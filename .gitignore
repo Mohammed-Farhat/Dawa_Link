@@ -1,0 +1,22 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node.js
+node_modules/
+
+# Logs and system files
+*.log
+.DS_Store
+Thumbs.db
+
+/docs
+DawaLink_Project_Proposal.md
+Project_Requirements.md
