@@ -1,17 +1,22 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v3.0 · **Date:** 2026-10-13
-**Builds on:** `01` v4.0 · `04` v3.0
-**Status:** ✅ validated by the team (2026-10-13). **v3.0 applies design review #2** (decision log §N):
+**Version:** v4.0 · **Date:** 2026-10-20
+**Builds on:** `01` v5.0 · `04` v4.0 · ADR-004
+**Status:** ✅ validated by the team (2026-10-20). **v4.0 applies the professor's guidance** (decision log §S):
+- **the agent decides where the client should go** and recommends one pharmacy (or route) with a reason;
+- **real locations:** "Use my location" or a district; pharmacies pin themselves on a map; travel times by car and on foot;
+- **days of use and pickup day:** a box is offered only if it lasts the client's days of use.
+
+**v3.0 applied design review #2** (decision log §N):
 - **urgent needs:** requests and watches search for 6 hours and can only be started 08:00–20:00;
 - **instant reservations:** the pharmacy presses [Picked up] or [Not available]. There is no confirmation step and no pickup code;
 - a prescription is a **notice**;
 - first come, first served;
-- district only.
+- ~~district only~~ (replaced in v4.0).
 
 **Numbers:** `04` §5 is the source of truth.
 
-> **What, not how it looks.** This document defines what each user can do and see. The ASCII sketches only show *which information appears where*; visual design is step 11. Prices are in LBP with ≈ USD. Location is district-only.
+> **What, not how it looks.** This document defines what each user can do and see. The ASCII sketches only show *which information appears where*; visual design is step 11. Prices are in LBP with ≈ USD. Location is the client's shared location or a district; the AI never sees coordinates.
 
 **Parts:**
 1. Client
@@ -41,7 +46,9 @@
 | **The agent proposes, the client taps** | Reserving, accepting an offer, starting or cancelling a request and changing its constraints always need a button tap. Typing "yes" never acts. **Cards are made by DawaLink's tools; the agent only chooses which to show** (`04` R-AG7). |
 | **Plain language** | "Reserved: pick up by Tuesday 21:00", not `RESERVED` |
 | **No medical content** | Only what's printed on a box. A prescription is a notice: "bring it to the pharmacy". |
-| **Privacy** | District-level location only; no GPS or maps |
+| **Privacy** | The location is shared only when the client taps **"Use my location"** (or picks a district), is stored rounded, and **is never sent to the AI**: the agent only sees "8 min by car, Hamra" |
+| **The agent decides where to go** | It **recommends one** pharmacy (or one route for several medicines) with a short reason: travel time, opening hours, price, the expiry fit, and what the client said. Up to 2 alternatives are shown. The client taps to reserve. |
+| **The box must last** | The client says (or is asked) **how many days** they'll use the medicine and **when** they'll pick it up. Only boxes that last that long are offered. |
 | **Fair and transparent** | When stock is scarce, a **fixed rule** decides who gets offered it: **first come, first served**. Nobody can change it, not the agent and not an admin. |
 
 ### 1.2 Screen map
@@ -122,13 +129,14 @@ flowchart TD
 
 #### CS-6 Search results
 - Search box with catalog autocomplete and fuzzy matching ("Did you mean Augmentin?").
-- **Filters:** district (default from profile), max price, "include same-composition alternatives".
-- **Sort:** best match (same district → same governorate → rest of Lebanon → price → expiry soonest), cheapest, latest expiry.
+- **Location:** [📍 Use my location], or the profile's district.
+- **Filters:** max price, "include same-composition alternatives", **days of use** (optional) and **pickup: today / tomorrow**.
+- **Sort:** best match (lasts your days of use → nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
 - **Each card:**
   - product and pack;
-  - pharmacy and district ("same district" or the district's name);
+  - pharmacy, area and **travel time** ("8 min by car · 20 min walk");
   - **price in LBP ≈ USD**, public price, discount %;
-  - expiry and days left;
+  - expiry and days left, with ✓ "lasts your 12 days", or a ⚠ warning when days of use weren't given;
   - 📄 "Prescription needed";
   - availability (exact up to 5, then "5+");
   - "alternative" badge;
@@ -137,10 +145,11 @@ flowchart TD
   - **[Notify me]** → a mini-form (max price) → a **watch for the next 6 hours**;
   - **[Ask DawaLink to find it]** → **CS-15 pre-filled**. The agent then sources it, including asking open pharmacies for unlisted stock.
   - Outside 08:00–20:00, both buttons say "Available from 08:00".
+- **Boxes exist but none fit:** "No match: the available boxes expire too early for 12 days of use (the latest expires 28 Oct)." + the same two buttons.
 
 #### CS-7 Listing detail
 - Product (ingredients, strength, form, pack, prescription notice).
-- Pharmacy (name, address, district, opening hours with an Open/Closed badge, **pickup time**: "holds reservations 1 day").
+- Pharmacy (name, address, district, **a map with its pin**, travel time by car and on foot, opening hours with an Open/Closed badge, **pickup time**: "holds reservations 1 day").
 - Offer (price LBP ≈ USD, discount, expiry, availability).
 - "3 other offers (same composition)" link.
 - [Reserve].
@@ -156,9 +165,11 @@ flowchart TD
 │ Expires: 12 Jan 2027             │
 │ 📄 Prescription needed: bring it  │
 │    to the pharmacy.              │
+│ Pick up: (•) Today ( ) Tomorrow  │
+│ Days of use: [ 12 ] (optional)   │
+│ ✓ Lasts your 12 days             │
 │ ✅ Reserved immediately.          │
-│    Pick up by Tue 21:00          │
-│    (Pharmacy A holds it 1 day).  │
+│    Pick up by today 21:00        │
 │ 💵 You pay at the pharmacy.        │
 │ [ Cancel ]  [ Reserve ]          │
 └──────────────────────────────────┘
@@ -170,6 +181,7 @@ flowchart TD
 | Cause | Message |
 |---|---|
 | Item just taken | "Someone reserved this a moment ago." + next options |
+| Doesn't fit | "This box expires on 28 Oct, before your 12 days end." + [See boxes that fit] |
 | Only part available | "Only 1 left now." (adjust, reserve again) |
 | Group: one item failed | "Aspirin was just taken at Pharmacy A, so nothing was reserved yet." The agent immediately offers **a new card with the remaining items** ("Reserve Concor ×2 alone?") and keeps looking for Aspirin. |
 | Limit | "You have 5 open reservations (the maximum)." / "Max 3 of the same medicine." |
@@ -183,8 +195,8 @@ flowchart TD
 |---|---|
 | Text | In the client's language and style (Arabizi in → Arabizi out) |
 | Choice chips | Disambiguation, quick replies |
-| Option card | One listing + [Reserve] |
-| **Plan card** | One pharmacy's group for several medicines + total + [Reserve these] |
+| Option card | One listing + travel time + [Reserve]. The agent's pick is marked **Recommended**, with its reason. |
+| **Plan card** | One pharmacy's group for several medicines + total + [Reserve these]. A plan with several pharmacies shows the **route** ("A → C, 22 min by car"). |
 | **Request summary card** | "Find Concor ×2, Glucophage ×1 in Saida" + [Start sourcing] |
 | Status card | Reserved (order number, pick up by) / picked up / not available / expired / cancelled |
 | Offer card | Matching or early-release offer + [Accept] / [No thanks], valid 2 h |
@@ -209,6 +221,7 @@ flowchart TD
   - [Cancel];
   - the timeline.
 - **Statuses:** reserved · picked up · not available (the pharmacy didn't have it) · expired ("missed pickups: 1 of 2") · cancelled.
+- **Expired by mistake?** An expired reservation shows **[I picked it up]**. If the pharmacy forgot to press [Picked up], this sends the case to an admin, who can remove the missed pickup (`04` R-N3).
 
 #### CS-11 Watches
 - Product, district, max price, **ends at** (6 hours after creation), status.
@@ -232,7 +245,7 @@ In-app list (see §1.7).
 │ 2 [Glucophage 850 · 30   ▾] ×[1] │
 │ 3 [Aspirin Cardio 100    ▾] ×[1] │
 │ [ + Add medicine ]   (max 5)     │
-│ District:  [Saida ▾]             │
+│ From: [📍 My location] or [Saida ▾]│
 │ Max price per medicine (optional)│
 │ [✓] Same-composition alternatives OK │
 │ DawaLink searches for up to 6 hours │
@@ -242,6 +255,7 @@ In-app list (see §1.7).
 ```
 - **Validation:** 1–5 medicines from the catalog (controlled substances can't be chosen); quantity 1–3; ≤ 2 open requests; **only 08:00–20:00** (otherwise: "DawaLink searches during the day. Please come back tomorrow from 08:00.").
 - Items that need a prescription show the notice.
+- Each medicine has an optional **days of use** (if empty: 1 day, with the expiry warning).
 - [Start sourcing] → CS-16. The agent starts immediately.
 
 #### CS-16 Request page
@@ -288,11 +302,11 @@ In-app list (see §1.7).
 ### 1.5 Assistant flows (AF)
 | ID | Situation | What happens |
 |---|---|---|
-| AF-1 | Clear request | Catalog search → options (same district first, then other areas) within budget → cards + chips → [Reserve] → CS-8. |
+| AF-1 | Clear request | Catalog search → options that fit, with travel times → the agent **recommends one** pharmacy with a short reason ("closest, open until 23:00, lasts your 12 days") + up to 2 alternatives → [Reserve] → CS-8. |
 | AF-2 | Ambiguous ("augmentin") | Chips [1g] [625mg] [457mg syrup]. It never guesses. |
 | AF-3 | Unknown name | Asks for the spelling or the ingredient on the box; after 2 tries, suggests the Search page. |
-| AF-4 | **Several medicines** ("baddi concor 5 w glucophage 850") | Calls `plan_basket` → **plan cards per pharmacy** ("Pharmacy C has both: 1 trip, total …") → [Reserve these]. If the client prefers cheapest over fewest trips, it re-plans and explains. |
-| AF-5 | Missing info | Asks only what's needed; the district comes from the profile. |
+| AF-4 | **Several medicines** ("baddi concor 5 w glucophage 850") | Calls `plan_basket` → **plan cards per pharmacy**, with the route ("Pharmacy C has both: 1 trip, 9 min by car, total …") → [Reserve these]. If the client prefers cheapest over fewest trips, it re-plans and explains. |
+| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. |
 | AF-6 | Option taken at tap time | Offers the next option. |
 | AF-7 | **Pharmacy marks a reservation not available** | **Decision event** → the agent re-plans with the next options. |
 | AF-8 | Nothing fits | Explains what exists outside the constraints, then decides: early release (asks up to 3 **open** pharmacies) and/or a 6-hour watch, **or suggests a sourcing request** if there are several items. |
@@ -314,6 +328,8 @@ In-app list (see §1.7).
 | AF-24 | **"Find these for me"** | Prepares a **request summary card** (items, district, budget) → the client taps **[Start sourcing]** → the request page opens; the agent continues there. |
 | AF-25 | "What's happening with my request?" | Reads the request status through a tool → a short summary + a link to CS-16. |
 | AF-26 | **"I'm dying / it's urgent, put me first"** | Explains the fixed rule (**whoever asked first is offered first**) without any medical judgment. For a medical emergency, it tells the client to contact a doctor or emergency services. It offers **[Talk to a person]** → escalation `emergency_claim`. **Nobody can change the order, not the agent and not an admin.** |
+| AF-27 | **No box fits** ("baddi concor la 30 yom") | "The boxes available expire before your 30 days end (the latest expires 12 Nov). I can watch for new stock or ask pharmacies." |
+| AF-28 | **The client's situation** ("ma 3ande siyyara, w bkhallis shoghl 6": no car, I finish work at 6) | The agent weighs walking time and opening hours, and recommends a pharmacy that's walkable and open after 18:00, saying why. |
 
 ### 1.6 Request flows (RF): the agent working on its own
 | ID | Situation | What the client experiences |
@@ -335,7 +351,7 @@ In-app list (see §1.7).
 | CN-3 | **Reserved** (order number, pharmacy, address, hours, pick up by, price, prescription notice) | ✅ | ✅ |
 | CN-5 | **Not available** (the pharmacy didn't have it) | ✅ | ✅ |
 | CN-6 | Pickup reminder (4 h before the deadline) | ✅ | ✅ |
-| CN-7 | Expired (no-show) | ✅ | ✅ |
+| CN-7 | Expired (no-show), with [I picked it up] to contest | ✅ | ✅ |
 | CN-8 | Reservations paused | ✅ | ✅ |
 | CN-9 | Early-release offer (valid 2 h) | ✅ | ✅ |
 | CN-10 | Matching offer: watch or request item (valid 2 h) | ✅ | ✅ |
@@ -360,6 +376,8 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 | Client came without a prescription | The pharmacist doesn't hand it over; the client can come back before the deadline, or cancel without penalty |
 | Session expires mid-flow | Log in → back to the same screen; an unsent message is kept |
 | Request or watch at night | "Please come back tomorrow from 08:00" |
+| Location not shared | The profile's district is used (times shown as "about"); the client can share it at any time |
+| Routing service down | Straight-line distance, labeled "about" (`04` R-RT1) |
 | Third open request | "You have 2 open requests (the maximum)." |
 
 ### 1.9 Metric events
@@ -379,6 +397,8 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 | D9 | One active chat + [New chat]; requests have their own threads | ✅ |
 | D10 | Mobile-first | ✅ |
 | D11 | Requests and watches only 08:00–20:00 | ✅ (review #2) |
+| D12 | Location shared per search, chat or request (or a district); stored rounded; never sent to the AI | ✅ (§S) |
+| D13 | Days of use (default 1) and pickup day; only boxes that last are offered | ✅ (§S) |
 
 ---
 
@@ -407,7 +427,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 
 #### PS-1 Register pharmacy
 - **Account:** email, password.
-- **Pharmacy:** name, **license number** (format, unique), phone, address, district.
+- **Pharmacy:** name, **license number** (format, unique), phone, address, district, and a **pin on the map** (required; checked by the admin).
 - **Weekly opening hours:** 0–2 ranges per day.
 - **Pickup time:** how long reservations are held: **1, 2 or 3 days** (default 1).
 - **Terms:** sealed, in-date packs only; price ≤ public price; keep quantities up to date; check reservations daily.
@@ -473,7 +493,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 - **Decline:** a reason from a list, no penalty. **No answer within 2 h** → expired.
 
 #### PS-10 Settings
-Weekly opening hours, **pickup time (1–3 days)**, phone, change password. Name, license and address are changed only by an admin.
+Weekly opening hours, **pickup time (1–3 days)**, phone, change password. Name, license, address and map pin are changed only by an admin.
 
 #### PS-11 Notifications
 In-app list (§2.4).
@@ -503,7 +523,7 @@ In-app list (§2.4).
 ### 2.5 What the pharmacy sees about a client
 | Sees | Never sees |
 |---|---|
-| Order number, product, units, price, times, pick up by, "prescription needed" | Name, email, phone, district, chats, requests, other orders |
+| Order number, product, units, price, times, pick up by, "prescription needed" | Name, email, phone, district, location, chats, requests, other orders |
 
 ### 2.6 Edge cases
 | Case | Behavior |
@@ -530,6 +550,7 @@ In-app list (§2.4).
 | P-D9 | ~~Refuse handover rules~~ | **removed**: the pharmacist's own process at the counter (review #2) |
 | P-D10 | Desktop-first, phone-friendly | ✅ |
 | P-D11 | **Pickup time set by each pharmacy** (1–3 days, default 1) | ✅ (review #2) |
+| P-D12 | **Map pin at registration**, checked by the admin; only an admin moves it after approval | ✅ (§S) |
 
 ---
 
@@ -565,7 +586,7 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 ```
 
 #### AS-3 Pharmacy approvals
-- **Queue with automatic checks:** license format; duplicate license, phone, email or address.
+- **Queue with automatic checks:** license format; duplicate license, phone, email or address; **a map to check that the pin matches the address**.
 - [Approve] · [Reject] (reason) · [Ask for more information].
 
 #### AS-4 Pharmacies
@@ -575,6 +596,7 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 #### AS-5 Clients
 - Status (active, paused, suspended), reservations, no-shows, open requests.
 - [Lift pause] / [Suspend] / [Reinstate] (reason). Suspending ends the client's sessions at once.
+- **[Clear no-show]** on a contested reservation (reason; audited; `04` R-N3).
 - Viewing contact details is audited.
 
 #### AS-6 Escalations

@@ -1,22 +1,28 @@
 # DawaLink: Database Design
 
-**Version:** v2.0 · **Date:** 2026-10-13
-**Builds on:** `04_domain_rules.md` v3.0 (every rule ID referenced here is defined there) · `02` v2.0 · ADR-001/002/003 · [design review #2](reviews/design_review_02.md)
+**Version:** v3.0 · **Date:** 2026-10-20
+**Builds on:** `04_domain_rules.md` v4.0 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v2.0 applies design review #2** (decision log §N):
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.0 applies the professor's guidance** (decision log §S):
+- **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
+- **expiry fit:** `pickup_day` and `days_of_use` on orders, `days_of_use` on request items and claims, and a `fits()` function;
+- a **travel-time cache**;
+- no fixed minimum before expiry in `visible_listings`.
+
+**v2.0 applied design review #2** (decision log §N):
 - **no jobs table:** one clock check loop reads the deadlines on the rows;
 - instant reservations, with no pickup code;
 - the claim is the single "need";
 - server-side **sessions** instead of refresh tokens;
 - a **proposals** table so that cards come only from tools;
 - a turn lease on conversations;
-- districts without coordinates.
+- ~~districts without coordinates~~ (reference points added back in v3.0).
 
 ---
 
 ## In short
 
-- **33 tables in 7 areas:**
+- **34 tables in 7 areas:**
   - identity;
   - catalog;
   - inventory;
@@ -39,7 +45,7 @@
   - `SKIP LOCKED` in the clock check;
   - one idempotency key per order.
 - **Privacy:**
-  - PII lives in 3 columns only (`users.email`, `full_name`, `phone`);
+  - PII lives in 3 user columns (`users.email`, `full_name`, `phone`), plus the client's **rounded location** on conversations, requests and claims, which is never sent to the LLM;
   - chats are stored redacted;
   - the audit log stores IDs, never PII values;
   - three database roles with least privilege.
@@ -139,7 +145,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 
 **`email_verification_tokens`**: id uuid PK · user_id FK · `token_hash` bytea U · expires_at (24 h) · used_at.
 
-**`districts`**: id smallint PK · name U · `governorate` text NN. No coordinates: location is district-only, and the area order is same district → same governorate → rest of Lebanon (`04` R-S2).
+**`districts`**: id smallint PK · name U · `governorate` text NN · `ref_lat`, `ref_lon` numeric(8,5): the point used when a client picks a district instead of sharing their location (`04` R-S2).
 
 **`pharmacies`**
 | Column | Type | Rules |
@@ -150,6 +156,8 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | license_number | text | NN, U |
 | phone | text | NN, U |
 | district_id | smallint | FK |
+| **lat / lon** | numeric(8,5) | NN: the **map pin** set at registration (`04` R-S2) |
+| location_checked_at / _by | timestamptz / uuid | set by the admin at approval; only an admin can move the pin afterwards |
 | **pickup_days** | smallint | NN, default 1, `CHECK (pickup_days BETWEEN 1 AND 3)` (`04` N-6) |
 | status | text | `IN ('PENDING','APPROVED','REJECTED','SUSPENDED')` (`04` SM-1) |
 | info_requested | boolean | default false |
@@ -241,10 +249,12 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | qty_requested | int | > 0 |
 | qty_locked | int | NN, ≥ 0. **`CHECK (state IN ('OFFERED','RESERVED') OR qty_locked = 0)`**: terminal orders hold no stock. |
 | qty_picked_up | int | nullable; set at PICKED_UP |
+| **pickup_day / days_of_use** | date / smallint | chosen by the client (`04` R-F3, R-F2); the box fits them (INV-25) |
 | price_snapshot_lbp | bigint | NN, ≥ 0; **can't change (trigger)** (INV-5) |
 | offer_expires_at | timestamptz | **`CHECK (state <> 'OFFERED' OR offer_expires_at IS NOT NULL)`** |
 | deadline | timestamptz | **`CHECK (state <> 'RESERVED' OR deadline IS NOT NULL)`**; **never changes once set (trigger)** (INV-15) |
-| counts_as_no_show | boolean | set at O4 |
+| counts_as_no_show | boolean | set at O4; an admin may clear it after a contest (`04` R-N3) |
+| contested_at | timestamptz | when the client pressed [I picked it up] (one contest per order) |
 | close_reason | text | `IN ('not_available','client_cancel','declined','expired','withdrawn','system')` |
 | idempotency_key | text | NN; **`UNIQUE (client_id, idempotency_key)`**: one key per order: the client sends one `Idempotency-Key` per tap, and a group reserve stores `<key>:<position>` for each of its orders (DR2-A12, `06` API-D5) |
 | created_at, reserved_at, closed_at, updated_at | timestamptz | |
@@ -257,7 +267,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 - **Clock check:** `(deadline) WHERE state = 'RESERVED'` and `(offer_expires_at) WHERE state = 'OFFERED'`.
 - `(request_item_id)`, `(claim_id)` and `(group_id)`.
 
-**Trigger `orders_guard`** (BEFORE UPDATE): rejects any change to a **terminal** order (INV-4), any change to `price_snapshot_lbp`, and any change to a `deadline` that is already set.
+**Trigger `orders_guard`** (BEFORE UPDATE): rejects any change to a **terminal** order (INV-4), any change to `price_snapshot_lbp`, and any change to a `deadline` that is already set. **The one exception** on an `EXPIRED_NO_SHOW` order: setting `contested_at` once, and changing `counts_as_no_show` from true to false (`04` R-N3).
 
 ### 3.5 Agent: sourcing requests, claims, early release
 
@@ -269,7 +279,8 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | client_id | uuid | FK |
 | state | text | `IN ('OPEN','CLOSED')` |
 | outcome | text | `IN ('FULFILLED','PARTIAL','UNFULFILLED','CANCELLED')`; `CHECK ((state='CLOSED') = (outcome IS NOT NULL))` |
-| district_id | smallint | FK |
+| district_id | smallint | FK (the client's district, for display) |
+| **loc_lat / loc_lon / loc_source** | numeric(7,3) ×2 / text | the client's location for this request, **rounded to ~100 m** (N-43); `loc_source IN ('shared','district')`; never sent to the LLM; purged with the request |
 | alternatives_ok | boolean | NN |
 | **ends_at** | timestamptz | NN: creation + the search window (`04` N-11), from the app clock |
 | window_checked_at | timestamptz | set when the window check (N-24) has run, so it runs once |
@@ -281,7 +292,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 - `(client_id) WHERE state = 'OPEN'`, for the 2-open-requests limit;
 - `(ends_at) WHERE state = 'OPEN'`, for the clock check.
 
-**`request_items`**: id uuid PK · request_id FK · `position` 1–5 (U with request_id) · product_id FK · `qty` 1–3 · **`qty_secured`** 0–qty (units in its RESERVED or PICKED_UP orders; checked by reconciliation, INV-18) · max_price_lbp nullable · `state IN ('SEARCHING','PROPOSED','WAITING','SECURED','UNAVAILABLE','CANCELLED')` · updated_at.
+**`request_items`**: id uuid PK · request_id FK · `position` 1–5 (U with request_id) · product_id FK · `qty` 1–3 · **`qty_secured`** 0–qty (units in its RESERVED or PICKED_UP orders; checked by reconciliation, INV-18) · **`days_of_use`** smallint NN default 1 (`04` R-F2) · max_price_lbp nullable · `state IN ('SEARCHING','PROPOSED','WAITING','SECURED','UNAVAILABLE','CANCELLED')` · updated_at.
 
 **`claims`**: the **single "need" object**, one table for **watches** and **waiting request items** (`04` SM-7, R-PRI)
 | Column | Type | Rules |
@@ -293,7 +304,9 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | product_id | uuid | FK |
 | include_equivalents | boolean | |
 | equivalence_key | text | copied in, used for matching |
-| district_id | smallint | the reach is this district or its governorate (N-23) |
+| district_id | smallint | for display |
+| **loc_lat / loc_lon** | numeric(7,3) | the client's rounded location; the reach is travel time from here (N-23) |
+| **days_of_use** | smallint | NN, default 1; only boxes that fit are offered (`04` R-F1) |
 | max_price_lbp | bigint | nullable |
 | qty / qty_missing | int / int | qty 1–3; `qty_missing` 0–qty (R-W4) |
 | ends_at | timestamptz | NN (the search window) |
@@ -339,12 +352,14 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | request_id | uuid | U, nullable; `CHECK ((kind='request') = (request_id IS NOT NULL))` |
 | status | text | `IN ('ACTIVE','ARCHIVED')` |
 | case_state | jsonb | NN, default `{}`: the agent's working memory (items in focus, constraints, plans shown, pending proposals) |
+| **loc_lat / loc_lon / loc_source / loc_set_at** | numeric(7,3) ×2 / text / timestamptz | the location shared in this chat, rounded. **Kept out of `case_state`**, so it's never loaded into the LLM context (INV-24). |
 | **turn_lease_until / turn_owner** | timestamptz / text | the turn lease (`04` R-AG2, N-27) |
 | **pending_turn_at / turn_attempts** | timestamptz / smallint | a decision event waiting for a turn (`04` R-AG4); retries (SM-12) |
+| **followup_at** | timestamptz | one follow-up scheduled by the agent (`07` AG-D11, `04` N-39); cleared when the turn runs |
 | last_activity_at / created_at | timestamptz | |
 
 - `UNIQUE (client_id) WHERE kind='chat' AND status='ACTIVE'` gives one active chat per client (D9).
-- Index `(pending_turn_at) WHERE pending_turn_at IS NOT NULL`, for the clock check.
+- Indexes `(pending_turn_at) WHERE pending_turn_at IS NOT NULL` and `(followup_at) WHERE followup_at IS NOT NULL`, for the clock check.
 
 **`chat_messages`**: id bigint PK · conversation_id FK (`ON DELETE CASCADE`) · `seq` (U with conversation) · `author IN ('client','agent','system','admin')` · `kind IN ('text','card','timeline','event')` · `text_redacted` (**PII removed before insert**, INV-10) · `cards` jsonb (**proposal IDs** for agent cards; template data for system cards) · agent_run_id FK nullable · created_at.
 - Decision events are stored as `kind='event'` system messages, so the next turn reads them from the history (R-AG4).
@@ -395,7 +410,7 @@ When a tap arrives, the API checks the owner, `used_at IS NULL`, `expires_at > n
 
 ### 3.8 Operations
 
-**There is no jobs table** (DR2-A10). The clock check (§6) reads the deadlines on the rows: `orders.offer_expires_at`, `orders.deadline`, `sourcing_requests.ends_at`, `claims.ends_at`, `early_release_asks.respond_by`, `conversations.pending_turn_at`, `email_outbox.next_attempt_at`.
+**There is no jobs table** (DR2-A10). The clock check (§6) reads the deadlines on the rows: `orders.offer_expires_at`, `orders.deadline`, `sourcing_requests.ends_at`, `claims.ends_at`, `early_release_asks.respond_by`, `conversations.pending_turn_at`, `conversations.followup_at`, `email_outbox.next_attempt_at`.
 
 **`email_outbox`**: id bigint · user_id FK · template · params jsonb (**no email address stored**; it's resolved at send time) · `dedupe_key` U · `state IN ('QUEUED','SENT','FAILED','DEAD')` · attempts · next_attempt_at · last_error · created_at · sent_at.
 Index `(next_attempt_at) WHERE state IN ('QUEUED','FAILED')`.
@@ -416,6 +431,8 @@ Index `(next_attempt_at) WHERE state IN ('QUEUED','FAILED')`.
 
 Indexes: (entity_type, entity_id, occurred_at) and (occurred_at).
 **Append-only:** the app role has `INSERT, SELECT` only, plus a trigger that rejects UPDATE and DELETE (only the retention role may delete rows older than 1 year).
+
+**`travel_time_cache`**: PK (pharmacy_id, origin_cell, mode) · `origin_cell` text (the client's rounded location) · `mode IN ('car','walk')` · minutes int · km numeric(6,2) · `source IN ('road','straight')` · computed_at. Entries older than 24 h (N-43) are ignored and purged daily (`04` R-RT1).
 
 **`app_state`**: key text PK · value jsonb · updated_at. Small system values:
 - `daily_tasks_last_run`, so the once-a-day tasks run once even across restarts;
@@ -449,6 +466,8 @@ Indexes: (entity_type, entity_id, occurred_at) and (occurred_at).
 | INV-21 cards from proposals | FK from the tap to `proposals` | Owner, expiry, one use, re-validation | API test with a forged payload |
 | INV-22 request hours | | Checked at creation with the app clock | boundary tests (07:59, 08:00, 20:00) |
 | INV-23 no pharmacy text to the LLM | | Tool output schemas carry codes only | schema test |
+| INV-24 no coordinates to the LLM | Location columns live outside `case_state` | Tools return minutes, km and area names only | trace scan test |
+| INV-25 only boxes that fit | `fits()` function | Checked in search, tools, taps, matching and offer acceptance | boundary tests |
 
 **Example reconciliation query (INV-2):** run in tests and once a day by the clock check, which raises an alert on any row.
 ```sql
@@ -488,10 +507,16 @@ CREATE FUNCTION visible_listings(p_today date) RETURNS TABLE (...) LANGUAGE sql 
     AND ii.listing_control = 'LIVE'
     AND NOT p.controlled
     AND ii.qty_on_hand - ii.qty_reserved >= 1
-    AND ii.expiry_date BETWEEN p_today + 17 AND p_today + 180   -- NEAR_EXPIRY (04 N-1)
+    AND ii.expiry_date BETWEEN p_today AND p_today + 180        -- NEAR_EXPIRY (04 N-1): no fixed minimum
 $$;
 
--- Area order (04 R-S2): 0 same district · 1 same governorate · 2 rest of Lebanon
+-- Expiry fit (04 R-F1): the box is still valid on the last day of use
+CREATE FUNCTION fits(expiry date, pickup_day date, days_of_use int)
+RETURNS boolean LANGUAGE sql IMMUTABLE AS $$
+  SELECT expiry >= pickup_day + (days_of_use - 1)
+$$;
+
+-- Area label (district / governorate), for display only; ranking uses travel time (04 R-S3)
 CREATE FUNCTION area_rank(client_district smallint, pharmacy_district smallint)
 RETURNS smallint LANGUAGE sql STABLE AS $$
   SELECT CASE WHEN client_district = pharmacy_district THEN 0
@@ -501,7 +526,7 @@ RETURNS smallint LANGUAGE sql STABLE AS $$
 $$;
 ```
 
-The window bounds (17, 180) and the early-release zone (181–270) come from config, in a later revision of these functions. They're shown as literals here for clarity.
+Travel times aren't computed in SQL: the routing service is called from Python (`04` R-RT1). The window bounds (0, 180) and the early-release zone (181–270) come from config, in a later revision of these functions. They're shown as literals here for clarity.
 
 ---
 
@@ -525,7 +550,7 @@ The window bounds (17, 180) and the early-release zone (181–270) come from con
 
 | Topic | Design |
 |---|---|
-| **Where PII lives** | `users.email`, `users.full_name`, `users.phone` only. District is coarse location. |
+| **Where PII lives** | `users.email`, `users.full_name`, `users.phone`, plus the client's **location**: rounded to ~100 m, stored only on conversations, requests and claims, purged with them, and **never sent to the LLM** (INV-24). Pharmacy pins are business addresses, not PII. |
 | Chats | Stored **redacted** (`text_redacted`): known account identifiers and phone/email patterns removed before insert and before any LLM call |
 | Pharmacy text | Decline reasons are codes; nothing typed by a pharmacy is passed to the agent (`04` R-AG8) |
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
@@ -545,6 +570,8 @@ The window bounds (17, 180) and the early-release zone (181–270) come from con
 | `answer_reports.snapshot` | Kept while the report is open or exported to regression (redacted) |
 | Notifications | 90 days |
 | Sessions and verification tokens | Deleted after expiry or revocation |
+| Client location | Deleted with its conversation, request or claim |
+| `travel_time_cache` | Rows older than 24 h (N-43) |
 | Audit events | 1 year (retention role) |
 | Upload staging rows | Deleted at apply or discard (inline) |
 
@@ -579,9 +606,10 @@ The window bounds (17, 180) and the early-release zone (181–270) come from con
   - killed mid-pass → the next pass finishes the work.
 - **Reconciliation queries** (INV-2, INV-18) run after every integration test.
 - **Time,** with the injected clock:
-  - visibility and price at d = 16, 17, 180, 181;
+  - visibility and price at d = −1, 0, 180, 181;
+  - the expiry fit at its boundaries (expiry = last day of use, and one day before it);
   - request hours at 07:59, 08:00 and 20:00;
-  - pickup deadlines across closed days, and the expiry − 14 days cap.
+  - pickup days across closed days, "today" near closing time (N-42), and the deadline never after the expiry date.
 
 ---
 
@@ -604,3 +632,5 @@ The window bounds (17, 180) and the early-release zone (181–270) come from con
 | DB-D13 | Cards | **`proposals` table**; a tap sends a proposal ID | What the client sees is what the button does | ✅ 2026-10-13 (review #2) |
 | DB-D14 | Login | **`sessions` table** (opaque token) instead of refresh tokens | Less code; instant revocation | ✅ 2026-10-13 (review #2) |
 | DB-D15 | Agent turn lock | **A lease on `conversations`** instead of a session advisory lock | No connection held during LLM calls; expires after a crash | ✅ 2026-10-13 (review #2) |
+| DB-D16 | Locations | **Pharmacy pin; district reference points; the client's location rounded to ~100 m** on conversations, requests and claims, outside `case_state` | The routes the professor asked for, with the least personal data and none of it reaching the LLM | ✅ 2026-10-20 (§S) |
+| DB-D17 | Expiry fit and travel times | **`pickup_day` / `days_of_use` columns + a `fits()` function; a 24 h travel-time cache** | One definition of "fits"; fewer calls to the routing service | ✅ 2026-10-20 (§S) |

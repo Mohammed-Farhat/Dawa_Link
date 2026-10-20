@@ -1,14 +1,19 @@
 # DawaLink: Domain Rules and State Machines
 
-**Version:** v3.0 · **Date:** 2026-10-13
-**Builds on:** `01` v4.0 · `03` v3.0 · `adr/ADR-001`, `ADR-002`, `ADR-003` (as amended) · [design review #2](reviews/design_review_02.md)
-**Status:** ✅ validated by the team (2026-10-13). **v3.0 applies design review #2** (decision log §N):
+**Version:** v4.0 · **Date:** 2026-10-20
+**Builds on:** `01` v5.0 · `03` v4.0 · `adr/ADR-001`–`ADR-004` · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
+**Status:** ✅ validated by the team (2026-10-20). **v4.0 applies the professor's guidance** (decision log §S):
+- the agent's job is to **bring each need to the right pharmacy**, and **the agent decides** which pharmacy (or route), from facts computed by code (R-AG9);
+- **real locations and road travel times** (R-S2, R-RT); coordinates never reach the LLM;
+- **expiry fit:** a box must last the client's **days of use** from the chosen **pickup day** (R-F); there is **no fixed minimum** before expiry any more.
+
+**v3.0 applied design review #2** (decision log §N):
 - **needs are urgent:** a request or a watch searches for **6 hours**, and can only be started during request hours (08:00–20:00);
 - **instant reservations:** no pharmacy confirmation step. The pharmacy presses **[Picked up]** or **[Not available]**;
 - each pharmacy sets its **pickup time** (1–3 days);
 - a prescription is a **notice** only;
 - priority is **first come, first served**, and nobody can override it;
-- location is **district only**;
+- ~~location is district only~~ (replaced in v4.0);
 - one **clock check** loop replaces the jobs table;
 - the **claim** is the single "need" object.
 
@@ -34,13 +39,13 @@
 | R-T1 | All business logic uses **Asia/Beirut** time (DST handled by the time-zone database). Timestamps are **stored in UTC**. |
 | R-T2 | **Opening hours:** a weekly schedule, 0–2 ranges per day `[open, close)`; `close` may be 24:00. They're used for: "open now" (early-release asks), the pickup deadline, and the Open/Closed badge. *(Closures, holidays and vacation mode are postponed.)* |
 | R-T3 | **Request hours (N-5):** sourcing requests and watches can only be **created** during request hours. Outside them the client sees: "DawaLink searches during the day. Please come back tomorrow from 08:00." Searching and reserving listed stock work at any time. |
-| R-T4 | **Pickup deadline** = the closing time on the pharmacy's *k*-th open day after the day of the reservation, where *k* is the pharmacy's **pickup time** setting (N-6). *Example:* reserved Mon 10:00, *k* = 1, the pharmacy is open Tue 08:00–21:00 → Tue 21:00. If the pharmacy has no opening hours in the next 14 days, the deadline is reservation + *k* × 24 h. **The deadline is never later than the end of the day (expiry − 14 days)** (N-2), so the client always gets at least 14 days of shelf life. |
+| R-T4 | **Pickup day and deadline:** the client chooses the **pickup day** (R-F3): today, or one of the pharmacy's next open days within its **pickup time** setting (N-6). The **deadline** = the closing time on that day, and **never after the box's expiry date**. *Example:* reserved Mon 10:00, the client chooses tomorrow, the pharmacy is open Tue 08:00–21:00 → Tue 21:00. |
 | R-T5 | **A reservation's deadline never changes once set.** Editing the opening hours or the pickup time setting doesn't affect existing reservations. |
 | R-T6 | **Offers use real time** (N-12), and notifications are sent immediately. |
 | R-T7 | **Expiry dates:** month/year only (e.g. `11/26`) means the **last day of that month**. **Days to expiry** `d` = expiry date − today (Beirut), in whole days. |
 | R-T8 | **Search window (N-11):** the **first search runs immediately** when a request is created, so what's listed is reported and proposed within seconds. The window (`ends_at`) is how long DawaLink **keeps trying in the background for the items not yet found**: waiting for new stock and asking pharmacies. The client doesn't wait on the screen and can cancel at any time. The **window check** (N-24) runs once, shortly before the end. |
 | R-T9 | **Derive, don't store:** the eligibility zone and the policy price are **pure functions of `expiry_date` and today**, computed whenever they're read. |
-| R-T10 | **The clock check.** One worker loop runs every few seconds (N-26) with `now` from the app clock. It finds overdue rows using the deadlines **stored on the rows themselves**, and acts on them:<br>• expire offers;<br>• expire reservations (no-show);<br>• end search windows;<br>• expire early-release asks;<br>• run the window check;<br>• run the matching sweep over active claims (R-PRI1);<br>• run pending agent turns (R-AG4);<br>• send the email outbox;<br>• once a day: retention purges and stale-inventory reminders.<br>**There is no jobs table.** Each action re-checks the row's state in its own transaction, so running it twice does nothing. If the worker stops, the next pass catches up. |
+| R-T10 | **The clock check.** One worker loop runs every few seconds (N-26) with `now` from the app clock. It finds overdue rows using the deadlines **stored on the rows themselves**, and acts on them:<br>• expire offers;<br>• expire reservations (no-show);<br>• end search windows;<br>• expire early-release asks;<br>• run the window check;<br>• run the matching sweep over active claims (R-PRI1);<br>• run pending agent turns (R-AG4) and due follow-ups (`followup_at`, N-39);<br>• send the email outbox;<br>• once a day: retention purges and stale-inventory reminders.<br>**There is no jobs table.** Each action re-checks the row's state in its own transaction, so running it twice does nothing. If the worker stops, the next pass catches up. |
 | R-T11 | **One clock:** every time limit (deadlines, offer expiry, search windows, answer times) is computed from the app clock (`now`, `today`), never the database clock. `created_at` may use real time, because it only orders "who came first". |
 
 ---
@@ -122,8 +127,7 @@ Name, license and address can only be changed by an **admin** after approval (ed
 |---|---|---|
 | NOT_ELIGIBLE | Controlled, or not matched | Never published or asked about |
 | EXPIRED | d < 0 | Hidden |
-| BELOW_MIN | 0 ≤ d < 17 | Hidden. 17 = 14 days guaranteed at pickup + up to 3 pickup days. |
-| **NEAR_EXPIRY** | **17 ≤ d ≤ 180** | **Published automatically** |
+| **NEAR_EXPIRY** | **0 ≤ d ≤ 180** | **Published automatically.** There's no fixed minimum: whether a box suits a given client is decided by the **expiry fit** (R-F1). *(The BELOW_MIN zone was removed in v4.0.)* |
 | EARLY_RELEASE | 180 < d ≤ 270 | Private; the agent may ask about it (SM-6) |
 | PRIVATE | d > 270 | Private |
 
@@ -167,6 +171,7 @@ There is **no pharmacy confirmation step**: a client's tap **reserves immediatel
 - `group_id` (one group reserve);
 - `qty_requested`, `qty_locked` (units currently held), `qty_picked_up`;
 - `price_snapshot` per pack;
+- `pickup_day`, `days_of_use` (R-F1–R-F3);
 - `offer_expires_at` (OFFERED), `deadline` (RESERVED);
 - `counts_as_no_show`.
 
@@ -193,15 +198,15 @@ stateDiagram-v2
 
 | # | Transition | Actor | Guards | Effects |
 |---|---|---|---|---|
-| O1 | **Create** → RESERVED | CLIENT (tap) | Client ACTIVE · open orders + new ≤ 5 (R-L1) · units per equivalence group ≤ 3 (R-L2) · listing visible · qty ≤ qty_available (row lock) · idempotency key unused. A **group reserve** (R-RQ6) creates several orders **all or none**, each with its own key. | Price snapshot; `qty_reserved += qty`; deadline (R-T4); PN-4 to the pharmacy (in-app + email); CN-3 to the client. If linked to a need → R-RQ7 / R-W3 (the need's other offers and asks are withdrawn when it's covered). |
+| O1 | **Create** → RESERVED | CLIENT (tap) | Client ACTIVE · open orders + new ≤ 5 (R-L1) · units per equivalence group ≤ 3 (R-L2) · listing visible · qty ≤ qty_available (row lock) · **the box fits** the client's days of use from the chosen pickup day (R-F1) · the pickup day is valid (R-F3) · idempotency key unused. A **group reserve** (R-RQ6) creates several orders **all or none**, each with its own key. | Price snapshot; `qty_reserved += qty`; deadline (R-T4); PN-4 to the pharmacy (in-app + email); CN-3 to the client. If linked to a need → R-RQ7 / R-W3 (the need's other offers and asks are withdrawn when it's covered). |
 | O2 | RESERVED → **PICKED_UP** | PHARMACY (own) | Before the deadline (no late pickup) | `qty_on_hand −= qty_locked`; `qty_reserved −= qty_locked`; `qty_picked_up = qty_locked`; `qty_locked = 0`; units-saved metric |
 | O3 | RESERVED → **not available** (*k* units) | PHARMACY (own) | 1 ≤ *k* ≤ `qty_locked` | The units aren't there: `qty_on_hand −= k`; `qty_reserved −= k`; `qty_locked −= k`. If `qty_locked` reaches 0 → **NOT_AVAILABLE**. CN-5 to the client. The linked need gets *k* units back → **decision event** (R-AG4) if its window is still open. Never a penalty for the client. |
 | O4 | RESERVED → **EXPIRED_NO_SHOW** | SYSTEM (clock check) | Deadline reached, still RESERVED | Release; `counts_as_no_show = true`; CN-7; R-N1. A closed request's outcome doesn't change (R-RQ9). |
 | O5 | RESERVED → **CANCELLED_BY_CLIENT** | CLIENT (tap) | Own order, before the deadline | Release; PN-8; a linked request item → CANCELLED if its request is still open; no penalty |
 | O6 | open → **CANCELLED_BY_SYSTEM** | SYSTEM | Pharmacy suspended (OFFERED only) · product became controlled · client suspended | Release; notify the affected parties; the linked need → decision event, unless the client was suspended |
-| O7 | (matching hold) → **OFFERED** | SYSTEM | R-PRI allocation | Lock up to the claim's missing units; `offer_expires_at = now + 2 h`; CN-10 + an offer card in the claim's thread |
+| O7 | (matching hold) → **OFFERED** | SYSTEM | R-PRI allocation; only boxes that fit the claim's days of use (R-F1) | Lock up to the claim's missing units; `offer_expires_at = now + 2 h`; CN-10 + an offer card in the claim's thread |
 | O8 | (early-release accept) → **OFFERED** | PHARMACY | SM-6 | Lock at the accepted price; `offer_expires_at = now + 2 h`; CN-9 + an offer card |
-| O9 | OFFERED → **RESERVED** | CLIENT (tap) | Client ACTIVE · O1 limit guards (the lock is already held; the claim's offers count once, R-W3) | As O1 (deadline, PN-4, CN-3). **The claim's other offers → OFFER_WITHDRAWN at once**; its open asks are withdrawn if the need is now covered. |
+| O9 | OFFERED → **RESERVED** | CLIENT (tap) | Client ACTIVE · O1 limit guards (the lock is already held; the claim's offers count once, R-W3) · the box fits the pickup day the client chooses (R-F1, R-F3) | As O1 (deadline, PN-4, CN-3). **The claim's other offers → OFFER_WITHDRAWN at once**; its open asks are withdrawn if the need is now covered. |
 | O10 | OFFERED → **OFFER_DECLINED / OFFER_EXPIRED** | CLIENT / SYSTEM | none | Release. Matching hold → the unit goes to the next claim (R-PRI); this claim skips this item for 24 h. Early release → the item **returns to private**. |
 | O11 | OFFERED → **OFFER_WITHDRAWN** | SYSTEM | Another offer for the same claim accepted · the request or watch cancelled by the client | Release (as O10) |
 
@@ -215,9 +220,9 @@ stateDiagram-v2
 | ID | Rule |
 |---|---|
 | R-E1 | **Created by the AGENT only**, for a **claim** (a watch or a waiting request item; R-W3). Needs an ACTIVE client and an ACTIVE claim; product (plus equivalents if allowed); quantity = the claim's missing units. |
-| R-E2 | **Candidates:** inventory items in the **EARLY_RELEASE** zone at APPROVED pharmacies that are **open now** (R-T2); product or allowed equivalent; `qty_available ≥ 1`; in the claim's district or governorate (N-23). |
+| R-E2 | **Candidates:** inventory items in the **EARLY_RELEASE** zone at APPROVED pharmacies that are **open now** (R-T2); product or allowed equivalent; `qty_available ≥ 1`; within the claim's travel-time reach (N-23, R-RT3). |
 | R-E3 | **Anti-spam:** skip pharmacies that already got 10 asks today, or that declined the same product in the last 7 days. |
-| R-E4 | **Selection:** same district first, then soonest expiry (less waste), then the fewest [Not available] marks in the last 30 days. **Top 3**, asked at once. |
+| R-E4 | **Selection:** shortest travel time from the client first, then soonest expiry (less waste), then the fewest [Not available] marks in the last 30 days. **Top 3**, asked at once. |
 | R-E5 | **Client limits:** ≤ 5 OPEN early-release requests; the same product can't be asked again within 24 h after UNFULFILLED. |
 | R-E6 | **Pharmacy answer** within the answer time (N-13): **Accept** (qty ≤ min(missing units, private available); price ≤ public price; the suggested price is the public price − 25%, R-PR3) → O8. **Decline** (reason code). No answer in time → EXPIRED. **No penalties.** If the need was **already covered** when the pharmacy answers: "Thank you, this need was just met"; the ask → WITHDRAWN and nothing is locked. |
 | R-E7 | **Resolution:** the client accepts the offer → FULFILLED, and the other asks are withdrawn. All asks ended without an accepted offer → **UNFULFILLED** (a decision event if the claim's window is open). When the claim's window ends, open asks → WITHDRAWN. |
@@ -234,7 +239,7 @@ A **claim** is one need for one medicine: a client **watch** ([Notify me]) or a 
 
 | ID | Rule |
 |---|---|
-| R-W1 | **Created by** the CLIENT ([Notify me], a tap) or the AGENT (`create_watch` in chat, `open_claim` in a request), **only during request hours** (R-T3). Fields: product (plus equivalents if allowed), district, optional max price, quantity (1–3 units), `ends_at` = creation + the search window (N-11). A request item's claim uses the request's `ends_at`. |
+| R-W1 | **Created by** the CLIENT ([Notify me], a tap) or the AGENT (`create_watch` in chat, `open_claim` in a request), **only during request hours** (R-T3). Fields: product (plus equivalents if allowed), **the client's location** (shared or a district, R-S2), **days of use** (default 1, R-F2), optional max price, quantity (1–3 units), `ends_at` = creation + the search window (N-11). A request item's claim uses the request's `ends_at`. |
 | R-W2 | ≤ 5 live client watches; one per product. Request-item claims don't count toward this limit. |
 | R-W3 | **One need, two paths (DR2-A7).** Each path (matching, early release) holds **at most one offer** for the claim at a time. **When the client accepts any offer, the claim's other offers are withdrawn at once**, and its open asks are withdrawn if the need is now covered. For the client limits (R-L1, R-L2), a claim's simultaneous offers **count once**. |
 | R-W4 | **Partial coverage:** a claim tracks `qty_missing`. A reservation for fewer units leaves it ACTIVE for the rest (e.g. 1 of 2 found → keep searching for 1). FULFILLED when `qty_missing = 0`. |
@@ -258,11 +263,11 @@ A partly secured item ("1 of 2 secured") stays SEARCHING or WAITING for the miss
 
 | ID | Rule |
 |---|---|
-| R-RQ1 | **Creation** always needs a **client tap**: [Start sourcing] on the request form, on the agent's summary card in chat, or from the search empty state (pre-filled form). It requires an ACTIVE client, **request hours** (R-T3), **1–5 items** (product + quantity 1–3) and a district, plus optionally a max price per item and "alternatives OK". `ends_at` = creation + the search window (N-11). |
+| R-RQ1 | **Creation** always needs a **client tap**: [Start sourcing] on the request form, on the agent's summary card in chat, or from the search empty state (pre-filled form). It requires an ACTIVE client, **request hours** (R-T3), **1–5 items** (product + quantity 1–3 + **days of use**, default 1) and **a location** (shared or a district, R-S2), plus optionally a max price per item and "alternatives OK". `ends_at` = creation + the search window (N-11). |
 | R-RQ2 | **Limits:** ≤ 2 open requests per client. Their orders count toward R-L1/R-L2. |
 | R-RQ3 | **The agent runs a turn on a request when** (decision events):<br>• it is submitted;<br>• the client writes in the request thread;<br>• a reservation for an item is marked not available, or cancelled by the system;<br>• an early-release request ends UNFULFILLED;<br>• the **window check** finds items not secured (N-24);<br>• a group reserve left some items unticked (R-RQ6). |
-| R-RQ4 | **Autonomy boundary.**<br>• **The agent may, without asking:** search; plan; open claims (matching); send early-release asks (R-E rules); schedule follow-up checks inside the window; escalate.<br>• **It must get a client tap for:** reserving; accepting an offer; changing constraints (budget, alternatives); removing an item; cancelling.<br>• **It never ranks clients** (R-PRI), and it never gives up on an item by itself: items become UNAVAILABLE only when the window ends. |
-| R-RQ5 | **Multi-medicine planning:** the agent calls the deterministic tool `plan_basket(items, constraints)`. It returns candidate plans: sets of visible listings covering the items, where **one medicine's quantity may be split across pharmacies** (Concor ×2 = 1 at A + 1 at B). Plans are ranked by **area** (all in the client's district → same governorate → rest of Lebanon), then **number of pharmacies**, then **total price**. The agent picks a plan in light of the client's stated preferences, explains it, and proposes it. Items with no listing go to a claim and/or early release. |
+| R-RQ4 | **Autonomy boundary.**<br>• **The agent may, without asking:** search; plan; open claims (matching); send early-release asks (R-E rules); schedule **one follow-up check at a time** inside the window (N-39); escalate.<br>• **It must get a client tap for:** reserving; accepting an offer; changing constraints (budget, alternatives); removing an item; cancelling.<br>• **It never ranks clients** (R-PRI), and it never gives up on an item by itself: items become UNAVAILABLE only when the window ends. |
+| R-RQ5 | **Multi-medicine planning:** the agent calls the deterministic tool `plan_basket(items, constraints)`. It returns candidate plans: sets of visible listings covering the items, where **one medicine's quantity may be split across pharmacies** (Concor ×2 = 1 at A + 1 at B). Every plan uses only boxes that **fit** (R-F1), and comes with its **route**: the best order to visit its pharmacies and the total travel time (R-RT2). Candidates are listed by **total travel time**, then **number of pharmacies**, then **total price**, but **the agent decides** which plan to recommend (R-AG9). It uses what the client said (no car, only after 18:00, cheapest…), explains why in one sentence, and proposes it with up to 2 alternatives. Items with no listing go to a claim and/or early release. |
 | R-RQ6 | **Per-item reporting and plan cards.**<br>• The agent **always tells the client, item by item, what it found and what it didn't**. Example: "Found Concor at Pharmacy A. Glucophage and Aspirin aren't listed: I'm asking 2 pharmacies and watching for new stock."<br>• Plan cards are grouped **per pharmacy** and can hold **any subset** of the items (one card with only Concor is normal).<br>• The group sheet lists the card's items with **checkboxes, all ticked by default**. **[Reserve these]** reserves the ticked items **all or none**.<br>• If an item fails at tap time (just taken, limit reached), **nothing in that card is reserved**. The agent says which item failed, offers a new card with the remaining items, and keeps sourcing the failed one.<br>• **Unticked items** go back to SEARCHING, and the agent gets a turn. |
 | R-RQ7 | **A covered need:** when all of an item's units are reserved, the item is SECURED, its claim is FULFILLED, and its open offers and asks are withdrawn (R-W3). |
 | R-RQ8 | **Thread:** each request has its own conversation (`kind = request`). Informational events post template cards there. The chat assistant can read a request's status through a tool. |
@@ -280,7 +285,7 @@ A partly secured item ("1 of 2 secured") stays SEARCHING or WAITING for the miss
 ### SM-12 Clock check, agent turns and email
 
 - **Clock check (R-T10):** there's no queue to manage. The deadlines live on the rows (`offer_expires_at`, `deadline`, `ends_at`, `respond_by`). Each due row is handled in its own transaction, with a state re-check.
-- **Pending agent turns:** a conversation with `pending_turn_at ≤ now` and no active turn lease (R-AG2) gets a turn. A failed turn is retried after 1 m, 5 m and 15 m. After 4 failures → escalate (`cannot_resolve`) + alert.
+- **Pending agent turns:** a conversation with `pending_turn_at ≤ now` or `followup_at ≤ now`, and no active turn lease (R-AG2), gets a turn. A failed turn is retried after 1 m, 5 m and 15 m. After 4 failures → escalate (`cannot_resolve`) + alert.
 - **Email outbox:** `QUEUED → SENT | FAILED → retry (1 m, 5 m, 30 m) → DEAD` (alert).
 
 ---
@@ -300,7 +305,7 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | ID | Rule |
 |---|---|
 | R-PRI1 | **When matching runs:**<br>• newly available stock (an item enters the window, an upload or manual edit, a lock released, a listing resumed, a pharmacy reinstated, a price dropping below a claim's max);<br>• when a claim is **created**;<br>• in the clock check's **sweep of all active claims** (R-T10), so stock that's already visible is never missed. |
-| R-PRI2 | **Order: first come, first served** = the earliest claim (`created_at`, then `id`). Computed by code, with the reason logged (e.g. "allocated to claim C-12: waiting since 10:02"). Each winning claim gets an OFFERED hold for its missing units while stock remains. **Reach:** the claim's district or governorate (N-23). |
+| R-PRI2 | **Order: first come, first served** = the earliest claim (`created_at`, then `id`). Computed by code, with the reason logged (e.g. "allocated to claim C-12: waiting since 10:02"). Each winning claim gets an OFFERED hold for its missing units while stock remains. **Reach:** pharmacies within the claim's travel-time reach (N-23); only boxes that fit (R-F1). |
 | R-PRI3 | **Eligibility:** claims whose client is not ACTIVE, or would exceed R-L1/R-L2, are **skipped** for this round, with the reason logged. The next claim gets the unit. |
 | R-PRI4 | **Nobody can change the order:** not the agent, not an admin. If a client claims an emergency, the agent:<br>• explains the rule;<br>• for a medical emergency, tells the client to contact a doctor or emergency services;<br>• offers human help (escalation `emergency_claim`).<br>The human can help and reply, but can't change the order. |
 | R-PRI5 | **Direct reservations** (a client tapping a visible listing) are first come, first served at the tap. R-PRI governs only holds created by matching. |
@@ -310,10 +315,27 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | ID | Rule |
 |---|---|
 | R-S1 | Login required; only visible listings; page size 20. |
-| R-S2 | **Location = district only** (no maps, GPS, coordinates or distances). Each district belongs to a **governorate**. **Area order:** same district → same governorate → rest of Lebanon. Cards say "same district" or name the district. *Known limitation:* inside one district, ranking falls back to price. |
-| R-S3 | **Best match:** area order → price ascending → expiry soonest. Other sorts: cheapest, latest expiry. |
+| R-S2 | **Location** (the professor's guidance):<br>• **Client:** shares their location from the phone for a search, a chat or a request ("Use my location"), or picks a **district** (its reference point is used). It's stored **rounded to about 100 m**, only on that conversation, request or claim, and purged with them (R-RET).<br>• **Pharmacy:** sets a **map pin** at registration. An admin checks it at approval, and only an admin can move it after.<br>• **Coordinates never reach the LLM** (INV-24): tools give it travel times, distances and area names. |
+| R-S3 | **Best match:** boxes that fit (R-F1) → shortest travel time (by car, or walking when the client says so) → price ascending → expiry soonest. Other sorts: nearest, cheapest, latest expiry. Each result shows the travel time by car and on foot. |
 | R-S4 | Alternatives (same equivalence group) only if toggled, and labeled. |
 | R-S5 | Availability shown exactly up to 5, then "5+". |
+
+### R-F Expiry fit: days of use and pickup day (the professor's guidance)
+| ID | Rule |
+|---|---|
+| R-F1 | **A box fits** a client if it's still valid on the **last day of use**: `expiry_date ≥ pickup_day + days_of_use − 1`.<br>*Examples* (today Oct 20, a box expiring Oct 21):<br>• 1 day of use, picked up today → used Oct 20 → ✅ fits;<br>• 1 day of use, picked up tomorrow → used Oct 21 → ✅ fits (still valid on its expiry day);<br>• 3 days of use, picked up today → would be used Oct 20–22 → ❌ doesn't fit.<br>*The professor's example:* 12 days of use → a box expiring in 2 days ❌, one expiring in 15 days ✅. |
+| R-F2 | **Days of use** come from the client: the agent asks, and the search page and forms have an optional field. If the client doesn't know → **1 day** (N-44), and every card and agent message shows the expiry date with a warning: "Expires 25 Oct: make sure that's enough for your treatment; the pharmacist can check your prescription." DawaLink never judges what the right duration is (logistics only). |
+| R-F3 | **Pickup day:** today (only if the pharmacy stays open at least N-42 longer), or one of its next open days within its pickup time (N-6). Only days on which the box fits are offered. |
+| R-F4 | **No match:** if no visible box fits, the client is told plainly: "No match: the available boxes expire too early for 12 days of use (the latest expires 28 Oct)." The agent can then watch for new stock or ask pharmacies (early-release boxes are 181–270 days from expiry, so they fit almost any use). |
+| R-F5 | **The fit is always checked in code:** in search, in the tools, at the tap, in matching and when an offer is accepted (INV-25). |
+
+### R-RT Routes and travel time
+| ID | Rule |
+|---|---|
+| R-RT1 | **Travel times** are computed in code by a routing service (OpenRouteService, built on OpenStreetMap data), **by car and on foot**, from the client's rounded location to each candidate pharmacy. Results are cached (N-43). If the service fails or is too slow (N-41), **straight-line distance** is used instead, with an estimated time labeled "about" (`source = straight`). |
+| R-RT2 | **Routes for plans:** for a plan with several pharmacies, code tries every visiting order (starting from the client's location) and keeps the shortest total travel time. |
+| R-RT3 | **Reach** for automatic actions (matching offers, early-release asks): pharmacies within N-23 by car from the client's location. |
+| R-RT4 | **What the agent sees** is only `{pharmacy name, area, car_min, walk_min, km, source}` and, for plans, the visiting order and total time. **Never coordinates** (INV-24). |
 
 ### R-L Client limits
 | ID | Rule |
@@ -328,6 +350,7 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 |---|---|
 | R-N1 | Counted no-shows in a rolling 30 days: at **2** → PAUSED for 7 days; each later no-show while ≥ 2 → paused 7 more days. |
 | R-N2 | Cancellations and [Not available] marks never penalize the client. |
+| R-N3 | **Contesting a no-show** (`09` FR-27): if the pharmacy forgot to press [Picked up], the client presses **[I picked it up]** on the expired reservation (while it still counts, i.e. within 30 days). This opens an escalation (`complaint`). An admin checks and can **clear the no-show** (`counts_as_no_show = false`, with a reason, audited); a pause it caused is lifted if it no longer applies. One contest per reservation. |
 
 ### R-PR Pricing
 | ID | Rule |
@@ -347,6 +370,7 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | R-AG6 | Write tools (`create_watch`, `request_early_release`, `open_claim`, `escalate`) take an **idempotency key**. A failed turn is retried whole. |
 | R-AG7 | **Cards come only from tools (DR2-B1).** Tools create **proposals**, stored server-side with their exact content, and return their IDs. The LLM chooses which proposal IDs to show; the server renders the cards. A tap sends the proposal ID, and the API checks the owner and expiry and **re-validates everything**. What the client sees is exactly what the button does. |
 | R-AG8 | **Text typed by pharmacies never reaches the LLM.** Tools return codes, numbers and IDs only (e.g. reason = `not_available`). |
+| R-AG9 | **The agent decides where the client should go** (the professor's guidance, ADR-004):<br>• the tools return candidate pharmacies or plans with their facts (travel time by car and on foot, opening hours vs when the client can go, price, stock, expiry fit, reliability);<br>• the agent weighs them with what the client said;<br>• it **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives (N-45).<br>The client still taps to reserve (R-RQ4 is unchanged). |
 
 ### R-AS Assistant limits
 - Message ≤ 1,000 chars.
@@ -407,6 +431,8 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | Audit log | 1 year |
 | LLM traces | Provider retention (30 days, free tier); evidence exported to the repo |
 | Uploaded files | **Not stored** (processed and discarded) |
+| Client location | Rounded to ~100 m; deleted with its conversation, request or claim |
+| Travel-time cache | 24 h (N-43) |
 
 ### R-DEMO Demo clock
 In **demo mode only** (a config flag that is off in production), an admin can **advance the app clock**. This shows time-based behavior live: an offer expiring, the window check, a window ending, a no-show. Every advance is audited. Because every rule reads the app clock (R-T11), nothing else changes.
@@ -417,12 +443,12 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 
 | ID | Number | Value | Status |
 |---|---|---|---|
-| N-1 | Publishable window | 17–180 days to expiry | validated |
-| N-2 | Minimum shelf life at pickup | 14 days | validated |
+| N-1 | Publishable window | **0–180 days** to expiry (no fixed minimum; the expiry fit decides, R-F1) | **changed** (§S) |
+| N-2 | ~~Minimum shelf life at pickup~~ | removed: replaced by the expiry fit (R-F1) | removed (§S) |
 | N-3 | Early-release window | 181–270 days | validated |
-| N-4 | Discount tiers (system-wide) | 91–180 days 25% · 31–90 days 40% · 17–30 days 60% | validated |
+| N-4 | Discount tiers (system-wide) | 91–180 days 25% · 31–90 days 40% · 0–30 days 60% | changed (§S) |
 | N-5 | **Request hours** (creating requests and watches) | 08:00–20:00 Beirut time | **new** (review #2) |
-| N-6 | **Pickup time** | Pharmacy setting: 1–3 open days, **default 1**; until closing time; never after expiry − 14 days | **changed** (review #2) |
+| N-6 | **Pickup time** | Pharmacy setting: how far ahead a client may choose the pickup day: 1–3 open days, **default 1**. The deadline is the closing time on the chosen day, never after the box's expiry date. | changed (review #2, §S) |
 | N-7 | ~~Max prescription wait~~ | removed: the prescription is a notice | removed |
 | N-8 | Pickup reminder | 4 h before the deadline | changed |
 | N-9 | No-shows | 2 in 30 days → 7-day pause | validated |
@@ -438,7 +464,7 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | N-19 | Retention | see R-RET | validated |
 | N-20 | Duplicate pharmacy check | same license, email, phone or address | validated |
 | N-21 | Alerts | see R-AL | changed |
-| N-23 | Automatic reach (matching offers, early-release asks) | the claim's district or governorate | changed (was 20 km) |
+| N-23 | Automatic reach (matching offers, early-release asks) | ≤ 30 min by car from the client's location | changed (§S) |
 | N-24 | Window check | 1 h before the search window ends | changed |
 | N-25 | ~~Admin priority override~~ | removed | removed |
 | N-26 | Clock check interval | every 5 s | new |
@@ -447,6 +473,20 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | N-29 | General API rate limit | 120 requests per minute per session | new (`06` §4) |
 | N-30 | Proposal (agent card) validity | 2 h, single use | new (`06` API-D3) |
 | N-31 | Maximum page size | 50 (default 20, R-S1) | new (`06` §1) |
+| N-32 | Agent history per turn | last 20 messages | new (`07` §6.1) |
+| N-33 | Case state size | ≤ 8 KB | new (`07` §6.2) |
+| N-34 | LLM calls per turn | ≤ 8 (tool calls + reply + 1 repair) | new (`07` §8) |
+| N-35 | LLM call timeout | 30 s | new (`07` §8) |
+| N-36 | LLM retries | 2 (1 s, then 3 s back-off) on timeouts, 429 and 5xx | new (`07` §8) |
+| N-37 | Agent turn time limit | 60 s in chat · 90 s in the worker | new (`07` §8) |
+| N-38 | Circuit breaker | 3 LLM failures in 5 min → degraded mode for 2 min | new (`07` §8) |
+| N-39 | Agent follow-ups | one pending per request · 15–300 min ahead · inside the window · ≤ 4 per request | new (`07` AG-D11) |
+| N-40 | Database statement timeout | 5 s | new (`09` FM-D8) |
+| N-41 | Outbound HTTP timeout (non-LLM: SES, Langfuse, routing) | 10 s | new (`09` FM-D8) |
+| N-42 | Same-day pickup | "Today" is offered only if the pharmacy stays open at least 1 h more | new (§S) |
+| N-43 | Location and travel times | client location rounded to ~100 m (3 decimals); travel-time cache kept 24 h | new (§S) |
+| N-44 | Default days of use | 1 day (with the expiry warning, R-F2) | new (§S) |
+| N-45 | Agent recommendation | 1 recommended + up to 2 alternatives | new (§S) |
 
 ---
 
@@ -457,12 +497,12 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | INV-1 | `0 ≤ qty_reserved ≤ qty_on_hand` (units). |
 | INV-2 | `qty_reserved` = sum of `qty_locked` in the item's open orders. |
 | INV-3 | No client exceeds 5 open orders, or 3 units per equivalence group in open orders (a claim's simultaneous offers count once). |
-| INV-4 | Terminal orders never change, and every order ends in exactly one terminal state. |
+| INV-4 | Terminal orders never change (the only exception: a contested no-show can be cleared, R-N3), and every order ends in exactly one terminal state. |
 | INV-5 | `0 ≤ effective price ≤ public price`; `price_snapshot` never changes. |
 | INV-6 | Controlled products never appear in listings, orders, claims, requests or early release. |
 | INV-7 | An order is picked up at most once, only by its own pharmacy, only while RESERVED and before its deadline. |
 | INV-8 | Clients and the agent never receive private inventory, or which pharmacy holds it, except through an accepted early-release offer. |
-| INV-9 | Pharmacies never receive client name, email, phone, district or chat content. |
+| INV-9 | Pharmacies never receive client name, email, phone, district, location or chat content. |
 | INV-10 | No LLM prompt, response or trace contains the client's account name, email or phone. |
 | INV-11 | **No agent tool creates, accepts or cancels an order, or creates or cancels a request.** Only client taps, pharmacy actions or SYSTEM rules do. |
 | INV-12 | A unit is held for at most one claim at a time. |
@@ -477,6 +517,8 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | INV-21 | Every card button refers to a server-stored proposal created by a tool. |
 | INV-22 | Requests and watches are created only during request hours. |
 | INV-23 | No text typed by a pharmacy appears in an LLM prompt. |
+| INV-24 | No coordinates (the client's or a pharmacy's) appear in an LLM prompt, response or trace. |
+| INV-25 | No reservation or offer is created for a box that doesn't fit the client's days of use from the chosen pickup day (R-F1). |
 
 ---
 
@@ -487,6 +529,8 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | Reserve, accept offers, cancel own reservations; group reserve | ✅ tap | none | none | ❌ proposes only | none |
 | Create or cancel a sourcing request; change constraints; remove an item | ✅ tap | none | none | ❌ prepares or proposes a card | closes the request when its window ends |
 | Work a request: search, plan, claims, early-release asks, follow-ups | none | none | none | ✅ within R-RQ4 | matching (R-PRI) |
+| **Decide which pharmacy or route to recommend** | none | none | none | ✅ (R-AG9) | computes the facts: travel times, routes, expiry fit |
+| Set or move a pharmacy's map pin | none | at registration | ✅ (checks at approval; moves after) | ❌ | none |
 | Mark a reservation picked up or not available | none | ✅ own | none | ❌ | none |
 | Expiries (offers, reservations, windows, asks), system cancellations | none | none | none | ❌ | ✅ clock check |
 | Create a watch | ✅ tap | none | none | ✅ (chat) | none |
@@ -513,4 +557,5 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | R-D24 | **Limits raised for requests:** 5 open orders; 2 requests × 5 items; 5 early-release requests | ✅ validated |
 | R-D25 | **Multi-medicine planning** by `plan_basket`. *Updated by review #2: quantities can be split across pharmacies; area first.* | ✅ validated (updated) |
 | R-D26 | **Agent-first simplifications** (decision log §K) | ✅ validated |
-| R-D27–R-D38 | **Design review #2:** urgent needs (6-hour window, request hours), instant reservations, pickup time per pharmacy, the prescription notice, first come first served, district-only, the clock check, the claim as the single need, cards from tools, server-side sessions, evaluation and deployment changes. See decision log §N. | ✅ validated |
+| R-D27–R-D38 | **Design review #2:** urgent needs (6-hour window, request hours), instant reservations, pickup time per pharmacy, the prescription notice, first come first served, district-only *(replaced by §S)*, the clock check, the claim as the single need, cards from tools, server-side sessions, evaluation and deployment changes. See decision log §N. | ✅ validated |
+| R-D39–R-D48 | **The professor's guidance (2026-10-20):** the agent brings the need to the right pharmacy and decides it; real locations and road travel times; the expiry fit with days of use and pickup day; no fixed minimum before expiry. See decision log §S. | ✅ validated |

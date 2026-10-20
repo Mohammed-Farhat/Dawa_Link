@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-10-18, covers steps 01–06 and design review #2. Sections A–F and I–O validated by the team (2026-10-13 to 2026-10-18). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-10-20, covers steps 01–09, design review #2 and the professor's guidance. Sections A–F and I–S validated by the team (2026-10-13 to 2026-10-20). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -184,7 +184,7 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | DR2-A6 | **Split quantities:** one medicine's quantity can come from several pharmacies; partial coverage keeps searching | 04 R-RQ5, R-W4 | ✅ 2026-10-13 |
 | DR2-A7 | **The claim is the single need:** matching and early release in parallel; **the first accepted offer wins**, the others are cancelled at once; offers count once for the limits | 04 SM-7 (R-W3) | ✅ 2026-10-13 |
 | DR2-A8 | **First come, first served;** nobody (agent or admin) can change priority | 04 R-PRI, ADR-003 (amended) | ✅ 2026-10-13 |
-| DR2-A9 | **District only:** same district → same governorate → rest of Lebanon; no coordinates or km | 04 R-S2 | ✅ 2026-10-13 |
+| DR2-A9 | ~~**District only:** same district → same governorate → rest of Lebanon; no coordinates or km~~ *Superseded by §S (PG-2, PG-3): real locations and road travel times.* | 04 R-S2 | ✅ superseded (§S) |
 | DR2-A10 | **Clock check instead of a jobs table;** deadlines live on the rows; `created_at` in real time; every time limit from the app clock | 04 R-T10, R-T11 | ✅ 2026-10-13 |
 | DR2-A11 | **Matching** also runs on new claims and in a sweep; it locks clients first and skips paused clients or clients at a limit | 04 R-PRI1, R-PRI3; 05 §6 | ✅ 2026-10-13 |
 | DR2-A12 | **One idempotency key per order** (group reserve); **regular Fargate**, no Spot | 05 §3.4; 02 §7 | ✅ 2026-10-13 |
@@ -224,6 +224,75 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | API-D12 | **CSRF:** `SameSite=Strict` cookie + `Origin` check | 06 §2.1 | ✅ 2026-10-18 |
 | API-D13 | **OpenAPI generated and exported in CI**; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | 06 §9 | ✅ 2026-10-18 |
 | API-D14 | **New numbers:** polling 3 s · 120 requests/min per session · proposal validity 2 h · max page size 50 | 04 N-28–N-31 | ✅ 2026-10-18 |
+
+## P. Agent decisions (step 07)
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| AG-D1 | **One graph, two modes**; the mode changes only the prompt section and the tool set | 07 §2, §3 | ✅ 2026-10-18 |
+| AG-D2 | **17 tools + `reply`** (6 read, 6 proposal, 5 bounded action) | 07 §4 | ✅ 2026-10-18 |
+| AG-D3 | **Every turn ends with a `reply` tool** (text, card IDs, chips, notes), checked by the output guard | 07 §4.5 | ✅ 2026-10-18 |
+| AG-D4 | **Tool errors returned as codes; identity injected by code**, never taken from the model | 07 §4.1 | ✅ 2026-10-18 |
+| AG-D5 | **Memory = last 20 messages + `case_state` + tools**; no memory across conversations; no vector store | 07 §6 | ✅ 2026-10-18 |
+| AG-D6 | **PII redaction** (own identifiers + email and Lebanese phone patterns) before storage and before the model | 07 §7.1 | ✅ 2026-10-18 |
+| AG-D7 | **Injection: structural defense** + flagging (not blocking) | 07 §7.1 | ✅ 2026-10-18 |
+| AG-D8 | **Clinical check: rules + prompt first**; an LLM classifier only if the safety evaluation shows misses | 07 §7.2 | ✅ 2026-10-18 |
+| AG-D9 | **Output violation → one repair, then a fixed template** | 07 §7.2 | ✅ 2026-10-18 |
+| AG-D10 | **Limits and resilience:** timeouts, retries, turn limits, circuit breaker, worker retries | 07 §8 | ✅ 2026-10-18 |
+| AG-D11 | **Follow-ups** as one `conversations.followup_at`, bounded | 07 §4.4; 05 §3.6 | ✅ 2026-10-18 |
+| AG-D12 | **Prompts versioned in the repo**; `prompt_version` on every run; changes need an evaluation comparison | 07 §5.1 | ✅ 2026-10-18 |
+| AG-D13 | **Temperature 0; provider and model as config; a scripted fake model in tests** | 07 §10 | ✅ 2026-10-18 |
+| AG-D14 | **Observability:** one Langfuse trace per turn with spans; `agent_runs` / `agent_tool_calls` mirror; evidence exported | 07 §9 | ✅ 2026-10-18 |
+| AG-D15 | **New numbers** N-32–N-39 in `04` §5 | 04 §5 | ✅ 2026-10-18 |
+
+## Q. Evaluation decisions (step 08)
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| EV-D1 | **Six suites E1–E6:** understanding, 3-contender simulation, ablations, safety, model comparison, real-world constraints | 08 §3 | ✅ 2026-10-18 |
+| EV-D2 | **U-set ~300** written by the team (language and category mix), JSONL with gold labels, 60/40 dev/held-out, 20% double-labeled | 08 §2.1 | ✅ 2026-10-18 |
+| EV-D3 | **R-set ~120** adversarial cases with automatic pass criteria + manual review; **target 0 violations** | 08 §2.2, E4 | ✅ 2026-10-18 |
+| EV-D4 | **E2 three contenders:** search baseline, no-AI scripted policy (with keyword rules), the agent; same seeds and simulated client; 5 seeds × 100 requests | 08 E2 | ✅ 2026-10-18 |
+| EV-D5 | **Primary metric:** units secured within the window; secondary metrics as listed | 08 E2 | ✅ 2026-10-18 |
+| EV-D6 | **Simulation behavior = stated assumptions** with base values and ranges, varied in E6 | 08 §2.4 | ✅ 2026-10-18 |
+| EV-D7 | **Initial targets** fixed now; changeable only before the first held-out run | 08 §3, §6.3 | ✅ 2026-10-18 |
+| EV-D8 | **Model rule:** the cheapest model that meets every target (closes O1 when run) | 08 E5 | ✅ 2026-10-18 |
+| EV-D9 | **Statistics:** mean ± 95% bootstrap CI; paired comparisons | 08 §4 | ✅ 2026-10-18 |
+| EV-D10 | **Results committed** (config, raw, summary, charts) + exported traces + failure analysis | 08 §5, §6 | ✅ 2026-10-18 |
+| EV-D11 | **CI:** deterministic evaluation on every PR; LLM subset gate on agent and prompt PRs (manual trigger) | 08 §7 | ✅ 2026-10-18 |
+| EV-D12 | **Datasets written during the build**, dev parts first; held-out parts before the final runs | 08 §8 | ✅ 2026-10-18 |
+
+## R. Failure Matrix decisions (step 09)
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| FM-D1 | **Format:** 6 groups (FX, FA, FR, FI, FS, FO); per row: detection, behavior, what the user sees, test folder, severity; status ⏳ → 🔨 → ✅; updated in every PR | 09 | ✅ 2026-10-20 |
+| FM-D2 | **Principles P1–P8:** fail closed for stock, money, safety and privacy; degrade gracefully for the AI, email and tracing | 09 §1 | ✅ 2026-10-20 |
+| FM-D3 | **Tracing is best-effort:** a Langfuse failure never fails a turn; `agent_runs` always records | 09 FX-6 | ✅ 2026-10-20 |
+| FM-D4 | **Failure-injection fakes**; every failure test also checks the invariants and the trail | 09 §8 | ✅ 2026-10-20 |
+| FM-D5 | **Event coalescing:** many events for one conversation → one agent turn | 09 FA-20 | ✅ 2026-10-20 |
+| FM-D6 | **Unsupported language** → the reply is in English | 09 FI-4 | ✅ 2026-10-20 |
+| FM-D7 | **CSV exports escaped** against formula injection | 09 FS-10 | ✅ 2026-10-20 |
+| FM-D8 | **Timeouts everywhere:** database statements 5 s (N-40), outbound HTTP 10 s (N-41) | 04 §5 | ✅ 2026-10-20 |
+| FM-D9 | **Contesting a no-show:** [I picked it up] → `complaint` escalation → an admin can clear the no-show | 04 R-N3; 06 | ✅ 2026-10-20 |
+
+## S. The professor's guidance (2026-10-20)
+
+The professor said the agent's purpose is to **bring the client's need to the right pharmacy**, that **the agent decides** which pharmacy based on the **best route** and other properties, and that the **expiry must cover the client's period of use**. The team settled the details on 2026-10-20 (ADR-004).
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| PG-1 | **The agent's purpose:** bring each need to the right pharmacy. **The agent decides** which pharmacy (or plan and route) to recommend, from facts computed by code plus what the client said; **one recommendation + up to 2 alternatives**; the client still taps | 04 R-AG9, N-45; 07 J2; ADR-004 | ✅ 2026-10-20 |
+| PG-2 | **Location:** the client taps "Use my location" or picks a district; pharmacies pin themselves on a map at registration, checked by the admin. Stored **rounded to ~100 m**, outside the agent's case state, purged with its conversation or request. **Coordinates never reach the LLM.** | 04 R-S2, INV-24; 05 DB-D16 | ✅ 2026-10-20 |
+| PG-3 | **Routes:** road travel times **by car and on foot** from OpenRouteService (OpenStreetMap data), cached 24 h, with a **straight-line fallback**; the best visiting order for multi-pharmacy plans; automatic reach = 30 min by car | 04 R-RT, N-23, N-43; 02 §1 | ✅ 2026-10-20 |
+| PG-4 | **Days of use:** asked by the agent, with optional fields elsewhere. **If unknown → 1 day**, with the expiry date shown as a warning. No request is sent to the pharmacy for it (that would be a medical question). | 04 R-F2, N-44 | ✅ 2026-10-20 |
+| PG-5 | **Pickup day:** today (if the pharmacy stays open at least 1 h more) or a next open day within the pharmacy's pickup time; the deadline is closing time that day, never after the expiry date | 04 R-T4, R-F3, N-42 | ✅ 2026-10-20 |
+| PG-6 | **Expiry fit:** a box is offered only if `expiry ≥ pickup day + days of use − 1`; otherwise "no match" (with the latest expiry available) | 04 R-F1, R-F4, INV-25 | ✅ 2026-10-20 |
+| PG-7 | **No fixed minimum before expiry:** any unexpired box (0–180 days) can be listed; the fit decides who it suits; the 60% tier now covers 0–30 days. No-shows are unchanged (the client's responsibility). | 04 N-1, N-2, N-4 | ✅ 2026-10-20 |
+| PG-8 | **Early release and multi-medicine requests stay:** they also bring the need to the right pharmacy | 01 C8, C17, C18 | ✅ 2026-10-20 |
+| PG-9 | **Evaluation:** E1 measures days of use, pickup day and situation; E2 measures **decision quality** (choices vs an oracle that knows the client's real situation), travel time, and boxes that don't last (must be 0); the simulation uses a precomputed travel-time matrix | 08 v1.1 | ✅ 2026-10-20 |
+
+*This section supersedes: DR2-A9 (district only), N-1 (17–180 days), N-2 (14 days at pickup) and the BELOW_MIN zone, N-23 (district or governorate reach), and the area-first plan ranking in R-RQ5.*
 
 ## G. Default numbers (superseded)
 

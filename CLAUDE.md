@@ -1,6 +1,6 @@
 # DawaLink: guide for Claude Code sessions
 
-DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**. The needs are **urgent**: the client reserves now and picks up within a day or so. At its center is **one agent with two modes**: a chat **assistant**, and an **autonomous sourcing agent** that owns a client's request for 1–5 medicines during a **6-hour search window**.
+DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**. The needs are **urgent**: the client reserves now and picks up within a day or so. At its center is **one agent with two modes**: a chat **assistant**, and an **autonomous sourcing agent** that owns a client's request for 1–5 medicines during a **6-hour search window**. **The agent's purpose (the professor's words): bring the client's need to the right pharmacy.** It **decides** which pharmacy or route, from facts computed by code.
 
 - **Course:** Agentic Systems 503N/798S, Dr. Ammar Mohanna, Fall 2026, **Path A** (application). The professor proposed and approved the topic. The scope stays **logistics-only** (no clinical functions).
 - **Team:** Mohammed Farhat (repo owner), Mohamad Natafgi, Anthony John Kanaan. They know **Python only**. **Claude writes all the code**, and the team reviews every PR.
@@ -25,18 +25,22 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-13:
+The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-20:
 
-- **Planning steps 00–05 are validated**, and [design review #2](docs/reviews/design_review_02.md) is closed and applied (decision log §N): `01` v4.0, `02` v2.0, `03` v3.0, `04` v3.0, `05` v2.0.
-- **Step 06, API contracts, is validated** ([docs/06_api.md](docs/06_api.md) v1.0, 2026-10-18; decision log §O).
-- **Next: step 07, Agent specification.** ⚠️ **Don't start it until the user explicitly says to.** After it come the steps below, each validated, and each started **only when the user says so**:
-  - 08 Evaluation plan
-  - 09 Failure Matrix
-  - 10 Threat model
+- **Planning steps 00–09 are all validated** (decision log sections A–S). **Current versions:**
+  - `01` v5.0 · `02` v3.0 · `03` v4.0 · `04` v4.0 · `05` v3.0;
+  - `06` v1.1 · `07` v1.1 · `08` v1.1;
+  - `09` v1.1 (living: every PR updates it);
+  - ADR-001–004.
+- **History of the big changes:**
+  - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
+  - API, agent, evaluation and Failure Matrix (§O–§R, 2026-10-18 to 10-20).
+- **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
+- **Next: step 10, Threat model.** ⚠️ **Don't start it until the user explicitly says to.** After it come the steps below, each validated, and each started **only when the user says so**:
   - 11 UI design
   - 12 Infrastructure and CI/CD
 - **After planning:** build → test → evaluate → deploy → report and demo.
-- **No code exists yet.** The repo has one commit, containing `.gitignore`.
+- **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
 - **Open items:**
   - O1: which LLM model (chosen by measurement);
   - O2: who pays for the real LLM (needed only for the evaluation runs and the demo).
@@ -85,6 +89,8 @@ The details are in the linked docs. If a request or code change would break one 
 - **The agent proposes; the client's tap executes** through the API. Agent tools never create, accept or cancel orders or requests, and never change priority, prices or stock ([02 §3](docs/02_architecture.md), [04](docs/04_domain_rules.md) R-AG).
 - **Cards come only from tools** (stored proposals); a tap sends the proposal ID, and the API re-validates it. **Text typed by pharmacies never reaches the LLM** (04 R-AG7, R-AG8).
 - **Priority is first come, first served, in code.** Nobody can change it: not the LLM, not an admin ([ADR-003](docs/adr/ADR-003-priority-is-a-rule-not-the-llm.md), amended).
+- **The agent decides where the client goes** (ADR-004): code computes the travel times, routes and expiry fit; the agent weighs them with what the client said and recommends one pharmacy with a reason. **Coordinates never reach the LLM** (04 INV-24): location is stored rounded, outside `case_state`.
+- **A box is offered only if it lasts the client's days of use** from the chosen pickup day (04 R-F1, INV-25); unknown days → 1 day + an expiry warning.
 - **Urgent needs:** requests and watches search for 6 hours and can only be started during request hours. Reservations are **instant** (no pharmacy confirmation); the pharmacy marks [Picked up] or [Not available]; the pickup time is set per pharmacy. A prescription is a **notice** only (04 §1, SM-5, R-P1).
 - **Our tables are the source of truth** ([ADR-001](docs/adr/ADR-001-conversation-state-and-agent-turns.md)):
   - LangGraph is stateless per turn;

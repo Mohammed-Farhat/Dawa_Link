@@ -1,9 +1,14 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v2.0 · **Date:** 2026-10-13
-**Builds on:** `01` v4.0 · `03` v3.0 · `04` v3.0 · `05` v2.0 · ADR-001, ADR-002, ADR-003 · [design review #2](reviews/design_review_02.md)
+**Version:** v3.0 · **Date:** 2026-10-20
+**Builds on:** `01` v5.0 · `03` v4.0 · `04` v4.0 · `05` v3.0 · ADR-001–ADR-004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
-**Status:** ✅ Stack validated. **v2.0 applies design review #2** (decision log §N):
+**Status:** ✅ Stack validated. **v3.0 applies the professor's guidance** (decision log §S, ADR-004):
+- a **routing service** (OpenRouteService, OpenStreetMap data) for travel times and routes, with a straight-line fallback and a cache;
+- **maps** in the browser (Leaflet + OpenStreetMap tiles) for the pharmacy pin and the listing detail;
+- location data kept **out of the LLM context**.
+
+**v2.0 applied design review #2** (decision log §N):
 - a **clock check** loop instead of a jobs table;
 - **server-side sessions**;
 - **cards only from tools** (proposals);
@@ -40,6 +45,8 @@ The team's strongest language is Python, and the team must be able to read, revi
 | Chat transport | **SSE** for streaming a reply (15 s heartbeat) + **polling every few seconds** for new messages and cards posted by the worker | Fast-feeling replies; simple, reliable updates | WebSockets |
 | Auth | **Server-side sessions:** a random token in an httpOnly, Secure, SameSite=Strict cookie; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification | Less code than JWT + refresh tokens; logout and suspension take effect instantly; same origin through one CloudFront, so no CORS. *(Admin 2FA and password reset postponed.)* | JWT + refresh rotation; tokens in localStorage |
 | Files | **No file storage.** Uploads are processed in memory and discarded. | Smaller attack surface | A private S3 bucket |
+| **Routing** | **OpenRouteService** (free tier, API key; built on OpenStreetMap data, attribution shown): road travel time **by car and on foot**, and the best visiting order for plans. Cached 24 h; **straight-line fallback** when it fails (`04` R-RT). | Real routes, as the professor asked; open data; no cost at our scale | Google Maps (paid), straight-line only (not a real route) |
+| **Maps (browser)** | **Leaflet + OpenStreetMap tiles**: the pharmacy pins itself at registration; clients see the pharmacy on a map | Free and open; drawn in the browser, so nothing goes to the AI | Google Maps |
 | LLM tracing | **Langfuse Cloud** (free tier) | Traces, tokens, cost, prompt versions | LangSmith |
 | Logs | **structlog** JSON → CloudWatch | One request and trace ID across API, worker and agent | none |
 | Quality | **ruff, mypy, pytest** + coverage; ESLint, Vitest | Standard | none |
@@ -67,6 +74,7 @@ flowchart LR
     LLM[(LLM: Claude / Ollama)]
     LF[(Langfuse)]
     SES[(SES)]
+    ORS[(Routing: OpenRouteService)]
 
     C & P & A --> CF
     CF -- "/*" --> S3
@@ -76,6 +84,7 @@ flowchart LR
     W -- request & decision turns --> LLM
     W --> SES
     API & W -. traces .-> LF
+    API & W -- travel times --> ORS
 ```
 
 **Where agent turns run (ADR-001, ADR-002):**
@@ -113,22 +122,24 @@ flowchart TD
     API -. decision event .-> IN
 ```
 
-### 3.2 Tools
+### 3.2 Tools (full contracts in [`07`](07_agent.md) §4)
 
 | Tool | Does | Guarantees (code) |
 |---|---|---|
 | `search_catalog(text)` | Candidate products | No controlled products |
 | `get_equivalents(product_id)` | Same-composition products | Exact equivalence group only |
-| `find_options(product_ids, qty, district, max_price, sort)` | Ranked visible listings (same district → same governorate → rest) | Visible stock only |
-| **`plan_basket(items, constraints, preference)`** | Candidate plans for several medicines; quantities may be split across pharmacies (area → fewest pharmacies → price) | Deterministic; visible stock only |
+| `find_options(product_ids, qty, days_of_use, pickup, max_price, sort)` | Visible listings **whose box lasts the days of use**, with travel time by car and on foot from the client's location | Visible stock only; **never returns coordinates** |
+| **`plan_basket(items, constraints, preference)`** | Candidate plans for several medicines, each with its **route** (visiting order, total travel time); quantities may be split across pharmacies | Deterministic; only boxes that last |
 | `propose_reservation(listing_id, qty)` / **`propose_plan(plan_id)`** | A **proposal** for a [Reserve] or [Reserve these] card, or the reason it isn't allowed (limits) | Creates a stored proposal only; the tap reserves |
 | `propose_cancellation(order_id)` | A [Cancel] proposal | Only the tap cancels |
 | **`prepare_request_summary(items, district, budget)`** | A request summary proposal with [Start sourcing] | Creates nothing else; the tap creates the request (request hours checked) |
 | **`get_request_status(request_id)`** | Items, statuses, timeline | Own requests only |
-| **`propose_constraint_change(request_id, change)`** | A proposal: allow alternatives, raise the budget, remove an item | Applied only on tap |
+| `get_reservations(view)` | The client's own reservations | Own only |
+| **`propose_constraint_change(request_id, change)`** | A proposal: allow alternatives, or raise an item's max price | Applied only on tap |
+| **`propose_remove_item(request_id, item_id)`** | A proposal to stop sourcing one item | Applied only on tap |
 | **`open_claim(request_item_id)`** / `create_watch(product_id, district, max_price, qty)` | Waits for stock for 6 hours; matching decides first come, first served | Idempotent; limits; request hours |
 | `request_early_release(claim_id)` | Asks up to 3 open pharmacies | Returns only "asked N"; anti-spam; idempotent |
-| `schedule_followup(request_id, at)` | A later check-in, inside the window | Bounded |
+| `schedule_followup(in_minutes)` | One later check-in, inside the window (`04` N-39) | Bounded; one pending per request |
 | `escalate(reason, summary)` | Hands off to an admin (including `emergency_claim`) | Admin-only visibility; no priority power |
 
 - **There is no tool to create, accept or cancel orders or requests, or to change priority, prices or stock** (INV-11, INV-17).
@@ -142,6 +153,7 @@ flowchart TD
 | **Proposals** | Per conversation; expire (e.g. 2 h) and are used once | The exact content of each card the agent showed |
 | **Request record** | Sourcing request + items + claims + orders (system of record) | The agent reads it through tools and changes it only through tools or taps |
 | **Client preferences** | Profile fields | Default district, alternatives OK |
+| **Location** | Per chat, request or claim; rounded to ~100 m | Stored **outside the case state**, so it's never in the LLM context; the agent sees travel times only |
 
 ### 3.4 Guardrails, limits, baselines
 - **Input:** PII redaction (known account identifiers + patterns), length cap, rate limit.
@@ -158,13 +170,13 @@ flowchart TD
 
 | Area | Entities |
 |---|---|
-| Identity | users, sessions, email-verification tokens, pharmacies (weekly opening hours, pickup time), districts (with governorate) |
+| Identity | users, sessions, email-verification tokens, pharmacies (weekly opening hours, pickup time, **map pin**), districts (governorate, reference point) |
 | Catalog | products (flags, `units_per_pack`), equivalence groups. Loaded by script from the MoPH list + team overrides and OTC files. |
 | Inventory | inventory_uploads + staging rows (until Apply), inventory_items (private; a listing is an item's publication state) |
 | Marketplace | orders (offer → reservation → pickup; units; order number) |
 | **Agent** | **sourcing_requests**, **request_items**, **claims** (the single need: watches + waiting request items), early_release_requests + asks, conversations (case state, turn lease), chat_messages, **proposals**, answer_reports |
 | Admin | escalations, abuse_flags |
-| Operations | notifications + email outbox, audit_events, agent_runs + agent_tool_calls, app_state |
+| Operations | notifications + email outbox, audit_events, agent_runs + agent_tool_calls, app_state, **travel_time_cache** |
 
 ---
 
@@ -216,7 +228,7 @@ dawalink/
 CloudFront (HTTPS on *.cloudfront.net)
 ├── /*      → S3 (React build), private, Origin Access Control
 └── /api/*  → VPC origin → internal ALB → ECS "api" (Fargate) · ECS "worker" (Fargate)
-RDS PostgreSQL db.t4g.micro (isolated subnet) · SES · Secrets Manager (DB, LLM key, Langfuse keys)
+RDS PostgreSQL db.t4g.micro (isolated subnet) · SES · Secrets Manager (DB, LLM key, Langfuse keys, routing key)
 ```
 
 - **Networking:**

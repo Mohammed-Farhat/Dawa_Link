@@ -1,6 +1,8 @@
 # DawaLink: Design Documents
 
-DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**, for **urgent needs**: the client reserves now and picks the medicine up within a day or so.
+DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**, for **urgent needs**: the client reserves now and picks the medicine up today or tomorrow, and **the box must last the days they'll use it**.
+
+**The agent's purpose** (the professor's words): *bring the client's need to the right pharmacy.* **The agent decides** which pharmacy (or route) the client should go to, from travel times, opening hours, price, stock and the expiry fit computed by code. It never sees coordinates.
 
 At its center is **one agent with two modes**:
 - an **assistant** clients chat with;
@@ -17,7 +19,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | If you want to… | Read |
 |---|---|
 | Understand the product and the agent in 10 minutes | [`01`](01_scope_and_features.md) §1–§5 |
-| See why the agent is designed this way | [ADR-002](adr/ADR-002-agent-role-assistant-and-sourcing.md) (two modes) · [ADR-003](adr/ADR-003-priority-is-a-rule-not-the-llm.md) (priority) · [ADR-001](adr/ADR-001-conversation-state-and-agent-turns.md) (agent turns) |
+| See why the agent is designed this way | [ADR-002](adr/ADR-002-agent-role-assistant-and-sourcing.md) (two modes) · [ADR-004](adr/ADR-004-agent-decides-the-pharmacy.md) (the agent decides the pharmacy) · [ADR-003](adr/ADR-003-priority-is-a-rule-not-the-llm.md) (priority) · [ADR-001](adr/ADR-001-conversation-state-and-agent-turns.md) (agent turns) |
 | See what each user does, screen by screen | [`03`](03_user_flows.md): read each part's "In short" box first |
 | Know the exact rules (states, limits, timers, numbers) | [`04`](04_domain_rules.md) |
 | Understand the tech | [`02`](02_architecture.md), then [`05`](05_database.md) |
@@ -31,22 +33,22 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | # | Document | Content | Status |
 |---|---|---|---|
 | ✔ | [Requirements checklist](requirements_checklist.md) | Every course requirement → artifact, location, phase; Definition of Done | 🟡 living |
-| 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–O validated |
-| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v4.0 |
-| 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, deployment | ✅ v2.0 |
-| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v3.0 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v3.0 |
-| 05 | [Database design](05_database.md) | ER diagram, 33 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v2.0 |
-| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.0 |
-| 07 | Agent specification | Graph, prompts, tools, guards, memory, limits | ⏳ |
-| 08 | Evaluation plan | Datasets, baselines, ablations, metrics and targets | ⏳ |
-| 09 | Failure Matrix | Failure modes, handling, tests (living) | ⏳ |
+| 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–S validated |
+| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.0 |
+| 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.0 |
+| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.0 |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.0 |
+| 05 | [Database design](05_database.md) | ER diagram, 34 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.0 |
+| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.1 |
+| 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 17 tools + reply, prompts, memory, guardrails, limits, observability | ✅ v1.1 |
+| 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E6 (understanding, 3-contender simulation, ablations, safety, models, constraints), targets, statistics, CI gates | ✅ v1.1 |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 118 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.1 (living) |
 | 10 | Threat model | Assets, threats, mitigations | ⏳ |
 | 11 | UI design | Visual design | ⏳ before the frontend build |
 | 12 | Infrastructure and CI/CD | CDK, pipelines, secrets | ⏳ |
 
 **Supporting folders:**
-- [`adr/`](adr/): decisions with the options compared (ADR-001, 002, 003; 001–003 amended by review #2).
+- [`adr/`](adr/): decisions with the options compared (ADR-001–003, amended by review #2; ADR-004 from the professor's guidance).
 - [`reviews/`](reviews/): design reviews ([#1](reviews/design_review_01.md) ✅ · [#2](reviews/design_review_02.md) ✅).
 
 ---
@@ -67,10 +69,16 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | **Units** | All quantities are counted in units. Today 1 unit = 1 pack; box splitting comes later. |
 | **Equivalence group** | Same ingredient(s), strength and form ("same medicine, another brand"). XR never matches normal release. |
 | **Inventory item** | A pharmacy's private stock of one product batch: on hand, reserved, expiry. The pharmacy keeps quantities current (edits or uploads). |
-| **Zone** | By days to expiry: *near-expiry* 17–180 (published automatically) · *early-release* 181–270 (private; the agent may ask) · *private* > 270 · *below minimum* < 17. Computed live. |
+| **Zone** | By days to expiry: *near-expiry* 0–180 (published automatically; no fixed minimum) · *early-release* 181–270 (private; the agent may ask) · *private* > 270. Computed live. |
 | **Listing** | An inventory item's publication state (visible when near-expiry, LIVE, in stock, pharmacy approved). Not a separate object. |
 | **Order / reservation** | One quantity from one pharmacy. A tap **reserves it instantly** (no confirmation step). The client shows the **order number** (`R-…`) at the counter; the pharmacy presses **[Picked up]** or **[Not available]**. |
-| **Pickup time** | Set by each pharmacy: 1–3 days (default 1), until closing time. Not picked up by then → back to stock (a no-show). |
+| **Pickup time** | Set by each pharmacy: how far ahead a client may choose the pickup day (1–3 days, default 1). Not picked up by closing time that day → back to stock (a no-show). |
+| **Pickup day** | The day the client says they'll come: today (if the pharmacy stays open at least 1 h more) or a next open day within the pickup time |
+| **Days of use** | How many days the client will take the medicine (asked; 1 if unknown, with an expiry warning) |
+| **Expiry fit** | A box is offered only if it's still valid on the last day of use: `expiry ≥ pickup day + days of use − 1`. Otherwise: "No match: the boxes expire too early for N days." |
+| **Location** | Shared from the phone ("Use my location") or a district; pharmacies have a map pin. Stored rounded; **never sent to the AI**. |
+| **Travel time** | Road time by car and on foot, computed by code (OpenRouteService; straight-line "about" if it's down) |
+| **Recommendation** | The agent's choice of pharmacy (or route), with a one-sentence reason, plus up to 2 alternatives |
 | **Claim** | **One need for one medicine**, waiting for stock: a client **watch** ([Notify me]) or a **waiting request item**. Matching and early release both work for the same claim; the first offer the client accepts wins. |
 | **Offer / hold** | Stock held for one claim for **2 hours**, after matching or after a pharmacy accepts an early release. The client taps to accept, which reserves it. |
 | **Priority rule** | Who gets scarce new stock first: **first come, first served** (the claim that started waiting first). Computed by code. **Nobody can change it**: not the AI, not an admin. |

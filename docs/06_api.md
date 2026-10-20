@@ -1,8 +1,8 @@
 # DawaLink: API Contracts
 
-**Version:** v1.0 (validated by the team, API-D1–API-D14) · **Date:** 2026-10-18
-**Builds on:** `04` v3.0 (rules; every guard below cites its rule) · `05` v2.0 (tables) · `03` v3.0 (screens) · `02` v2.0 (components)
-**Status:** ✅ validated 2026-10-18 (decision log §O)
+**Version:** v1.1 (validated; v1.1 adds locations, travel times and the expiry fit) · **Date:** 2026-10-20
+**Builds on:** `04` v4.0 (rules; every guard below cites its rule) · `05` v3.0 (tables) · `03` v4.0 (screens) · `02` v3.0 (components) · ADR-004
+**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`.
 
 This document defines **every action** the website can ask the server to do, and **every interface between the main components** (the browser, the API, the agent, the worker and the database). For each endpoint it gives:
 - who may call it;
@@ -84,7 +84,8 @@ That is what the course asks for: *"interfaces between major components, includi
 3. **Ownership:** a client sees only their own reservations, requests, watches, conversations and proposals. A pharmacy sees only its own reservations, inventory and asks. **Someone else's object returns `404 NOT_FOUND`**, never `403`, so IDs can't be probed for existence.
 
 ### 2.3 Privacy in responses
-- A pharmacy **never** receives a client's name, email, phone, district or messages (`04` INV-9). It sees the order number, product, units, price, times and the "prescription needed" flag.
+- A pharmacy **never** receives a client's name, email, phone, district, location or messages (`04` INV-9).
+- **The client's location** goes from the browser to our API only. It's stored rounded, and **never sent to the LLM** (INV-24). Responses show travel times and area names. It sees the order number, product, units, price, times and the "prescription needed" flag.
 - A client **never** receives private inventory or which pharmacy holds it (`04` INV-8), except through an accepted early-release offer.
 - Admins see contact details only through one audited endpoint (`GET /admin/clients/{id}/contact`, logged as `pii.view`).
 
@@ -143,6 +144,9 @@ That is what the course asks for: *"interfaces between major components, includi
 | `GROUP_ITEM_FAILED` | 409 | One ticked item of a group failed; **nothing was reserved**; `details.failed_items[]` (each with its own code) | R-RQ6 |
 | `RESERVATION_NOT_ACTIVE` | 409 | The reservation isn't RESERVED any more (already picked up, expired, cancelled) | SM-5 |
 | `OFFER_NOT_OPEN` | 409 | The offer expired, was declined or was withdrawn; `details.reason` | O9–O11 |
+| `NOT_CONTESTABLE` | 409 | Contesting a reservation that isn't an expired no-show, is older than 30 days, or was already contested | R-N3 |
+| `DOES_NOT_FIT` | 409 | The box expires before the client's last day of use; `details.expiry_date`, `details.last_day_of_use` | R-F1 |
+| `PICKUP_DAY_INVALID` | 422 | A pickup day the pharmacy doesn't allow (closed, too far ahead, or "today" too close to closing) | R-F3 |
 | **Requests and watches** | | | |
 | `OUTSIDE_REQUEST_HOURS` | 409 | Creating a request or watch outside request hours; `details.opens_at` | R-T3 |
 | `LIMIT_OPEN_REQUESTS` | 409 | Already 2 open requests | R-RQ2 |
@@ -226,6 +230,18 @@ class PharmacyCard(BaseModel):   # what a client sees about a pharmacy
     open_now: bool
     closes_at: datetime | None   # today, if open
     pickup_days: int             # 1–3 (N-6)
+    area: str                    # "Hamra" (never coordinates)
+
+class Travel(BaseModel):        # computed by code from the client's location (04 R-RT1)
+    car_min: int
+    walk_min: int
+    km: float
+    source: Literal["road", "straight"]   # "straight" is shown as "about"
+
+class LocationIn(BaseModel):    # input only; stored rounded; never sent to the LLM
+    lat: float | None = None
+    lon: float | None = None
+    district_id: int | None = None   # used when the client doesn't share a location
 ```
 
 ### 5.2 Account
@@ -268,6 +284,9 @@ class Listing(BaseModel):        # a visible inventory item (04 SM-3)
     available: int               # capped at 5 (R-S5)
     more_available: bool         # True when more than 5
     is_alternative: bool         # same composition, other brand (R-S4)
+    travel: Travel               # from the client's location
+    fits: bool | None            # lasts the client's days of use (R-F1); None = days unknown → warning
+    pickup_days_allowed: list[date]   # the days the client may choose (R-F3)
 
 class Reservation(BaseModel):    # an order (04 SM-5)
     id: UUID
@@ -424,7 +443,7 @@ All paths are relative to `/api/v1`.
 | `GET /config/public` | anyone | → `{request_hours: {start, end}, search_window_hours, offer_hours, lbp_per_usd, rate_date, discount_tiers, server_now, demo_mode}` | | §5 numbers |
 | `GET /districts` | anyone | → `list[District]` | | R-S2 |
 | `POST /auth/register/client` | anyone | `{email, password, full_name, phone?, district_id, accept_terms: true}` → **201** `Me` + session cookie; verification email sent | `EMAIL_TAKEN`, `WEAK_PASSWORD`, `SIGNUP_LIMIT`, `VALIDATION_ERROR` | SM-2, R-AU1, R-AU5 |
-| `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **201** `Me` (pharmacy PENDING) + cookie | `EMAIL_TAKEN`, `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1 |
+| `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, location: {lat, lon} (the map pin), pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **201** `Me` (pharmacy PENDING) + cookie | `EMAIL_TAKEN`, `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1 |
 | `POST /auth/login` | anyone | `{email, password}` → `Me` + cookie | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3 |
 | `POST /auth/logout` | any | → **204**; session revoked | | R-AU3 |
 | `GET /auth/me` | any | → `Me` | `UNAUTHENTICATED` | |
@@ -440,19 +459,20 @@ All paths are relative to `/api/v1`.
 | `GET /catalog/products?q=&limit=` | logged in | → `{items: list[ProductSummary], did_you_mean: list[str]}` (fuzzy; brand or ingredient; **controlled products never returned**) | | R-C6, CS-6 |
 | `GET /catalog/products/{id}` | logged in | → `ProductSummary` + `{ingredients: [{name, strength}], atc_code}` | `NOT_FOUND` | R-C2 |
 | `GET /catalog/products/{id}/equivalents` | logged in | → `list[ProductSummary]` (same equivalence group only) | `NOT_FOUND` | R-C5 |
-| `GET /listings?product_id=\|q=&district_id=&max_price=&currency=&include_alternatives=&sort=best\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. `district_id` defaults to the profile; it sets the area order, not a filter. | `VALIDATION_ERROR` | R-S1–R-S5 |
+| `GET /listings?product_id=\|q=&lat=&lon=\|district_id=&days_of_use=&pickup=today\|tomorrow&max_price=&currency=&include_alternatives=&sort=best\|nearest\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. Without `lat`/`lon`, the profile's district is used. With `days_of_use`, boxes that don't last are left out, and an empty result says why (`no_match: {latest_expiry}`). | `VALIDATION_ERROR` | R-S1–R-S5, R-F1 |
 | `GET /listings/{id}` | client | → `Listing` + `{pharmacy_hours: [...], other_offers_count}` | `NOT_FOUND` (also when it stopped being visible) | CS-7 |
 
 ### 6.3 Reservations and offers (client)
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `POST /reservations` 🔑 | client ACTIVE | `{listing_id, qty, expected_price_lbp}` → **201** `Reservation` (`source = "search"`; **never wakes the agent**) | `LISTING_NOT_AVAILABLE`, `NOT_ENOUGH_STOCK`, `PRICE_CHANGED`, `LIMIT_OPEN_ORDERS`, `LIMIT_GROUP_UNITS`, `EMAIL_NOT_VERIFIED`, `CLIENT_PAUSED` | O1, R-AG5 |
+| `POST /reservations` 🔑 | client ACTIVE | `{listing_id, qty, expected_price_lbp, pickup_day, days_of_use? (default 1)}` → **201** `Reservation` (`source = "search"`; **never wakes the agent**) | `LISTING_NOT_AVAILABLE`, `NOT_ENOUGH_STOCK`, `PRICE_CHANGED`, `DOES_NOT_FIT`, `PICKUP_DAY_INVALID`, `LIMIT_OPEN_ORDERS`, `LIMIT_GROUP_UNITS`, `EMAIL_NOT_VERIFIED`, `CLIENT_PAUSED` | O1, R-F1, R-AG5 |
 | `GET /reservations?view=active\|history&cursor=` | client | → page of `Reservation` | | CS-10 |
 | `GET /reservations/{id}` | client (own) | → `Reservation` + `timeline: list[{at, text}]` | `NOT_FOUND` | CS-10 |
 | `POST /reservations/{id}/cancel` | client (own) | → `Reservation` (CANCELLED_BY_CLIENT; no penalty) | `RESERVATION_NOT_ACTIVE` | O5, R-N2 |
+| `POST /reservations/{id}/contest` | client (own) | → **202**; opens a `complaint` escalation ("I picked it up") | `NOT_CONTESTABLE` | R-N3 |
 | `GET /offers?state=open` | client | → `list[Offer]` | | CN-9, CN-10 |
-| `POST /offers/{id}/accept` 🔑 | client ACTIVE (own) | → **201** `Reservation`; the claim's other offers are withdrawn at once | `OFFER_NOT_OPEN`, `LIMIT_OPEN_ORDERS`, `LIMIT_GROUP_UNITS`, `CLIENT_PAUSED` | O9, R-W3 |
+| `POST /offers/{id}/accept` 🔑 | client ACTIVE (own) | `{pickup_day}` → **201** `Reservation`; the claim's other offers are withdrawn at once | `OFFER_NOT_OPEN`, `DOES_NOT_FIT`, `PICKUP_DAY_INVALID`, `LIMIT_OPEN_ORDERS`, `LIMIT_GROUP_UNITS`, `CLIENT_PAUSED` | O9, R-W3, R-F1 |
 | `POST /offers/{id}/decline` | client (own) | → **204**; the unit goes to the next claim | `OFFER_NOT_OPEN` | O10 |
 
 **Price protection (API-D4):** the client sends the price it was shown (`expected_price_lbp`). If the price went **up** since then (a new day moved it to another discount tier, or the pharmacy changed its override) → `409 PRICE_CHANGED` with the new price, and nothing is reserved. If it went **down**, the reservation goes through at the lower price.
@@ -461,7 +481,7 @@ All paths are relative to `/api/v1`.
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `POST /watches` 🔑 | client ACTIVE | `{product_id, include_alternatives, qty, max_price?: MoneyIn, district_id?}` → **201** `Watch` (ends after the search window) | `OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `PRODUCT_NOT_ALLOWED`, `CLIENT_PAUSED` | R-W1, R-W2, R-T3 |
+| `POST /watches` 🔑 | client ACTIVE | `{product_id, include_alternatives, qty, days_of_use? (default 1), max_price?: MoneyIn, location?: LocationIn}` → **201** `Watch` (ends after the search window) | `OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `PRODUCT_NOT_ALLOWED`, `CLIENT_PAUSED` | R-W1, R-W2, R-T3 |
 | `GET /watches?state=live\|all` | client | → `list[Watch]` | | CS-11 |
 | `POST /watches/{id}/cancel` | client (own) | → `Watch` (CANCELLED; its offers withdrawn) | `NOT_FOUND` | SM-7 |
 
@@ -471,7 +491,7 @@ Matching then runs **first come, first served** (R-PRI). The client is told by a
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `POST /requests` 🔑 | client ACTIVE | `{items: [{product_id, qty, max_price?: MoneyIn}] (1–5), district_id?, alternatives_ok}` → **201** `SourcingRequest`. The agent's first turn starts within seconds (the search runs immediately). | `OUTSIDE_REQUEST_HOURS`, `LIMIT_OPEN_REQUESTS`, `PRODUCT_NOT_ALLOWED`, `VALIDATION_ERROR` (0 or > 5 items, qty outside 1–3, the same product twice), `CLIENT_PAUSED` | R-RQ1, R-RQ2, R-T8 |
+| `POST /requests` 🔑 | client ACTIVE | `{items: [{product_id, qty, days_of_use? (default 1), max_price?: MoneyIn}] (1–5), location?: LocationIn, alternatives_ok}` → **201** `SourcingRequest`. The agent's first turn starts within seconds (the search runs immediately). | `OUTSIDE_REQUEST_HOURS`, `LIMIT_OPEN_REQUESTS`, `PRODUCT_NOT_ALLOWED`, `VALIDATION_ERROR` (0 or > 5 items, qty outside 1–3, the same product twice), `CLIENT_PAUSED` | R-RQ1, R-RQ2, R-T8 |
 | `GET /requests?state=open\|closed&cursor=` | client | → page of `SourcingRequest` | | CS-5 |
 | `GET /requests/{id}` | client (own) | → `SourcingRequest` | `NOT_FOUND` | CS-16 |
 | `POST /requests/{id}/cancel` | client (own) | → `SourcingRequest` (CANCELLED; its claims, asks and offers withdrawn; existing reservations kept) | `REQUEST_CLOSED` | R-RQ9 |
@@ -483,6 +503,7 @@ The request form (CS-15), the agent's summary card ([Start sourcing], via `/prop
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
 | `GET /conversations/active-chat` | client ACTIVE or PAUSED | → `{conversation_id, kind: "chat"}` (created if none) | `EMAIL_NOT_VERIFIED` | D9 |
+| `PUT /conversations/{id}/location` | client (own) | `LocationIn` → **204**. Sets the location the agent's tools use in this chat; stored rounded, **never in the LLM context**. | `NOT_FOUND`, `VALIDATION_ERROR` | R-S2 |
 | `POST /conversations/new-chat` | client | → `{conversation_id}`; the old chat is archived (kept 30 days) | | D9, R-RET |
 | `GET /conversations/{id}/messages?after_seq=&limit=` | client (own) | → `MessagesPage`. **The polling endpoint:** the page calls it every 3 s while open. | `NOT_FOUND` | API-D7 |
 | `POST /conversations/{id}/messages` | client (own) | `{text (1–1,000), client_message_id: UUID}` → **chat:** an **SSE stream** (§6.6.1). **Request thread:** **202** `{message_seq}`; the worker runs the turn, and the page sees the reply by polling. | `CONVERSATION_BUSY`, `ASSISTANT_UNAVAILABLE`, `TOKEN_BUDGET_EXCEEDED`, `MESSAGE_TOO_LONG`, `RATE_LIMITED`, `REQUEST_CLOSED` | R-AG2, R-AS, C15 |
@@ -584,10 +605,11 @@ class ExecuteResult(BaseModel):
 | `GET /admin/overview` | → counts needing attention + 7-day agent and marketplace metrics | | AS-2 |
 | `GET /admin/pharmacies?status=&q=&cursor=` · `GET /admin/pharmacies/{id}` | → list / detail with automatic checks (duplicate license, phone, email, address) | | AS-3, AS-4 |
 | `POST /admin/pharmacies/{id}/approve` · `/reject {reason}` · `/request-info {message}` · `/suspend {reason}` · `/reinstate {reason}` | → pharmacy | `REASON_REQUIRED` | SM-1 |
-| `PATCH /admin/pharmacies/{id}` | `{name?, license_number?, address?, district_id?}` → pharmacy (audited) | `LICENSE_TAKEN` | SM-1 |
+| `PATCH /admin/pharmacies/{id}` | `{name?, license_number?, address?, district_id?, location?: {lat, lon}}` → pharmacy (audited). Approval also records that the pin was checked. | `LICENSE_TAKEN` | SM-1, R-S2 |
 | `GET /admin/clients?q=&status=&cursor=` | → list **without contact details** (status, district, reservations, no-shows, open requests) | | AS-5 |
 | `GET /admin/clients/{id}/contact` | → `{full_name, email, phone}`; **logged as `pii.view`** | | A-D3 |
 | `POST /admin/clients/{id}/lift-pause` · `/suspend` · `/reinstate` | `{reason}` → client state; suspending revokes sessions | `REASON_REQUIRED` | SM-2 |
+| `POST /admin/reservations/{id}/clear-no-show` | `{reason}` → the reservation no longer counts as a no-show; a pause it caused is lifted if it no longer applies (audited) | `REASON_REQUIRED`, `NOT_CONTESTABLE` | R-N3 |
 | `GET /admin/escalations?state=` · `GET /admin/escalations/{id}` | → list / detail (summary, appended notes, request ref, **redacted** conversation, trace link) | | AS-6 |
 | `POST /admin/escalations/{id}/take` · `/reply {text ≤ 500}` · `/resolve {note}` | → escalation; the reply becomes an `admin` message + CN-14. **No priority endpoint exists** (R-PRI4). | `VALIDATION_ERROR` | SM-9 |
 | `GET /admin/abuse-flags?state=` · `POST /admin/abuse-flags/{id}/dismiss\|warn\|suspend {reason}` | → flag | `REASON_REQUIRED` | SM-11 |
@@ -664,12 +686,13 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | Interface | Between | Contract |
 |---|---|---|
 | **Services** | API routers **and** agent tools → `services/` | The same Python functions do reservations, requests, watches and matching for both. Tools never call HTTP. That's why a tap and a tool can't disagree. |
-| **Proposals** | agent tools → `proposals` table → API → browser | One stored row per agent card. Its `payload` per kind:<br>• `reserve`: `{listing_id, qty, price_lbp_shown}`<br>• `reserve_group`: `{pharmacy_id, items: [{item_key, listing_id, qty, price_lbp_shown, request_item_id?}]}`<br>• `accept_offer`: `{offer_id}`<br>• `cancel`: `{order_id}`<br>• `request_summary`: `{items, district_id, alternatives_ok, max_prices}`<br>• `constraint_change`: `{request_id, alternatives_ok? \| item_max_prices?}`<br>• `remove_item`: `{request_id, request_item_id}`<br>The card's text is rendered from this payload. |
+| **Proposals** | agent tools → `proposals` table → API → browser | One stored row per agent card. Its `payload` per kind:<br>• `reserve`: `{listing_id, qty, price_lbp_shown, pickup_day, days_of_use}`<br>• `reserve_group`: `{pharmacy_id, pickup_day, items: [{item_key, listing_id, qty, price_lbp_shown, days_of_use, request_item_id?}]}`<br>• `accept_offer`: `{offer_id}`<br>• `cancel`: `{order_id}`<br>• `request_summary`: `{items, district_id, alternatives_ok, max_prices}`<br>• `constraint_change`: `{request_id, alternatives_ok? \| item_max_prices?}`<br>• `remove_item`: `{request_id, request_item_id}`<br>The card's text is rendered from this payload. |
 | **Deadlines on rows** | services (writer) → worker clock check (reader) | `orders.offer_expires_at` / `deadline`, `sourcing_requests.ends_at` / `window_checked_at`, `claims.ends_at`, `early_release_asks.respond_by`, `email_outbox.next_attempt_at` (`04` R-T10, `05` §3.8) |
 | **Decision events** | services → agent | A `chat_messages` row with `kind = "event"`, a JSON body `{type, ids…}` (types: `not_available`, `system_cancelled`, `early_release_unfulfilled`, `window_check`, `group_item_failed`, `items_unticked`, `request_submitted`), and `conversations.pending_turn_at = now` (`04` R-AG4) |
 | **Turn lease** | API and worker | `conversations.turn_lease_until` / `turn_owner` (`05` §6). The API answers `CONVERSATION_BUSY` while it's held. |
 | **Email** | services → `email_outbox` → worker → SES | `{template: "CN-3" \| …, user_id, params}`. The address is resolved at send time; params hold display values and IDs only. |
 | **Clock** | everything | `clock.now()` (UTC, + the demo offset in demo mode) and `clock.today()` (Beirut date). Never `datetime.now()` in domain code (`04` R-T11). |
+| **Routing** | services and tools → `routing` module → OpenRouteService | `travel_times(origin_cell, pharmacy_ids, modes) → {pharmacy_id: Travel}` and `best_order(origin_cell, pharmacy_ids) → (order, total_min)`. Uses the 24 h cache; falls back to straight-line distance after N-41 (`04` R-RT). Only travel times and area names leave this module towards the agent. |
 | **Agent ↔ LLM; tool schemas; guards; traces** | agent | Defined in `07` |
 
 ---
@@ -697,6 +720,7 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | Validation | Pydantic on every input; `422 VALIDATION_ERROR` with field details (§3.1) |
 | Authentication | Server-side sessions, `SameSite=Strict` + `Origin` check (§2.1) |
 | Authorization and least privilege | Role, status and ownership on every endpoint; `404` for others' objects (§2.2); no priority endpoint at all |
+| Privacy of location | Rounded, stored apart from the agent's context, never in LLM traffic (§2.3, INV-24) |
 | Error behavior | One format, a stable code catalog mapped to the rules (§3) |
 | Human approval for consequential actions | Every reservation, acceptance, request and change is a client call; the agent has no HTTP access, and its cards are re-validated (§6.7) |
 | Rate limits | §4 |

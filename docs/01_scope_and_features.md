@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v4.0 · **Date:** 2026-10-13
-**Status:** ✅ validated by the team (2026-10-13).
+**Version:** v5.0 · **Date:** 2026-10-20
+**Status:** ✅ validated by the team (2026-10-20).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -9,8 +9,12 @@
   - pickup time set by each pharmacy;
   - a prescription is a notice;
   - **first come, first served**, which nobody can override;
-  - district only;
+  - ~~district only~~ (replaced in v5.0);
   - a no-AI baseline in the evaluation.
+- **v5.0 applies the professor's guidance** (decision log §S, ADR-004):
+  - the agent's purpose is to **bring the client's need to the right pharmacy**, and **the agent decides** which pharmacy (or route);
+  - **real locations and road travel times** (the AI never sees coordinates);
+  - **the box must last the client's days of use**, from the chosen pickup day; no fixed minimum before expiry.
 
 **Numbers:** `04_domain_rules.md` §5 is the source of truth; numbers here are summaries.
 **Timeline:** no internal deadlines. We're done when **every course requirement is satisfied**. The only fixed date is the **live demo on 2026-11-30**.
@@ -19,7 +23,9 @@
 
 ## 1. Goal
 
-Connect **clients who cannot afford a medicine at full price** with **pharmacies selling near-expiry stock at a discount**, so the client gets the medicine **when they need it, now**, and the pharmacy doesn't throw it away. Near-expiry medicine suits **urgent needs**: the client picks it up within a day or so, while it still has at least 14 days left.
+Connect **clients who cannot afford a medicine at full price** with **pharmacies selling near-expiry stock at a discount**, so the client gets the medicine **when they need it, now**, and the pharmacy doesn't throw it away. Near-expiry medicine suits **urgent needs**: the client picks it up today or tomorrow, and the box must **last the days they'll use it**.
+
+**The agent's purpose, in the professor's words:** *bring the client's need to the right pharmacy.* **The agent decides** which pharmacy the client should go to (or the route, for several medicines). It bases this on travel time, opening hours, price, stock and the expiry fit, together with what the client tells it.
 
 **This is an agentic-systems project.** The core of DawaLink is an **agent that works on clients' medicine needs**: it understands them, plans, sources (including stock that isn't listed yet), re-plans when things fail, and reports back. Everything that must be exact is plain code, and every consequential step needs a human tap.
 
@@ -27,6 +33,7 @@ Connect **clients who cannot afford a medicine at full price** with **pharmacies
 | DawaLink does | DawaLink never does |
 |---|---|
 | Find, plan, ask pharmacies, reserve (after a tap), notify | Recommend a medicine or dose, or answer "can I take X with Y?" |
+| **Recommend where to go:** the pharmacy that fits best (route, hours, price, a box that lasts) | Send the client's location to the AI (it only sees travel times) |
 | Offer a **same-composition** alternative (same ingredient + strength + form), only with consent | Suggest a "similar" medicine |
 | Tell the client a prescription is needed ("bring it to the pharmacy") | Read, judge or schedule prescriptions (the pharmacist checks at the counter) |
 | **Apply a fixed, transparent rule** when stock is scarce: first come, first served | **Let the AI, or anyone, decide who gets a medicine first** (no triage) |
@@ -48,7 +55,7 @@ Connect **clients who cannot afford a medicine at full price** with **pharmacies
 
 ```
 PHARMACY                      DAWALINK                                              CLIENT
-uploads / edits inventory ──► private inventory ──(17–180 days to expiry)──► public listings ◄── search page
+uploads / edits inventory ──► private inventory ──(0–180 days to expiry)───► public listings ◄── search page
                                                                           ▲              ◄── assistant (chat)
                                                                           │              ◄── SOURCING REQUEST
                                    ┌──────────────── AGENT ───────────────┴───────┐        "Concor ×2, Glucophage ×1,
@@ -72,8 +79,18 @@ Each feature has **Done when** checks; the IDs are reused in issues, tests and t
 #### C6: Assistant (interactive mode)
 A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspellings. Replies are text plus **cards and buttons**. **Cards are created by tools; the agent chooses which to show** (`04` R-AG7).
 1. **Understands** free text and maps it to exact catalog products; asks with chips when something is ambiguous.
-2. **Collects constraints:** quantity, district, budget, alternatives OK.
-3. **Finds and explains ranked options** (same district first, then other areas); for **several medicines** it proposes a plan (C18).
+2. **Collects what matters:**
+   - quantity;
+   - **days of use**;
+   - **pickup day** (today or tomorrow);
+   - location (shared, or a district);
+   - budget;
+   - alternatives OK;
+   - the client's situation (no car, free after 18:00…).
+3. **Decides where the client should go:**
+   - compares the pharmacies whose boxes last long enough (travel time by car and on foot, opening hours, price, stock) with what the client said;
+   - **recommends one**, with a reason, and shows up to 2 alternatives;
+   - for **several medicines**, it plans the route (C18).
 4. **Proposes reservations.** The client's tap reserves. It **re-plans** when an option is taken or a pharmacy marks it not available.
 5. **When nothing fits:** early release (C8), a watch (C9), or it suggests turning the need into a **sourcing request** (C17).
 6. **Shows the prescription notice** for items that need one.
@@ -96,7 +113,7 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
 - [ ] Every turn is traced.
 
 #### C17: Sourcing requests (autonomous mode)
-The client submits a **request** for **1–5 medicines** they need **now**, with a district and optionally a budget and "alternatives OK". They can do this through a form, from the chat (the agent prepares a summary card and the client taps [Start sourcing]), or from an empty search. Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
+The client submits a **request** for **1–5 medicines** they need **now**, with a location (shared, or a district), the days of use of each medicine, and optionally a budget and "alternatives OK". They can do this through a form, from the chat (the agent prepares a summary card and the client taps [Start sourcing]), or from an empty search. Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
 
 | The agent may do on its own | The agent needs a client tap for |
 |---|---|
@@ -118,7 +135,7 @@ The client submits a **request** for **1–5 medicines** they need **now**, with
 - [ ] A request closes correctly at the end of its window.
 
 #### C18: Multi-medicine planning
-- A deterministic tool, `plan_basket`, returns candidate plans covering several medicines. **One medicine's quantity can be split across pharmacies** (Concor ×2 = 1 at A + 1 at B). Plans are ranked by **area (same district → same governorate → rest of Lebanon) → fewest pharmacies → lowest total price**.
+- A deterministic tool, `plan_basket`, returns candidate plans covering several medicines. **One medicine's quantity can be split across pharmacies** (Concor ×2 = 1 at A + 1 at B). Each plan uses only boxes that **last the client's days of use**, and comes with its **route** (the best visiting order and the total travel time). **The agent decides** which plan to recommend, from these facts and the client's situation.
 - The agent **chooses** among them using the client's stated preferences (e.g. "cheapest even if two trips"), **explains** the choice, and **proposes** it as one card per pharmacy.
 - The agent **always reports item by item** what it found and what it didn't. A card can hold any subset (e.g. only Concor), and the missing items go to early release or a claim.
 - **[Reserve these]** reserves the ticked items of that card **all or none**. If one fails at tap time, the agent says which one and offers the rest.
@@ -143,7 +160,7 @@ The client submits a **request** for **1–5 medicines** they need **now**, with
 
 #### C9: Watches and matching (first come, first served)
 - A **claim** is one need for one medicine. Two kinds exist: a client **watch** ([Notify me] on the search page, or set by the agent) and a **waiting request item**. A claim lasts **6 hours**.
-- When stock becomes available, **code** offers it to matching claims **first come, first served** (whoever started waiting first), within the same district or governorate.
+- When stock becomes available, **code** offers it to matching claims **first come, first served** (whoever started waiting first), within 30 minutes by car of the client, and only boxes that last their days of use.
 - The winner gets a **2-hour hold** (an offer). If it isn't taken, the next claim gets it.
 - **Nobody ranks clients**: not the agent, not an admin. Emergency claims get human help, not priority.
 
@@ -183,20 +200,21 @@ If the LLM is down or over budget:
 - The inventory is **private**.
 
 #### C4: Near-expiry publishing and pricing
-- Items **17–180 days** from expiry are **published automatically**.
+- Items **0–180 days** from expiry are **published automatically**. There's no fixed minimum: whether a box suits a client depends on their **days of use** (C7).
 - **System-wide discount tiers** (25% / 40% / 60% by days left), with a **per-item price override** (≤ public price; 0 = donation).
 - Pharmacies can pause items.
 - Prices are stored in LBP and **shown in LBP + ≈ USD**.
 
 #### C5: Search page (non-chat UI, baseline and fallback)
-- Search by name, filter by district, price and alternatives.
-- Each result shows pharmacy and district, price (LBP + USD), discount, expiry, the prescription notice, availability (exact up to 5) and [Reserve].
+- Search by name from your location (shared, or a district); filter by price, alternatives, **days of use** and pickup day.
+- Each result shows the pharmacy, its area and its **travel time** (car and on foot), price (LBP + USD), discount, expiry, the prescription notice, availability (exact up to 5) and [Reserve].
 - **Empty results:** [Notify me] (a 6-hour watch) or [Ask DawaLink to find it] (pre-filled sourcing request).
 
 #### C7: Reservations and pickup
 - A tap **reserves immediately** and **locks the stock**. There is no confirmation step.
 - The pharmacy is notified (screen + email) and puts the box aside.
-- **Pickup time is set by each pharmacy** (1–3 days, default 1), ending at closing time, and never later than 14 days before expiry.
+- The client chooses the **pickup day**: today, or a next open day within the pharmacy's pickup time (1–3 days, default 1). The deadline is closing time that day.
+- **The box must last the client's days of use** from that day (if they don't know: 1 day, with the expiry date shown as a warning). Otherwise it isn't offered: "No match: the boxes expire too early for 12 days of use."
 - **At the counter:** the client shows the **order number**; the pharmacist checks the prescription if needed and presses **[Picked up]**.
 - **[Not available]** (all or some units) → the client is told and, for agent orders, the agent re-plans. No penalty.
 - **No-shows:** not picked up in time → back to stock; 2 in 30 days → 7-day pause.
@@ -226,6 +244,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 
 #### C13: Safety and security
 - Authentication (server-side sessions), roles, row-level ownership; **agent tools scoped to the client**.
+- **Location privacy:** shared only when the client taps "Use my location"; stored rounded; **never sent to the AI** (it sees travel times only).
 - PII redaction before every LLM call (known account identifiers + phone/email patterns).
 - **Taps execute, the agent proposes; cards come only from tools.**
 - Schema-validated tools; injection treated as data; **no text typed by pharmacies reaches the LLM**; a clinical guardrail.
@@ -238,6 +257,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
   - re-plans;
   - early-release success;
   - **requests fulfilled within the 6-hour window**, and minutes to secure;
+  - **travel time** per secured medicine, and **boxes that didn't last** (must be 0);
   - **cost per fulfilled request**;
   - guardrail triggers.
 - Business metrics: reservations, units saved, [Not available] rate, no-shows.
@@ -257,7 +277,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 
 | Code (deterministic) | Agent (judgment) | Humans (approval) |
 |---|---|---|
-| Search, ranking, `plan_basket` candidates | Understanding messy multilingual needs; choosing a plan to match the client's preferences | Client taps: reserve, accept, start or cancel a request, change constraints |
+| Search, travel times, routes, the expiry fit, `plan_basket` candidates | Understanding messy multilingual needs; **deciding which pharmacy or route** fits the client's situation | Client taps: reserve, accept, start or cancel a request, change constraints |
 | Stock locks, reservations, deadlines, the clock check | **Deciding what to do next** on a request: wait, ask pharmacies, re-plan, suggest relaxing constraints, escalate | Pharmacy marks picked up or not available; answers early-release asks |
 | **Priority allocation** (first come, first served) | Explaining options, outcomes and the rule to the client | Admin: approvals, escalations (human help) |
 | Publishing, pricing, prescription notice | Adapting to what the client says ("I can only go Thursday") | Pharmacist checks the prescription |
@@ -295,6 +315,8 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
 13. **Night:** a request at 22:00 → "come back tomorrow from 08:00".
 14. **Messy inventory file** → row errors with "did you mean…", nothing else blocked.
 15. **Two clients race for the last box** → one gets it, the other is offered the next option.
+16. **The professor's example:** "I need it for 12 days" → Pharmacy A's box expires in 2 days, B's in 15 → the agent recommends B and says why. With only A's box → "No match: it expires too early for 12 days."
+17. **The agent decides where to go:** "ma 3ande siyyara, w bkhallis shoghl 6" (no car, I finish work at 6) → it recommends the pharmacy 12 min on foot that's open until 23:00, not the cheaper one 25 min away by car.
 
 ---
 
@@ -321,6 +343,7 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
 - Real-time POS integration.
 - Prescription upload, reading or scheduling.
 - **Priority decided by the AI or by an admin.**
+- Turn-by-turn navigation (we show the travel time and a map link).
 
 ## 9. Real-world constraints we evaluate
 | Constraint | Measured as |
@@ -331,11 +354,13 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
 | Cost | **Cost per fulfilled request** |
 | Privacy | PII found in traces (must be 0) |
 | Human approval | Consequential actions taken without a tap (must be 0) |
+| Location privacy | Coordinates found in traces (must be 0) |
 
 ## 10. Changes from the proposal
 | Proposal | Now |
 |---|---|
 | Requests ranked by need-by date | **First come, first served** within a short urgent window (code, not the AI); design review #2 |
+| Matched to the nearest pharmacy | **Kept and extended:** the agent decides using road travel time, opening hours, price and the expiry fit (the professor's guidance) |
 | The agent contacts pharmacies, tries the next one, proposes alternatives, escalates | **Kept and extended:** sourcing requests, early release, multi-medicine plans |
 | A prescription is submitted | A prescription **notice**; the pharmacist checks at the counter |
 | Trust score; delivery | Add-on; out of scope |
