@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.0 · **Date:** 2026-10-22
+**Version:** v1.1 (v1.1 adds the [Directions] link from `11`) · **Date:** 2026-10-22
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **Living:** every PR that adds an attack surface updates it (Definition of Done #6).
 
@@ -183,6 +183,7 @@ flowchart LR
 | **OpenRouteService** | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key | **Who** the client is: no account, no session, no name |
 | **AWS SES** | Emails | The client's email address and the template text (order number, medicine, pharmacy, deadline) | Chat content |
 | **OpenStreetMap tiles** (fetched by the browser, not our server) | The map | The viewer's IP address and the map area shown | Anything from our server |
+| **OpenStreetMap directions** (a link the client taps, `11` §11) | Directions to a pharmacy | The pharmacy's pin as the destination, and the viewer's IP address | The client's location: it is never put in the link |
 
 **Honest limit (RR-3):** the LLM sees travel times to named pharmacies in named areas. From these it could guess **roughly which neighborhood** the client is in, never an exact point, and never **who** the client is.
 

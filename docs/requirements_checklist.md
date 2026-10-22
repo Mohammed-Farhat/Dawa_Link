@@ -90,7 +90,7 @@ A PR is merged only when **all** of the following hold:
 | T-12 | Adversarial testing; **failures → regression tests** | R-set (~120 attacks, target 0 violations); 👎 report → admin confirms → regression case | `08` E4/§5, `eval/safety/`, `tests/regression/`, AS-8 | Build + Evaluate | 🟡 |
 | T-13 | API and interface contracts: schemas, validation, auth, error behavior | Endpoint contracts (`06` ✅) + generated OpenAPI + contract tests (3 per endpoint, every error code, Schemathesis) | `06`, `tests/api/` | Design + Build | 🟡 |
 | T-14 | Clean, modular code: separation of concerns, naming, no duplication, centralized config, secure dependencies and secrets, consistent errors, **no dead code** | Repo structure, `config.py`, linters, review checklist, dependency scanning | `02` §6, CI | Build | ⏳ |
-| T-15 | UI designed around the user, not chat by default | Search page + assistant with cards; role-specific portals | `03`, `11` | Design + Build | 🟡 |
+| T-15 | UI designed around the user, not chat by default | A search-first home (not chat by default); the assistant's cards rendered from stored proposals; role-specific portals. UI design ✅ (`11` + the design canvas) | `03`, `11` | Design + Build | 🟡 |
 | T-16 | Reproducibility | Docker Compose, uv lockfile, seeds, "reproduce the results" commands | README, `eval/` | Build + Evaluate | ⏳ |
 
 ## 5. Bonus engineering practices (up to +10%)

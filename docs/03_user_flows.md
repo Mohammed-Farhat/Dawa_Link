@@ -1,8 +1,10 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.1 · **Date:** 2026-10-22
+**Version:** v4.2 · **Date:** 2026-10-22
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.1 applies the threat model** (`10`, decision log §T): registration always answers "check your email" (CS-2, PS-1, CN-18); admin two-factor login (AS-1); random order numbers; agent text shown as plain text (CS-9).
+**Status:** ✅ validated by the team (2026-10-20). **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
+
+**v4.1 applies the threat model** (`10`, decision log §T): registration always answers "check your email" (CS-2, PS-1, CN-18); admin two-factor login (AS-1); random order numbers; agent text shown as plain text (CS-9).
 
 **v4.0 applies the professor's guidance** (decision log §S):
 - **the agent decides where the client should go** and recommends one pharmacy (or route) with a reason;
@@ -73,7 +75,7 @@ flowchart TD
 ```
 
 **Navigation:**
-- **Mobile** bottom bar: 🔍 Search · 💬 Assistant · 📋 My requests & reservations · 👤 Me.
+- **Mobile** bottom bar: **Home** (with the search) · Assistant · Mine (requests, reservations, watches) · Me. Detail pages (search results, a reservation, a request) open full screen with a back arrow (`11` §3.1).
 - **Desktop:** a top bar, with the assistant as a side panel.
 
 ### 1.3 Screens
@@ -124,7 +126,7 @@ flowchart TD
 │ My reservations                  │
 │ │ Augmentin 1g ×1 · R-7K3Q2F · pick up by Tue 21:00 │
 ├──────────────────────────────────┤
-│ 🔍Search 💬Assistant 📋Mine 👤Me │
+│ 🏠Home 💬Assistant 📋Mine 👤Me   │
 └──────────────────────────────────┘
 ```
 - **Paused banner:** "Reservations paused until 20 Oct (2 missed pickups)."
@@ -198,7 +200,7 @@ flowchart TD
 |---|---|
 | Text | In the client's language and style (Arabizi in → Arabizi out). **Shown as plain text:** no links, images or formatting (`10` TM-D5). |
 | Choice chips | Disambiguation, quick replies |
-| Option card | One listing + travel time + [Reserve]. The agent's pick is marked **Recommended**, with its reason. |
+| Option card | One listing + travel time + [Reserve]. The agent's pick is marked **Recommended**, with its reason. Its alternatives (up to 2) are folded under "See N other options" (`11` §6). |
 | **Plan card** | One pharmacy's group for several medicines + total + [Reserve these]. A plan with several pharmacies shows the **route** ("A → C, 22 min by car"). |
 | **Request summary card** | "Find Concor ×2, Glucophage ×1 in Saida" + [Start sourcing] |
 | Status card | Reserved (order number, pick up by) / picked up / not available / expired / cancelled |
@@ -475,7 +477,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
    ```
    - Row errors include **"did you mean…"** suggestions for unmatched product names.
    - Controlled products are rejected with a reason.
-4. **Inventory table** (private): product, batch, expiry, quantity, reserved, zone (*listed · early-release window · private · below minimum · expired*).
+4. **Inventory table** (private): product, batch, expiry, quantity, reserved, zone (*listed · early-release window · private · expired*).
 5. **Quick edit** of a quantity (e.g. after a sale in the shop), and a manual add form with catalog autocomplete. Reserved units can't be removed here; use [Not available] on the reservation.
 
 #### PS-7 Listings

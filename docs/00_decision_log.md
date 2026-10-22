@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-10-22, covers steps 01–10, design review #2 and the professor's guidance. Sections A–F and I–T validated by the team (2026-10-13 to 2026-10-22). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-10-22, covers steps 01–11, design review #2 and the professor's guidance. Sections A–F and I–U validated by the team (2026-10-13 to 2026-10-22). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -312,6 +312,31 @@ From [`10_threat_model.md`](10_threat_model.md). The team validated these on 202
 | TM-D10 | **End-of-project hygiene:** scan evidence before export, push protection, backup retention, delete everything after the demo | 10 §10 | ⏸ postponed to the end of the project (team's choice) |
 
 *Also from this step: R-AU8 (IP-based limits use CloudFront's address) and the Failure Matrix rows FS-19–FS-22.*
+
+## U. UI design decisions (step 11)
+
+From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by the team on 2026-10-22, noting that **the UI can still change during the build** (look changes on the canvas, rule changes in `11`, a decision-log row for any validated decision that changes).
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| UI-D1 | **Visual language:** a green brand (`#0B6E4F`); one meaning per color (green done/fits · blue working · amber attention · red failed · grey info); Inter + Noto Sans Arabic + IBM Plex Mono for order numbers; borders, not shadows; Tabler line icons; light theme only | 11 §2 | ✅ 2026-10-22 |
+| UI-D2 | **Home is search first:** today's pickup → search box → two equal entry cards (Find medicines for me · Ask the assistant) → the open request | 11 §3.1, §5 | ✅ 2026-10-22 |
+| UI-D3 | **Navigation:** client tabs Home · Assistant · Mine · Me; detail pages full screen with a back arrow; pharmacy and admin sidebars that stack on phones; a dark admin sidebar | 11 §3 | ✅ 2026-10-22 |
+| UI-D4 | **One component per card kind**, rendered from the stored proposal: the same fact order everywhere, one main button, used or expired cards change state, "Recommended" = green border + badge + a reason, alternatives folded under "See N other options" | 11 §4, §6 | ✅ 2026-10-22 |
+| UI-D5 | **The counter view:** the order number in large monospace, one tap from Home | 11 §4, §5 | ✅ 2026-10-22 |
+| UI-D6 | **The reserve sheet asks the pickup day and days of use**, with a live fit badge (the server re-checks at the tap) | 11 §5 | ✅ 2026-10-22 |
+| UI-D7 | **Language:** English labels; `dir="auto"` per message; Arabic font on demand; every UI string in one file | 11 §8 | ✅ 2026-10-22 |
+| UI-D8 | **Accessibility:** WCAG 2.1 AA; `axe` in component tests; keyboard and screen-reader passes before the demo | 11 §9 | ✅ 2026-10-22 |
+| UI-D9 | **Low-end phones:** per-portal code splitting, maps only where needed, no images, polling only while visible; budgets of ≤ 250 KB start-up JS and Lighthouse ≥ 80 | 11 §10 | ✅ 2026-10-22 |
+| UI-D10 | **Maps and location:** maps only for the pin; [Directions] opens OpenStreetMap with the pharmacy's pin only; the location prompt only after the tap, with the privacy sentence | 11 §11; 10 §4.3 | ✅ 2026-10-22 |
+| UI-D11 | **Frontend structure and tests:** React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, Playwright demo flows; screenshots in every frontend PR | 11 §13 | ✅ 2026-10-22 |
+| UI-D12 | **The design canvas is the visual reference;** `11` wins on rules; screens not drawn reuse the same components | 11 §14 | ✅ 2026-10-22 |
+
+*Also from this step:*
+- `03` v4.2 (the "Home" tab, folded alternatives, a stale zone label removed);
+- `10` v1.1 (the [Directions] link).
+
+*Later, when the team asks:* 4 more boards (CS-15, CS-7, PS-6, AS-10).
 
 ## G. Default numbers (superseded)
 

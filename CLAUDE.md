@@ -27,17 +27,19 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-22:
 
-- **Planning steps 00–10 are all validated** (decision log sections A–T). **Current versions:**
-  - `01` v5.1 · `02` v3.1 · `03` v4.1 · `04` v4.1 · `05` v3.1;
+- **Planning steps 00–11 are all validated** (decision log sections A–U). **Current versions:**
+  - `01` v5.1 · `02` v3.1 · `03` v4.2 · `04` v4.1 · `05` v3.1;
   - `06` v1.2 · `07` v1.2 · `08` v1.1;
-  - `09` v1.2 (living: every PR updates it) · `10` v1.0 (threat model; living: a PR that adds an attack surface updates it);
+  - `09` v1.2 (living: every PR updates it) · `10` v1.1 (threat model; living: a PR that adds an attack surface updates it);
+  - `11` v1.0 (UI design) + the design canvas https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG (the user's private artifact; read it with the Artifact tool);
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
   - API, agent, evaluation and Failure Matrix (§O–§R, 2026-10-18 to 10-20);
-  - the threat model (§T, 2026-10-22): random order numbers, admin two-factor login, registration never reveals an account, plain-text agent replies, layered LLM cost caps, "reliability" removed (app stock is assumed real; [Not available] kept).
+  - the threat model (§T, 2026-10-22): random order numbers, admin two-factor login, registration never reveals an account, plain-text agent replies, layered LLM cost caps, "reliability" removed (app stock is assumed real; [Not available] kept);
+  - the UI design (§U, 2026-10-22): a search-first home, one meaning per color, cards rendered from proposals, WCAG AA, low-end phones; 10 boards on the design canvas. The UI can still change during the build; 4 more boards (CS-15, CS-7, PS-6, AS-10) will be drawn when the user asks.
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
-- **Next: step 11, UI design.** ⚠️ **Don't start it until the user explicitly says to.** After it comes step 12 (Infrastructure and CI/CD), also validated and started **only when the user says so**.
+- **Next: step 12, Infrastructure and CI/CD** (the last planning step). ⚠️ **Don't start it until the user explicitly says to.**
 - **After planning:** build → test → evaluate → deploy → report and demo.
 - **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
 - **Open items:**
@@ -69,7 +71,7 @@ If the user's first message is general ("let's continue"), summarize where we ar
 4. **Skills:**
    - use `engineering:documentation` whenever writing or updating docs;
    - use `engineering:architecture` / `engineering:system-design` for design reviews and ADRs.
-5. **UI and visual design wait for step 11.** Until then, flows describe *what happens*, not how it looks.
+5. **UI and visual design follow [`11`](docs/11_ui_design.md) and its design canvas.** `03` says *what happens*; `11` says how it looks and behaves.
 6. **Code is for Python developers to review.**
    - Readable, typed, small PRs.
    - Every PR explains what changed and why, in plain language, and meets the Definition of Done.
@@ -117,6 +119,7 @@ The details are in the linked docs. If a request or code change would break one 
 | Tables, migrations, models, locking, retention, seeding | [05_database.md](docs/05_database.md) |
 | Stack, components, agent tools, repo layout, deployment | [02_architecture.md](docs/02_architecture.md) (repo layout in §6) |
 | Security: auth, access, limits, attack surfaces, what third parties receive | [10_threat_model.md](docs/10_threat_model.md) |
+| The frontend: look, components, states, accessibility, structure | [11_ui_design.md](docs/11_ui_design.md) + the design canvas (link in §2) |
 | Screens and flows; what the agent says and when (AF-, RF-, CS-, PS-, AS- IDs) | [03_user_flows.md](docs/03_user_flows.md) |
 | Agent turns, conversation state, case state | [ADR-001](docs/adr/ADR-001-conversation-state-and-agent-turns.md) |
 | Why the design looks the way it does | [reviews/design_review_01.md](docs/reviews/design_review_01.md), [design_review_02.md](docs/reviews/design_review_02.md) |
