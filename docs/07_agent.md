@@ -1,16 +1,17 @@
 # DawaLink: Agent Specification
 
-**Version:** v1.1 (validated; v1.1 applies the professor's guidance) · **Date:** 2026-10-20
+**Version:** v1.2 (validated; v1.2 applies the threat model) · **Date:** 2026-10-22
 **Builds on:**
 - `01` v5.0 (C6, C8, C9, C15–C18)
 - `02` v2.0 §3
-- `04` v4.0 (R-AG, R-RQ, R-PRI, R-AS, R-E, R-F, R-RT, SM-7, SM-8)
+- `04` v4.1 (R-AG, R-RQ, R-PRI, R-AS, R-E, R-F, R-RT, SM-7, SM-8)
 - ADR-004 (the agent decides the pharmacy)
 - `05` v2.0 (conversations, proposals, agent_runs)
 - `06` v1.0 (SSE, proposals, busy)
 - ADR-001, ADR-002, ADR-003
+- `10` (threat model: TM-D2, TM-D3, TM-D5, TM-D6)
 
-**Status:** ✅ validated 2026-10-18 (decision log §P). **v1.1 applies the professor's guidance** (decision log §S): the agent's purpose is to **bring the client's need to the right pharmacy**. It **decides** which pharmacy or route (J2), from travel times, opening hours, price, stock and the expiry fit computed by code, and it never sees coordinates.
+**Status:** ✅ validated 2026-10-18 (decision log §P). **v1.1 applies the professor's guidance** (decision log §S): the agent's purpose is to **bring the client's need to the right pharmacy**. It **decides** which pharmacy or route (J2), from travel times, opening hours, price, stock and the expiry fit computed by code, and it never sees coordinates. **v1.2 applies the threat model** (`10`, decision log §T): the admin-approved pharmacy name is the only pharmacy-typed text the agent sees; replies are plain text and the output guard removes URLs; global spend caps.
 
 This is the specification of **the agent itself**:
 - what it decides;
@@ -57,7 +58,7 @@ These are the decisions we hand to the LLM. They are also what the evaluation co
 | # | Decision | Example |
 |---|---|---|
 | J1 | **Understand** messy multilingual requests and map them to exact catalog products, quantities, **days of use**, **pickup day** and constraints (including the client's situation: no car, free after 18:00…). **Ask** when something is ambiguous; never guess a strength. | "baddi augmentin w shi lal da8et, ma b2dar edfa3 aktar men 10$" → Augmentin (which strength? chips) + "something for pressure" (a clinical request: refuse that part) + budget 10 USD |
-| J2 | **Decide which pharmacy (or route) the client should go to** (the professor's guidance, R-AG9). It weighs travel time by car and on foot, opening hours vs when the client can go, price, stock, the expiry fit and reliability, together with what the client said. It **recommends one** with a one-sentence reason, plus up to 2 alternatives. | "ma 3ande siyyara, w bkhallis shoghl 6" (no car, I finish work at 6) → recommends the pharmacy 12 min on foot that's open until 23:00, rather than the cheaper one 25 min away by car |
+| J2 | **Decide which pharmacy (or route) the client should go to** (the professor's guidance, R-AG9). It weighs travel time by car and on foot, opening hours vs when the client can go, price, stock and the expiry fit, together with what the client said. It **recommends one** with a one-sentence reason, plus up to 2 alternatives. | "ma 3ande siyyara, w bkhallis shoghl 6" (no car, I finish work at 6) → recommends the pharmacy 12 min on foot that's open until 23:00, rather than the cheaper one 25 min away by car |
 | J3 | **Decide the next step** for each missing item: propose what exists, wait for new stock, ask pharmacies, suggest relaxing a constraint, suggest a sourcing request, or escalate | Glucophage not listed, two open pharmacies hold private stock → ask them **and** watch |
 | J4 | **Re-plan** after events | Pharmacy A marked Concor not available → next option, or ask pharmacies |
 | J5 | **Communicate** in the client's language and style: per-item reports, the prescription notice, the first-come-first-served rule, refusals, honest "not found" | Arabizi in → Arabizi out |
@@ -173,7 +174,7 @@ Tool calls map to `progress` events:
 - **Never returned:**
   - private inventory or which pharmacy holds it (INV-8);
   - client identity;
-  - text typed by pharmacies (R-AG8);
+  - text typed by pharmacies, except the pharmacy's admin-approved name (R-AG8);
   - availability above 5 (shown as "5+");
   - **coordinates** of the client or of pharmacies (INV-24): only `{area, car_min, walk_min, km, source}`.
 - **Same services as the API.** Tools call the same Python functions as the endpoints (`06` §8), so a tool and a tap can't disagree.
@@ -214,7 +215,7 @@ Each one **runs the same checks as the real action, without locking anything**. 
 Every turn ends with exactly one `reply`:
 ```python
 class Reply(BaseModel):
-    text: str = Field(max_length=1200)        # in the client's language; plain words; no internal codes
+    text: str = Field(max_length=1200)        # in the client's language; plain text (no links, Markdown or HTML); no internal codes
     proposal_ids: list[UUID] = Field(max_length=5)   # cards to show, in order (from this turn or still open)
     quick_replies: list[str] = Field(max_length=4)   # chips; each ≤ 40 chars; tapping sends the text
     case_notes: CaseNotes | None = None       # what to remember (§6.2)
@@ -355,6 +356,7 @@ The safety set (`08`) measures that the injections have **no effect**.
 | Schema | `reply` arguments are valid (lengths, ≤ 5 cards, ≤ 4 chips) |
 | **Cards** | Every `proposal_id` exists, belongs to **this conversation and client**, is open, and was created by a tool (INV-21) |
 | PII | No email, phone or coordinate pattern in `text` or chips |
+| **Links** | No URLs in `text` or chips: they're removed (`10` TM-D5). The reply is **shown as plain text**, so it can't carry links, images or HTML (no phishing link, no image that leaks data). |
 | **Recommendation** | A card marked `recommended` comes from this turn's tools and fits (R-F1); at most one recommended card per item |
 | **Clinical** | **Rules first** (design review #1, B6): patterns for doses and frequencies ("500 mg twice a day", "kel 8 se3at", "habbtein bil nhar"), advice verbs plus a medicine ("take / khod / est3mel … with/ma3"), and interaction or pregnancy terms. Precise patterns, so that "Augmentin 1g · 14 tablets" isn't flagged. |
 | Language | The reply is in the client's language (a cheap script check: Arabic script vs Latin) |
@@ -389,7 +391,7 @@ The run's outcome becomes `guardrail_blocked`, and `guardrail_triggered{type}` i
 | Tool time limit | 5 s; a DB serialization conflict is retried once | Tools are fast database queries |
 | **Circuit breaker** | 3 LLM failures within 5 min → **degraded mode for 2 min** for everyone (N-38) | Fail fast and fall back to search (C15) |
 | Per request | ≤ 20 agent turns (N-17) → escalate `cannot_resolve` (R-RQ10) | Runaway loops |
-| Daily budget | Per client (R-AS); a monthly global spend alert at 80% (R-AL); **at 100% → degraded mode** | Cost control |
+| Spend caps | Per client per day (R-AS); **global daily and monthly caps** (N-46) → degraded mode; an alert at 80% of the month (R-AL); the **provider's own spend limit** as a hard backstop | Cost control: one bad day can't burn the month (`10` TM-D6) |
 
 **Failures, by kind:**
 
@@ -515,8 +517,11 @@ The order of who gets stock **doesn't change**.
 | AG-D13 | **Temperature 0; provider and model are config; a scripted fake model in tests** | ✅ 2026-10-18 | Reproducible, $0 CI |
 | AG-D14 | **Observability:** one Langfuse trace per turn with spans per LLM and tool call; `agent_runs` / `agent_tool_calls` mirror the numbers; evidence exported to the repo | ✅ 2026-10-18 | AgentOps (15% of the grade) and evidence after 30 days |
 | AG-D15 | **New numbers** for `04` §5: history 20 messages (N-32) · case state ≤ 8 KB (N-33) · ≤ 8 LLM calls per turn (N-34) · LLM timeout 30 s (N-35) · 2 retries (N-36) · turn limit 60/90 s (N-37) · circuit breaker 3 / 5 min → 2 min (N-38) | ✅ 2026-10-18 | Numbers live only in `04` §5 |
+| AG-D16 | **Threat-model changes** (`10`, §T): the admin-approved pharmacy name is the only pharmacy-typed text the agent sees (TM-D2); "reliability" removed from J2 (TM-D3); replies are plain text with URLs removed (TM-D5); global spend caps (TM-D6) | ✅ 2026-10-22 | Indirect injection and unsafe output closed off; cost bounded; no undefined facts |
 
 **v1.1 (2026-10-20):** the professor's guidance. J1 and J2, the hard rules 9–10, the tool inputs and outputs (days of use, pickup day, travel, routes, `recommended`), the case state and the output guard are updated. See decision log §S and ADR-004.
+
+**v1.2 (2026-10-22):** the threat model (AG-D16). "Reliability" was removed from J2: nothing measures it, and the team assumes the stock on the app is real; [Not available] stays for the rare exception.
 
 **Applied on validation (2026-10-18):**
 - N-32–N-38 are in `04` §5, plus N-39 (the follow-up bounds of AG-D11);

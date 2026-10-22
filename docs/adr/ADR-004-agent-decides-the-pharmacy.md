@@ -1,6 +1,6 @@
 # ADR-004: The agent decides which pharmacy; code computes the route facts; location stays out of the LLM
 
-**Status:** Accepted (2026-10-20, the professor's guidance, decision log §S)
+**Status:** Accepted (2026-10-20, the professor's guidance, decision log §S) · **Amended** (2026-10-22, `10` TM-D3): "reliability" removed from the facts. Nothing measures it; the team assumes the stock on the app is real, and [Not available] handles the rare exception.
 **Date:** 2026-10-20
 **Deciders:** DawaLink team, following the course professor's guidance
 
@@ -26,7 +26,7 @@ The professor described the agent's purpose as: *"we only help in bringing the c
    - road travel time by car and on foot (OpenRouteService, cached, with a straight-line fallback);
    - for plans, the best visiting order;
    - opening hours compared with when the client can go;
-   - price, stock and reliability;
+   - price and stock;
    - **the expiry fit** (`expiry ≥ pickup day + days of use − 1`).
 2. **The agent decides.** It weighs those facts together with what the client said ("no car", "I finish at 6", "cheapest"). It **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives. The client still taps to reserve.
 3. **Location stays out of the LLM.**

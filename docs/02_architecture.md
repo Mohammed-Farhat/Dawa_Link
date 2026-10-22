@@ -1,9 +1,11 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.0 · **Date:** 2026-10-20
-**Builds on:** `01` v5.0 · `03` v4.0 · `04` v4.0 · `05` v3.0 · ADR-001–ADR-004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
+**Version:** v3.1 · **Date:** 2026-10-22
+**Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
-**Status:** ✅ Stack validated. **v3.0 applies the professor's guidance** (decision log §S, ADR-004):
+**Status:** ✅ Stack validated. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
+
+**v3.0 applies the professor's guidance** (decision log §S, ADR-004):
 - a **routing service** (OpenRouteService, OpenStreetMap data) for travel times and routes, with a straight-line fallback and a cache;
 - **maps** in the browser (Leaflet + OpenStreetMap tiles) for the pharmacy pin and the listing detail;
 - location data kept **out of the LLM context**.
@@ -43,7 +45,7 @@ The team's strongest language is Python, and the team must be able to read, revi
 | Email | **AWS SES** via an outbox table | Retries; templates | Sending email directly from the app |
 | Frontend | **React + TypeScript (Vite), Mantine, TanStack Query, React Router**, types from OpenAPI | Role portals + a chat that renders cards + request pages | Streamlit, Next.js |
 | Chat transport | **SSE** for streaming a reply (15 s heartbeat) + **polling every few seconds** for new messages and cards posted by the worker | Fast-feeling replies; simple, reliable updates | WebSockets |
-| Auth | **Server-side sessions:** a random token in an httpOnly, Secure, SameSite=Strict cookie; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification | Less code than JWT + refresh tokens; logout and suspension take effect instantly; same origin through one CloudFront, so no CORS. *(Admin 2FA and password reset postponed.)* | JWT + refresh rotation; tokens in localStorage |
+| Auth | **Server-side sessions:** a random token in an httpOnly, Secure, SameSite=Strict cookie; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification | Less code than JWT + refresh tokens; logout and suspension take effect instantly; same origin through one CloudFront, so no CORS. **Admins also use TOTP two-factor login** (`pyotp`, `10` TM-D8). *(Password reset postponed.)* | JWT + refresh rotation; tokens in localStorage |
 | Files | **No file storage.** Uploads are processed in memory and discarded. | Smaller attack surface | A private S3 bucket |
 | **Routing** | **OpenRouteService** (free tier, API key; built on OpenStreetMap data, attribution shown): road travel time **by car and on foot**, and the best visiting order for plans. Cached 24 h; **straight-line fallback** when it fails (`04` R-RT). | Real routes, as the professor asked; open data; no cost at our scale | Google Maps (paid), straight-line only (not a real route) |
 | **Maps (browser)** | **Leaflet + OpenStreetMap tiles**: the pharmacy pins itself at registration; clients see the pharmacy on a map | Free and open; drawn in the browser, so nothing goes to the AI | Google Maps |
@@ -143,7 +145,7 @@ flowchart TD
 | `escalate(reason, summary)` | Hands off to an admin (including `emergency_claim`) | Admin-only visibility; no priority power |
 
 - **There is no tool to create, accept or cancel orders or requests, or to change priority, prices or stock** (INV-11, INV-17).
-- **Tool results contain codes, numbers and IDs only**: never text typed by pharmacies (R-AG8).
+- **Tool results contain codes, numbers, IDs and the admin-approved pharmacy name only**: never other text typed by pharmacies (R-AG8).
 
 ### 3.3 Memory
 
@@ -157,7 +159,7 @@ flowchart TD
 
 ### 3.4 Guardrails, limits, baselines
 - **Input:** PII redaction (known account identifiers + patterns), length cap, rate limit.
-- **Output:** clinical check, only proposal IDs that this turn's tools created, no PII.
+- **Output:** clinical check, only proposal IDs that this turn's tools created, no PII, no links (shown as plain text).
 - **Limits:** 6 tool calls per turn, 20 turns per request, a daily token budget per client.
 - **Degraded mode:** chat → "use Search". Requests keep their state; turns resume later.
 - **Baselines (evaluation, `08`):**
@@ -241,7 +243,8 @@ RDS PostgreSQL db.t4g.micro (isolated subnet) · SES · Secrets Manager (DB, LLM
 - **Cost:**
   - budget alerts at $50 / $80;
   - about $55–65 per month while deployed;
-  - **short test deploys, then `cdk destroy`**; the final stack is deployed close to the demo and destroyed after it.
+  - **short test deploys, then `cdk destroy`**; the final stack is deployed close to the demo and destroyed after it;
+  - **LLM spend:** global daily and monthly caps in the app (`04` N-46), plus a spend limit set in the provider's console as a hard backstop.
 
 ---
 

@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-10-20, covers steps 01–09, design review #2 and the professor's guidance. Sections A–F and I–S validated by the team (2026-10-13 to 2026-10-20). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-10-22, covers steps 01–10, design review #2 and the professor's guidance. Sections A–F and I–T validated by the team (2026-10-13 to 2026-10-22). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -37,7 +37,7 @@
 | T3 | Agent framework **LangGraph** (+ langchain-anthropic). *The model is chosen by measurement (T13, O1).* | 02 §1 | ✅ 2026-10-13 (updated) |
 | T4 | Worker process ~~+ Postgres job table~~. *Updated by §N (DR2-A10): one **clock check** loop reads the deadlines stored on the rows; no jobs table.* | 02 §1 | ✅ 2026-10-13 (updated by §N) |
 | T5 | Chat over **SSE** streaming. | 02 §1 | ✅ 2026-10-13 |
-| T6 | Auth: ~~JWT in an httpOnly cookie~~ **server-side sessions** (§N DR2-B4), argon2, rate limits, email verification. *(Admin TOTP 2FA and password reset postponed by §K.)* | 02 §1 | ✅ 2026-10-13 (updated by §K, §N) |
+| T6 | Auth: ~~JWT in an httpOnly cookie~~ **server-side sessions** (§N DR2-B4), argon2, rate limits, email verification. *(Password reset postponed by §K. Admin TOTP 2FA was postponed by §K, then restored by §T TM-D8.)* | 02 §1 | ✅ 2026-10-13 (updated by §K, §N) |
 | T7 | ~~Private S3 for license documents and raw uploads~~ → **no file storage**: uploads are processed in memory and discarded (license upload postponed, §K) | 02 §1 | ✅ 2026-10-13 (updated by §K) |
 | T8 | Tracing with **Langfuse**; JSON logs to CloudWatch. | 02 §1 | ✅ 2026-10-13 |
 | T9 | AWS: **ECS Fargate + ALB + one CloudFront + S3 + RDS + SES**, no NAT, built with **CDK (Python)**, budget alerts at $50 / $80, destroyed after the demo. *Updated by §N (DR2-B7): internal ALB via a CloudFront VPC origin; tasks in public subnets; regular Fargate, no Spot.* | 02 §7 | ✅ 2026-10-13 (updated by §N) |
@@ -95,7 +95,7 @@
 | ID | Decision | Where | Validated |
 |---|---|---|---|
 | A-D1 | Admin accounts created from the command line only | 03 §3.5 | ✅ 2026-10-13 |
-| A-D2 | Two-factor login for admins | 03 §3.5 | ⏸ postponed (§K) |
+| A-D2 | Two-factor login for admins | 03 §3.5 | ✅ restored 2026-10-22 (§T TM-D8; postponed by §K until then) |
 | A-D3 | Admins can view client contact details for support; every view audited | 03 §3.5 | ✅ 2026-10-13 |
 | A-D4 | Admins read chats only for escalated or reported cases, redacted | 03 §3.5 | ✅ 2026-10-13 |
 | A-D5 | Clients can ask for a human | 03 §3.5 | ✅ 2026-10-13 |
@@ -135,7 +135,7 @@
 
 | ID | Decision | Validated |
 |---|---|---|
-| AF-1 | **Simplify or postpone non-agent platform features:**<br>• fixed CSV upload template (no column mapping or encoding detection)<br>• one system-wide discount table + per-item override<br>• weekly opening hours only (no closures)<br>• offers last 2 h of real time (no client hours)<br>• no license document upload<br>• no change requests<br>• postponed: admin 2FA, password reset, delete account<br>• only agent-related abuse rules + the no-show pause<br>• catalog via import script (read-only admin view)<br>• essential notifications only<br>• no extra pharmacy screens | ✅ |
+| AF-1 | **Simplify or postpone non-agent platform features:**<br>• fixed CSV upload template (no column mapping or encoding detection)<br>• one system-wide discount table + per-item override<br>• weekly opening hours only (no closures)<br>• offers last 2 h of real time (no client hours)<br>• no license document upload<br>• no change requests<br>• postponed: admin 2FA *(restored by §T)*, password reset, delete account<br>• only agent-related abuse rules + the no-show pause<br>• catalog via import script (read-only admin view)<br>• essential notifications only<br>• no extra pharmacy screens | ✅ |
 | AF-2 | **Multi-medicine planning** (add-on A5) promoted into the agent's core | ✅ |
 | AF-3 | **Keep the chat assistant AND add autonomous sourcing requests:** one agent, two modes (ADR-002) | ✅ (team: "we keep the agent chatbot, but also add the feature of sourcing for clients") |
 | AF-4 | **Units:** quantities in units now; box splitting later (A3) | ✅ |
@@ -159,7 +159,7 @@
 
 | ID | Decision | Where | Validated |
 |---|---|---|---|
-| DB-D1 | **UUID** keys for business entities + readable refs (`R-000123` orders, `Q-000045` requests); `bigint` for logs | 05 §1 | ✅ 2026-10-13 |
+| DB-D1 | **UUID** keys for business entities + readable refs (`R-7K3Q2F` orders, `Q-4HX9TM` requests); `bigint` for logs. *Refs made random by §T (TM-D4); they were sequential.* | 05 §1 | ✅ 2026-10-13 (amended §T) |
 | DB-D2 | Status lists as **text + CHECK**, not native enums | 05 §1 | ✅ 2026-10-13 |
 | DB-D3 | **One `claims` table** for watches and waiting request items (one priority implementation) | 05 §3.5 | ✅ 2026-10-13 |
 | DB-D4 | Uploads go through a **staging table** until Apply, then deleted; the file is never stored | 05 §3.3 | ✅ 2026-10-13 |
@@ -190,7 +190,7 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | DR2-A12 | **One idempotency key per order** (group reserve); **regular Fargate**, no Spot | 05 §3.4; 02 §7 | ✅ 2026-10-13 |
 | DR2-A13 | **Small rules:** items end only when the window ends (the agent may propose removing one); unticked items go back to the agent; a second escalation is appended; the deadline cap; event routing by source (search orders never wake the agent) | 04 R-RQ4, R-RQ6, SM-9, R-T4, R-AG5 | ✅ 2026-10-13 |
 | DR2-B1 | **Cards come only from tools** (stored proposals); a tap sends the proposal ID and is re-validated | 04 R-AG7; 05 `proposals` | ✅ 2026-10-13 |
-| DR2-B2 | **Text typed by pharmacies never reaches the LLM** | 04 R-AG8 | ✅ 2026-10-13 |
+| DR2-B2 | **Text typed by pharmacies never reaches the LLM** *(except the admin-approved pharmacy name, §T TM-D2)* | 04 R-AG8 | ✅ 2026-10-13 (clarified §T) |
 | DR2-B3 | **Polling** for new cards; "one moment…" while a turn runs | 02 §1; 03 CS-9 | ✅ 2026-10-13 |
 | DR2-B4 | **Server-side sessions** instead of JWT + refresh tokens | 04 R-AU3; 05 `sessions` | ✅ 2026-10-13 |
 | DR2-B5 | **Turn lease** instead of an advisory lock | 04 R-AG2; ADR-001 (amended) | ✅ 2026-10-13 |
@@ -293,6 +293,25 @@ The professor said the agent's purpose is to **bring the client's need to the ri
 | PG-9 | **Evaluation:** E1 measures days of use, pickup day and situation; E2 measures **decision quality** (choices vs an oracle that knows the client's real situation), travel time, and boxes that don't last (must be 0); the simulation uses a precomputed travel-time matrix | 08 v1.1 | ✅ 2026-10-20 |
 
 *This section supersedes: DR2-A9 (district only), N-1 (17–180 days), N-2 (14 days at pickup) and the BELOW_MIN zone, N-23 (district or governorate reach), and the area-first plan ranking in R-RQ5.*
+
+## T. Threat model decisions (step 10)
+
+From [`10_threat_model.md`](10_threat_model.md). The team validated these on 2026-10-22, after clarifying TM-D2, TM-D3, TM-D7 and TM-D9.
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| TM-D1 | **Method:** a lightweight threat model: assets, attackers, trust boundaries, STRIDE per area, the OWASP Top 10 for LLM Applications (2025) for the agent, inherent and residual risk, a test per threat, accepted risks. Living: updated by every PR that adds an attack surface. | 10 §1 | ✅ 2026-10-22 |
+| TM-D2 | **The pharmacy's name is the only pharmacy-typed text the agent sees.** It's safe because an admin approves it at registration, and only an admin can change it afterwards. R-AG8 and INV-23 reworded. | 04 R-AG8, INV-23 | ✅ 2026-10-22 |
+| TM-D3 | **No "reliability" label:** the team assumes the stock on the app is real. **[Not available] is kept** for the rare exception (a box sold at the counter before the app was updated): it protects the client from an unfair no-show, triggers the agent's re-planning, and is the evaluation's main real-world constraint. "Reliability" removed from ADR-004, R-AG9 and J2. | 04 R-AG9, 07 J2, ADR-004 | ✅ 2026-10-22 |
+| TM-D4 | **Random order and request numbers** (`R-7K3Q2F`): 6 characters without look-alikes. Amends DB-D1 (sequential). | 05 §1 | ✅ 2026-10-22 |
+| TM-D5 | **Agent replies are plain text;** the output guard removes URLs | 07 §7.2 | ✅ 2026-10-22 |
+| TM-D6 | **Layered cost caps:** per client per day; global per day (10% of the month); global per month; the provider's own spend limit; ≤ 10 location updates per hour | 04 R-AS, N-46, N-47 | ✅ 2026-10-22 |
+| TM-D7 | **Registration never reveals whether an email has an account:** always "check your email"; an existing account's owner gets CN-18; the verification link logs the user in; pharmacies confirm their email before the approval queue | 04 R-AU4, R-AU7; 06 §6.1; 03 CS-2, PS-1 | ✅ 2026-10-22 |
+| TM-D8 | **Admin two-factor login (TOTP)** restored (A-D2), set up by `create_admin.py`; contact-detail views limited to 30 per hour per admin | 04 R-AU6, N-47; 05 `users` | ✅ 2026-10-22 |
+| TM-D9 | **What each third party receives** is stated (`10` §4.3) and kept to the minimum; `06` §2.3 corrected (the routing service gets the rounded point, with no identity). The exact data each outside API needs is confirmed during the build, and the table is updated then. | 10 §4.3; 06 §2.3 | ✅ 2026-10-22 |
+| TM-D10 | **End-of-project hygiene:** scan evidence before export, push protection, backup retention, delete everything after the demo | 10 §10 | ⏸ postponed to the end of the project (team's choice) |
+
+*Also from this step: R-AU8 (IP-based limits use CloudFront's address) and the Failure Matrix rows FS-19–FS-22.*
 
 ## G. Default numbers (superseded)
 

@@ -1,8 +1,10 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.0 · **Date:** 2026-10-20
-**Builds on:** `01` v5.0 · `04` v4.0 · ADR-004
-**Status:** ✅ validated by the team (2026-10-20). **v4.0 applies the professor's guidance** (decision log §S):
+**Version:** v4.1 · **Date:** 2026-10-22
+**Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
+**Status:** ✅ validated by the team (2026-10-20). **v4.1 applies the threat model** (`10`, decision log §T): registration always answers "check your email" (CS-2, PS-1, CN-18); admin two-factor login (AS-1); random order numbers; agent text shown as plain text (CS-9).
+
+**v4.0 applies the professor's guidance** (decision log §S):
 - **the agent decides where the client should go** and recommends one pharmacy (or route) with a reason;
 - **real locations:** "Use my location" or a district; pharmacies pin themselves on a map; travel times by car and on foot;
 - **days of use and pickup day:** a box is offered only if it lasts the client's days of use.
@@ -89,11 +91,12 @@ flowchart TD
 | Email | Valid, unique |
 | Password | ≥ 10 chars; not a common password |
 | Phone | Optional (for WhatsApp later) |
-| District | Dropdown; used to show same-district pharmacies first |
+| District | Dropdown; used for travel times when the client doesn't share their location (`04` R-S2) |
 | Terms and privacy notice | Required |
 
+**After [Sign up]:** always "Check your email to continue", **whether or not the email already has an account**, so nobody can find out who uses DawaLink (`04` R-AU7). A new email gets the verification link (CN-1). An email that already has an account gets "You already have a DawaLink account: just log in" (CN-18).
+
 **Errors:**
-- Email already used → "An account with this email exists. [Log in]".
 - Too many sign-ups from this network → "Please try again later".
 
 #### CS-3 Log in
@@ -102,7 +105,7 @@ flowchart TD
 - *(Password reset is postponed.)*
 
 #### CS-4 Verify email
-- "We sent a link to r***@gmail.com." [Resend], at most once per minute.
+- "We sent a link to r***@gmail.com." [Resend], at most once per minute and 5 times a day. **The link also logs the client in.**
 - **Before verification: search only.** No assistant, requests, reservations or watches. A banner explains this.
 
 #### CS-5 Home
@@ -115,11 +118,11 @@ flowchart TD
 │ 💬 Ask the Assistant →           │
 │ My requests                      │
 │ ┌──────────────────────────────┐ │
-│ │ Q-77 · 3 medicines · until 15:30 │
+│ │ Q-6BN2RA · 3 medicines · until 15:30 │
 │ │ ✅2 reserved · ⏳1 asking pharmacies│
 │ └──────────────────────────────┘ │
 │ My reservations                  │
-│ │ Augmentin 1g ×1 · R-1042 · pick up by Tue 21:00 │
+│ │ Augmentin 1g ×1 · R-7K3Q2F · pick up by Tue 21:00 │
 ├──────────────────────────────────┤
 │ 🔍Search 💬Assistant 📋Mine 👤Me │
 └──────────────────────────────────┘
@@ -175,7 +178,7 @@ flowchart TD
 └──────────────────────────────────┘
 ```
 - **Group version** (from a plan): lists the card's items with **checkboxes (all ticked)** and the total. **[Reserve these]** reserves the ticked items **all or none**. Unticked items stay with the agent, which keeps looking for them.
-- **On tap:** the order is created and the stock locked at once → "Reserved ✅ R-1042: show this number at the counter" → the chat or request thread gets a status card, and the pharmacy is notified.
+- **On tap:** the order is created and the stock locked at once → "Reserved ✅ R-7K3Q2F: show this number at the counter" → the chat or request thread gets a status card, and the pharmacy is notified.
 - **Failures:**
 
 | Cause | Message |
@@ -193,7 +196,7 @@ flowchart TD
 
 | Block | Purpose |
 |---|---|
-| Text | In the client's language and style (Arabizi in → Arabizi out) |
+| Text | In the client's language and style (Arabizi in → Arabizi out). **Shown as plain text:** no links, images or formatting (`10` TM-D5). |
 | Choice chips | Disambiguation, quick replies |
 | Option card | One listing + travel time + [Reserve]. The agent's pick is marked **Recommended**, with its reason. |
 | **Plan card** | One pharmacy's group for several medicines + total + [Reserve these]. A plan with several pharmacies shows the **route** ("A → C, 22 min by car"). |
@@ -213,7 +216,7 @@ flowchart TD
 #### CS-10 Reservations
 - **Active** (reserved) and **History**.
 - **Reserved detail:**
-  - the **order number `R-1042`**, large, with "Show this at the counter";
+  - the **order number `R-7K3Q2F`**, large, with "Show this at the counter";
   - product, pharmacy, address, hours;
   - **pick up by**;
   - the prescription notice;
@@ -261,7 +264,7 @@ In-app list (see §1.7).
 #### CS-16 Request page
 ```
 ┌──────────────────────────────────┐
-│ Q-77 · searching until 15:30 · Saida │
+│ Q-6BN2RA · searching until 15:30 · Saida │
 │ ✅ Concor 5mg ×2 · reserved · A   │
 │ ✅ Aspirin Cardio ×1 · reserved · A│
 │ ⏳ Glucophage 850 ×1 · asking 2   │
@@ -269,7 +272,7 @@ In-app list (see §1.7).
 │ ── What DawaLink did ──          │
 │ 09:32 Found Concor + Aspirin at A│
 │       (1 trip, 1,060,000 LBP)    │
-│ 09:35 You reserved both (R-1042, R-1043) │
+│ 09:35 You reserved both (R-7K3Q2F, R-9PDW4C) │
 │ 09:36 Glucophage not listed →    │
 │       asked 2 open pharmacies    │
 │ ── Talk to DawaLink ──           │
@@ -361,6 +364,7 @@ In-app list (see §1.7).
 | CN-15 | **Request: plan ready, your tap needed** | ✅ | ✅ |
 | CN-16 | **Request: 1 hour left** (items still missing) | ✅ | ✅ |
 | CN-17 | **Request closed** (summary) | ✅ | ✅ |
+| CN-18 | **You already have an account** (someone registered with this email; at most 1 per day, `04` R-AU7) | none | ✅ |
 
 All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 were removed in v3.0.)*
 
@@ -432,6 +436,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 - **Pickup time:** how long reservations are held: **1, 2 or 3 days** (default 1).
 - **Terms:** sealed, in-date packs only; price ≤ public price; keep quantities up to date; check reservations daily.
 - *(License document upload postponed.)*
+- **After [Register]:** "Check your email". The pharmacy enters the approval queue once it confirms its email (`04` R-AU7).
 
 #### PS-2 Pending approval
 - "Under review." Only the registration details can be edited.
@@ -446,7 +451,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 ```
 ┌────────────────────────────────────────────────────┐
 │ 🔍 Order number [ R-____ ]                          │
-│ NEW · R-1042 · Augmentin 1g · 14 tablets · ×2      │
+│ NEW · R-7K3Q2F · Augmentin 1g · 14 tablets · ×2      │
 │ Batch A123 · exp 12 Jan 2027 · 716,000 LBP each    │
 │ 📄 Prescription needed (check it at the counter)    │
 │ Pick up by: Tue 21 Oct, 21:00                      │
@@ -465,7 +470,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 3. **Summary before applying:**
    ```
    Rows: 1,204 · OK: 1,191 · Errors: 13 [Download errors]
-   + 25 new · ~ 3 changed · − 12 set to 0 · ⚠ 1 reserved item kept (file says 0, 1 reserved for R-1042)
+   + 25 new · ~ 3 changed · − 12 set to 0 · ⚠ 1 reserved item kept (file says 0, 1 reserved for R-7K3Q2F)
    [ Apply ]  [ Discard ]
    ```
    - Row errors include **"did you mean…"** suggestions for unmatched product names.
@@ -575,7 +580,7 @@ In-app list (§2.4).
 - Email + password.
 - Accounts are created from the command line only (A-D1).
 - 5 failures → 15-min lock + alert.
-- *(2FA postponed.)*
+- **Then a 6-digit code from an authenticator app** (TOTP, `04` R-AU6). It's set up when `create_admin.py` creates the admin; a lost phone means re-running the script.
 
 #### AS-2 Overview
 ```
@@ -586,7 +591,7 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 ```
 
 #### AS-3 Pharmacy approvals
-- **Queue with automatic checks:** license format; duplicate license, phone, email or address; **a map to check that the pin matches the address**.
+- **Queue with automatic checks:** license format; duplicate license, phone, email or address; **a map to check that the pin matches the address**; **the name is checked too**: the agent shows it to clients, so it must be the pharmacy's real name (`04` R-AG8).
 - [Approve] · [Reject] (reason) · [Ask for more information].
 
 #### AS-4 Pharmacies
@@ -597,12 +602,12 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 - Status (active, paused, suspended), reservations, no-shows, open requests.
 - [Lift pause] / [Suspend] / [Reinstate] (reason). Suspending ends the client's sessions at once.
 - **[Clear no-show]** on a contested reservation (reason; audited; `04` R-N3).
-- Viewing contact details is audited.
+- Viewing contact details is audited, and limited to 30 clients per hour per admin (`04` N-47).
 
 #### AS-6 Escalations
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ ESC-81 · emergency_claim · Request Q-77 · opened 20 min ago  │
+│ ESC-81 · emergency_claim · Request Q-6BN2RA · opened 20 min ago  │
 │ Agent summary: "Client says the need is urgent; Glucophage   │
 │ 850 ×1 still missing; 2 pharmacies declined; 2 h left."      │
 │ Conversation (redacted) [Show] · Trace [Open in Langfuse]    │
@@ -664,7 +669,7 @@ New registration (in-app + daily email) · **escalation** (immediate; emergency 
 | ID | Decision | Status |
 |---|---|---|
 | A-D1 | Admins created from the command line only | ✅ |
-| A-D2 | 2FA for admins | **postponed** (§K) |
+| A-D2 | 2FA for admins | ✅ **restored** (§T, TM-D8): TOTP |
 | A-D3 | Contact details viewable, audited | ✅ |
 | A-D4 | Chats only for escalated or reported cases, redacted | ✅ |
 | A-D5 | Clients can ask for a human | ✅ |

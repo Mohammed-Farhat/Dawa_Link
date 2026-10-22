@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.0 · **Date:** 2026-10-20
-**Status:** ✅ validated by the team (2026-10-20).
+**Version:** v5.1 · **Date:** 2026-10-22
+**Status:** ✅ validated by the team (2026-10-20). **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -180,9 +180,10 @@ If the LLM is down or over budget:
 #### C1: Accounts and roles
 - Client, pharmacy and admin roles. **Server-side sessions** (logout and suspension take effect instantly).
 - **Pharmacies:** registration → admin approval → upload unlocks. Name, license and address are changed by an admin after approval.
-- **Clients:** log in to search; a **verified email** is needed for the assistant, requests, reserving and watches. Sign-ups are rate-limited per IP.
+- **Clients:** log in to search; a **verified email** is needed for the assistant, requests, reserving and watches. Sign-ups are rate-limited per IP, and **never reveal whether an email already has an account**.
 - **Admins:** created from the command line.
-- *Postponed:* admin 2FA, password reset, account deletion.
+- **Admins** also log in with a one-time code from an authenticator app (TOTP, `10` TM-D8).
+- *Postponed:* password reset, account deletion.
 
 #### C2: Medicine catalog
 - **Imported by a script** from the MoPH price list (source and date stored).
@@ -247,8 +248,9 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 - **Location privacy:** shared only when the client taps "Use my location"; stored rounded; **never sent to the AI** (it sees travel times only).
 - PII redaction before every LLM call (known account identifiers + phone/email patterns).
 - **Taps execute, the agent proposes; cards come only from tools.**
-- Schema-validated tools; injection treated as data; **no text typed by pharmacies reaches the LLM**; a clinical guardrail.
+- Schema-validated tools; injection treated as data; **no text typed by pharmacies reaches the LLM** except their admin-approved names; replies shown as plain text (no links); a clinical guardrail.
 - Rate limits; an audit log of every state change and its actor.
+- **Threat model:** `10` (assets, attackers, 55 threats with tests, accepted risks).
 
 #### C14: Observability (AgentOps)
 - Langfuse traces for every turn, LLM call and tool call (latency, tokens, cost, retries, errors).
@@ -332,7 +334,7 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
 | A7 | Impact dashboard | Demo value |
 | A8 | Arabic (RTL) interface | Accessibility |
 | A9 | Optional pre-authorized auto-reserve within the client's limits | More autonomy; needs a careful consent design |
-| P-1 | Admin 2FA, password reset, account deletion | Platform security and privacy extras |
+| P-1 | Password reset, account deletion *(admin 2FA moved into the core by §T)* | Platform security and privacy extras |
 | P-2 | Pharmacy closures and vacation mode; license document upload; editable discount tiers; catalog admin UI; extra abuse rules | Platform features, not the agent |
 
 ## 8. Out of scope

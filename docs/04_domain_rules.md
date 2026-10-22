@@ -1,8 +1,10 @@
 # DawaLink: Domain Rules and State Machines
 
-**Version:** v4.0 · **Date:** 2026-10-20
-**Builds on:** `01` v5.0 · `03` v4.0 · `adr/ADR-001`–`ADR-004` · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
-**Status:** ✅ validated by the team (2026-10-20). **v4.0 applies the professor's guidance** (decision log §S):
+**Version:** v4.1 · **Date:** 2026-10-22
+**Builds on:** `01` v5.1 · `03` v4.1 · `adr/ADR-001`–`ADR-004` · `10` (threat model) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
+**Status:** ✅ validated by the team (2026-10-20). **v4.1 applies the threat model** (`10`, decision log §T): the admin-approved pharmacy name may reach the agent (R-AG8); "reliability" removed from R-AG9; admin two-factor login, registration that never reveals an account, IP limits from CloudFront (R-AU4, R-AU6–R-AU8); global LLM spend caps and security limits (N-46, N-47).
+
+**v4.0 applies the professor's guidance** (decision log §S):
 - the agent's job is to **bring each need to the right pharmacy**, and **the agent decides** which pharmacy (or route), from facts computed by code (R-AG9);
 - **real locations and road travel times** (R-S2, R-RT); coordinates never reach the LLM;
 - **expiry fit:** a box must last the client's **days of use** from the chosen **pickup day** (R-F); there is **no fixed minimum** before expiry any more.
@@ -76,7 +78,7 @@ Every transition below runs in **one database transaction**, with row locks on t
 
 | From | To | Trigger | Actor | Guards | Effects |
 |---|---|---|---|---|---|
-| (new) | PENDING | Registration | PHARMACY | Unique license, email, phone; valid fields | PN-1; admin notified; duplicate check (same license, email, phone or address → flag) |
+| (new) | PENDING | Registration, once its email link is confirmed (R-AU7) | PHARMACY | Unique license, email, phone; valid fields | PN-1; admin notified; duplicate check (same license, email, phone or address → flag) |
 | PENDING | PENDING (`info_requested`) | Ask for more information | ADMIN | Message | Pharmacy notified |
 | PENDING | APPROVED | Approve | ADMIN | none | PN-2; inventory and listings unlock |
 | PENDING | REJECTED | Reject | ADMIN | Reason | PN-3 |
@@ -96,7 +98,7 @@ Name, license and address can only be changed by an **admin** after approval (ed
 
 | From | To | Trigger | Actor | Effects |
 |---|---|---|---|---|
-| (new) | UNVERIFIED | Sign up | CLIENT | CN-1 verification email (sign-ups rate-limited per IP, R-AU5) |
+| (new) | UNVERIFIED | Sign up | CLIENT | CN-1 verification email (sign-ups rate-limited per IP, R-AU5). An email that already has an account gets CN-18 instead, and no new account is created (R-AU7). |
 | UNVERIFIED | ACTIVE | Valid verification link | CLIENT | none |
 | ACTIVE | PAUSED | 2nd counted no-show in a rolling 30 days | SYSTEM | `paused_until = now + 7 days`; CN-8 |
 | PAUSED | ACTIVE | `paused_until` reached, or an admin lifts the pause (reason) | SYSTEM / ADMIN | none |
@@ -210,7 +212,7 @@ stateDiagram-v2
 | O10 | OFFERED → **OFFER_DECLINED / OFFER_EXPIRED** | CLIENT / SYSTEM | none | Release. Matching hold → the unit goes to the next claim (R-PRI); this claim skips this item for 24 h. Early release → the item **returns to private**. |
 | O11 | OFFERED → **OFFER_WITHDRAWN** | SYSTEM | Another offer for the same claim accepted · the request or watch cancelled by the client | Release (as O10) |
 
-**At the counter:** the client shows the **order number** (e.g. `R-1042`). The pharmacist finds the reservation and presses **[Picked up]**. There is no pickup code, and no late pickup. The pharmacist checks the prescription when one is needed (R-P1).
+**At the counter:** the client shows the **order number** (e.g. `R-7K3Q2F`). The pharmacist finds the reservation and presses **[Picked up]**. There is no pickup code, and no late pickup. The pharmacist checks the prescription when one is needed (R-P1).
 
 ### SM-6 Early-release request
 
@@ -369,8 +371,8 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | R-AG5 | **Event routing:**<br>• orders from the **search page** → notifications only, **never an agent turn** (this keeps the evaluation baseline agent-free);<br>• assistant orders and agent-created watches → the client's active chat;<br>• request orders and claims → the request thread. |
 | R-AG6 | Write tools (`create_watch`, `request_early_release`, `open_claim`, `escalate`) take an **idempotency key**. A failed turn is retried whole. |
 | R-AG7 | **Cards come only from tools (DR2-B1).** Tools create **proposals**, stored server-side with their exact content, and return their IDs. The LLM chooses which proposal IDs to show; the server renders the cards. A tap sends the proposal ID, and the API checks the owner and expiry and **re-validates everything**. What the client sees is exactly what the button does. |
-| R-AG8 | **Text typed by pharmacies never reaches the LLM.** Tools return codes, numbers and IDs only (e.g. reason = `not_available`). |
-| R-AG9 | **The agent decides where the client should go** (the professor's guidance, ADR-004):<br>• the tools return candidate pharmacies or plans with their facts (travel time by car and on foot, opening hours vs when the client can go, price, stock, expiry fit, reliability);<br>• the agent weighs them with what the client said;<br>• it **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives (N-45).<br>The client still taps to reserve (R-RQ4 is unchanged). |
+| R-AG8 | **Text typed by pharmacies never reaches the LLM**, with one exception: the pharmacy's **name**, which an admin approves at registration and only an admin can change afterwards (SM-1; `10` TM-D2). Tools return codes, numbers, IDs and that name only (e.g. reason = `not_available`). |
+| R-AG9 | **The agent decides where the client should go** (the professor's guidance, ADR-004):<br>• the tools return candidate pharmacies or plans with their facts (travel time by car and on foot, opening hours vs when the client can go, price, stock, expiry fit);<br>• the agent weighs them with what the client said;<br>• it **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives (N-45).<br>The client still taps to reserve (R-RQ4 is unchanged). |
 
 ### R-AS Assistant limits
 - Message ≤ 1,000 chars.
@@ -378,6 +380,7 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 - ≤ 6 tool calls per turn.
 - ≤ 20 agent turns per request.
 - A daily token budget per client (value set after measuring; placeholder 200k). Over budget → degraded mode for that client until midnight.
+- **Global spend caps (N-46):** a daily and a monthly cap on LLM spend for the whole system. Reaching either → degraded mode for everyone until the next day or month. The provider's own spend limit is set as a hard backstop outside our code (`10` TM-D6).
 - Conversations are kept 30 days after their last activity, or after the request closes.
 
 ### R-AU Accounts and security
@@ -385,13 +388,16 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 |---|---|
 | R-AU1 | Password ≥ 10 chars, not in the top-10k list, argon2id. |
 | R-AU2 | 5 failed logins in 15 min → locked 15 min (admins: other admins are alerted). |
-| R-AU3 | **Server-side sessions (DR2-B4):** login creates a session. The browser holds only a random token in an httpOnly, Secure, SameSite=Strict cookie; the server stores its hash. Valid 7 days (admins 12 h). **Logout, a password change or a suspension revokes it immediately.** *(Admin 2FA postponed.)* |
-| R-AU4 | Email verification link 24 h, single use, stored hashed. *(Password reset postponed.)* |
+| R-AU3 | **Server-side sessions (DR2-B4):** login creates a session. The browser holds only a random token in an httpOnly, Secure, SameSite=Strict cookie; the server stores its hash. Valid 7 days (admins 12 h). **Logout, a password change or a suspension revokes it immediately.** Admins also enter a one-time code (R-AU6). |
+| R-AU4 | Email verification link 24 h, single use, stored hashed. **Following it logs the user in.** Pharmacies confirm their email too, before they enter the approval queue (R-AU7). *(Password reset postponed.)* |
 | R-AU5 | ≤ 5 sign-ups per IP per hour. The assistant and requests need a verified email. |
+| R-AU6 | **Admin two-factor login** (`10` TM-D8): after the password, admins enter a TOTP code from an authenticator app. The secret is created by `create_admin.py` (the only way to create an admin, A-D1) and stored encrypted; a lost phone means re-running the script (no recovery flow). Contact-detail views (`pii.view`) are limited (N-47), and the other admins are alerted above the limit (R-AL). |
+| R-AU7 | **Registration never reveals whether an email has an account** (`10` TM-D7). Client and pharmacy registration always answer "check your email". A new email gets the verification link (CN-1); an email that already has an account gets "you already have an account: just log in" (CN-18), at most once per address per day (N-47). Login computes a password hash even for unknown emails, so its timing reveals nothing. |
+| R-AU8 | **IP-based limits** use the client address that CloudFront reports. An `X-Forwarded-For` header sent by the client is ignored (`10` TH-41). |
 
 ### R-NT Notifications (essential set)
 - **Clients:**
-  - verification;
+  - verification (or "you already have an account", R-AU7);
   - **reserved** (order number, pharmacy, address, hours, pick up by, price, prescription notice);
   - not available;
   - pickup reminder;
@@ -420,6 +426,8 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 - > 10 dead emails in 1 h.
 - The clock check is more than 2 min late.
 - An agent turn failed 4 times.
+- LLM spend reaches the global daily cap (N-46).
+- An admin goes over the contact-detail view limit (N-47).
 
 ### R-RET Retention
 | Data | Kept |
@@ -460,7 +468,7 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | N-15 | Upload | CSV/XLSX fixed template · 5 MB · 10,000 rows | validated |
 | N-16 | Stale-inventory reminder | 7 days without an upload or edit | validated |
 | N-17 | Assistant | 1,000 chars · 20/min · 100/day · 6 tools per turn · 20 turns per request · daily token budget | changed |
-| N-18 | Auth | lockout 5 / 15 min · sessions 7 days (admin 12 h) · verification 24 h · ≤ 5 sign-ups per IP per hour | changed (sessions) |
+| N-18 | Auth | lockout 5 / 15 min · sessions 7 days (admin 12 h) · verification 24 h · ≤ 5 sign-ups per IP per hour · admin TOTP codes (30 s, ±1 step) | changed (sessions; admin TOTP, §T) |
 | N-19 | Retention | see R-RET | validated |
 | N-20 | Duplicate pharmacy check | same license, email, phone or address | validated |
 | N-21 | Alerts | see R-AL | changed |
@@ -487,6 +495,8 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | N-43 | Location and travel times | client location rounded to ~100 m (3 decimals); travel-time cache kept 24 h | new (§S) |
 | N-44 | Default days of use | 1 day (with the expiry warning, R-F2) | new (§S) |
 | N-45 | Agent recommendation | 1 recommended + up to 2 alternatives | new (§S) |
+| N-46 | Global LLM spend caps | daily cap = 10% of the monthly budget · monthly cap = the monthly budget (alert at 80%, R-AL) · the provider's own spend limit = the monthly budget (hard backstop) | new (§T) |
+| N-47 | Security limits | location updates ≤ 10 per hour per client · "you already have an account" email ≤ 1 per address per day · verification resend ≤ 1 per minute and ≤ 5 per day · admin contact-detail views (`pii.view`) ≤ 30 per hour per admin | new (§T) |
 
 ---
 
@@ -516,7 +526,7 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | INV-20 | A claim has at most one OFFERED order per path (matching, early release); once one is accepted, none of the claim's other offers stays open. |
 | INV-21 | Every card button refers to a server-stored proposal created by a tool. |
 | INV-22 | Requests and watches are created only during request hours. |
-| INV-23 | No text typed by a pharmacy appears in an LLM prompt. |
+| INV-23 | No text typed by a pharmacy appears in an LLM prompt, except its admin-approved name (R-AG8). |
 | INV-24 | No coordinates (the client's or a pharmacy's) appear in an LLM prompt, response or trace. |
 | INV-25 | No reservation or offer is created for a box that doesn't fit the client's days of use from the chosen pickup day (R-F1). |
 
@@ -559,3 +569,4 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | R-D26 | **Agent-first simplifications** (decision log §K) | ✅ validated |
 | R-D27–R-D38 | **Design review #2:** urgent needs (6-hour window, request hours), instant reservations, pickup time per pharmacy, the prescription notice, first come first served, district-only *(replaced by §S)*, the clock check, the claim as the single need, cards from tools, server-side sessions, evaluation and deployment changes. See decision log §N. | ✅ validated |
 | R-D39–R-D48 | **The professor's guidance (2026-10-20):** the agent brings the need to the right pharmacy and decides it; real locations and road travel times; the expiry fit with days of use and pickup day; no fixed minimum before expiry. See decision log §S. | ✅ validated |
+| R-D49–R-D53 | **The threat model (2026-10-22):** the admin-approved pharmacy name may reach the agent (R-AG8); admin two-factor login (R-AU6); registration never reveals an account (R-AU7); IP limits from CloudFront (R-AU8); global spend caps and security limits (N-46, N-47). See decision log §T. | ✅ validated |

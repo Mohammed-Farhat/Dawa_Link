@@ -1,7 +1,7 @@
 # DawaLink: Failure Matrix (living)
 
-**Version:** v1.1 (validated; v1.1 adds location, routing and expiry-fit failures) · **Date:** 2026-10-20
-**Builds on:** `04` v3.0 (rules, invariants) · `05` v2.0 (locks, clock check) · `06` v1.0 (error codes) · `07` v1.0 (agent limits, guards) · `08` v1.0 (evaluation)
+**Version:** v1.2 (validated; v1.2 adds the threat model's rows FS-19–FS-22) · **Date:** 2026-10-22
+**Builds on:** `04` v4.1 (rules, invariants) · `05` v3.1 (locks, clock check) · `06` v1.2 (error codes) · `07` v1.2 (agent limits, guards) · `08` v1.1 (evaluation) · `10` (threat model)
 **Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every PR updates it (Definition of Done #6).
 
 The course requires that *"application teams must maintain a Failure Matrix"* and that systems *"handle incomplete, invalid, unexpected, or malicious inputs and external component failures safely and predictably."* This document lists **every way we know DawaLink can fail**, and for each one:
@@ -16,7 +16,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 
 ## In short
 
-- **118 failure modes in 6 groups:**
+- **122 failure modes in 6 groups:**
   - FX: external components (the LLM, email, database, workers…);
   - FA: the agent;
   - FR: races and timing;
@@ -96,8 +96,8 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FA-9 | **Invented product, price or pharmacy in the text** | Can't be caught by a simple rule. Cards are always correct (rendered from tools). Measured in `eval` (false claims). | Prompt rule 7; cards are the source of truth; regression tests from E1/E4 failures | Text might be wrong; the card isn't | `eval` (E1, E4) | M |
 | FA-10 | **False action claim** ("I reserved it") | `eval` check: claim phrases without a matching tool result | Prompt rule 3; measured; failures → regression set | Misleading text; the reservations page shows the truth | `eval` (E4) | M |
 | FA-11 | **Prompt injection** in a chat message | Input guard flag | Processed as data; the agent has no harmful tool; flagged for metrics and abuse rules (R-AB) | Normal help continues | `eval` (E4) + `security` | H |
-| FA-12 | **Injection through tool data** (e.g. catalog names) | Same | Tool outputs are data; **pharmacy text never reaches the model** (R-AG8) | Nothing | `security` + `agent` | H |
-| FA-13 | **Agent asked to act for another client** ("cancel R-001043") | Tool ownership check | `NOT_FOUND` to the model; nothing changes | "I can only see your own reservations." | `security` + `eval` (E4) | H |
+| FA-12 | **Injection through tool data** (e.g. catalog names) | Same | Tool outputs are data; **pharmacy text never reaches the model**, except names an admin approved (R-AG8) | Nothing | `security` + `agent` | H |
+| FA-13 | **Agent asked to act for another client** ("cancel R-9PDW4C") | Tool ownership check | `NOT_FOUND` to the model; nothing changes | "I can only see your own reservations." | `security` + `eval` (E4) | H |
 | FA-14 | **"Put me first" / emergency claim** | Prompt rule 4 | Emergency template; optional escalation; **the allocation can't change** (no tool or endpoint exists) | Explanation + emergency services + [Talk to a person] | `eval` (E4) + `unit` (allocator) | H |
 | FA-15 | **Conversation busy** (another turn holds the lease) | Lease check | Chat: `409 CONVERSATION_BUSY` + auto-retry; worker: waits for the next pass | "One moment…" | `api` + `agent` | L |
 | FA-16 | **Lease expires during a very long turn** | Save step checks the lease | The save is refused (no double writes); the turn is retried whole | A short delay | `agent` | M |
@@ -128,7 +128,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FR-8 | **Pharmacy presses [Picked up] twice / from two devices** | State re-check | The second gets `RESERVATION_NOT_ACTIVE` ("already picked up") | "Already picked up" | `api` | L |
 | FR-9 | **[Picked up] after the deadline** | Deadline check | `PICKUP_DEADLINE_PASSED`; the reservation already expired (no late pickup, SM-5) | "This reservation expired at 21:00." | `api` | M |
 | FR-10 | **The clock check and a tap race on the same reservation** | Locks + re-check | Exactly one outcome (picked up or expired) | Consistent | `integration` | M |
-| FR-11 | **Upload or edit lowers stock below what's reserved** | R-U3 | Reserved units are kept; warning shown; use [Not available] instead | "1 unit kept for R-1042" | `integration` | H |
+| FR-11 | **Upload or edit lowers stock below what's reserved** | R-U3 | Reserved units are kept; warning shown; use [Not available] instead | "1 unit kept for R-7K3Q2F" | `integration` | H |
 | FR-12 | **Matching and a direct reservation at the same moment** | Lock order: clients → items (`05` §6) | No deadlock; one gets the unit | Consistent | `integration` | M |
 | FR-13 | **Two matching runs on the same medicine group** | Advisory lock per group | Run one at a time; deterministic allocation (INV-17) | Consistent | `integration` | M |
 | FR-14 | **Paused or at-limit client would win a matching hold** | R-PRI3 | Skipped this round; the next claim gets the unit (reason logged) | Nothing for them; the next person gets the offer | `unit` + `integration` | M |
@@ -195,8 +195,12 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FS-14 | **Early-release spam against pharmacies** | Anti-spam (R-E3, R-E5) | Asks skipped; the tool returns the reason | Nothing | `unit` | M |
 | FS-15 | **Agent tricked into a consequential action** | Structural: no such tool exists | Nothing can happen; an `audit_events` scan must find 0 agent-made state changes (E6) | Nothing | `security` + `eval` (E6) | H |
 | FS-16 | **Demo clock used outside demo mode** | Config flag | `404 DEMO_MODE_OFF` | Not available | `security` | H |
-| FS-17 | **Compromised admin account** | Audit log; short sessions (12 h); lockout | Every admin action is audited with a reason; **no admin endpoint can change stock, prices or priority**. Residual risk: 2FA is postponed (P-1); analyzed in `10`. | n/a | `security` + `10` | H |
+| FS-17 | **Compromised admin account** | Audit log; short sessions (12 h); lockout; contact-view limit alert | **TOTP two-factor login** (R-AU6); every admin action is audited with a reason; **no admin endpoint can change stock, prices or priority**; contact-detail views limited (N-47). Analyzed in `10` (TH-7). | n/a | `security` + `10` | H |
 | FS-18 | **Coordinates leak into AI traffic or traces** | Trace scan (E6) | Location is stored outside `case_state`; tools return minutes and areas only (INV-24); the scan must find 0 | Nothing | `security` + `eval` (E6) | H |
+| FS-19 | **Account discovery:** someone types a person's email into a registration form to learn whether they use DawaLink | Same answer always (R-AU7) | "Check your email" whatever the email; the owner gets CN-18 (≤ 1 per day); login takes the same time for unknown emails | "Check your email to continue" | `security` | M |
+| FS-20 | **A link or image in an agent reply** (after an injection) | Output guard (URL patterns) | URLs removed; the reply is shown as plain text, never as Markdown or HTML (`10` TM-D5) | Plain text, no clickable link | `agent` + `security` | M |
+| FS-21 | **Forged client IP** (`X-Forwarded-For`) to dodge the sign-up limit | IP taken from CloudFront (R-AU8) | The forged header is ignored; the real address is counted | `SIGNUP_LIMIT` as usual | `security` | M |
+| FS-22 | **Guessing someone else's order number** (in chat, or at a pharmacy counter) | Random refs (`05` §1) | Numbers can't be guessed; in chat, tools return `NOT_FOUND` for others' orders (FA-13) | "I can only see your own reservations." | `unit` (ref generator) + `security` | M |
 
 ---
 

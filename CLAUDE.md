@@ -25,25 +25,25 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-20:
+The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-22:
 
-- **Planning steps 00–09 are all validated** (decision log sections A–S). **Current versions:**
-  - `01` v5.0 · `02` v3.0 · `03` v4.0 · `04` v4.0 · `05` v3.0;
-  - `06` v1.1 · `07` v1.1 · `08` v1.1;
-  - `09` v1.1 (living: every PR updates it);
+- **Planning steps 00–10 are all validated** (decision log sections A–T). **Current versions:**
+  - `01` v5.1 · `02` v3.1 · `03` v4.1 · `04` v4.1 · `05` v3.1;
+  - `06` v1.2 · `07` v1.2 · `08` v1.1;
+  - `09` v1.2 (living: every PR updates it) · `10` v1.0 (threat model; living: a PR that adds an attack surface updates it);
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
-  - API, agent, evaluation and Failure Matrix (§O–§R, 2026-10-18 to 10-20).
+  - API, agent, evaluation and Failure Matrix (§O–§R, 2026-10-18 to 10-20);
+  - the threat model (§T, 2026-10-22): random order numbers, admin two-factor login, registration never reveals an account, plain-text agent replies, layered LLM cost caps, "reliability" removed (app stock is assumed real; [Not available] kept).
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
-- **Next: step 10, Threat model.** ⚠️ **Don't start it until the user explicitly says to.** After it come the steps below, each validated, and each started **only when the user says so**:
-  - 11 UI design
-  - 12 Infrastructure and CI/CD
+- **Next: step 11, UI design.** ⚠️ **Don't start it until the user explicitly says to.** After it comes step 12 (Infrastructure and CI/CD), also validated and started **only when the user says so**.
 - **After planning:** build → test → evaluate → deploy → report and demo.
 - **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
 - **Open items:**
   - O1: which LLM model (chosen by measurement);
-  - O2: who pays for the real LLM (needed only for the evaluation runs and the demo).
+  - O2: who pays for the real LLM (needed only for the evaluation runs and the demo);
+  - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Team tasks (not Claude's):**
   - write and label the ~300-request understanding set (Arabizi / Arabic / English);
   - create realistic inventory files in the upload template;
@@ -87,7 +87,7 @@ If the user's first message is general ("let's continue"), summarize where we ar
 The details are in the linked docs. If a request or code change would break one of these, stop and raise it.
 
 - **The agent proposes; the client's tap executes** through the API. Agent tools never create, accept or cancel orders or requests, and never change priority, prices or stock ([02 §3](docs/02_architecture.md), [04](docs/04_domain_rules.md) R-AG).
-- **Cards come only from tools** (stored proposals); a tap sends the proposal ID, and the API re-validates it. **Text typed by pharmacies never reaches the LLM** (04 R-AG7, R-AG8).
+- **Cards come only from tools** (stored proposals); a tap sends the proposal ID, and the API re-validates it. **Text typed by pharmacies never reaches the LLM**, except the admin-approved pharmacy name (04 R-AG7, R-AG8). **Agent replies are shown as plain text** (no links, images or HTML; `10` TM-D5).
 - **Priority is first come, first served, in code.** Nobody can change it: not the LLM, not an admin ([ADR-003](docs/adr/ADR-003-priority-is-a-rule-not-the-llm.md), amended).
 - **The agent decides where the client goes** (ADR-004): code computes the travel times, routes and expiry fit; the agent weighs them with what the client said and recommends one pharmacy with a reason. **Coordinates never reach the LLM** (04 INV-24): location is stored rounded, outside `case_state`.
 - **A box is offered only if it lasts the client's days of use** from the chosen pickup day (04 R-F1, INV-25); unknown days → 1 day + an expiry warning.
@@ -107,6 +107,7 @@ The details are in the linked docs. If a request or code change would break one 
   - controlled substances are excluded entirely;
   - a prescription notice by default (the pharmacist checks at the counter).
 - **Observability:** every agent turn and tool call is recorded, in Langfuse plus our own `agent_runs` / `agent_tool_calls` tables.
+- **Security:** follow the [threat model](docs/10_threat_model.md). A PR that adds an attack surface (an endpoint, tool, input, third party or role) updates it. Order and request numbers are random (`R-7K3Q2F`). Registration never reveals whether an email has an account. Admins log in with TOTP.
 
 ## 5. Reading map: read before working on…
 
@@ -115,6 +116,7 @@ The details are in the linked docs. If a request or code change would break one 
 | Any rule, state, limit, timer, number or invariant | [04_domain_rules.md](docs/04_domain_rules.md) (**source of truth**) |
 | Tables, migrations, models, locking, retention, seeding | [05_database.md](docs/05_database.md) |
 | Stack, components, agent tools, repo layout, deployment | [02_architecture.md](docs/02_architecture.md) (repo layout in §6) |
+| Security: auth, access, limits, attack surfaces, what third parties receive | [10_threat_model.md](docs/10_threat_model.md) |
 | Screens and flows; what the agent says and when (AF-, RF-, CS-, PS-, AS- IDs) | [03_user_flows.md](docs/03_user_flows.md) |
 | Agent turns, conversation state, case state | [ADR-001](docs/adr/ADR-001-conversation-state-and-agent-turns.md) |
 | Why the design looks the way it does | [reviews/design_review_01.md](docs/reviews/design_review_01.md), [design_review_02.md](docs/reviews/design_review_02.md) |
@@ -132,7 +134,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **Agent:** LangGraph.
 - **Background work:** a worker running the clock check (no jobs table).
 - **Chat:** SSE streaming for replies + polling for new cards.
-- **Auth:** server-side sessions (opaque cookie + `sessions` table).
+- **Auth:** server-side sessions (opaque cookie + `sessions` table); admins also use TOTP.
 - **Frontend:** React + TypeScript, Mantine.
 - **Hosting:** AWS ECS Fargate (regular, public subnets), internal ALB behind one CloudFront (VPC origin), RDS, SES, built with CDK (Python).
 - **LLM by stage:**

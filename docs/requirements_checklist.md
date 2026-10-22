@@ -53,8 +53,8 @@ A PR is merged only when **all** of the following hold:
 | G-2 | Problem before technology | Proposal and poster; scope chosen before the stack | proposal, poster, `01` | Design | ✅ |
 | G-3 | Agentic justification; what stays deterministic or human | Boundary tables, plus **measured** agent vs the search baseline **and vs a no-AI scripted policy** using the same tools | `01` §5, `02` §3, `04` §7, `08`, report | Design + Evaluate | 🟡 |
 | G-4 | Identify **and evaluate** ≥ 1 real-world constraint | 7 constraints with measurements (stale inventory, pharmacy response, latency, cost, privacy, **location privacy**, human approval): suite E6 | `01` §9, `08` E6, results | Evaluate | 🟡 |
-| G-5 | AuthN/Z, least privilege, secret and PII protection, I/O validation, prompt-injection defenses, human approval | Implemented controls + security tests | `01` C13, `04` R-AU, `10`, `tests/security/` | Build | ⏳ |
-| G-6 | Safe handling of bad or malicious input and external failures | Failure Matrix (`09` ✅: 112 modes, principles P1–P8) + failure-injection tests (`09` §8) | `09`, `tests/` | Build | 🟡 |
+| G-5 | AuthN/Z, least privilege, secret and PII protection, I/O validation, prompt-injection defenses, human approval | Controls mapped in the threat model (`10` ✅ §7) + implemented controls + security tests | `01` C13, `04` R-AU, `10`, `tests/security/` | Design + Build | 🟡 |
+| G-6 | Safe handling of bad or malicious input and external failures | Failure Matrix (`09` ✅: 122 modes, principles P1–P8) + failure-injection tests (`09` §8) | `09`, `tests/` | Build | 🟡 |
 | G-7 | Public, authorized or synthetic data with provenance and ToS | MoPH source and date on every product; dataset description sheets; seeded synthetic generators | `04` R-C1, `eval/datasets/README.md` | Build + Evaluate | 🟡 |
 | G-8 | Track model/API usage, system cost, **cost per successful task** | Langfuse + `agent_runs` + AWS cost; cost per fulfilled request reported per model (E2, E5) | `08` E2/E5, results, report | Evaluate + Deploy | 🟡 |
 | G-9 | Students responsible for AI-written code | Teammate review on every PR (DoD #7); an **AI-usage statement** in the README and report | PRs, README, report | Build + Submit | ⏳ |
@@ -63,11 +63,11 @@ A PR is merged only when **all** of the following hold:
 
 | ID | Deliverable | What exactly | Where | Phase | Status |
 |---|---|---|---|---|---|
-| D-1 | Live demo + poster | Demo script covering the 15 scenarios, **including failures and attacks**; the **demo clock** (AS-12, demo mode only); a recorded backup | `01` §6, `docs/demo_script.md` | Submit | 🟡 |
+| D-1 | Live demo + poster | Demo script covering the 17 scenarios (`01` §6) and the security challenges (`10` §9.3), **including failures and attacks**; the **demo clock** (AS-12, demo mode only); a recorded backup | `01` §6, `docs/demo_script.md` | Submit | 🟡 |
 | D-2 | Full GitHub repo with setup and reproducibility docs | README: run everything locally with one command; seed data; how to run tests and reproduce the evaluation; `.env.example` | repo root | Build | ⏳ |
 | D-3 | Evaluation suite, experiments, results | Plan ✅ (`08`): U-set, R-set, simulation, P-set; suites E1–E6; results in `eval/results/` | `eval/`, `08` | Evaluate | 🟡 |
 | D-4 | Agent traces and operational metrics | Langfuse project + **exported traces and metrics** in the repo | `docs/evidence/`, `eval/results/` | Evaluate + Deploy | ⏳ |
-| D-5 | Failure analysis and security/threat analysis | Failure Matrix, threat model, failure analysis of evaluation errors | `09`, `10`, `08` | Build + Evaluate | ⏳ |
+| D-5 | Failure analysis and security/threat analysis | Failure Matrix (`09` ✅), threat model (`10` ✅), failure analysis of evaluation errors | `09`, `10`, `08` | Design + Build + Evaluate | 🟡 |
 | D-6 | Architecture and API documentation | Architecture, database and API docs + exported OpenAPI spec | `02`, `05`, `06`, `docs/openapi.json` | Design + Build | 🟡 |
 | D-7 | Final technical report | Problem, users, agentic justification, design choices and alternatives, evaluation, constraints, failures, security, limitations | `docs/report/` | Submit | ⏳ |
 | D-8 | **Evidence, not only prepared examples** | Held-out tests (40% locked), 5 seeds × 100 simulated requests per contender, regression tests from real failures (`08` §5–§6) | `eval/`, `tests/regression/` | Evaluate | 🟡 |
@@ -82,10 +82,10 @@ A PR is merged only when **all** of the following hold:
 | T-4 | Logs and traces across model/tool interactions | Langfuse + structured logs | §1.2 above | Build | ⏳ |
 | T-5 | Metrics: end-to-end, model and tool latency, tokens, cost, task success, tool failures, retries, agent errors | `agent_runs` + Langfuse + dashboard + evaluation report | `05`, AS-10, `08` | Build + Evaluate | ⏳ |
 | T-6 | Retries, timeouts, fallbacks, schema validation, error handling, graceful degradation | Clock-check retries, LLM timeouts, degraded mode, validated tool outputs | `04` R-T10, SM-12, `01` C15, code | Build | ⏳ |
-| T-7 | Authorization, least privilege, secret management, injection defenses | Server-side sessions; role and ownership checks; client-scoped tools; **cards only from tools**; no pharmacy text to the LLM; Secrets Manager | `02`, `04` R-AG7/R-AG8, `10` | Build + Deploy | ⏳ |
+| T-7 | Authorization, least privilege, secret management, injection defenses | Server-side sessions; role and ownership checks; client-scoped tools; **cards only from tools**; no pharmacy text to the LLM (except approved names); Secrets Manager; **admin TOTP**; threat model (`10` ✅) | `02`, `04` R-AG7/R-AG8/R-AU, `10` | Design + Build + Deploy | 🟡 |
 | T-8 | **Test beyond the happy path:** invalid/ambiguous input, API/tool failures, malformed responses, rate limits, malicious input, unauthorized actions | One test category per item (§6 below) | `tests/` | Build | ⏳ |
 | T-9 | **Maintain a Failure Matrix** | Living document (`09` ✅), updated in every PR; every row ✅ or an accepted limitation before submission | `09` | Build | 🟡 |
-| T-10 | Failure analysis + lightweight threat model | Threat model (assets, threats, mitigations); analysis of failures found in evaluation | `10`, `08` | Build + Evaluate | ⏳ |
+| T-10 | Failure analysis + lightweight threat model | Threat model ✅ (`10`: assets, attackers, trust boundaries, 55 threats with tests, OWASP LLM Top 10, accepted risks); analysis of failures found in evaluation | `10`, `08` | Design + Evaluate | 🟡 |
 | T-11 | Evaluation: baselines, metrics, data, held-out testing | Search-page baseline + **no-AI scripted policy**; understanding set dev/held-out; simulation with several runs per setup; targets fixed before held-out runs | `08`, `eval/` | Evaluate | 🟡 |
 | T-12 | Adversarial testing; **failures → regression tests** | R-set (~120 attacks, target 0 violations); 👎 report → admin confirms → regression case | `08` E4/§5, `eval/safety/`, `tests/regression/`, AS-8 | Build + Evaluate | 🟡 |
 | T-13 | API and interface contracts: schemas, validation, auth, error behavior | Endpoint contracts (`06` ✅) + generated OpenAPI + contract tests (3 per endpoint, every error code, Schemathesis) | `06`, `tests/api/` | Design + Build | 🟡 |

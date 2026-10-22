@@ -1,8 +1,8 @@
 # DawaLink: API Contracts
 
-**Version:** v1.1 (validated; v1.1 adds locations, travel times and the expiry fit) · **Date:** 2026-10-20
-**Builds on:** `04` v4.0 (rules; every guard below cites its rule) · `05` v3.0 (tables) · `03` v4.0 (screens) · `02` v3.0 (components) · ADR-004
-**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`.
+**Version:** v1.2 (validated; v1.2 applies the threat model) · **Date:** 2026-10-22
+**Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
+**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected.
 
 This document defines **every action** the website can ask the server to do, and **every interface between the main components** (the browser, the API, the agent, the worker and the database). For each endpoint it gives:
 - who may call it;
@@ -36,7 +36,7 @@ That is what the course asks for: *"interfaces between major components, includi
 | Base URL | `https://<cloudfront-domain>/api/v1`. Locally: `http://localhost:8000/api/v1`. |
 | Format | JSON (UTF-8) in and out, except the upload (multipart), template and error downloads (CSV), and the chat stream (SSE). |
 | Field names | `snake_case`. |
-| IDs | UUIDs (strings). Human references: `ref` = `R-001042` (order, shown at the counter) and `Q-000045` (sourcing request). Searching a ref accepts it with or without the leading zeros (`R-1042`). |
+| IDs | UUIDs (strings). Human references: `ref` = `R-7K3Q2F` (order, shown at the counter) and `Q-4HX9TM` (sourcing request). They're **random**, so they can't be guessed (`05` §1, `10` TM-D4). Searching a ref ignores case and the dash (`r7k3q2f` finds `R-7K3Q2F`). |
 | Time | ISO 8601 in **UTC** (`2026-10-20T19:00:00Z`). The frontend displays Beirut time. Responses that show time-based state include `server_now` (the **app clock**, so the demo clock works, `04` R-DEMO). Dates (`expiry_date`) are `YYYY-MM-DD`. |
 | Money out | Integer **LBP** + `usd_approx` (computed on the server with the configured rate, `04` R-C3), for example `{"lbp": 716000, "usd_approx": 8.0}`. |
 | Money in | `{"amount": 10, "currency": "USD"}` or `{"amount": 900000, "currency": "LBP"}`. The server converts to LBP; checks are always done in LBP. |
@@ -54,6 +54,7 @@ That is what the course asks for: *"interfaces between major components, includi
 
 ### 2.1 Session
 - `POST /auth/login` creates a **server-side session** (`04` R-AU3, `05` `sessions`).
+- **Admins** also send a one-time `totp_code` from their authenticator app (`04` R-AU6). A wrong or missing code gets the same `INVALID_CREDENTIALS` as a wrong password, and counts toward the lockout.
 - The browser receives one cookie:
 
   `dl_session=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=604800` (admins: 12 h).
@@ -84,8 +85,8 @@ That is what the course asks for: *"interfaces between major components, includi
 3. **Ownership:** a client sees only their own reservations, requests, watches, conversations and proposals. A pharmacy sees only its own reservations, inventory and asks. **Someone else's object returns `404 NOT_FOUND`**, never `403`, so IDs can't be probed for existence.
 
 ### 2.3 Privacy in responses
-- A pharmacy **never** receives a client's name, email, phone, district, location or messages (`04` INV-9).
-- **The client's location** goes from the browser to our API only. It's stored rounded, and **never sent to the LLM** (INV-24). Responses show travel times and area names. It sees the order number, product, units, price, times and the "prescription needed" flag.
+- A pharmacy **never** receives a client's name, email, phone, district, location or messages (`04` INV-9). It sees the order number, product, units, price, times and the "prescription needed" flag.
+- **The client's location** goes from the browser to our API. It's stored rounded, and **never sent to the LLM** (INV-24). To compute travel times, the API sends **only the rounded point, with no identity**, to the routing service (`04` R-RT1, `10` §4.3). Responses show travel times and area names.
 - A client **never** receives private inventory or which pharmacy holds it (`04` INV-8), except through an accepted early-release offer.
 - Admins see contact details only through one audited endpoint (`GET /admin/clients/{id}/contact`, logged as `pii.view`).
 
@@ -124,7 +125,6 @@ That is what the course asks for: *"interfaces between major components, includi
 | `INTERNAL_ERROR` | 500 | Unexpected error (logged with `request_id`) | |
 | `SERVICE_UNAVAILABLE` | 503 | Database unreachable | |
 | **Accounts** | | | |
-| `EMAIL_TAKEN` | 409 | Sign-up with a used email | SM-2 |
 | `WEAK_PASSWORD` | 422 | < 10 characters or a common password | R-AU1 |
 | `SIGNUP_LIMIT` | 429 | > 5 sign-ups from this network in 1 h | R-AU5 |
 | `INVALID_CREDENTIALS` | 401 | Wrong email or password (one generic message) | R-AU2 |
@@ -184,10 +184,15 @@ That is what the course asks for: *"interfaces between major components, includi
 |---|---|---|
 | Failed logins | 5 in 15 min per account → locked 15 min | `ACCOUNT_LOCKED` (R-AU2) |
 | Sign-ups | 5 per network address per hour | `SIGNUP_LIMIT` (R-AU5) |
-| Resend verification email | 1 per minute | `RATE_LIMITED` |
+| Resend verification email | 1 per minute, 5 per day (N-47) | `RATE_LIMITED` |
+| "You already have an account" email | 1 per address per day (N-47); further registrations with that email get the same answer but no email | none (same answer) |
 | Chat messages | 20 per minute, 100 per day per client | `RATE_LIMITED` (R-AS) |
 | Any other API call | 120 per minute per session (N-29) | `RATE_LIMITED` |
 | Polling for new messages | Every 3 s while a chat or request page is open (N-28); fits inside the general limit | none |
+| Location updates | 10 per hour per client (N-47); protects the routing quota | `RATE_LIMITED` (the last location is kept) |
+| Admin contact-detail views (`pii.view`) | 30 per hour per admin (N-47); the other admins are alerted (R-AL) | `RATE_LIMITED` |
+
+Limits counted per network address (sign-ups) use the address CloudFront reports; an `X-Forwarded-For` header sent by the client is ignored (`04` R-AU8).
 
 Agent-side limits (tool calls per turn, early-release asks) are enforced inside the services, not here (`04` R-AS, R-E3).
 
@@ -290,7 +295,7 @@ class Listing(BaseModel):        # a visible inventory item (04 SM-3)
 
 class Reservation(BaseModel):    # an order (04 SM-5)
     id: UUID
-    ref: str                     # "R-001042": shown at the counter
+    ref: str                     # "R-7K3Q2F": shown at the counter
     state: Literal["RESERVED", "PICKED_UP", "NOT_AVAILABLE", "EXPIRED_NO_SHOW",
                    "CANCELLED_BY_CLIENT", "CANCELLED_BY_SYSTEM"]
     status_text: str             # "Reserved: pick up by Tue 21:00"
@@ -353,7 +358,7 @@ class RequestItem(BaseModel):
 
 class SourcingRequest(BaseModel):            # 04 SM-8
     id: UUID
-    ref: str                     # "Q-000077"
+    ref: str                     # "Q-6BN2RA"
     state: Literal["OPEN", "CLOSED"]
     outcome: Literal["FULFILLED", "PARTIAL", "UNFULFILLED", "CANCELLED"] | None
     district: District
@@ -442,13 +447,13 @@ All paths are relative to `/api/v1`.
 | `GET /health` | anyone | → `{status, db, version}` (used by the load balancer) | `SERVICE_UNAVAILABLE` | |
 | `GET /config/public` | anyone | → `{request_hours: {start, end}, search_window_hours, offer_hours, lbp_per_usd, rate_date, discount_tiers, server_now, demo_mode}` | | §5 numbers |
 | `GET /districts` | anyone | → `list[District]` | | R-S2 |
-| `POST /auth/register/client` | anyone | `{email, password, full_name, phone?, district_id, accept_terms: true}` → **201** `Me` + session cookie; verification email sent | `EMAIL_TAKEN`, `WEAK_PASSWORD`, `SIGNUP_LIMIT`, `VALIDATION_ERROR` | SM-2, R-AU1, R-AU5 |
-| `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, location: {lat, lon} (the map pin), pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **201** `Me` (pharmacy PENDING) + cookie | `EMAIL_TAKEN`, `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1 |
-| `POST /auth/login` | anyone | `{email, password}` → `Me` + cookie | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3 |
+| `POST /auth/register/client` | anyone | `{email, password, full_name, phone?, district_id, accept_terms: true}` → **202** `{"message": "Check your email"}`, **the same answer whether or not the email already has an account** (`04` R-AU7). A new email becomes an UNVERIFIED account and gets the link (CN-1); an existing one gets CN-18. | `WEAK_PASSWORD`, `SIGNUP_LIMIT`, `VALIDATION_ERROR` | SM-2, R-AU1, R-AU5, R-AU7 |
+| `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, location: {lat, lon} (the map pin), pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **202** `{"message": "Check your email"}`, the same answer whether or not the email already has an account (R-AU7). The pharmacy enters the approval queue (PENDING) once its email link is confirmed. | `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1, R-AU7 |
+| `POST /auth/login` | anyone | `{email, password, totp_code?}` → `Me` + cookie. **Admins must send `totp_code`** (R-AU6). | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3, R-AU6 |
 | `POST /auth/logout` | any | → **204**; session revoked | | R-AU3 |
 | `GET /auth/me` | any | → `Me` | `UNAUTHENTICATED` | |
-| `POST /auth/verify-email` | anyone | `{token}` → `Me` (client becomes ACTIVE) | `TOKEN_INVALID` | R-AU4 |
-| `POST /auth/verify-email/resend` | client (UNVERIFIED) | → **202** | `RATE_LIMITED` | R-AU4 |
+| `POST /auth/verify-email` | anyone | `{token}` → `Me` + session cookie (a client becomes ACTIVE; a pharmacy enters the approval queue as PENDING) | `TOKEN_INVALID` | R-AU4, R-AU7 |
+| `POST /auth/verify-email/resend` | logged in, email not verified | → **202** (≤ 1 per minute, ≤ 5 per day, N-47) | `RATE_LIMITED` | R-AU4 |
 | `POST /auth/password` | any | `{current_password, new_password}` → **204**; other sessions revoked | `INVALID_CREDENTIALS`, `WEAK_PASSWORD` | R-AU1 |
 | `GET /me/profile` · `PATCH /me/profile` | client | `{phone?, district_id?, alternatives_ok_default?}` → `Me` | `VALIDATION_ERROR` | CS-13 |
 
@@ -545,7 +550,7 @@ class ExecuteResult(BaseModel):
                   "request_summary", "constraint_change", "remove_item"]
     reservations: list[Reservation] = []
     request: SourcingRequest | None = None
-    message: str                 # "Reserved ✅ R-001042: show this number at the counter"
+    message: str                 # "Reserved ✅ R-7K3Q2F: show this number at the counter"
 ```
 
 **What each kind does**, re-validated as if new:
@@ -581,7 +586,7 @@ class ExecuteResult(BaseModel):
 | `POST /pharmacy/me/resubmit` | REJECTED | → profile (PENDING) | | SM-1 |
 | `PATCH /pharmacy/me` | APPROVED | `{phone?, hours?, pickup_days? (1–3)}` → profile (existing deadlines unchanged) | `VALIDATION_ERROR` | R-T5, N-6 |
 | `GET /pharmacy/dashboard` | APPROVED / SUSPENDED | → `{new_reservations, due_today, open_asks, live_listings, units_reserved, last_inventory_update, stale}` | | PS-3 |
-| `GET /pharmacy/reservations?view=active\|history&q=R-1042&cursor=` | APPROVED / SUSPENDED | → page of `{id, ref, product, batch, expiry_date, qty, price_each, total, deadline, prescription_required, state, status_text, is_new, created_at}`. **No client identity** (INV-9). `is_new` = reserved in the last 24 h and still RESERVED. | | PS-4 |
+| `GET /pharmacy/reservations?view=active\|history&q=R-7K3Q2F&cursor=` | APPROVED / SUSPENDED | → page of `{id, ref, product, batch, expiry_date, qty, price_each, total, deadline, prescription_required, state, status_text, is_new, created_at}`. **No client identity** (INV-9). `is_new` = reserved in the last 24 h and still RESERVED. | | PS-4 |
 | `POST /pharmacy/reservations/{id}/picked-up` | APPROVED / SUSPENDED (own) | → reservation (PICKED_UP) | `RESERVATION_NOT_ACTIVE` ("already picked up"), `PICKUP_DEADLINE_PASSED` | O2, INV-7 |
 | `POST /pharmacy/reservations/{id}/not-available` | APPROVED / SUSPENDED (own) | `{units}` → reservation (still RESERVED with fewer units, or NOT_AVAILABLE) | `UNITS_INVALID`, `RESERVATION_NOT_ACTIVE` | O3 |
 | `GET /pharmacy/inventory/template` | APPROVED | → `text/csv` with the template columns | | SM-4 |
@@ -607,7 +612,7 @@ class ExecuteResult(BaseModel):
 | `POST /admin/pharmacies/{id}/approve` · `/reject {reason}` · `/request-info {message}` · `/suspend {reason}` · `/reinstate {reason}` | → pharmacy | `REASON_REQUIRED` | SM-1 |
 | `PATCH /admin/pharmacies/{id}` | `{name?, license_number?, address?, district_id?, location?: {lat, lon}}` → pharmacy (audited). Approval also records that the pin was checked. | `LICENSE_TAKEN` | SM-1, R-S2 |
 | `GET /admin/clients?q=&status=&cursor=` | → list **without contact details** (status, district, reservations, no-shows, open requests) | | AS-5 |
-| `GET /admin/clients/{id}/contact` | → `{full_name, email, phone}`; **logged as `pii.view`** | | A-D3 |
+| `GET /admin/clients/{id}/contact` | → `{full_name, email, phone}`; **logged as `pii.view`**; ≤ 30 per hour per admin (N-47) | `RATE_LIMITED` | A-D3, R-AU6 |
 | `POST /admin/clients/{id}/lift-pause` · `/suspend` · `/reinstate` | `{reason}` → client state; suspending revokes sessions | `REASON_REQUIRED` | SM-2 |
 | `POST /admin/reservations/{id}/clear-no-show` | `{reason}` → the reservation no longer counts as a no-show; a pause it caused is lifted if it no longer applies (audited) | `REASON_REQUIRED`, `NOT_CONTESTABLE` | R-N3 |
 | `GET /admin/escalations?state=` · `GET /admin/escalations/{id}` | → list / detail (summary, appended notes, request ref, **redacted** conversation, trace link) | | AS-6 |
@@ -634,12 +639,12 @@ Idempotency-Key: 5b1e…
 {"listing_id": "a3f…", "qty": 1, "expected_price_lbp": 716000}
 
 201 Created
-{"id": "e91…", "ref": "R-001042", "state": "RESERVED",
+{"id": "e91…", "ref": "R-7K3Q2F", "state": "RESERVED",
  "status_text": "Reserved: pick up by Tue 21:00",
  "qty": 1, "price_each": {"lbp": 716000, "usd_approx": 8.0},
  "deadline": "2026-10-20T19:00:00Z", "source": "search", …}
 ```
-At the counter, the pharmacist searches `R-1042` and calls `POST /pharmacy/reservations/e91…/picked-up`.
+At the counter, the pharmacist searches `R-7K3Q2F` and calls `POST /pharmacy/reservations/e91…/picked-up`.
 
 ### 7.2 Two clients tap the last box at the same moment
 Both send `POST /reservations` for the same listing. The database lock lets one through (`05` §6):
@@ -746,6 +751,7 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | API-D12 | **CSRF:** `SameSite=Strict` cookie + `Origin` check on every state-changing request | ✅ 2026-10-18 | Two simple layers |
 | API-D13 | **OpenAPI generated and exported to `docs/openapi.json` in CI**; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | ✅ 2026-10-18 | Deliverable D-6, T-13, bonus B-8 |
 | API-D14 | **New numbers** to add to `04` §5: polling 3 s · API rate limit 120 per minute per session · proposal validity 2 h · max page size 50 | ✅ 2026-10-18 | Numbers live only in `04` §5 |
+| API-D15 | **Threat-model changes** (`10`, §T): registration answers "check your email" whatever the email (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random refs; new limits (§4); IP limits from CloudFront | ✅ 2026-10-22 | Accounts can't be discovered; the admin account is protected; order numbers can't be guessed |
 
 **Applied on validation (2026-10-18):**
 - the API-D14 numbers are in `04` §5 (N-28–N-31);
