@@ -1,6 +1,6 @@
 # DawaLink: Project Overview (read this first)
 
-**Status as of:** 2026-10-22: planning steps 00–10 are validated; no code yet.
+**Status as of:** 2026-10-23: planning steps 00–11 are validated; no code yet.
 **Who it's for:** the team, and anyone who wants the whole picture without reading every document. Each section links to the detailed doc.
 **Kept current:** updated whenever a planning step is validated.
 **Numbers here are summaries.** The exact values live in [`04` §5](04_domain_rules.md), the source of truth.
@@ -20,13 +20,14 @@
   - a target of 0 safety violations;
   - every AI step recorded;
   - 122 failure cases and 55 security threats, each with a test.
-- **Next:** step 11 (UI design), then step 12 (infrastructure and CI/CD). Then we build, test, evaluate and deploy. **The live demo is on 2026-11-30.**
+- **The look is chosen:** the initial UI design for the website (desktop and mobile) is drawn on a design canvas. It's friendly and big, and it puts the saving first (§11).
+- **Next:** step 12 (infrastructure and CI/CD), the last planning step. Then we build, test, evaluate and deploy. **The live demo is on 2026-11-30.**
 
 ---
 
 ## 1. Where we are
 
-**Done:** planning steps 00–10, all validated by the team. The [docs README](README.md) lists every doc with its version.
+**Done:** planning steps 00–11, all validated by the team. The [docs README](README.md) lists every doc with its version.
 
 | Step | What it decided |
 |---|---|
@@ -41,10 +42,10 @@
 | 08 [Evaluation](08_evaluation.md) | How we prove the agent is useful and safe |
 | 09 [Failure Matrix](09_failure_matrix.md) | 122 ways it can fail, and what happens then (living) |
 | 10 [Threat model](10_threat_model.md) | Who could attack it, how, and what stops them (living) |
+| 11 [UI design](11_ui_design.md) | How the website looks and behaves, on desktop and mobile; the screens are drawn on a design canvas |
 
 **Next:**
-- step 11 (UI design);
-- step 12 (infrastructure and CI/CD);
+- step 12 (infrastructure and CI/CD), the last planning step;
 - then the build: **the agent and its evaluation first**, then the platform screens.
 
 **Still open:**
@@ -229,6 +230,25 @@ A client writes:
   If the AI is down or over budget → "Use Search", and everything else keeps working.
 - **One agent turn at a time** per conversation. Every turn and tool call is recorded, in Langfuse and in our own tables.
 
+### 6.4 Why an agent, and not just the search page?
+The search page answers one question: *"where is this one medicine listed right now?"* The agent takes on the whole job of getting the client their medicines.
+
+| Situation | Search page (no AI) | The agent |
+|---|---|---|
+| A messy message ("baddi concor w glucophage, la 12 yom, ma 3ande siyyara w bkhallis shoghl 6") | The client types each name, picks the strength, sets the filters | Understands one message in any language, and asks only what's missing |
+| Several medicines | One search each; the client works out the trips | Plans them together: fewest trips or cheapest, quantities split across pharmacies, the visiting order |
+| Choosing where to go | Sorts by one thing (nearest or cheapest) | Weighs everything against the client's situation (no car, free after 6) and explains its choice |
+| Not listed anywhere | "Notify me", and hope | **Asks open pharmacies to release boxes they keep privately**, which search can never show, and watches for new stock |
+| Something fails | The client finds out and starts over | Re-plans at once |
+| The client isn't looking | Nothing happens | Keeps working for 6 hours, and an hour before the end suggests relaxing the request or calls in a person |
+
+**We don't just claim this; we measure it.** The evaluation (E2) runs the same requests through three contenders:
+1. the search page;
+2. a fixed program with **no AI** that uses the same tools;
+3. the agent.
+
+Wherever the AI adds nothing, we report it honestly as "this should stay plain code". The search page is also the fallback when the AI is down.
+
 ---
 
 ## 7. Edge cases (what happens when…)
@@ -312,7 +332,37 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 
 ---
 
-## 11. Tech in brief (details in [`02`](02_architecture.md))
+## 11. The UI design in brief (details in [`11`](11_ui_design.md))
+
+The initial design for the website, on desktop and mobile, is drawn on a design canvas: **"DawaLink initial UI design (website, desktop and mobile)"**, https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx. It's private, so ask the repo owner for access. **It can still change during the build.**
+
+- **The look:**
+  - one font for English and Arabic (Readex Pro, made for easy reading);
+  - deep navy and a friendly blue; **yellow is used only for savings**;
+  - rounded cards and pill buttons;
+  - 17 px text and 48–60 px buttons, so it's easy for older users and on cheap phones.
+- **Client tabs: Home · Medicines · Ask · Me.**
+  - **Home:** today's pickup ticket, the search box, "Find several medicines" and "Ask DawaLink".
+  - **Search:** the medicine shown once, then one row per pharmacy with walking or driving time, closing time, price and **what you save**.
+  - **Reserve:** today or tomorrow, the days of use, and a clear "lasts your 12 days".
+  - **Pickup ticket:** a dark screen with a huge order number to show at the counter.
+  - **My medicines:** one tracker per medicine, from searching to ready to pick up.
+  - **Ask:** the chat, which works in Arabic too, right to left.
+- **Pharmacy:**
+  - a **Today** screen built around the counter: a big order-number box, with [Picked up] and [Not available];
+  - a clear check of the inventory file before [Apply].
+- **Admin:** an overview of what needs attention, and the agent's health.
+- **Later**, decided during the build:
+  - the savings total on Home;
+  - a text-size setting;
+  - Undo on [Picked up];
+  - a reminder button on the ticket;
+  - a map view in search;
+  - "why" chips on the agent's recommendation.
+
+---
+
+## 12. Tech in brief (details in [`02`](02_architecture.md))
 
 | Part | Choice |
 |---|---|
@@ -320,7 +370,7 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 | Database | PostgreSQL, SQLAlchemy, Alembic |
 | Agent | LangGraph |
 | Background work | One worker loop, the **clock check**: every few seconds it handles everything that is due, such as expiring offers, ending windows and running agent turns. There is no jobs table. |
-| Frontend | React + TypeScript + Mantine; maps with Leaflet + OpenStreetMap |
+| Frontend | React + TypeScript + Mantine, styled with the design in §11; maps with Leaflet + OpenStreetMap |
 | Routes | OpenRouteService (free), cached, with a straight-line fallback |
 | AI by stage | A fake scripted AI in tests ($0) · Ollama `qwen2.5:7b` on the laptop for development · the chosen model for evaluation and the demo |
 | Tracing | Langfuse + our own `agent_runs` tables |
@@ -329,7 +379,7 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 
 ---
 
-## 12. Where to read more
+## 13. Where to read more
 
 | If you want… | Read |
 |---|---|
@@ -338,7 +388,9 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 | Each screen, and what the agent says when | [`03`](03_user_flows.md) |
 | An exact rule, limit or number | [`04`](04_domain_rules.md) (the source of truth) |
 | The agent in depth | [`07`](07_agent.md) |
+| How the website looks | [`11`](11_ui_design.md) and the design canvas (§11) |
 | How a decision was made | [`00`](00_decision_log.md) |
+| Why the design changed along the way | The two design reviews in [`reviews/`](reviews/) |
 | What the course requires, and where we cover it | [Requirements checklist](requirements_checklist.md) |
 | Words you don't know | The glossary in the [docs README](README.md) |
 
