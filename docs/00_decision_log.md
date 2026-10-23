@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-10-22, covers steps 01–11, design review #2 and the professor's guidance. Sections A–F and I–U validated by the team (2026-10-13 to 2026-10-22). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-10-23, covers steps 01–11, design review #2 and the professor's guidance. Sections A–F and I–U validated by the team (2026-10-13 to 2026-10-23; §U amended on 2026-10-23 with the v2 design, UI-D13). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -319,9 +319,9 @@ From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by th
 
 | ID | Decision | Where | Validated |
 |---|---|---|---|
-| UI-D1 | **Visual language:** a green brand (`#0B6E4F`); one meaning per color (green done/fits · blue working · amber attention · red failed · grey info); Inter + Noto Sans Arabic + IBM Plex Mono for order numbers; borders, not shadows; Tabler line icons; light theme only | 11 §2 | ✅ 2026-10-22 |
+| UI-D1 | **Visual language:** a green brand (`#0B6E4F`); one meaning per color (green done/fits · blue working · amber attention · red failed · grey info); Inter + Noto Sans Arabic + IBM Plex Mono for order numbers; borders, not shadows; Tabler line icons; light theme only. *The look was replaced by UI-D13 (v2).* | 11 §2 | ✅ 2026-10-22 (replaced by UI-D13) |
 | UI-D2 | **Home is search first:** today's pickup → search box → two equal entry cards (Find medicines for me · Ask the assistant) → the open request | 11 §3.1, §5 | ✅ 2026-10-22 |
-| UI-D3 | **Navigation:** client tabs Home · Assistant · Mine · Me; detail pages full screen with a back arrow; pharmacy and admin sidebars that stack on phones; a dark admin sidebar | 11 §3 | ✅ 2026-10-22 |
+| UI-D3 | **Navigation:** client tabs Home · Assistant · Mine · Me; detail pages full screen with a back arrow; pharmacy and admin sidebars that stack on phones; a dark admin sidebar. *Updated by UI-D13: Home · Medicines · Ask · Me; pill tabs in a top bar for pharmacies and admins.* | 11 §3 | ✅ 2026-10-22 (updated by UI-D13) |
 | UI-D4 | **One component per card kind**, rendered from the stored proposal: the same fact order everywhere, one main button, used or expired cards change state, "Recommended" = green border + badge + a reason, alternatives folded under "See N other options" | 11 §4, §6 | ✅ 2026-10-22 |
 | UI-D5 | **The counter view:** the order number in large monospace, one tap from Home | 11 §4, §5 | ✅ 2026-10-22 |
 | UI-D6 | **The reserve sheet asks the pickup day and days of use**, with a live fit badge (the server re-checks at the tap) | 11 §5 | ✅ 2026-10-22 |
@@ -330,13 +330,14 @@ From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by th
 | UI-D9 | **Low-end phones:** per-portal code splitting, maps only where needed, no images, polling only while visible; budgets of ≤ 250 KB start-up JS and Lighthouse ≥ 80 | 11 §10 | ✅ 2026-10-22 |
 | UI-D10 | **Maps and location:** maps only for the pin; [Directions] opens OpenStreetMap with the pharmacy's pin only; the location prompt only after the tap, with the privacy sentence | 11 §11; 10 §4.3 | ✅ 2026-10-22 |
 | UI-D11 | **Frontend structure and tests:** React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, Playwright demo flows; screenshots in every frontend PR | 11 §13 | ✅ 2026-10-22 |
-| UI-D12 | **The design canvas is the visual reference;** `11` wins on rules; screens not drawn reuse the same components | 11 §14 | ✅ 2026-10-22 |
+| UI-D12 | **The design canvas is the visual reference;** `11` wins on rules; screens not drawn reuse the same components. *Since UI-D13, the reference is the v2 canvas.* | 11 §14 | ✅ 2026-10-22 (updated by UI-D13) |
+| UI-D13 | **The v2 design direction** (v2 canvas, 15 boards: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx):<br>• deep navy and a friendly blue, yellow for savings only;<br>• Readex Pro for English and Arabic; rounded cards and pill buttons; 17 px text;<br>• a floating menu Home · Medicines · Ask · Me, with a **My medicines** tracker;<br>• compact search rows showing the saving;<br>• a dark pickup ticket;<br>• the pharmacy's Today screen built around the counter;<br>• a navy admin bar.<br>It **replaces** the look of UI-D1 and the navigation of UI-D3, and **updates** UI-D4 (blue "Recommended"), UI-D5 (the ticket) and UI-D12.<br>**Later** (previewed on the boards): the savings total on Home, the text-size setting, Undo on [Picked up], the reminder button, the List/Map switch, the "why" chips. | 11 v1.1 §2, §3, §5, §14 | ✅ 2026-10-23 |
 
 *Also from this step:*
 - `03` v4.2 (the "Home" tab, folded alternatives, a stale zone label removed);
 - `10` v1.1 (the [Directions] link).
 
-*Later, when the team asks:* 4 more boards (CS-15, CS-7, PS-6, AS-10).
+*The 4 boards that were pending (CS-15, CS-7, PS-6, AS-10) are drawn on the v2 canvas (2026-10-23).* `03` → v4.3 for the v2 tabs and search layout.
 
 ## G. Default numbers (superseded)
 

@@ -1,8 +1,10 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.2 · **Date:** 2026-10-22
+**Version:** v4.3 · **Date:** 2026-10-23
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
+**Status:** ✅ validated by the team (2026-10-20). **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+
+**v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
 **v4.1 applies the threat model** (`10`, decision log §T): registration always answers "check your email" (CS-2, PS-1, CN-18); admin two-factor login (AS-1); random order numbers; agent text shown as plain text (CS-9).
 
@@ -75,7 +77,7 @@ flowchart TD
 ```
 
 **Navigation:**
-- **Mobile** bottom bar: **Home** (with the search) · Assistant · Mine (requests, reservations, watches) · Me. Detail pages (search results, a reservation, a request) open full screen with a back arrow (`11` §3.1).
+- **Mobile** bottom menu: **Home** (with the search) · **Medicines** (one tracker per medicine: requests, reservations and watches together) · **Ask** (the assistant) · **Me**. Detail pages (search results, a pharmacy, a reservation, a request) open full screen with a back button (`11` §3.1).
 - **Desktop:** a top bar, with the assistant as a side panel.
 
 ### 1.3 Screens
@@ -126,7 +128,7 @@ flowchart TD
 │ My reservations                  │
 │ │ Augmentin 1g ×1 · R-7K3Q2F · pick up by Tue 21:00 │
 ├──────────────────────────────────┤
-│ 🏠Home 💬Assistant 📋Mine 👤Me   │
+│ 🏠Home 💊Medicines 💬Ask 👤Me    │
 └──────────────────────────────────┘
 ```
 - **Paused banner:** "Reservations paused until 20 Oct (2 missed pickups)."
@@ -137,8 +139,9 @@ flowchart TD
 - **Location:** [📍 Use my location], or the profile's district.
 - **Filters:** max price, "include same-composition alternatives", **days of use** (optional) and **pickup: today / tomorrow**.
 - **Sort:** best match (lasts your days of use → nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
-- **Each card:**
-  - product and pack;
+- **Layout (`11` v1.1):** the medicine (product, pack, prescription notice) is shown once at the top, then one compact row per pharmacy, with what the client saves.
+- **Each pharmacy row:**
+  - product and pack (in the header above);
   - pharmacy, area and **travel time** ("8 min by car · 20 min walk");
   - **price in LBP ≈ USD**, public price, discount %;
   - expiry and days left, with ✓ "lasts your 12 days", or a ⚠ warning when days of use weren't given;
@@ -216,6 +219,7 @@ flowchart TD
 - **Errors:** [Retry] on failure; "Assistant unavailable, [Use Search]" when the LLM is down. **Cards keep working.**
 
 #### CS-10 Reservations
+- Shown inside **My medicines** (`11` §3.1). The reserved detail is the **pickup ticket**.
 - **Active** (reserved) and **History**.
 - **Reserved detail:**
   - the **order number `R-7K3Q2F`**, large, with "Show this at the counter";
@@ -229,6 +233,7 @@ flowchart TD
 - **Expired by mistake?** An expired reservation shows **[I picked it up]**. If the pharmacy forgot to press [Picked up], this sends the case to an admin, who can remove the missed pickup (`04` R-N3).
 
 #### CS-11 Watches
+- Shown inside **My medicines** (`11` §3.1).
 - Product, district, max price, **ends at** (6 hours after creation), status.
 - [Stop watching]. Watches can be created only 08:00–20:00.
 - An offer arrives as a card + email and is held **2 h**. [Accept] reserves it at once.

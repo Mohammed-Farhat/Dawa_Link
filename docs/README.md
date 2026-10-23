@@ -36,7 +36,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–U validated |
 | 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.1 |
 | 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.1 |
-| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.2 |
+| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.3 |
 | 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.1 |
 | 05 | [Database design](05_database.md) | ER diagram, 34 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.1 |
 | 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.2 |
@@ -44,7 +44,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E6 (understanding, 3-contender simulation, ablations, safety, models, constraints), targets, statistics, CI gates | ✅ v1.1 |
 | 09 | [Failure Matrix](09_failure_matrix.md) | 122 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.2 (living) |
 | 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 55 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.1 (living) |
-| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the design canvas | ✅ v1.0 |
+| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.1 |
 | 12 | Infrastructure and CI/CD | CDK, pipelines, secrets | ⏳ |
 
 **Supporting folders:**
