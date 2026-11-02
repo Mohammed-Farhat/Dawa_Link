@@ -146,5 +146,5 @@ The owner chose a simple setup (`12` INF-D3, INF-D14). Practices marked ✖ aren
 | ID | Item | Why it matters |
 |---|---|---|
 | Q-1 | ~~Public or private GitHub repo?~~ **Resolved: public** (confirmed 2026-11-02; GitHub secret scanning is on by default) | ✅ |
-| Q-2 | Who pays for the real LLM (O2) | Needed for evaluation runs and the demo |
+| Q-2 | ~~Who pays for the real LLM (O2)~~ | **Resolved 2026-11-02:** the owner's Claude Max plan includes API credits (T15) |
 | Q-3 | ~~Approval proof and pharmacist interviews (review #2 D1, D2)~~ | **Dropped by the team (2026-10-18):** the proposal and poster phase is complete; the report cites the approved proposal. The simulation uses stated assumptions about pharmacy behavior, tested across a range of values. |

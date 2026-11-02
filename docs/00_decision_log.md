@@ -46,6 +46,7 @@
 | T13 | **LLM by stage:** automated tests and CI use a **fake, scripted LLM** ($0). Day-to-day development uses a **local model** via Ollama (`qwen2.5:7b`, already installed). Evaluation and the demo use the real model chosen by measurement. *Since T14, the candidates are Claude models only.* | 02 §1 | ✅ 2026-10-13 (updated by T14) |
 | T12 | **Buttons call the API directly.** The assistant only proposes; it never executes consequential actions. | 02 §3.1 | ✅ 2026-10-13 |
 | T14 | **The real LLM is Anthropic's Claude API.** Which Claude model stays open (O1). The local model stays for development only. | 02 §1, §10 | ✅ 2026-11-02 |
+| T15 | **The owner's Claude Max plan pays for the real LLM:** $100 of API credits per billing cycle. Unused credit doesn't roll over. When it runs out, API calls stop until the next credit, unless more is bought. Closes O2. | 02 §10 | ✅ 2026-11-02 |
 
 ## C. Agent rules
 
@@ -401,7 +402,7 @@ From [`12_infrastructure.md`](12_infrastructure.md). The owner set this directio
 | ID | Item | Needed by (dependency, not a date) |
 |---|---|---|
 | O1 | Which Claude model (chosen by measurement). The provider is settled: Anthropic's Claude API (T14). | Evaluation step |
-| O2 | Who pays for the real LLM. Development runs on the local model, so this is only needed for the evaluation runs and the demo. | Before the evaluation runs |
+| O2 | ~~Who pays for the real LLM~~ → the owner's Claude Max plan (T15) | ✅ |
 | O3 | Catalog source: **checked 2026-10-13.** The MoPH "Lebanon National Drugs Database" price list is public, with downloadable .xls/.xlsx per exchange-rate date. Columns: ATC, Name, B/G, Ingredients (with strengths), Dosage, Form, Price (LBP). **No pack size, no prescription/OTC flag, no controlled flag** (there is a separate Narcotics section). The rules for this gap are in `04` §2. | Step 04 decisions |
 | O4 | ~~Values in §G~~ → done in `04` §5 | ✅ |
 | O5 | Where the Ministry price file lives (in the repo or uploaded separately) | Before the catalog import in AWS |

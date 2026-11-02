@@ -20,7 +20,7 @@
 - regular Fargate (no Spot);
 - a demo clock.
 
-**Still open:** which Claude model, and who pays for it (§10).
+**Still open:** which Claude model (§10).
 
 This is the high-level view. The details live in their own documents:
 - database: `05_database.md`
@@ -285,4 +285,5 @@ Claude writes the code. **The owner (Mohammed) and Claude check every change, an
    - Claude Haiku 5.5 (`claude-haiku-5-5`, $0.10 / $0.50 per 1M tokens);
    - Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2 / $10);
    - Claude Opus 5.5 (`claude-opus-5-5`, $4 / $20), as an upper reference on a small sample.
-2. **Who pays for the real LLM:** needed only for the evaluation runs and the demo.
+
+**Settled:** the owner's Claude Max plan pays for the real LLM, with $100 of API credits per billing cycle (decision log T15). Unused credit doesn't roll over. If it runs out, API calls stop until the next credit, unless more is bought, and the agent falls back to degraded mode.

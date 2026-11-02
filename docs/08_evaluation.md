@@ -266,7 +266,7 @@ We report each variant's drop in fulfillment, time to secure and client effort, 
 | Haiku 5.5 | ≈ $2 | ≈ $8 | ≈ $3 |
 | Sonnet 5.5 | ≈ $35 | (not run) | ≈ $65 |
 
-If a Haiku-class model meets the targets, the selected model's full runs (E1–E4) cost **≈ $15**. The Sonnet comparison adds **≈ $100**, and can be cut to fewer cases if needed. This sizes open item O2 (who pays).
+If a Haiku-class model meets the targets, the selected model's full runs (E1–E4) cost **≈ $15**. The Sonnet comparison adds **≈ $100**, so it must be cut to fewer cases: the owner's Max plan gives $100 of API credits per billing cycle (decision log T15), and part of that is kept for the demo.
 
 ### E6 Real-world constraints (checklist G-4)
 | Constraint | How it's evaluated |

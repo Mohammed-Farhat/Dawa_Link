@@ -330,13 +330,14 @@ aws cloudfront create-invalidation --distribution-id <website-distribution-id> -
 | CloudFront, S3, ECR, SES, Cognito | ≈ $0 at this scale (free tiers, to confirm) |
 | **Total while running** | **≈ $82 ≈ $2.70 a day** |
 
-The $100 credit covers about five weeks of this. The LLM isn't included (O2): it's capped by N-46 and the provider's own spend limit.
+The $100 AWS credit covers about five weeks of this. The LLM isn't included: it's paid by the API credits from the owner's Claude Max plan (decision log T15), and capped by N-46 and the provider's own spend limit.
 
 ---
 
 ## 14. Before the demo
 
-- [ ] The real LLM key is in `dawalink/keys`, with the provider's spend limit set (O2).
+- [ ] The real LLM key is in `dawalink/keys`, with the provider's spend limit set.
+- [ ] Enough API credit is left for the demo. When it runs out, API calls stop and the agent falls back to "Use Search".
 - [ ] Sign up from scratch with a non-team email, and the verification email arrives.
 - [ ] A reservation email reaches a verified demo address, and the in-app notification shows for everyone.
 - [ ] Log in on an **iPhone and an Android phone**.

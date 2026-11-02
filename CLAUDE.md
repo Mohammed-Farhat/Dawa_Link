@@ -58,7 +58,6 @@ The status column in [docs/README.md](docs/README.md) is the source of truth. As
 - **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
-  - O2: who pays for the real LLM (needed only for the evaluation runs and the demo);
   - O5: where the Ministry price file lives (decided later);
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
@@ -160,7 +159,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **LLM by stage:**
   - a fake scripted LLM in tests;
   - Ollama `qwen2.5:7b` for development;
-  - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo.
+  - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from the owner's Max plan ($100 per billing cycle, no rollover).
 - **Commands:** none yet. Add the run, test and lint commands here when the code skeleton lands.
 
 ## 7. Environment notes
