@@ -1,11 +1,13 @@
 # DawaLink: UI Design
 
-**Version:** v1.1 · **Date:** 2026-10-23
+**Version:** v1.2 · **Date:** 2026-11-02
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
 **Status:** ✅ validated by the team (2026-10-22, decision log §U). **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
+
+**v1.2 (2026-11-02, step 12):** fonts are self-hosted, the API client sends the login token in a header, and screenshots go to the owner instead of pull requests.
 
 **v1.1 (2026-10-23): the team chose the v2 design direction** (decision log §U, UI-D13). It's a friendlier, bigger look: Readex Pro, deep navy and blue, yellow for savings only, rounded shapes. It adds compact search rows, a dark pickup ticket and a "My medicines" tab. Some v2 extras wait until later (§14.2).
 
@@ -254,7 +256,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Color | Never the only signal: words and icons on every status (§1) |
 | Zoom and motion | Works at 200% zoom; respects "reduce motion" (no animations then) |
 | Forms | Labels always visible; errors next to the field, in words |
-| **Checks** | `axe` runs in component tests (CI). Before the demo: a keyboard-only pass and a screen-reader pass (TalkBack on Android, NVDA on Windows) through the demo scenarios. |
+| **Checks** | `axe` runs in component tests. Before the demo: a keyboard-only pass and a screen-reader pass (TalkBack on Android, NVDA on Windows) through the demo scenarios. |
 
 ---
 
@@ -263,7 +265,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 - **Code split per portal:** the client bundle never includes pharmacy or admin code.
 - **Maps are loaded only on screens that show a map** (§11). Search results show a list with travel times, not a map.
 - **No images** except map tiles. Icons are inline SVG.
-- **Fonts:** Readex Pro, split into a Latin and an Arabic subset with `unicode-range`, so the Arabic part downloads only when Arabic text appears.
+- **Fonts:** Readex Pro, self-hosted (no request to Google Fonts) and split into a Latin and an Arabic subset with `unicode-range`, so the Arabic part downloads only when Arabic text appears.
 - **Polling runs only while the chat or request page is visible:** it pauses when the tab is hidden and resumes when it's shown (N-28).
 - **Budgets, measured before the demo:**
   - client start-up JavaScript ≤ 250 KB compressed;
@@ -298,11 +300,11 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 |---|---|
 | Stack | React + TypeScript + Vite, **Mantine** (the theme in §2), React Router, TanStack Query |
 | Routes | Client: `/`, `/search`, `/assistant`, `/requests/:id`, `/reservations/:id`, … · Pharmacy: `/pharmacy/*` · Admin: `/admin/*`, each loaded on demand |
-| API | Types **generated from the OpenAPI file** (`06` §9), plus one small client that: adds the `Idempotency-Key` to creating taps; turns error codes into messages (§7); handles `401` (log in again) and `409 CONVERSATION_BUSY` (retry) |
+| API | Types **generated from the OpenAPI file** (`06` §9), plus one small client that: adds the login token in the `Authorization` header (`06` §2.1); adds the `Idempotency-Key` to creating taps; turns error codes into messages (§7); handles `401` (log in again) and `409 CONVERSATION_BUSY` (retry) |
 | Live data | Chat: SSE through `fetch` streaming (`06` §6.6.1). Everything else: TanStack Query, with 3 s polling while visible. |
 | Folders | `frontend/src/{app, api, theme, strings, components/{cards,facts,feedback,layout}, features/{client,pharmacy,admin}}` |
 | Tests | Vitest + Testing Library + `axe` for components; **a few Playwright flows** for the demo scenarios (bonus B-8) |
-| Review help | Every frontend PR includes **screenshots** (phone and desktop) and lists the strings it adds, so the team can review it without reading TypeScript in depth |
+| Review help | Every frontend change comes with **screenshots** (phone and desktop) and lists the strings it adds, so the owner can check it without reading TypeScript in depth |
 
 ### 13.1 Small changes to `03` (applied 2026-10-22)
 1. **Bottom bar:** "🔍 Search" becomes **"Home"**, which holds the search (§3.1). Detail pages hide the bottom bar.
@@ -327,7 +329,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | UI-D8 | **Accessibility** | WCAG 2.1 AA; `axe` in component tests; keyboard and screen-reader passes before the demo | Part of "secure, maintainable" software, and checkable evidence for graders |
 | UI-D9 | **Low-end phones** | Per-portal code splitting, maps only where needed, no images, polling only while visible; budgets of ≤ 250 KB start-up JS and Lighthouse ≥ 80 | Our clients include people on cheap phones and slow data |
 | UI-D10 | **Maps and location** | Maps only for the pin (registration, listing detail, admin approval); [Directions] hands off to OpenStreetMap with the pharmacy's pin only; the location prompt only after the tap, with the privacy sentence | Saves data, and keeps the location promise (never to the AI, never in a link) |
-| UI-D11 | **Frontend structure and tests** | React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, a few Playwright demo flows; screenshots in every frontend PR | Types can't drift from the API; Python-only reviewers can check the UI from screenshots and tests |
+| UI-D11 | **Frontend structure and tests** | React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, a few Playwright demo flows; screenshots with every frontend change | Types can't drift from the API; Python-only reviewers can check the UI from screenshots and tests |
 | UI-D12 | **The design canvas is the visual reference** | The build follows the canvas for look and layout. This document wins on rules. Screens not drawn reuse the same components. | One place to look; no need to draw every screen of `03` |
 
 **v1.1 (2026-10-23): the v2 direction**

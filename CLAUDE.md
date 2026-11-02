@@ -3,7 +3,7 @@
 DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**. The needs are **urgent**: the client reserves now and picks up within a day or so. At its center is **one agent with two modes**: a chat **assistant**, and an **autonomous sourcing agent** that owns a client's request for 1–5 medicines during a **6-hour search window**. **The agent's purpose (the professor's words): bring the client's need to the right pharmacy.** It **decides** which pharmacy or route, from facts computed by code.
 
 - **Course:** Agentic Systems 503N/798S, Dr. Ammar Mohanna, Fall 2026, **Path A** (application). The professor proposed and approved the topic. The scope stays **logistics-only** (no clinical functions).
-- **Team:** Mohammed Farhat (repo owner), Mohamad Natafgi, Anthony John Kanaan. They know **Python only**. **Claude writes all the code**, and the team reviews every PR.
+- **Team:** Mohammed Farhat (repo owner), Mohamad Natafgi, Anthony John Kanaan. They know **Python only**. **Claude writes all the code.** Mohammed and Claude check every change; teammates read and edit files through GitHub.
 - **Repo:** https://github.com/Mohammed-Farhat/Dawa_Link (public).
 - **Only fixed date:** the live demo on **2026-11-30**.
 
@@ -19,19 +19,20 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 **Then read these with the Read tool before your first substantive reply:**
 1. [Project_Requirements.md](Project_Requirements.md): the course requirements, which are what we're graded on. Read-only; never edit it.
-2. [docs/requirements_checklist.md](docs/requirements_checklist.md): every requirement mapped to an artifact, plus the **Definition of Done** for every PR (§1).
+2. [docs/requirements_checklist.md](docs/requirements_checklist.md): every requirement mapped to an artifact, plus the **Definition of Done** for every change (§1).
 3. [docs/01_scope_and_features.md](docs/01_scope_and_features.md) §1–§6: the product, the agent's features, why an agent, the demo scenarios.
 4. The doc for the **current step** (§2 below) and the docs it says it builds on.
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-10-23:
+The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-11-02:
 
-- **Planning steps 00–11 are all validated** (decision log sections A–U). **Current versions:**
-  - `01` v5.1 · `02` v3.1 · `03` v4.3 · `04` v4.1 · `05` v3.1;
-  - `06` v1.2 · `07` v1.2 · `08` v1.1;
-  - `09` v1.2 (living: every PR updates it) · `10` v1.1 (threat model; living: a PR that adds an attack surface updates it);
-  - `11` v1.1 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
+- **Planning steps 00–12 are all validated** (decision log sections A–V). **Current versions:**
+  - `01` v5.2 · `02` v3.2 · `03` v4.3 · `04` v4.2 · `05` v3.2;
+  - `06` v1.3 · `07` v1.3 · `08` v1.2;
+  - `09` v1.3 (living: every change updates it) · `10` v1.2 (threat model; living: a change that adds an attack surface updates it);
+  - `12` v2.0 (infrastructure and deployment);
+  - `11` v1.2 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
@@ -44,18 +45,25 @@ The status column in [docs/README.md](docs/README.md) is the source of truth. As
     - compact search rows; a dark pickup ticket; the pharmacy's counter-first Today screen.
 
     The v2 extras wait until later: the savings total on Home, text size, Undo on [Picked up], the reminder button, the List/Map switch, and the "why" chips.
+  - infrastructure (§V, 2026-11-02): a simple, manual deployment, chosen by the owner:
+    - develop locally in Docker, then deploy once to AWS (Ireland) after the project is finished; only Mohammed touches AWS;
+    - AWS is set up by hand in the console. No CDK, CloudFormation, CI/CD, PR reviews or advanced GitHub features: don't propose them again;
+    - two CloudFronts (website on S3, API on a public ALB), no domain, no certificate;
+    - the login token travels in the `Authorization` header (`localStorage`), with CORS;
+    - build the validated login first, then switch to Cognito behind our API before deploying (`12` §10);
+    - the owner and Claude check everything and write the datasets.
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
-- **Next: step 12, Infrastructure and CI/CD** (the last planning step). ⚠️ **Don't start it until the user explicitly says to.**
-- **After planning:** build → test → evaluate → deploy → report and demo.
+- **Planning is finished. Next: the build.** ⚠️ **Don't start it until the user explicitly says to.**
+- **Then:** build → test → evaluate → switch to Cognito → deploy → report and demo.
 - **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
 - **Open items:**
-  - O1: which LLM model (chosen by measurement);
+  - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O2: who pays for the real LLM (needed only for the evaluation runs and the demo);
+  - O5: where the Ministry price file lives (decided later);
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
-- **Team tasks (not Claude's):**
-  - write and label the ~300-request understanding set (Arabizi / Arabic / English);
-  - create realistic inventory files in the upload template;
-  - review every PR.
+- **Who does what:**
+  - the owner and Claude write and label the ~300-request understanding set and the ~120-request safety set;
+  - the team creates realistic inventory files in the upload template.
 
 If the user's first message is general ("let's continue"), summarize where we are and ask before starting the next step.
 
@@ -78,17 +86,19 @@ If the user's first message is general ("let's continue"), summarize where we ar
    - use `engineering:documentation` whenever writing or updating docs;
    - use `engineering:architecture` / `engineering:system-design` for design reviews and ADRs.
 5. **UI and visual design follow [`11`](docs/11_ui_design.md) and its design canvas.** `03` says *what happens*; `11` says how it looks and behaves.
-6. **Code is for Python developers to review.**
-   - Readable, typed, small PRs.
-   - Every PR explains what changed and why, in plain language, and meets the Definition of Done.
+6. **Code is for Python developers to read.**
+   - Readable, typed, small changes.
+   - Claude runs each change's tests, tries it on the local website, and explains what changed and why, in plain language. It must meet the Definition of Done.
 7. **Git and publishing:**
    - Never commit, push, publish, or change `.gitignore` without the user's explicit permission.
    - Since 2026-10-18, `/docs`, `CLAUDE.md`, `DawaLink_Project_Proposal.md` and `Project_Requirements.md` are **tracked** (the user changed `.gitignore` so the team can read them). The user commits and pushes these updates themselves.
    - The repo is public: nothing secret or personal goes in tracked files. Before any doc is committed, check it for emails, keys and tokens.
 8. **Secrets and privacy:**
    - Secrets live in `.env` locally and in AWS Secrets Manager in production, and are never committed.
+   - The AWS access key stays in `~/.aws`, outside the project folder.
    - **No PII is ever sent to the LLM.**
 9. **Communication:** plain language, short, a recommendation rather than a survey of options. Explain technical terms the first time.
+10. **Held-out data:** the held-out datasets are written in a separate Claude session. In the working session, never open those files.
 
 ## 4. Design rules that must never be broken
 
@@ -115,7 +125,7 @@ The details are in the linked docs. If a request or code change would break one 
   - controlled substances are excluded entirely;
   - a prescription notice by default (the pharmacist checks at the counter).
 - **Observability:** every agent turn and tool call is recorded, in Langfuse plus our own `agent_runs` / `agent_tool_calls` tables.
-- **Security:** follow the [threat model](docs/10_threat_model.md). A PR that adds an attack surface (an endpoint, tool, input, third party or role) updates it. Order and request numbers are random (`R-7K3Q2F`). Registration never reveals whether an email has an account. Admins log in with TOTP.
+- **Security:** follow the [threat model](docs/10_threat_model.md). A change that adds an attack surface (an endpoint, tool, input, third party or role) updates it. Order and request numbers are random (`R-7K3Q2F`). Registration never reveals whether an email has an account. Admins log in with TOTP. The login token travels in the `Authorization` header.
 
 ## 5. Reading map: read before working on…
 
@@ -123,7 +133,8 @@ The details are in the linked docs. If a request or code change would break one 
 |---|---|
 | Any rule, state, limit, timer, number or invariant | [04_domain_rules.md](docs/04_domain_rules.md) (**source of truth**) |
 | Tables, migrations, models, locking, retention, seeding | [05_database.md](docs/05_database.md) |
-| Stack, components, agent tools, repo layout, deployment | [02_architecture.md](docs/02_architecture.md) (repo layout in §6) |
+| Stack, components, agent tools, repo layout | [02_architecture.md](docs/02_architecture.md) (repo layout in §6) |
+| Local setup, AWS, deployment, login across two sites, how we check changes | [12_infrastructure.md](docs/12_infrastructure.md) |
 | Security: auth, access, limits, attack surfaces, what third parties receive | [10_threat_model.md](docs/10_threat_model.md) |
 | The frontend: look, components, states, accessibility, structure | [11_ui_design.md](docs/11_ui_design.md) + the v2 design canvas (link in §2) |
 | Screens and flows; what the agent says and when (AF-, RF-, CS-, PS-, AS- IDs) | [03_user_flows.md](docs/03_user_flows.md) |
@@ -143,13 +154,13 @@ The details are in the linked docs. If a request or code change would break one 
 - **Agent:** LangGraph.
 - **Background work:** a worker running the clock check (no jobs table).
 - **Chat:** SSE streaming for replies + polling for new cards.
-- **Auth:** server-side sessions (opaque cookie + `sessions` table); admins also use TOTP.
+- **Auth:** server-side sessions (opaque token in the `Authorization` header + `sessions` table); admins also use TOTP. Cognito replaces password storage, email verification and TOTP before deploying (`12` §10).
 - **Frontend:** React + TypeScript, Mantine.
-- **Hosting:** AWS ECS Fargate (regular, public subnets), internal ALB behind one CloudFront (VPC origin), RDS, SES, built with CDK (Python).
+- **Hosting:** AWS Ireland, set up by hand: ECS Fargate (regular, public subnets), a public ALB, two CloudFronts (website on S3, API on the ALB), RDS, SES.
 - **LLM by stage:**
-  - a fake scripted LLM in tests and CI;
+  - a fake scripted LLM in tests;
   - Ollama `qwen2.5:7b` for development;
-  - the real model, chosen by measurement, for evaluation and the demo.
+  - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo.
 - **Commands:** none yet. Add the run, test and lint commands here when the code skeleton lands.
 
 ## 7. Environment notes

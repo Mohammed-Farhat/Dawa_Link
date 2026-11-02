@@ -1,8 +1,8 @@
 # DawaLink: Project Overview (read this first)
 
-**Status as of:** 2026-10-23: planning steps 00–11 are validated; no code yet.
+**Status as of:** 2026-11-02: all planning steps (00–12) are validated; no code yet.
 **Who it's for:** the team, and anyone who wants the whole picture without reading every document. Each section links to the detailed doc.
-**Kept current:** updated whenever a planning step is validated.
+**Kept current:** updated when the owner asks.
 **Numbers here are summaries.** The exact values live in [`04` §5](04_domain_rules.md), the source of truth.
 
 ---
@@ -21,17 +21,18 @@
   - every AI step recorded;
   - 122 failure cases and 55 security threats, each with a test.
 - **The look is chosen:** the initial UI design for the website (desktop and mobile) is drawn on a design canvas. It's friendly and big, and it puts the saving first (§11).
-- **Next:** step 12 (infrastructure and CI/CD), the last planning step. Then we build, test, evaluate and deploy. **The live demo is on 2026-11-30.**
+- **How it runs:** we build and test on the laptop in Docker, then deploy once to AWS in Ireland, by hand (§12).
+- **Next:** the build. Then we test, evaluate, switch the login to Cognito and deploy. **The live demo is on 2026-11-30.**
 
 ---
 
 ## 1. Where we are
 
-**Done:** planning steps 00–11, all validated by the team. The [docs README](README.md) lists every doc with its version.
+**Done:** planning steps 00–12, all validated. The [docs README](README.md) lists every doc with its version.
 
 | Step | What it decided |
 |---|---|
-| 00 [Decision log](00_decision_log.md) | Every decision, sections A–T |
+| 00 [Decision log](00_decision_log.md) | Every decision, sections A–V |
 | 01 [Scope](01_scope_and_features.md) | The product, the agent's features (C1–C18), the demo scenarios |
 | 02 [Architecture](02_architecture.md) | The stack and how the parts connect |
 | 03 [User flows](03_user_flows.md) | Every screen and flow, for clients, pharmacies and admins |
@@ -43,19 +44,20 @@
 | 09 [Failure Matrix](09_failure_matrix.md) | 122 ways it can fail, and what happens then (living) |
 | 10 [Threat model](10_threat_model.md) | Who could attack it, how, and what stops them (living) |
 | 11 [UI design](11_ui_design.md) | How the website looks and behaves, on desktop and mobile; the screens are drawn on a design canvas |
+| 12 [Infrastructure](12_infrastructure.md) | How we work, the local setup, and how to deploy to AWS by hand |
 
-**Next:**
-- step 12 (infrastructure and CI/CD), the last planning step;
-- then the build: **the agent and its evaluation first**, then the platform screens.
+**Next:** the build: **the agent and its evaluation first**, then the platform screens.
 
 **Still open:**
-- O1: which AI model we use (chosen by measurement);
-- O2: who pays for it. It's only needed for the evaluation runs and the demo; development uses a free local model.
+- O1: which Claude model we use (chosen by measurement). We use Anthropic's Claude API;
+- O2: who pays for it. It's only needed for the evaluation runs and the demo; development uses a free local model;
+- O5: where the Ministry price file lives.
 
-**Team tasks during the build:**
-- write and label ~300 test messages (Arabizi, Arabic, English) and ~120 attack messages;
-- create realistic inventory files;
-- review every PR.
+**Who does what during the build:**
+- **Claude** writes the code;
+- **Mohammed** checks every change, commits it, and is the only one with AWS access;
+- **Mohammed and Claude** write and label ~300 test messages (Arabizi, Arabic, English) and ~120 attack messages. The held-out part comes from a separate Claude session;
+- **the team** creates realistic inventory files.
 
 ---
 
@@ -287,7 +289,7 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 | **Client** | Every consequential action is a tap: reserve, accept an offer, start or cancel a request, raise a budget, allow another brand, remove an item |
 | **Pharmacy** | [Picked up] / [Not available]; accepting or refusing to release private stock; its inventory and prices |
 | **Admin** | Approving pharmacies (name and pin); answering handovers, including emergencies (help only, never priority); clearing contested no-shows; turning reported bad answers (👎) into tests |
-| **The team** | Reviews and can explain every PR; writes the test and attack messages |
+| **The owner** | Checks and can explain every change; writes the test and attack messages with Claude |
 | **Nobody** | Who gets scarce stock first: fixed code, first come, first served |
 
 ---
@@ -295,7 +297,8 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 ## 9. Safety and security in brief (details in [`10`](10_threat_model.md))
 
 - **Logins:**
-  - server-side sessions;
+  - server-side sessions, with a token sent in a header;
+  - we build our own login first, then Cognito takes over passwords, email checks and admin codes before we deploy;
   - strong passwords and lockout after repeated failures;
   - a verified email before chatting or reserving;
   - **admins also use a code from an authenticator app**.
@@ -307,7 +310,9 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
   - the location is stored rounded and never sent to the AI;
   - outside services get only what they need.
 - **Cost caps** at several levels, so an attacker (or a bug) can't run up the AI bill.
-- **Risks we accept, honestly stated** (11 in total). For example: someone with many accounts can get around per-client limits.
+- **Risks we accept, honestly stated** (16 in total). For example:
+  - someone with many accounts can get around per-client limits;
+  - the link between CloudFront and the load balancer isn't encrypted, because we have no domain or certificate.
 
 ---
 
@@ -315,20 +320,20 @@ All 122 failure cases are in the [Failure Matrix](09_failure_matrix.md), each wi
 
 | Suite | Question | Data |
 |---|---|---|
-| **E1 Understanding** | Does it understand messy requests, ask when unsure, refuse clinical questions? | ~300 messages written by the team |
+| **E1 Understanding** | Does it understand messy requests, ask when unsure, refuse clinical questions? | ~300 messages written by the owner and Claude |
 | **E2 Simulation** | Who secures more medicines within the 6 hours, and do they make good choices about where to go? Compared: the **search page**, a **program with no AI** using the same tools, and **the agent**. | A simulated world: 30 pharmacies, 200 clients; 5 runs × 100 requests per contender |
 | **E3 Ablations** | Which features matter (asking pharmacies, planning, re-planning)? | Same simulation |
 | **E4 Safety** | **0 violations:** no medical advice, injections without effect, no access to others' data, no priority manipulation | ~120 attack messages |
-| **E5 Models** | Quality, speed and cost per model → the cheapest model that meets every target | E1 + E4 + part of E2 |
+| **E5 Models** | Quality, speed and cost per model → the cheapest Claude model that meets every target | E1 + E4 + part of E2 |
 | **E6 Real-world constraints** | Results when inventory is out of date or pharmacies are slow; privacy and human approval at 0 violations | Simulation sweeps + scans of every trace |
 
 **What makes the results honest:**
-- part of every dataset is **held out** until the end;
+- part of every dataset is **held out** until the end, and written in a separate Claude session;
 - targets are fixed **before** the final runs;
 - several runs per setup;
 - every failure becomes a **regression test**.
 
-**Also tracked:** every agent turn is recorded (latency, tokens, cost, errors), with an admin health dashboard, and the CI runs tests, scans and an offline evaluation gate on every PR.
+**Also tracked:** every agent turn is recorded (latency, tokens, cost, errors), with an admin health dashboard. There are no pipelines: tests and the offline evaluation run on the laptop before each commit.
 
 ---
 
@@ -362,7 +367,7 @@ The initial design for the website, on desktop and mobile, is drawn on a design 
 
 ---
 
-## 12. Tech in brief (details in [`02`](02_architecture.md))
+## 12. Tech in brief (details in [`02`](02_architecture.md) and [`12`](12_infrastructure.md))
 
 | Part | Choice |
 |---|---|
@@ -372,10 +377,11 @@ The initial design for the website, on desktop and mobile, is drawn on a design 
 | Background work | One worker loop, the **clock check**: every few seconds it handles everything that is due, such as expiring offers, ending windows and running agent turns. There is no jobs table. |
 | Frontend | React + TypeScript + Mantine, styled with the design in §11; maps with Leaflet + OpenStreetMap |
 | Routes | OpenRouteService (free), cached, with a straight-line fallback |
-| AI by stage | A fake scripted AI in tests ($0) · Ollama `qwen2.5:7b` on the laptop for development · the chosen model for evaluation and the demo |
+| AI by stage | A fake scripted AI in tests ($0) · Ollama `qwen2.5:7b` on the laptop for development · a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo |
 | Tracing | Langfuse + our own `agent_runs` tables |
-| Hosting | AWS: CloudFront, ECS Fargate (API + worker), RDS, SES, built with CDK (Python), destroyed after the demo |
-| Quality | ruff, mypy, pytest, GitHub Actions, CodeQL, Dependabot, Trivy |
+| Login | Our own login first; Cognito replaces it before we deploy |
+| Hosting | AWS in Ireland, set up by hand after the project is finished: two CloudFronts (website on S3, API on a public load balancer), ECS Fargate (one backend image, running as API + worker), RDS, SES. No domain. |
+| Quality | ruff, mypy, pytest, run on the laptop. No pipelines. |
 
 ---
 
@@ -389,6 +395,7 @@ The initial design for the website, on desktop and mobile, is drawn on a design 
 | An exact rule, limit or number | [`04`](04_domain_rules.md) (the source of truth) |
 | The agent in depth | [`07`](07_agent.md) |
 | How the website looks | [`11`](11_ui_design.md) and the design canvas (§11) |
+| Running it locally, or deploying it | [`12`](12_infrastructure.md) |
 | How a decision was made | [`00`](00_decision_log.md) |
 | Why the design changed along the way | The two design reviews in [`reviews/`](reviews/) |
 | What the course requires, and where we cover it | [Requirements checklist](requirements_checklist.md) |

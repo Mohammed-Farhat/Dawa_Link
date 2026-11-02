@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-10-23, covers steps 01–11, design review #2 and the professor's guidance. Sections A–F and I–U validated by the team (2026-10-13 to 2026-10-23; §U amended on 2026-10-23 with the v2 design, UI-D13). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-11-02, covers steps 01–12, design review #2 and the professor's guidance. Sections A–F and I–V validated (2026-10-13 to 2026-11-02; §U amended on 2026-10-23 with the v2 design, UI-D13). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -37,14 +37,15 @@
 | T3 | Agent framework **LangGraph** (+ langchain-anthropic). *The model is chosen by measurement (T13, O1).* | 02 §1 | ✅ 2026-10-13 (updated) |
 | T4 | Worker process ~~+ Postgres job table~~. *Updated by §N (DR2-A10): one **clock check** loop reads the deadlines stored on the rows; no jobs table.* | 02 §1 | ✅ 2026-10-13 (updated by §N) |
 | T5 | Chat over **SSE** streaming. | 02 §1 | ✅ 2026-10-13 |
-| T6 | Auth: ~~JWT in an httpOnly cookie~~ **server-side sessions** (§N DR2-B4), argon2, rate limits, email verification. *(Password reset postponed by §K. Admin TOTP 2FA was postponed by §K, then restored by §T TM-D8.)* | 02 §1 | ✅ 2026-10-13 (updated by §K, §N) |
+| T6 | Auth: ~~JWT in an httpOnly cookie~~ **server-side sessions** (§N DR2-B4), argon2, rate limits, email verification. *(Password reset postponed by §K. Admin TOTP 2FA was postponed by §K, then restored by §T TM-D8.)* *The token moved to a header, and Cognito comes later (§V INF-D6, INF-D12).* | 02 §1 | ✅ 2026-10-13 (updated by §K, §N, §V) |
 | T7 | ~~Private S3 for license documents and raw uploads~~ → **no file storage**: uploads are processed in memory and discarded (license upload postponed, §K) | 02 §1 | ✅ 2026-10-13 (updated by §K) |
 | T8 | Tracing with **Langfuse**; JSON logs to CloudWatch. | 02 §1 | ✅ 2026-10-13 |
-| T9 | AWS: **ECS Fargate + ALB + one CloudFront + S3 + RDS + SES**, no NAT, built with **CDK (Python)**, budget alerts at $50 / $80, destroyed after the demo. *Updated by §N (DR2-B7): internal ALB via a CloudFront VPC origin; tasks in public subnets; regular Fargate, no Spot.* | 02 §7 | ✅ 2026-10-13 (updated by §N) |
-| T10 | CI/CD: GitHub Actions (OIDC), CodeQL, Dependabot, Trivy, offline eval gate. | 02 §1, §8 | ✅ 2026-10-13 |
-| T11 | **Claude writes the code; every change goes through a PR the team reviews and can explain.** | 02 §9 | ✅ 2026-10-13 |
-| T13 | **LLM by stage:** automated tests and CI use a **fake, scripted LLM** ($0). Day-to-day development uses a **local model** via Ollama (`qwen2.5:7b`, already installed). Evaluation and the demo use the real model chosen by measurement; the local model is one of the candidates. | 02 §1 | ✅ 2026-10-13 |
+| T9 | AWS: **ECS Fargate + ALB + one CloudFront + S3 + RDS + SES**, no NAT, built with **CDK (Python)**, budget alerts at $50 / $80, destroyed after the demo. *Updated by §N (DR2-B7): internal ALB via a CloudFront VPC origin; tasks in public subnets; regular Fargate, no Spot.* *Updated by §V: no CDK; set up by hand in Ireland; two CloudFronts and a public ALB.* | 02 §7 | ✅ 2026-10-13 (updated by §N, §V) |
+| T10 | ~~CI/CD: GitHub Actions (OIDC), CodeQL, Dependabot, Trivy, offline eval gate.~~ *Superseded by §V (INF-D14): no CI/CD; the owner and Claude check every change.* | 02 §1, §8 | ✅ superseded (§V) |
+| T11 | **Claude writes the code;** ~~every change goes through a PR the team reviews and can explain.~~ *Updated by §V (INF-D14): the owner and Claude check every change, and the owner can explain it.* | 02 §9 | ✅ 2026-10-13 (updated by §V) |
+| T13 | **LLM by stage:** automated tests and CI use a **fake, scripted LLM** ($0). Day-to-day development uses a **local model** via Ollama (`qwen2.5:7b`, already installed). Evaluation and the demo use the real model chosen by measurement. *Since T14, the candidates are Claude models only.* | 02 §1 | ✅ 2026-10-13 (updated by T14) |
 | T12 | **Buttons call the API directly.** The assistant only proposes; it never executes consequential actions. | 02 §3.1 | ✅ 2026-10-13 |
+| T14 | **The real LLM is Anthropic's Claude API.** Which Claude model stays open (O1). The local model stays for development only. | 02 §1, §10 | ✅ 2026-11-02 |
 
 ## C. Agent rules
 
@@ -192,11 +193,11 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | DR2-B1 | **Cards come only from tools** (stored proposals); a tap sends the proposal ID and is re-validated | 04 R-AG7; 05 `proposals` | ✅ 2026-10-13 |
 | DR2-B2 | **Text typed by pharmacies never reaches the LLM** *(except the admin-approved pharmacy name, §T TM-D2)* | 04 R-AG8 | ✅ 2026-10-13 (clarified §T) |
 | DR2-B3 | **Polling** for new cards; "one moment…" while a turn runs | 02 §1; 03 CS-9 | ✅ 2026-10-13 |
-| DR2-B4 | **Server-side sessions** instead of JWT + refresh tokens | 04 R-AU3; 05 `sessions` | ✅ 2026-10-13 |
+| DR2-B4 | **Server-side sessions** instead of JWT + refresh tokens. *The token moved from a cookie to a header (§V INF-D6).* | 04 R-AU3; 05 `sessions` | ✅ 2026-10-13 (updated by §V) |
 | DR2-B5 | **Turn lease** instead of an advisory lock | 04 R-AG2; ADR-001 (amended) | ✅ 2026-10-13 |
 | DR2-B6 | **Evaluation with three contenders** (search baseline, a no-AI scripted policy, the agent); several runs; success = secured within the window; pharmacy behavior from stated assumptions, tested across a range of values (DR2-E3) | 01 C16 | ✅ 2026-10-13 |
-| DR2-B7 | **Networking:** public-subnet tasks (no NAT); a CloudFront VPC origin to an internal ALB | 02 §7 | ✅ 2026-10-13 |
-| DR2-B8 | **Demo practicalities:** SES demo accounts or production access; short test deploys; the final deploy close to the demo | 02 §7 | ✅ 2026-10-13 |
+| DR2-B7 | **Networking:** public-subnet tasks (no NAT); ~~a CloudFront VPC origin to an internal ALB~~ *Replaced by §V (INF-D5): two CloudFronts and a public ALB.* | 02 §7 | ✅ 2026-10-13 (updated by §V) |
+| DR2-B8 | **Demo practicalities:** SES demo accounts ~~or production access; short test deploys; the final deploy close to the demo~~ *Updated by §V: one deploy after the project is finished; production access only if there's time.* | 02 §7 | ✅ 2026-10-13 (updated by §V) |
 | DR2-B9 | **Demo clock** (admin, demo mode only, audited) | 04 R-DEMO; 03 AS-12 | ✅ 2026-10-13 |
 | DR2-C | **Document fixes:** decision-log annotations; checklist corrections; "units saved"; early-release suggested price −25%; dropped pharmacy fields; aligned paths; demo scenarios; `CN-` notification IDs; `Q-` request refs | all docs | ✅ 2026-10-13 |
 | DR2-D | **Team tasks:** ~~written proof of the professor's approval; 2–3 pharmacist interviews~~ (dropped, DR2-E3); agent-first build order | 02 §9, checklist §8 | ✅ (team) |
@@ -221,8 +222,8 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | API-D9 | **Availability capped at 5** in responses (+ a "more" flag) | 06 §5.3 | ✅ 2026-10-18 |
 | API-D10 | **Money:** integer LBP + `usd_approx` out; LBP or USD in, converted on the server | 06 §1 | ✅ 2026-10-18 |
 | API-D11 | **Internal `event` messages never shown to clients**; pharmacy decline reasons are codes only | 06 §5.5, §6.9 | ✅ 2026-10-18 |
-| API-D12 | **CSRF:** `SameSite=Strict` cookie + `Origin` check | 06 §2.1 | ✅ 2026-10-18 |
-| API-D13 | **OpenAPI generated and exported in CI**; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | 06 §9 | ✅ 2026-10-18 |
+| API-D12 | **CSRF:** ~~`SameSite=Strict` cookie +~~ `Origin` check. *Updated by §V (INF-D6): the login token travels in a header, plus CORS.* | 06 §2.1 | ✅ 2026-10-18 (updated by §V) |
+| API-D13 | **OpenAPI generated and exported** *(by script, not CI, §V)*; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | 06 §9 | ✅ 2026-10-18 |
 | API-D14 | **New numbers:** polling 3 s · 120 requests/min per session · proposal validity 2 h · max page size 50 | 04 N-28–N-31 | ✅ 2026-10-18 |
 
 ## P. Agent decisions (step 07)
@@ -241,7 +242,7 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | AG-D10 | **Limits and resilience:** timeouts, retries, turn limits, circuit breaker, worker retries | 07 §8 | ✅ 2026-10-18 |
 | AG-D11 | **Follow-ups** as one `conversations.followup_at`, bounded | 07 §4.4; 05 §3.6 | ✅ 2026-10-18 |
 | AG-D12 | **Prompts versioned in the repo**; `prompt_version` on every run; changes need an evaluation comparison | 07 §5.1 | ✅ 2026-10-18 |
-| AG-D13 | **Temperature 0; provider and model as config; a scripted fake model in tests** | 07 §10 | ✅ 2026-10-18 |
+| AG-D13 | **Provider and model as config; a scripted fake model in tests.** *Temperature 0 now applies to the local model only: Claude models reject sampling settings (T14).* | 07 §10 | ✅ 2026-10-18 (updated by T14) |
 | AG-D14 | **Observability:** one Langfuse trace per turn with spans; `agent_runs` / `agent_tool_calls` mirror; evidence exported | 07 §9 | ✅ 2026-10-18 |
 | AG-D15 | **New numbers** N-32–N-39 in `04` §5 | 04 §5 | ✅ 2026-10-18 |
 
@@ -250,7 +251,7 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | ID | Decision | Where | Validated |
 |---|---|---|---|
 | EV-D1 | **Six suites E1–E6:** understanding, 3-contender simulation, ablations, safety, model comparison, real-world constraints | 08 §3 | ✅ 2026-10-18 |
-| EV-D2 | **U-set ~300** written by the team (language and category mix), JSONL with gold labels, 60/40 dev/held-out, 20% double-labeled | 08 §2.1 | ✅ 2026-10-18 |
+| EV-D2 | **U-set ~300** written by the owner and Claude *(updated by §V, INF-D14; the held-out part in a separate session)* (language and category mix), JSONL with gold labels, 60/40 dev/held-out, 20% double-labeled | 08 §2.1 | ✅ 2026-10-18 |
 | EV-D3 | **R-set ~120** adversarial cases with automatic pass criteria + manual review; **target 0 violations** | 08 §2.2, E4 | ✅ 2026-10-18 |
 | EV-D4 | **E2 three contenders:** search baseline, no-AI scripted policy (with keyword rules), the agent; same seeds and simulated client; 5 seeds × 100 requests | 08 E2 | ✅ 2026-10-18 |
 | EV-D5 | **Primary metric:** units secured within the window; secondary metrics as listed | 08 E2 | ✅ 2026-10-18 |
@@ -259,7 +260,7 @@ From [design review #2](reviews/design_review_02.md). The team answered §A with
 | EV-D8 | **Model rule:** the cheapest model that meets every target (closes O1 when run) | 08 E5 | ✅ 2026-10-18 |
 | EV-D9 | **Statistics:** mean ± 95% bootstrap CI; paired comparisons | 08 §4 | ✅ 2026-10-18 |
 | EV-D10 | **Results committed** (config, raw, summary, charts) + exported traces + failure analysis | 08 §5, §6 | ✅ 2026-10-18 |
-| EV-D11 | **CI:** deterministic evaluation on every PR; LLM subset gate on agent and prompt PRs (manual trigger) | 08 §7 | ✅ 2026-10-18 |
+| EV-D11 | ~~**CI:** deterministic evaluation on every PR; LLM subset gate on agent and prompt PRs (manual trigger)~~ *Updated by §V: the same checks run by hand.* | 08 §7 | ✅ 2026-10-18 (updated by §V) |
 | EV-D12 | **Datasets written during the build**, dev parts first; held-out parts before the final runs | 08 §8 | ✅ 2026-10-18 |
 
 ## R. Failure Matrix decisions (step 09)
@@ -339,6 +340,34 @@ From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by th
 
 *The 4 boards that were pending (CS-15, CS-7, PS-6, AS-10) are drawn on the v2 canvas (2026-10-23).* `03` → v4.3 for the v2 tabs and search layout.
 
+## V. Infrastructure and deployment decisions (step 12)
+
+From [`12_infrastructure.md`](12_infrastructure.md). The owner set this direction and validated the step on 2026-11-02. The earlier v1.0 draft (CDK, pipelines, one CloudFront, a domain) was never validated.
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| INF-D1 | **Local first** in Docker; one AWS deployment after the project is finished; no staging | 12 §1, §2 | ✅ 2026-11-02 |
+| INF-D2 | **Ireland** (`eu-west-1`) | 12 §3 | ✅ 2026-11-02 |
+| INF-D3 | **AWS by hand in the console;** only the owner has access; images pushed from the laptop; no CDK, CloudFormation or pipelines. Replaces T9's CDK and T10. | 12 §11, §12 | ✅ 2026-11-02 |
+| INF-D4 | **No domain:** `*.cloudfront.net` addresses | 12 §4 | ✅ 2026-11-02 |
+| INF-D5 | **Two CloudFronts and a public ALB** that accepts only CloudFront's addresses (one security group rule). Reverses DR2-B7. | 12 §4, §5 | ✅ 2026-11-02 |
+| INF-D6 | **The login token travels in the `Authorization` header,** kept in `localStorage`; CORS for the website only; the server-side session is unchanged. Changes API-D12 and R-AU3. | 12 §4.3; 06 §2.1 | ✅ 2026-11-02 |
+| INF-D7 | **Network:** public subnets for the ALB and tasks, isolated for RDS, no NAT | 12 §5 | ✅ 2026-11-02 |
+| INF-D8 | **One backend image, two services (`api`, `worker`), one ops task;** a worker heartbeat check; `/health` always `200` with the database's status | 12 §6; 06 §6.1 | ✅ 2026-11-02 |
+| INF-D9 | **`prepare_db` run by hand before each service update;** migrations keep the previous version working | 12 §7; 05 §9 | ✅ 2026-11-02 |
+| INF-D10 | **Secrets in Secrets Manager;** the API has no AWS permissions; the access key stays outside the project folder | 12 §8 | ✅ 2026-11-02 |
+| INF-D11 | **SES from one verified address, staying in the sandbox;** production access only if there's time; no bounce webhook | 12 §9 | ✅ 2026-11-02 |
+| INF-D12 | **Cognito after the project works, before deploying,** behind our API. The validated login is built first. | 12 §10 | ✅ 2026-11-02 |
+| INF-D13 | **Release and rollback by hand;** rollback = the previous task definition | 12 §12 | ✅ 2026-11-02 |
+| INF-D14 | **The owner and Claude check everything and write the datasets** (the held-out parts in a separate session); no CI, no PR reviews; the repo stays public. Replaces T10, T11's review, and Definition of Done #3 and #7. | 12 §1 | ✅ 2026-11-02 |
+| INF-D15 | **Logs kept 30 days;** app alerts + the AWS budget (excluding credits); no CloudWatch alarms; demo mode on in AWS | 12 §13 | ✅ 2026-11-02 |
+
+*Also from this step:*
+- accepted risks RR-12–RR-16 (`10` §8), and TH-45 now covers the AWS access key;
+- R-D54–R-D56 (`04`) and API-D16 (`06`);
+- open item O5 (the Ministry price file);
+- **what it gives up:** most of bonus B-1, B-2, B-3, B-4 and B-6, and the infrastructure-as-code part of B-7 (checklist §5).
+
 ## G. Default numbers (superseded)
 
 **Superseded by `04_domain_rules.md` §5 (validated 2026-10-13).** Kept for history only.
@@ -371,7 +400,8 @@ From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by th
 
 | ID | Item | Needed by (dependency, not a date) |
 |---|---|---|
-| O1 | Which LLM model (chosen by measurement) | Evaluation step |
+| O1 | Which Claude model (chosen by measurement). The provider is settled: Anthropic's Claude API (T14). | Evaluation step |
 | O2 | Who pays for the real LLM. Development runs on the local model, so this is only needed for the evaluation runs and the demo. | Before the evaluation runs |
 | O3 | Catalog source: **checked 2026-10-13.** The MoPH "Lebanon National Drugs Database" price list is public, with downloadable .xls/.xlsx per exchange-rate date. Columns: ATC, Name, B/G, Ingredients (with strengths), Dosage, Form, Price (LBP). **No pack size, no prescription/OTC flag, no controlled flag** (there is a separate Narcotics section). The rules for this gap are in `04` §2. | Step 04 decisions |
 | O4 | ~~Values in §G~~ → done in `04` §5 | ✅ |
+| O5 | Where the Ministry price file lives (in the repo or uploaded separately) | Before the catalog import in AWS |

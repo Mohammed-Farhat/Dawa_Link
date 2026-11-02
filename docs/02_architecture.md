@@ -1,9 +1,9 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.1 · **Date:** 2026-10-22
-**Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
+**Version:** v3.2 · **Date:** 2026-11-02
+**Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
-**Status:** ✅ Stack validated. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
+**Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
 
 **v3.0 applies the professor's guidance** (decision log §S, ADR-004):
 - a **routing service** (OpenRouteService, OpenStreetMap data) for travel times and routes, with a straight-line fallback and a cache;
@@ -16,17 +16,18 @@
 - **cards only from tools** (proposals);
 - a turn lease;
 - polling for new cards;
-- networking: **public-subnet tasks** + a **CloudFront VPC origin** to an internal ALB;
+- networking: **public-subnet tasks** + a **CloudFront VPC origin** to an internal ALB *(replaced by step 12: two CloudFronts and a public ALB)*;
 - regular Fargate (no Spot);
 - a demo clock.
 
-**Still open:** which LLM model, and who pays for it (§10).
+**Still open:** which Claude model, and who pays for it (§10).
 
 This is the high-level view. The details live in their own documents:
 - database: `05_database.md`
 - API: `06_api.md`
 - agent: `07_agent.md`
 - evaluation: `08_evaluation.md`
+- deployment: `12_infrastructure.md`
 
 ---
 
@@ -39,23 +40,23 @@ The team's strongest language is Python, and the team must be able to read, revi
 | Backend | **Python 3.12, FastAPI, Pydantic v2** | Team language; typed schemas are the API contract; OpenAPI generated automatically | NestJS (new to the team), Django (heavier) |
 | Env and packages | **uv** + lockfile | Reproducible installs | pip without a lockfile |
 | Database | **PostgreSQL 16, SQLAlchemy 2.0 (sync, psycopg 3), Alembic** | Row locks for stock; advisory locks for matching; versioned migrations | Async SQLAlchemy, MongoDB |
-| LLM by stage | **Tests/CI:** fake, scripted LLM. **Development:** **Ollama** `qwen2.5:7b` (local). **Evaluation and demo:** the real model, chosen by measurement. The provider and model are config values. | $0 while building; deterministic CI; the local model is also one evaluation candidate | Paying for tokens from day one |
+| LLM by stage | **Tests:** fake, scripted LLM. **Development:** **Ollama** `qwen2.5:7b` (local). **Evaluation and demo:** Anthropic's Claude API; the model is chosen by measurement. The provider and model are config values. | $0 while building; deterministic tests | Paying for tokens from day one |
 | Agent | **LangGraph, stateless per turn** + `langchain-anthropic` / `langchain-ollama` | An explicit, traceable graph (guards, tool loop, fallback). Conversations live in our tables (ADR-001). **One agent, two modes:** assistant and sourcing (ADR-002). | Strands; LangChain alone; no framework (ADR-001 option C) |
 | Background work | **Worker** running one **clock check** loop (every few seconds) that reads the deadlines stored on the rows | Offer and reservation expiry, search windows, matching, agent turns for decision events, email. **No jobs table:** nothing can get stuck, and the simulation just advances the clock (`04` R-T10). | Jobs table; Celery + Redis |
 | Email | **AWS SES** via an outbox table | Retries; templates | Sending email directly from the app |
 | Frontend | **React + TypeScript (Vite), Mantine, TanStack Query, React Router**, types from OpenAPI | Role portals + a chat that renders cards + request pages | Streamlit, Next.js |
 | Chat transport | **SSE** for streaming a reply (15 s heartbeat) + **polling every few seconds** for new messages and cards posted by the worker | Fast-feeling replies; simple, reliable updates | WebSockets |
-| Auth | **Server-side sessions:** a random token in an httpOnly, Secure, SameSite=Strict cookie; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification | Less code than JWT + refresh tokens; logout and suspension take effect instantly; same origin through one CloudFront, so no CORS. **Admins also use TOTP two-factor login** (`pyotp`, `10` TM-D8). *(Password reset postponed.)* | JWT + refresh rotation; tokens in localStorage |
+| Auth | **Server-side sessions:** a random token sent in the `Authorization` header and kept in the browser's `localStorage`; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification. **Cognito replaces** password storage, email verification and admin two-factor login after the project works, behind our API (`12` §10). | Less code than JWT + refresh tokens; logout and suspension take effect instantly. The website and the API are two separate sites (two CloudFronts), and Safari blocks third-party cookies, so the token can't be a cookie and the API uses CORS (`12` §4.3). **Admins also use TOTP two-factor login** (`pyotp`, `10` TM-D8). *(Password reset postponed.)* | JWT + refresh rotation; a cookie |
 | Files | **No file storage.** Uploads are processed in memory and discarded. | Smaller attack surface | A private S3 bucket |
 | **Routing** | **OpenRouteService** (free tier, API key; built on OpenStreetMap data, attribution shown): road travel time **by car and on foot**, and the best visiting order for plans. Cached 24 h; **straight-line fallback** when it fails (`04` R-RT). | Real routes, as the professor asked; open data; no cost at our scale | Google Maps (paid), straight-line only (not a real route) |
 | **Maps (browser)** | **Leaflet + OpenStreetMap tiles**: the pharmacy pins itself at registration; clients see the pharmacy on a map | Free and open; drawn in the browser, so nothing goes to the AI | Google Maps |
 | LLM tracing | **Langfuse Cloud** (free tier) | Traces, tokens, cost, prompt versions | LangSmith |
 | Logs | **structlog** JSON → CloudWatch | One request and trace ID across API, worker and agent | none |
 | Quality | **ruff, mypy, pytest** + coverage; ESLint, Vitest | Standard | none |
-| CI/CD | **GitHub Actions** (OIDC), CodeQL, Dependabot, secret scanning, Trivy, SonarCloud, Codecov | Free on a public repo; bonus credit | Jenkins |
-| Infrastructure | **AWS CDK (Python)** | Same language; one-command create and destroy | Terraform |
-| Hosting | **ECS Fargate (regular, no Spot) + internal ALB + one CloudFront (VPC origin) + S3 (frontend only) + RDS + SES** | Team has Fargate experience; production-like; no unencrypted hop over the internet | EC2 + Compose |
-| Local dev | **Docker Compose** (postgres, api, worker, web) + Ollama on the host | One command | none |
+| CI/CD | **None.** The owner and Claude run the tests and check each change on the laptop. | Simple; the owner's choice (`12` INF-D14) | GitHub Actions and automated scanners |
+| Infrastructure | **AWS console, by hand,** following the checklist in `12` §11 | Simple; only the owner touches AWS | CDK, CloudFormation, Terraform |
+| Hosting | **Ireland (`eu-west-1`): ECS Fargate (regular, no Spot) + public ALB + two CloudFronts (website on S3, API on the ALB) + RDS + SES** | Team has Fargate experience; production-like; no domain or certificate needed | EC2 + Compose |
+| Local dev | **Docker Compose** (postgres, api, worker, web, mailpit) + Ollama on the host | One command | none |
 
 ---
 
@@ -68,7 +69,8 @@ flowchart LR
         P[Pharmacist]
         A[Admin]
     end
-    CF[CloudFront · HTTPS · one URL]
+    CF1[CloudFront: website · HTTPS]
+    CF2[CloudFront: API · HTTPS]
     S3[(S3 · React build)]
     API[FastAPI<br/>REST · SSE chat · assistant turns · taps]
     DB[(PostgreSQL<br/>data · deadlines · outbox · conversations)]
@@ -78,9 +80,9 @@ flowchart LR
     SES[(SES)]
     ORS[(Routing: OpenRouteService)]
 
-    C & P & A --> CF
-    CF -- "/*" --> S3
-    CF -- "/api/* (VPC origin)" --> API --> DB
+    C & P & A --> CF1 & CF2
+    CF1 --> S3
+    CF2 -- "plain HTTP through the ALB" --> API --> DB
     API -- chat turns --> LLM
     W --> DB
     W -- request & decision turns --> LLM
@@ -202,7 +204,7 @@ flowchart TD
 
 ```
 dawalink/
-├── README.md · docker-compose.yml · .env.example · .github/workflows/
+├── README.md · docker-compose.yml · .env.example
 ├── backend/
 │   ├── pyproject.toml · uv.lock · Dockerfile · alembic.ini
 │   ├── src/dawalink/
@@ -213,61 +215,65 @@ dawalink/
 │   │   ├── api/           # routers, auth (sessions), SSE, errors
 │   │   ├── agent/         # graph, tools, proposals, guards, prompts/
 │   │   ├── worker/        # the clock check loop, email outbox
+│   │   ├── ops/           # one-off commands (prepare_db)
 │   │   └── observability/
 │   ├── scripts/           # catalog import, create admin, seed data
 │   ├── data/              # districts.csv, catalog_overrides.yaml
 │   ├── migrations/
 │   └── tests/
 ├── frontend/              # client (search, assistant, requests), pharmacy, admin
-├── sim/  ·  eval/  ·  infra/  ·  docs/
+├── sim/  ·  eval/  ·  docs/
 ```
 
 ---
 
-## 7. Deployment (AWS, CDK)
+## 7. Deployment (AWS, by hand; full guide in [`12`](12_infrastructure.md))
 
 ```
-CloudFront (HTTPS on *.cloudfront.net)
-├── /*      → S3 (React build), private, Origin Access Control
-└── /api/*  → VPC origin → internal ALB → ECS "api" (Fargate) · ECS "worker" (Fargate)
-RDS PostgreSQL db.t4g.micro (isolated subnet) · SES · Secrets Manager (DB, LLM key, Langfuse keys, routing key)
+CloudFront (website, HTTPS on *.cloudfront.net) → S3 (React build), private, Origin Access Control
+CloudFront (API, HTTPS on *.cloudfront.net)     → plain HTTP → public ALB → ECS "api" (Fargate)
+ECS "worker" (Fargate) · RDS PostgreSQL db.t4g.micro (isolated subnet) · SES · Secrets Manager
 ```
 
+- **We finish everything locally, then deploy once.** Only the owner touches AWS, and images are pushed to ECR from the laptop.
+- **Ireland** (`eu-west-1`), set up by hand in the console. There is no CDK or CloudFormation.
 - **Networking:**
-  - **The ALB is internal.** CloudFront reaches it through a **VPC origin**, so traffic between CloudFront and our servers never crosses the public internet unencrypted, and no secret header is needed.
+  - The ALB accepts traffic **only from CloudFront's addresses**. The CloudFront → ALB hop is plain HTTP, an accepted risk (`10` RR-12).
   - **ECS tasks run in public subnets with public IPs** for outbound access (Claude API, Langfuse, ECR, Secrets Manager). Their security group accepts inbound traffic **only from the ALB**.
   - There is no NAT gateway.
 - **Regular Fargate** for the API and the worker (no Spot), one task each.
-- Migrations run as a one-off task before each deploy.
-- **SES:** the sandbox only sends to verified addresses. Prepare demo accounts, or request production access well before the demo.
+- Migrations run as a one-off task before each service update. Rollback means the previous task definition.
+- **SES** stays in its sandbox by default, so it only sends to verified addresses. Cognito sends the sign-up email (`12` §9, §10).
 - **Cost:**
-  - budget alerts at $50 / $80;
-  - about $55–65 per month while deployed;
-  - **short test deploys, then `cdk destroy`**; the final stack is deployed close to the demo and destroyed after it;
+  - budget alerts at $50 / $80, excluding credits;
+  - about $82 per month while deployed;
   - **LLM spend:** global daily and monthly caps in the app (`04` N-46), plus a spend limit set in the provider's console as a hard backstop.
 
 ---
 
 ## 8. Bonus engineering practices
+The owner chose not to pursue CI/CD, code-quality automation, DevSecOps scanning, branch protection or infrastructure as code (`12` INF-D3, INF-D14). These stay:
+
 | Practice | How |
 |---|---|
-| Workflow | GitHub Projects, reviewed PRs, branch protection |
-| CI/CD | Lint → types → tests + coverage → offline evaluation gate → build → deploy |
-| Code quality automation | SonarCloud, Codecov, ruff, mypy |
-| Agent evaluation automation | Evaluation gate in CI (understanding, safety, and offline request-simulation metrics must not regress) |
 | Advanced AgentOps | Langfuse (model, prompt version, tokens, cost, latency, mode) |
-| DevSecOps | CodeQL, Dependabot, secret scanning, Trivy, OIDC |
-| Reproducible deployment | Docker Compose, CDK, Alembic, uv lockfile |
+| Reproducible deployment | Docker Compose, Alembic, uv lockfile |
+| Advanced testing | API contract tests, a load test, a red-team suite |
 | Controlled evolution | Versioned prompts; model as config; ablations, baselines and model comparison recorded |
 
 ---
 
 ## 9. Who does what
-Claude writes the code. **Every change goes through a PR that a teammate reviews and can explain.** The team:
-- writes and labels the client-request set (Arabizi, Arabic, English);
+Claude writes the code. **The owner (Mohammed) and Claude check every change, and the owner commits it and can explain it.**
+
+**The owner and Claude:**
+- write and label the client-request set (Arabizi, Arabic, English);
+- test and red-team by hand.
+
+**The owner** has the only AWS access and deploys.
+
+**The team:**
 - creates realistic inventory files in the template;
-- owns the AWS account and checks deployments;
-- tests and red-teams by hand;
 - writes the report and runs the demo.
 
 **Build order:** the agent and its evaluation first (the graded core), then the platform screens.
@@ -275,8 +281,7 @@ Claude writes the code. **Every change goes through a PR that a teammate reviews
 ---
 
 ## 10. Still open
-1. **The LLM model**, chosen by measurement: the cheapest model that meets the quality bar. Candidates:
-   - local `qwen2.5:7b`;
+1. **Which Claude model**, chosen by measurement: the cheapest model that meets the quality bar. The provider is settled: Anthropic's Claude API. Candidates:
    - Claude Haiku 5.5 (`claude-haiku-5-5`, $0.10 / $0.50 per 1M tokens);
    - Claude Sonnet 5.5 (`claude-sonnet-5-5`, $2 / $10);
    - Claude Opus 5.5 (`claude-opus-5-5`, $4 / $20), as an upper reference on a small sample.

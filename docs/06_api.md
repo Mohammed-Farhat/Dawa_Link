@@ -1,8 +1,8 @@
 # DawaLink: API Contracts
 
-**Version:** v1.2 (validated; v1.2 applies the threat model) · **Date:** 2026-10-22
+**Version:** v1.3 (validated; v1.3 applies step 12) · **Date:** 2026-11-02
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
-**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected.
+**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI.
 
 This document defines **every action** the website can ask the server to do, and **every interface between the main components** (the browser, the API, the agent, the worker and the database). For each endpoint it gives:
 - who may call it;
@@ -16,8 +16,8 @@ That is what the course asks for: *"interfaces between major components, includi
 
 ## In short
 
-- **REST + JSON** under `/api/v1`, behind the same CloudFront URL as the website (no CORS).
-- **One login cookie** (a server-side session). Every endpoint checks the **role**, the **account status** (verified, paused, approved…) and **ownership**. Someone else's object always looks like "not found".
+- **REST + JSON** under `/api/v1`, on its own CloudFront address, separate from the website's, so it uses CORS (§2.1).
+- **One login token** (a server-side session), sent in the `Authorization` header. Every endpoint checks the **role**, the **account status** (verified, paused, approved…) and **ownership**. Someone else's object always looks like "not found".
 - **One error format** with stable codes (`NOT_ENOUGH_STOCK`, `OUTSIDE_REQUEST_HOURS`, …). The frontend and the tests rely on the code, never on the message text.
 - **Three kinds of buttons, three paths:**
   1. **search page** → `POST /reservations` (no agent involved, ever);
@@ -33,7 +33,7 @@ That is what the course asks for: *"interfaces between major components, includi
 
 | Topic | Convention |
 |---|---|
-| Base URL | `https://<cloudfront-domain>/api/v1`. Locally: `http://localhost:8000/api/v1`. |
+| Base URL | `https://<api-cloudfront>/api/v1` (not the website's address). Locally: `http://localhost:8000/api/v1`. |
 | Format | JSON (UTF-8) in and out, except the upload (multipart), template and error downloads (CSV), and the chat stream (SSE). |
 | Field names | `snake_case`. |
 | IDs | UUIDs (strings). Human references: `ref` = `R-7K3Q2F` (order, shown at the counter) and `Q-4HX9TM` (sourcing request). They're **random**, so they can't be guessed (`05` §1, `10` TM-D4). Searching a ref ignores case and the dash (`r7k3q2f` finds `R-7K3Q2F`). |
@@ -55,13 +55,14 @@ That is what the course asks for: *"interfaces between major components, includi
 ### 2.1 Session
 - `POST /auth/login` creates a **server-side session** (`04` R-AU3, `05` `sessions`).
 - **Admins** also send a one-time `totp_code` from their authenticator app (`04` R-AU6). A wrong or missing code gets the same `INVALID_CREDENTIALS` as a wrong password, and counts toward the lockout.
-- The browser receives one cookie:
+- The response body holds a random `token`, valid 7 days (admins: 12 h). The frontend keeps it in `localStorage` and sends it on every call, including the chat stream:
 
-  `dl_session=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=604800` (admins: 12 h).
+  `Authorization: Bearer <token>`
 
-  The server stores only the token's hash. JavaScript can't read the cookie, so an XSS bug can't steal it.
+  The server stores only the token's hash. **Why not a cookie:** the website and the API are two separate sites (`12` §4.3), and Safari blocks third-party cookies. An XSS bug could read this token, so the CSP matters (`10` RR-13).
 - **Logout, a password change or a suspension** revokes the session at once. The next request gets `401 UNAUTHENTICATED`.
-- **CSRF protection:** the cookie is `SameSite=Strict`. In addition, every state-changing request (`POST`, `PATCH`, `DELETE`) must carry an `Origin` header equal to our own site; otherwise it gets `403 ORIGIN_REJECTED`.
+- **CSRF protection:** the login is a header the page adds itself, never a cookie, so another site can't make the browser send it. In addition, every state-changing request (`POST`, `PATCH`, `DELETE`) must carry an `Origin` header equal to the website's address; otherwise it gets `403 ORIGIN_REJECTED`.
+- **CORS:** the API allows only the website's address, with the headers `Authorization`, `Content-Type` and `Idempotency-Key`, and exposes `X-Request-ID`. Preflight answers are cached for 2 hours.
 
 ### 2.2 The three checks on every endpoint
 1. **Role:** `client`, `pharmacist` or `admin`. Wrong role → `403 FORBIDDEN`.
@@ -444,15 +445,15 @@ All paths are relative to `/api/v1`.
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `GET /health` | anyone | → `{status, db, version}` (used by the load balancer) | `SERVICE_UNAVAILABLE` | |
+| `GET /health` | anyone | → **always `200` while the process runs:** `{status: "ok" \| "degraded", db: "ok" \| "down", version}`. The load balancer only needs to know the process is alive (`12` §6). | | |
 | `GET /config/public` | anyone | → `{request_hours: {start, end}, search_window_hours, offer_hours, lbp_per_usd, rate_date, discount_tiers, server_now, demo_mode}` | | §5 numbers |
 | `GET /districts` | anyone | → `list[District]` | | R-S2 |
 | `POST /auth/register/client` | anyone | `{email, password, full_name, phone?, district_id, accept_terms: true}` → **202** `{"message": "Check your email"}`, **the same answer whether or not the email already has an account** (`04` R-AU7). A new email becomes an UNVERIFIED account and gets the link (CN-1); an existing one gets CN-18. | `WEAK_PASSWORD`, `SIGNUP_LIMIT`, `VALIDATION_ERROR` | SM-2, R-AU1, R-AU5, R-AU7 |
 | `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, location: {lat, lon} (the map pin), pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **202** `{"message": "Check your email"}`, the same answer whether or not the email already has an account (R-AU7). The pharmacy enters the approval queue (PENDING) once its email link is confirmed. | `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1, R-AU7 |
-| `POST /auth/login` | anyone | `{email, password, totp_code?}` → `Me` + cookie. **Admins must send `totp_code`** (R-AU6). | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3, R-AU6 |
+| `POST /auth/login` | anyone | `{email, password, totp_code?}` → `Me` + `token`. **Admins must send `totp_code`** (R-AU6). | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3, R-AU6 |
 | `POST /auth/logout` | any | → **204**; session revoked | | R-AU3 |
 | `GET /auth/me` | any | → `Me` | `UNAUTHENTICATED` | |
-| `POST /auth/verify-email` | anyone | `{token}` → `Me` + session cookie (a client becomes ACTIVE; a pharmacy enters the approval queue as PENDING) | `TOKEN_INVALID` | R-AU4, R-AU7 |
+| `POST /auth/verify-email` | anyone | `{token}` → `Me` + a session `token` (a client becomes ACTIVE; a pharmacy enters the approval queue as PENDING) | `TOKEN_INVALID` | R-AU4, R-AU7 |
 | `POST /auth/verify-email/resend` | logged in, email not verified | → **202** (≤ 1 per minute, ≤ 5 per day, N-47) | `RATE_LIMITED` | R-AU4 |
 | `POST /auth/password` | any | `{current_password, new_password}` → **204**; other sessions revoked | `INVALID_CREDENTIALS`, `WEAK_PASSWORD` | R-AU1 |
 | `GET /me/profile` · `PATCH /me/profile` | client | `{phone?, district_id?, alternatives_ok_default?}` → `Me` | `VALIDATION_ERROR` | CS-13 |
@@ -706,14 +707,14 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 
 - **Generated, not hand-written:**
   - FastAPI builds the OpenAPI spec from the Pydantic schemas;
-  - CI exports it to `docs/openapi.json` (deliverable D-6), and the frontend's TypeScript types are generated from it;
-  - a PR whose code doesn't match the committed spec fails CI.
+  - an export script writes it to `docs/openapi.json` (deliverable D-6), and the frontend's TypeScript types are generated from it;
+  - we re-export it in any change that touches the API, so the committed spec always matches the code.
 - **Interactive docs** (`/api/v1/docs`) are enabled **only in development**. The JSON spec is always available at `/api/v1/openapi.json`.
 - **Versioning:** `/api/v1` until a breaking change. Additive changes (new optional fields, new endpoints) keep `v1`.
 - **Contract tests** (`tests/api/`, checklist T-13 and bonus B-8):
   1. **Every endpoint has at least three tests:** a valid call, an invalid payload (→ `422`), and an unauthorized call (wrong role, another user's object → `403`/`404`). This is Definition of Done item #2.
   2. **Every error code** in §3.2 has a test that triggers it.
-  3. **Schemathesis** runs in CI against the OpenAPI spec. It generates many random valid and invalid requests and checks that the API never returns a `500` and always matches its own schema.
+  3. **Schemathesis** runs on the laptop against the OpenAPI spec. It generates many random valid and invalid requests and checks that the API never returns a `500` and always matches its own schema.
 
 ---
 
@@ -723,7 +724,7 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 |---|---|
 | Schemas | §5 (Pydantic), generated OpenAPI (§9) |
 | Validation | Pydantic on every input; `422 VALIDATION_ERROR` with field details (§3.1) |
-| Authentication | Server-side sessions, `SameSite=Strict` + `Origin` check (§2.1) |
+| Authentication | Server-side sessions, a token in the `Authorization` header, CORS + `Origin` check (§2.1) |
 | Authorization and least privilege | Role, status and ownership on every endpoint; `404` for others' objects (§2.2); no priority endpoint at all |
 | Privacy of location | Rounded, stored apart from the agent's context, never in LLM traffic (§2.3, INV-24) |
 | Error behavior | One format, a stable code catalog mapped to the rules (§3) |
@@ -748,10 +749,11 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | API-D9 | **Availability is capped at 5** in responses (+ a "more" flag) | ✅ 2026-10-18 | R-S5, and exact stock levels can't be scraped |
 | API-D10 | **Money:** integer LBP + `usd_approx` out; LBP or USD in, converted on the server | ✅ 2026-10-18 | One conversion rule (R-C3) |
 | API-D11 | **Internal `event` messages are never shown to clients**; pharmacies' decline reasons are **codes only** | ✅ 2026-10-18 | Clean UI; no pharmacy text can reach the agent (R-AG8) |
-| API-D12 | **CSRF:** `SameSite=Strict` cookie + `Origin` check on every state-changing request | ✅ 2026-10-18 | Two simple layers |
-| API-D13 | **OpenAPI generated and exported to `docs/openapi.json` in CI**; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | ✅ 2026-10-18 | Deliverable D-6, T-13, bonus B-8 |
+| API-D12 | **CSRF:** ~~`SameSite=Strict` cookie +~~ `Origin` check on every state-changing request. *Changed by `12` INF-D6: the login token travels in a header, plus CORS.* | ✅ 2026-10-18 (updated 2026-11-02) | Two simple layers |
+| API-D13 | **OpenAPI generated and exported to `docs/openapi.json`** *(by script, not CI, `12` INF-D14)*; interactive docs only in development; contract tests (3 per endpoint + every error code + Schemathesis) | ✅ 2026-10-18 | Deliverable D-6, T-13, bonus B-8 |
 | API-D14 | **New numbers** to add to `04` §5: polling 3 s · API rate limit 120 per minute per session · proposal validity 2 h · max page size 50 | ✅ 2026-10-18 | Numbers live only in `04` §5 |
 | API-D15 | **Threat-model changes** (`10`, §T): registration answers "check your email" whatever the email (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random refs; new limits (§4); IP limits from CloudFront | ✅ 2026-10-22 | Accounts can't be discovered; the admin account is protected; order numbers can't be guessed |
+| API-D16 | **Step 12 changes** (`12`, §V): the login token in the `Authorization` header; CORS for the website's address; `/health` always `200` while the process runs | ✅ 2026-11-02 | Two separate sites; a database outage must not kill healthy API tasks |
 
 **Applied on validation (2026-10-18):**
 - the API-D14 numbers are in `04` §5 (N-28–N-31);

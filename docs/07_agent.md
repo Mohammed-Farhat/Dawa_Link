@@ -1,6 +1,6 @@
 # DawaLink: Agent Specification
 
-**Version:** v1.2 (validated; v1.2 applies the threat model) · **Date:** 2026-10-22
+**Version:** v1.3 (validated; v1.3 drops the CI wording and applies the Claude API rules) · **Date:** 2026-11-02
 **Builds on:**
 - `01` v5.0 (C6, C8, C9, C15–C18)
 - `02` v2.0 §3
@@ -238,7 +238,7 @@ The prompts live in the repo as versioned files: `backend/src/dawalink/agent/pro
 
 - **Static parts come first**, so providers that support prompt caching can reuse them (cheaper and faster).
 - The **prompt version** (e.g. `v1.3`) is stored on every `agent_runs` row and in every trace.
-- Changing a prompt is a PR that must show an evaluation comparison against the previous version (bonus B-10).
+- Changing a prompt must come with an evaluation comparison against the previous version (bonus B-10).
 
 ### 5.2 Hard rules (the core of `system_core.md`)
 ```text
@@ -445,11 +445,13 @@ JSON logs (structlog) with `request_id`, `turn_id` and `trace_id` on every line,
 ## 10. Models and providers
 
 - **One interface, three providers.** The graph uses a LangChain chat model chosen by config (`LLM_PROVIDER`, `LLM_MODEL`):
-  - `FakeChatModel`: **scripted** tool calls and replies for tests and CI (deterministic, $0);
+  - `FakeChatModel`: **scripted** tool calls and replies for tests (deterministic, $0);
   - `ChatOllama` (`qwen2.5:7b`): development (local, $0);
-  - `ChatAnthropic`: evaluation and the demo, if chosen.
-- **Model choice (O1)** is made **by measurement** in `08`: the cheapest model that meets the quality and safety thresholds. Candidates are listed in `02` §10.
-- **Temperature 0** (and a fixed seed where supported) for reproducibility. The evaluation still runs several times to measure variation.
+  - `ChatAnthropic` (Anthropic's Claude API): evaluation and the demo.
+- **Model choice (O1)** is made **by measurement** in `08`: the cheapest Claude model that meets the quality and safety thresholds. Candidates are listed in `02` §10.
+- **No temperature setting on Claude models.** The API rejects `temperature`, `top_p` and `top_k`, so we don't send them. Temperature 0 applies to the local model only. Answers can vary between runs, so the evaluation runs several times to measure that.
+- **`effort` is set explicitly,** because its default differs by Claude model.
+- **A Claude reply can stop with `stop_reason: "refusal"`** when a safety classifier declines the request. We treat it as a failed LLM call (FX-1), and E5 measures how often medicine messages trigger it.
 - **Token use is kept small:** compact tool outputs, the last 20 messages only, cached static prompt parts.
 
 ---
@@ -514,7 +516,7 @@ The order of who gets stock **doesn't change**.
 | AG-D10 | **Limits and resilience:** 30 s LLM timeout, 2 retries, 60/90 s turn limit, circuit breaker (3 failures / 5 min → 2 min degraded), worker turn retries 1/5/15 min | ✅ 2026-10-18 | Requirement T-6: retries, timeouts, fallbacks, graceful degradation |
 | AG-D11 | **Follow-ups** stored as one `conversations.followup_at` (a small `05` addition), bounded: 15–300 min, inside the window, ≤ 4 per request | ✅ 2026-10-18 | Lets the agent wait for something specific (e.g. pharmacies opening) without a jobs table |
 | AG-D12 | **Prompts versioned in the repo**; `prompt_version` on every run and trace; a prompt change needs an evaluation comparison | ✅ 2026-10-18 | Controlled evolution (bonus B-10) |
-| AG-D13 | **Temperature 0; provider and model are config; a scripted fake model in tests** | ✅ 2026-10-18 | Reproducible, $0 CI |
+| AG-D13 | **Provider and model are config; a scripted fake model in tests.** *Temperature 0 now applies to the local model only: Claude models reject sampling settings.* | ✅ 2026-10-18 (updated 2026-11-02) | Reproducible, $0 tests |
 | AG-D14 | **Observability:** one Langfuse trace per turn with spans per LLM and tool call; `agent_runs` / `agent_tool_calls` mirror the numbers; evidence exported to the repo | ✅ 2026-10-18 | AgentOps (15% of the grade) and evidence after 30 days |
 | AG-D15 | **New numbers** for `04` §5: history 20 messages (N-32) · case state ≤ 8 KB (N-33) · ≤ 8 LLM calls per turn (N-34) · LLM timeout 30 s (N-35) · 2 retries (N-36) · turn limit 60/90 s (N-37) · circuit breaker 3 / 5 min → 2 min (N-38) | ✅ 2026-10-18 | Numbers live only in `04` §5 |
 | AG-D16 | **Threat-model changes** (`10`, §T): the admin-approved pharmacy name is the only pharmacy-typed text the agent sees (TM-D2); "reliability" removed from J2 (TM-D3); replies are plain text with URLs removed (TM-D5); global spend caps (TM-D6) | ✅ 2026-10-22 | Indirect injection and unsafe output closed off; cost bounded; no undefined facts |

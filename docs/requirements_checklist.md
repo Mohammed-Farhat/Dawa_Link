@@ -16,18 +16,18 @@
 
 ## 1. How we guarantee it during development
 
-### 1.1 Definition of Done for every pull request
-A PR is merged only when **all** of the following hold:
+### 1.1 Definition of Done for every change
+A change is committed only when **all** of the following hold:
 
 | # | Check | Requirement it serves |
 |---|---|---|
-| 1 | The PR description names the feature (C-), rules (R-, SM-, INV-) and Failure Matrix rows it implements | Traceability; technically defensible |
+| 1 | The commit message names the feature (C-), rules (R-, SM-, INV-) and Failure Matrix rows it implements | Traceability; technically defensible |
 | 2 | **Tests:** the happy path **plus every failure path** listed for this feature in the Failure Matrix; every invariant it touches; an **unauthorized-access test** for every new endpoint or tool | "Test beyond the happy path" |
-| 3 | **CI is green:** lint (ruff), type check (mypy), tests with a coverage threshold, offline evaluation gate, security scans | QA; bonus CI/CD |
+| 3 | **The checks pass on the laptop:** lint (ruff), type check (mypy), tests, offline evaluation checks | QA |
 | 4 | **Observability:** every new LLM or tool call is traced; errors are logged with a code; the relevant metrics are emitted | AgentOps & observability |
 | 5 | **Security:** input validation via schemas, ownership checks, no secrets in code, PII never sent to the LLM | Safety & security |
 | 6 | **Docs updated:** Failure Matrix rows, threat model (if a new attack surface), API docs (OpenAPI is generated automatically), README (if setup changed), decision log (if a decision changed) | Documentation, reproducibility |
-| 7 | **A teammate reviewed it and wrote a short summary of what it does** | "Students remain responsible for understanding… all submitted code" |
+| 7 | **The owner checked it and can explain what it does** | "Students remain responsible for understanding… all submitted code" |
 
 ### 1.2 What the running system records automatically
 
@@ -57,7 +57,7 @@ A PR is merged only when **all** of the following hold:
 | G-6 | Safe handling of bad or malicious input and external failures | Failure Matrix (`09` ✅: 122 modes, principles P1–P8) + failure-injection tests (`09` §8) | `09`, `tests/` | Build | 🟡 |
 | G-7 | Public, authorized or synthetic data with provenance and ToS | MoPH source and date on every product; dataset description sheets; seeded synthetic generators | `04` R-C1, `eval/datasets/README.md` | Build + Evaluate | 🟡 |
 | G-8 | Track model/API usage, system cost, **cost per successful task** | Langfuse + `agent_runs` + AWS cost; cost per fulfilled request reported per model (E2, E5) | `08` E2/E5, results, report | Evaluate + Deploy | 🟡 |
-| G-9 | Students responsible for AI-written code | Teammate review on every PR (DoD #7); an **AI-usage statement** in the README and report | PRs, README, report | Build + Submit | ⏳ |
+| G-9 | Students responsible for AI-written code | The owner checks every change (DoD #7); an **AI-usage statement** in the README and report | Commits, README, report | Build + Submit | ⏳ |
 
 ## 3. Final submission deliverables
 
@@ -84,28 +84,30 @@ A PR is merged only when **all** of the following hold:
 | T-6 | Retries, timeouts, fallbacks, schema validation, error handling, graceful degradation | Clock-check retries, LLM timeouts, degraded mode, validated tool outputs | `04` R-T10, SM-12, `01` C15, code | Build | ⏳ |
 | T-7 | Authorization, least privilege, secret management, injection defenses | Server-side sessions; role and ownership checks; client-scoped tools; **cards only from tools**; no pharmacy text to the LLM (except approved names); Secrets Manager; **admin TOTP**; threat model (`10` ✅) | `02`, `04` R-AG7/R-AG8/R-AU, `10` | Design + Build + Deploy | 🟡 |
 | T-8 | **Test beyond the happy path:** invalid/ambiguous input, API/tool failures, malformed responses, rate limits, malicious input, unauthorized actions | One test category per item (§6 below) | `tests/` | Build | ⏳ |
-| T-9 | **Maintain a Failure Matrix** | Living document (`09` ✅), updated in every PR; every row ✅ or an accepted limitation before submission | `09` | Build | 🟡 |
+| T-9 | **Maintain a Failure Matrix** | Living document (`09` ✅), updated with every change; every row ✅ or an accepted limitation before submission | `09` | Build | 🟡 |
 | T-10 | Failure analysis + lightweight threat model | Threat model ✅ (`10`: assets, attackers, trust boundaries, 55 threats with tests, OWASP LLM Top 10, accepted risks); analysis of failures found in evaluation | `10`, `08` | Design + Evaluate | 🟡 |
 | T-11 | Evaluation: baselines, metrics, data, held-out testing | Search-page baseline + **no-AI scripted policy**; understanding set dev/held-out; simulation with several runs per setup; targets fixed before held-out runs | `08`, `eval/` | Evaluate | 🟡 |
 | T-12 | Adversarial testing; **failures → regression tests** | R-set (~120 attacks, target 0 violations); 👎 report → admin confirms → regression case | `08` E4/§5, `eval/safety/`, `tests/regression/`, AS-8 | Build + Evaluate | 🟡 |
 | T-13 | API and interface contracts: schemas, validation, auth, error behavior | Endpoint contracts (`06` ✅) + generated OpenAPI + contract tests (3 per endpoint, every error code, Schemathesis) | `06`, `tests/api/` | Design + Build | 🟡 |
-| T-14 | Clean, modular code: separation of concerns, naming, no duplication, centralized config, secure dependencies and secrets, consistent errors, **no dead code** | Repo structure, `config.py`, linters, review checklist, dependency scanning | `02` §6, CI | Build | ⏳ |
+| T-14 | Clean, modular code: separation of concerns, naming, no duplication, centralized config, secure dependencies and secrets, consistent errors, **no dead code** | Repo structure, `config.py`, linters, the `uv` lockfile, review checklist | `02` §6 | Build | ⏳ |
 | T-15 | UI designed around the user, not chat by default | A search-first home (not chat by default); the assistant's cards rendered from stored proposals; role-specific portals. UI design ✅ (`11` + the design canvas) | `03`, `11` | Design + Build | 🟡 |
 | T-16 | Reproducibility | Docker Compose, uv lockfile, seeds, "reproduce the results" commands | README, `eval/` | Build + Evaluate | ⏳ |
 
 ## 5. Bonus engineering practices (up to +10%)
 
+The owner chose a simple setup (`12` INF-D3, INF-D14). Practices marked ✖ aren't pursued.
+
 | ID | Practice | What we do | Status |
 |---|---|---|---|
-| B-1 | Engineering workflow | GitHub Projects board, PRs with reviews, branch protection on `main` | ⏳ |
-| B-2 | CI/CD | GitHub Actions: build, test, deploy with gates (deploy only if CI is green) | ⏳ |
-| B-3 | Code quality automation | ruff, mypy, coverage reports (Codecov or SonarCloud, both free for public repos) | ⏳ |
-| B-4 | Agent evaluation automation | Every PR: deterministic gates (P-set, guard rules, no-AI simulation); agent PRs: an LLM subset gate (0 safety violations, accuracy within 3 points), `08` §7 | 🟡 |
+| B-1 | Engineering workflow | Not pursued: no PR reviews or branch protection | ✖ |
+| B-2 | CI/CD | Not pursued: no pipelines; deployment by hand (`12` §12) | ✖ |
+| B-3 | Code quality automation | Not pursued as automation: ruff, mypy and coverage run by hand | ✖ |
+| B-4 | Agent evaluation automation | Not pursued as automation: the deterministic and LLM subset checks in `08` §7 run by hand | ✖ |
 | B-5 | Advanced AgentOps | Langfuse: traces, cost, latency, prompt versions | ⏳ |
-| B-6 | DevSecOps | CodeQL, Dependabot, secret scanning, Trivy image scan | ⏳ |
-| B-7 | Reproducible deployment | Docker, **CDK (infrastructure as code)**, Alembic migrations run automatically on deploy | ⏳ |
+| B-6 | DevSecOps | Not pursued: GitHub secret scanning only, on by default | ✖ |
+| B-7 | Reproducible deployment | Docker and Alembic migrations, run by hand; no infrastructure as code | ⏳ |
 | B-8 | Advanced testing | API contract tests, a load test (e.g. Locust), a red-team suite | ⏳ |
-| B-9 | Production monitoring | CloudWatch alarms + admin alerts (AS-10); optionally Sentry (free tier) | ⏳ |
+| B-9 | Production monitoring | CloudWatch logs, the AWS budget and admin alerts (AS-10); no CloudWatch alarms | ⏳ |
 | B-10 | Controlled evolution | Versioned prompts, model as config, evaluation results per version, feature flags (e.g. early release on/off for comparisons) | ⏳ |
 
 ## 6. Test categories (how T-8 is covered)
@@ -123,7 +125,7 @@ A PR is merged only when **all** of the following hold:
 | **Malicious input** | Prompt injection in chat, in uploaded names and in pharmacy fields; formulas in CSV; oversized files | `tests/security/` |
 | **Unauthorized actions** | Pharmacy A touching pharmacy B's order; client reading another client's data; the agent attempting to create an order; a forged or reused card proposal | `tests/security/` |
 | Regression | Every confirmed failure (from tests, evaluation or 👎 reports) gets a permanent test | `tests/regression/` |
-| Evaluation (not in normal CI runs) | Understanding set, end-to-end simulation, safety set, model comparison | `eval/` |
+| Evaluation (not in the regular test run) | Understanding set, end-to-end simulation, safety set, model comparison | `eval/` |
 | Load (bonus) | Search and chat under concurrent users | `tests/load/` |
 
 ## 7. Grading rubric → where the evidence is
@@ -133,8 +135,8 @@ A PR is merged only when **all** of the following hold:
 | Idea, problem formulation, agentic justification | 20% | `01`, `02` §3, `04` §7, report; measured agent vs baseline |
 | Agent performance / evaluation | 20% | `08`, `eval/results/`, held-out and simulation results, model comparison |
 | AgentOps and observability | 15% | Langfuse, `agent_runs`, admin dashboard, exported traces |
-| Reliability, QA, security | 15% | Failure Matrix, threat model, `tests/` categories, CI |
-| Software engineering | 10% | Repo structure, CI quality gates, PR reviews |
+| Reliability, QA, security | 15% | Failure Matrix, threat model, `tests/` categories |
+| Software engineering | 10% | Repo structure, tests, code quality |
 | Poster and live demo | 10% | Demo script with failure and attack scenarios |
 | Documentation and reproducibility | 10% | README, docs 00–12, one-command setup, reproduce-the-results commands |
 | Bonus | +10% | §5 |
@@ -143,6 +145,6 @@ A PR is merged only when **all** of the following hold:
 
 | ID | Item | Why it matters |
 |---|---|---|
-| Q-1 | ~~Public or private GitHub repo?~~ **Resolved 2026-10-13: public** (enables free CodeQL, secret scanning, SonarCloud, Codecov) | ✅ |
+| Q-1 | ~~Public or private GitHub repo?~~ **Resolved: public** (confirmed 2026-11-02; GitHub secret scanning is on by default) | ✅ |
 | Q-2 | Who pays for the real LLM (O2) | Needed for evaluation runs and the demo |
 | Q-3 | ~~Approval proof and pharmacist interviews (review #2 D1, D2)~~ | **Dropped by the team (2026-10-18):** the proposal and poster phase is complete; the report cites the approved proposal. The simulation uses stated assumptions about pharmacy behavior, tested across a range of values. |

@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.1 · **Date:** 2026-10-22
-**Status:** ✅ validated by the team (2026-10-20). **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.2 · **Date:** 2026-11-02
+**Status:** ✅ validated by the team (2026-10-20). **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -267,11 +267,11 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 #### C16: Evaluation harness
 | Set | What it tests |
 |---|---|
-| **Understanding set** (~300 requests in Arabizi / Arabic / English, labeled by the team; dev + held-out) | Request understanding |
+| **Understanding set** (~300 requests in Arabizi / Arabic / English, labeled by the owner and Claude; dev + held-out) | Request understanding |
 | **End-to-end simulation** (simulated clients and pharmacies, stock changing over time, simulated clock; pharmacy behavior from stated assumptions, tested across a range of values) | **Three contenders** on **requests fulfilled within the window**, time to secure, client effort, pharmacy burden, cost:<br>1. the **search baseline** (search page + [Notify me]);<br>2. a **scripted sourcing policy with no AI** (same tools, fixed rules);<br>3. **the agent**.<br>Several runs per setup, with the spread reported. |
 | **Ablations** | No early release · no multi-medicine planning · no re-planning |
 | **Safety / red-team set** | Clinical questions, injection (including through pharmacy fields), cross-user access, priority manipulation ("I'm dying, put me first") |
-| **Model comparison** | Local qwen vs Claude models |
+| **Model comparison** | Claude models compared |
 
 ---
 

@@ -1,8 +1,8 @@
 # DawaLink: Domain Rules and State Machines
 
-**Version:** v4.1 · **Date:** 2026-10-22
+**Version:** v4.2 · **Date:** 2026-11-02
 **Builds on:** `01` v5.1 · `03` v4.1 · `adr/ADR-001`–`ADR-004` · `10` (threat model) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
-**Status:** ✅ validated by the team (2026-10-20). **v4.1 applies the threat model** (`10`, decision log §T): the admin-approved pharmacy name may reach the agent (R-AG8); "reliability" removed from R-AG9; admin two-factor login, registration that never reveals an account, IP limits from CloudFront (R-AU4, R-AU6–R-AU8); global LLM spend caps and security limits (N-46, N-47).
+**Status:** ✅ validated by the team (2026-10-20). **v4.2 applies step 12** (`12`, decision log §V): the login token travels in a header, application logs are kept 30 days, and demo mode is on in our AWS deployment. **v4.1 applies the threat model** (`10`, decision log §T): the admin-approved pharmacy name may reach the agent (R-AG8); "reliability" removed from R-AG9; admin two-factor login, registration that never reveals an account, IP limits from CloudFront (R-AU4, R-AU6–R-AU8); global LLM spend caps and security limits (N-46, N-47).
 
 **v4.0 applies the professor's guidance** (decision log §S):
 - the agent's job is to **bring each need to the right pharmacy**, and **the agent decides** which pharmacy (or route), from facts computed by code (R-AG9);
@@ -388,7 +388,7 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 |---|---|
 | R-AU1 | Password ≥ 10 chars, not in the top-10k list, argon2id. |
 | R-AU2 | 5 failed logins in 15 min → locked 15 min (admins: other admins are alerted). |
-| R-AU3 | **Server-side sessions (DR2-B4):** login creates a session. The browser holds only a random token in an httpOnly, Secure, SameSite=Strict cookie; the server stores its hash. Valid 7 days (admins 12 h). **Logout, a password change or a suspension revokes it immediately.** Admins also enter a one-time code (R-AU6). |
+| R-AU3 | **Server-side sessions (DR2-B4):** login creates a session. The browser holds only a random token, which it sends in the `Authorization` header; the server stores its hash. Valid 7 days (admins 12 h). **Logout, a password change or a suspension revokes it immediately.** Admins also enter a one-time code (R-AU6). |
 | R-AU4 | Email verification link 24 h, single use, stored hashed. **Following it logs the user in.** Pharmacies confirm their email too, before they enter the approval queue (R-AU7). *(Password reset postponed.)* |
 | R-AU5 | ≤ 5 sign-ups per IP per hour. The assistant and requests need a verified email. |
 | R-AU6 | **Admin two-factor login** (`10` TM-D8): after the password, admins enter a TOTP code from an authenticator app. The secret is created by `create_admin.py` (the only way to create an admin, A-D1) and stored encrypted; a lost phone means re-running the script (no recovery flow). Contact-detail views (`pii.view`) are limited (N-47), and the other admins are alerted above the limit (R-AL). |
@@ -441,9 +441,10 @@ DawaLink **doesn't ask when the client will have it**, and it doesn't change the
 | Uploaded files | **Not stored** (processed and discarded) |
 | Client location | Rounded to ~100 m; deleted with its conversation, request or claim |
 | Travel-time cache | 24 h (N-43) |
+| Application logs (CloudWatch) | 30 days |
 
 ### R-DEMO Demo clock
-In **demo mode only** (a config flag that is off in production), an admin can **advance the app clock**. This shows time-based behavior live: an offer expiring, the window check, a window ending, a no-show. Every advance is audited. Because every rule reads the app clock (R-T11), nothing else changes.
+In **demo mode only** (a config flag: it's on in our AWS deployment, which is the demo system, and would be off in a real launch), an admin can **advance the app clock**. This shows time-based behavior live: an offer expiring, the window check, a window ending, a no-show. Every advance is audited. Because every rule reads the app clock (R-T11), nothing else changes.
 
 ---
 
@@ -570,3 +571,4 @@ In **demo mode only** (a config flag that is off in production), an admin can **
 | R-D27–R-D38 | **Design review #2:** urgent needs (6-hour window, request hours), instant reservations, pickup time per pharmacy, the prescription notice, first come first served, district-only *(replaced by §S)*, the clock check, the claim as the single need, cards from tools, server-side sessions, evaluation and deployment changes. See decision log §N. | ✅ validated |
 | R-D39–R-D48 | **The professor's guidance (2026-10-20):** the agent brings the need to the right pharmacy and decides it; real locations and road travel times; the expiry fit with days of use and pickup day; no fixed minimum before expiry. See decision log §S. | ✅ validated |
 | R-D49–R-D53 | **The threat model (2026-10-22):** the admin-approved pharmacy name may reach the agent (R-AG8); admin two-factor login (R-AU6); registration never reveals an account (R-AU7); IP limits from CloudFront (R-AU8); global spend caps and security limits (N-46, N-47). See decision log §T. | ✅ validated |
+| R-D54–R-D56 | **Step 12 (2026-11-02):** the login token in a header (R-AU3); application logs kept 30 days (R-RET); demo mode on in our AWS deployment (R-DEMO). See decision log §V. | ✅ validated |

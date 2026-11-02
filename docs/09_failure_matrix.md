@@ -1,8 +1,8 @@
 # DawaLink: Failure Matrix (living)
 
-**Version:** v1.2 (validated; v1.2 adds the threat model's rows FS-19–FS-22) · **Date:** 2026-10-22
+**Version:** v1.3 (validated; v1.3 applies step 12) · **Date:** 2026-11-02
 **Builds on:** `04` v4.1 (rules, invariants) · `05` v3.1 (locks, clock check) · `06` v1.2 (error codes) · `07` v1.2 (agent limits, guards) · `08` v1.1 (evaluation) · `10` (threat model)
-**Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every PR updates it (Definition of Done #6).
+**Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every change updates it (Definition of Done #6).
 
 The course requires that *"application teams must maintain a Failure Matrix"* and that systems *"handle incomplete, invalid, unexpected, or malicious inputs and external component failures safely and predictably."* This document lists **every way we know DawaLink can fail**, and for each one:
 - how we notice it;
@@ -67,12 +67,12 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FX-5 | **Local model (Ollama) not running** (development) | Connection refused | Same as FX-1; the startup check logs a clear hint | Developer sees "Start Ollama" in the logs | `failure` | L |
 | FX-6 | **Langfuse unreachable** | Send error or timeout | **Tracing is best-effort (FM-D3):** sent in the background; if it fails, it's dropped with a counter. **The turn never fails because of tracing.** `agent_runs` still records everything. | Nothing | `failure` (fake tracer raising) | L |
 | FX-7 | **Email (SES) down or throttled** | SES error | Outbox: FAILED → retry 1 m, 5 m, 30 m → DEAD + alert (SM-12). In-app notifications are unaffected. | The in-app notification still appears; the email arrives late or never | `failure` (fake mailer) | M |
-| FX-8 | **Email bounces / invalid address** | SES bounce | Marked DEAD; the client sees in-app notifications only | Nothing (in-app works) | `failure` | L |
-| FX-9 | **SES sandbox** blocks unverified addresses (demo) | SES error | As FX-7. **Demo accounts prepared**, or production access requested (`02` §7). | Verification email missing in a live demo | `manual` (demo checklist) | M |
+| FX-8 | **Email bounces / invalid address** | An error from SES when sending | Marked DEAD; the client sees in-app notifications only. Later bounces: SES's suppression list stops repeat sends; no bounce webhook (`12` §9). | Nothing (in-app works) | `failure` | L |
+| FX-9 | **SES sandbox** blocks unverified addresses (demo) | SES error | As FX-7. We stay in the sandbox by default: **demo addresses are verified one by one**, and production access is optional (`12` §9). Cognito sends the sign-up email. | A notification email doesn't arrive; the in-app notification still appears | `manual` (demo checklist) | M |
 | FX-10 | **Database down** | Connection error | API returns `503 SERVICE_UNAVAILABLE`; the worker pauses and retries every 10 s; nothing half-written (transactions) | "DawaLink is temporarily unavailable" | `failure` (stop the database container) | H |
 | FX-11 | **Database slow / statement timeout** (5 s) | Statement timeout | Transaction rolled back; API `503` (safe to retry: idempotency); the clock check retries on the next pass | "Please try again" | `failure` | M |
 | FX-12 | **Connection pool exhausted** | Pool timeout | Request fails fast with `503`; logged; an alert if repeated. No connection is held during LLM calls (turn lease), so this is unlikely. | "Please try again" | `failure` (tiny pool) | M |
-| FX-13 | **Worker process crashes or restarts** | ECS restarts it; clock-check delay metric | Nothing is lost: deadlines live on the rows (P3). The next pass handles everything overdue; each row is handled once (`SKIP LOCKED` + re-check). | At most a short delay | `failure` (kill the worker mid-pass) | M |
+| FX-13 | **Worker process crashes, gets stuck or restarts** | ECS restarts it; a stale heartbeat fails its health check (`12` §6); clock-check delay metric | Nothing is lost: deadlines live on the rows (P3). The next pass handles everything overdue; each row is handled once (`SKIP LOCKED` + re-check). | At most a short delay | `failure` (kill the worker mid-pass) | M |
 | FX-14 | **Clock check falls behind** (> 2 min) | Lag metric | Alert (R-AL); it catches up in deadline order | Offers or expiries a little late (never early) | `failure` | L |
 | FX-15 | **API task restarts during a chat stream** | Stream closed | The client's message is already saved; the turn either saved its reply or will be retried by the user | The next poll shows the reply, or a [Retry] | `failure` | L |
 | FX-16 | **SSE connection cut** by a proxy or a mobile network | Stream closed | The reply is saved regardless; heartbeat every 15 s keeps idle connections open | The reply appears at the next poll | `failure` | L |
@@ -184,13 +184,13 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FS-3 | **Chat flood / API scraping** | Rate limits (`06` §4) | `RATE_LIMITED` with `Retry-After`; availability capped at 5 (no exact stock) | "Slow down" | `security` | M |
 | FS-4 | **Accessing someone else's object** (IDOR) | Ownership check | `404 NOT_FOUND` (INV-8, INV-9) | "Not found" | `security` (each endpoint) | H |
 | FS-5 | **Wrong role** (a client calling pharmacy or admin endpoints) | Role check | `403 FORBIDDEN` | "Not allowed" | `security` | H |
-| FS-6 | **Cross-site request (CSRF)** | `SameSite=Strict` + `Origin` check | `403 ORIGIN_REJECTED` | Nothing happens | `security` | H |
+| FS-6 | **Cross-site request (CSRF)** | The login is a header, never a cookie; CORS + `Origin` check | `403 ORIGIN_REJECTED` | Nothing happens | `security` | H |
 | FS-7 | **Forged or replayed card** | Proposal owner, expiry, one use, re-validation (INV-21) | `NOT_FOUND` / `PROPOSAL_USED` / `PROPOSAL_EXPIRED` | Nothing happens | `security` | H |
 | FS-8 | **Script in a chat message or field (XSS)** | Rendering as text | React escapes everything; chat text is never rendered as HTML; strict security headers (`12`) | The text shows literally | `security` | H |
 | FS-9 | **SQL injection** | Parameterized queries (SQLAlchemy) | Treated as plain text | Normal result | `security` | H |
 | FS-10 | **Spreadsheet formula injection** in an error report | CSV export | **Cells starting with `=`, `+`, `-` or `@` are prefixed with `'` (FM-D7)** | Safe file | `unit` | M |
 | FS-11 | **Oversized payload** | Size limits (64 KB JSON, 5 MB upload) | `413` / `422` | Clear message | `security` | L |
-| FS-12 | **Session stolen or reused after logout** | Server-side session check | Revoked sessions → `401`; the cookie is unreadable by scripts (httpOnly) | Logged out | `security` | H |
+| FS-12 | **Session stolen or reused after logout** | Server-side session check | Revoked sessions → `401`; scripts can read the token, so the CSP protects it (`10` RR-13) | Logged out | `security` | H |
 | FS-13 | **Personal data in logs or traces** | Redaction + log filters | Request bodies aren't logged; messages are redacted before storage and tracing; a scan in `eval` (E6) must find 0 | Nothing | `security` + `eval` (E6) | H |
 | FS-14 | **Early-release spam against pharmacies** | Anti-spam (R-E3, R-E5) | Asks skipped; the tool returns the reason | Nothing | `unit` | M |
 | FS-15 | **Agent tricked into a consequential action** | Structural: no such tool exists | Nothing can happen; an `audit_events` scan must find 0 agent-made state changes (E6) | Nothing | `security` + `eval` (E6) | H |
@@ -208,15 +208,15 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 
 | ID | Failure | Detected by | What the system does | User sees | Test | Sev |
 |---|---|---|---|---|---|---|
-| FO-1 | **Migration fails during deploy** | One-off migration task fails | The deploy stops; the old version keeps running; migrations are tested up **and down** in CI | Nothing | CI + `12` | H |
-| FO-2 | **Bad release** (errors after deploy) | Health check, error-rate alarm | Roll back to the previous task definition (`12`) | A short disruption at most | `manual` runbook | M |
+| FO-1 | **Migration fails during deploy** | One-off `prepare_db` task fails | Don't update the services; the old version keeps running; migrations are tested up **and down** before committing (`12` §7) | Nothing | `manual` + `12` | H |
+| FO-2 | **Bad release** (errors after deploy) | Health check, app alerts (R-AL) | Roll back to the previous task definition (`12` §12) | A short disruption at most | `manual` runbook | M |
 | FO-3 | **Reconciliation finds stock that doesn't add up** (INV-2) | The daily reconciliation query (`05` §4) | Alert with the item IDs; investigated by hand; regression test added | Nothing | `integration` | H |
 | FO-4 | **Retention task fails** | Clock-check daily task error | Retried the next day; alert if 2 days in a row | Nothing | `failure` | L |
-| FO-5 | **AWS budget alarm** ($50 / $80) | Budget alerts | The team scales down or destroys test stacks (`12`) | Nothing | `manual` | M |
+| FO-5 | **AWS budget alarm** ($50 / $80) | Budget alerts | The owner scales down or removes resources by hand (`12`) | Nothing | `manual` | M |
 | FO-6 | **Langfuse deletes traces after 30 days** | Known limit | Evidence exported to `docs/evidence/` after each evaluation run; `agent_runs` keeps the numbers | Nothing | `manual` (export checklist) | M |
 | FO-7 | **Live demo: the AI is down or slow** | Demo checklist | Show degraded mode (it's a demo scenario anyway); switch to the recorded backup video for the agent parts | The demo continues | `manual` (demo rehearsal) | M |
 | FO-8 | **Live demo: emails don't arrive** | Demo checklist | Pre-verified demo accounts; show the in-app notifications | The demo continues | `manual` | L |
-| FO-9 | **Database storage nearly full** | RDS storage alarm | Alert; retention removes old data; increase storage | Nothing | `manual` | L |
+| FO-9 | **Database storage nearly full** | Checked by hand in the RDS console (no CloudWatch alarms, `12` §13) | Retention removes old data; increase storage | Nothing | `manual` | L |
 
 ---
 
@@ -241,7 +241,7 @@ Every test asserts **three things**:
 ---
 
 ## 9. Keeping it alive
-- **Every PR** that adds or changes behavior **adds or updates rows here** and moves their status (⏳ → 🔨 → ✅ with the test path). This is Definition of Done #6.
+- **Every change** that adds or changes behavior **adds or updates rows here** and moves their status (⏳ → 🔨 → ✅ with the test path). This is Definition of Done #6.
 - **Every failure found later** (in a test, an evaluation run, a 👎 report or the demo rehearsal) becomes **a new row + a regression test**.
 - **Before submission**, every row must be ✅ or explicitly marked as an accepted limitation with a reason. This is the evidence for deliverable D-5 and for the reliability part of the grade (15%).
 
@@ -251,7 +251,7 @@ Every test asserts **three things**:
 
 | ID | Decision | Validated | Why |
 |---|---|---|---|
-| FM-D1 | **Format:** the 6 groups (FX, FA, FR, FI, FS, FO); per row: detection, behavior, what the user sees, test folder, severity; status ⏳ → 🔨 → ✅; updated in every PR | ✅ 2026-10-20 | Required by the course; traceable to tests |
+| FM-D1 | **Format:** the 6 groups (FX, FA, FR, FI, FS, FO); per row: detection, behavior, what the user sees, test folder, severity; status ⏳ → 🔨 → ✅; updated with every change | ✅ 2026-10-20 | Required by the course; traceable to tests |
 | FM-D2 | **Principles P1–P8**, especially "fail closed" for stock, money, safety and privacy, and "degrade gracefully" for the AI, email and tracing | ✅ 2026-10-20 | One consistent answer to "what happens when X fails" |
 | FM-D3 | **Tracing is best-effort:** a Langfuse failure never fails a turn (background sending, dropped with a counter); `agent_runs` always records | ✅ 2026-10-20 | Observability must not reduce availability |
 | FM-D4 | **The failure-injection fakes** in §8, and every failure test also checks the invariants and the trail | ✅ 2026-10-20 | Proves "safely and predictably" instead of claiming it |

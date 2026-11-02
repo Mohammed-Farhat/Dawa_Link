@@ -23,6 +23,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | See what each user does, screen by screen | [`03`](03_user_flows.md): read each part's "In short" box first |
 | Know the exact rules (states, limits, timers, numbers) | [`04`](04_domain_rules.md) |
 | Understand the tech | [`02`](02_architecture.md), then [`05`](05_database.md) |
+| Run or deploy it | [`12`](12_infrastructure.md) |
 | Check a decision | [`00`](00_decision_log.md) |
 | Check we meet every course requirement | [Requirements checklist](requirements_checklist.md) |
 
@@ -33,19 +34,19 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | # | Document | Content | Status |
 |---|---|---|---|
 | ✔ | [Requirements checklist](requirements_checklist.md) | Every course requirement → artifact, location, phase; Definition of Done | 🟡 living |
-| 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–U validated |
-| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.1 |
-| 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.1 |
+| 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–V validated |
+| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.2 |
+| 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.2 |
 | 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.3 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.1 |
-| 05 | [Database design](05_database.md) | ER diagram, 34 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.1 |
-| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.2 |
-| 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 17 tools + reply, prompts, memory, guardrails, limits, observability | ✅ v1.2 |
-| 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E6 (understanding, 3-contender simulation, ablations, safety, models, constraints), targets, statistics, CI gates | ✅ v1.1 |
-| 09 | [Failure Matrix](09_failure_matrix.md) | 122 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.2 (living) |
-| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 55 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.1 (living) |
-| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.1 |
-| 12 | Infrastructure and CI/CD | CDK, pipelines, secrets | ⏳ |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.2 |
+| 05 | [Database design](05_database.md) | ER diagram, 34 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.2 |
+| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.3 |
+| 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 17 tools + reply, prompts, memory, guardrails, limits, observability | ✅ v1.3 |
+| 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E6 (understanding, 3-contender simulation, ablations, safety, models, constraints), targets, statistics, regular checks | ✅ v1.2 |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 122 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.3 (living) |
+| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 55 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.2 (living) |
+| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.2 |
+| 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.0 |
 
 **Supporting folders:**
 - [`adr/`](adr/): decisions with the options compared (ADR-001–003, amended by review #2; ADR-004 from the professor's guidance, amended by the threat model).

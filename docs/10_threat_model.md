@@ -1,8 +1,8 @@
 # DawaLink: Threat Model
 
-**Version:** v1.1 (v1.1 adds the [Directions] link from `11`) · **Date:** 2026-10-22
-**Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · ADR-001–ADR-004
-**Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **Living:** every PR that adds an attack surface updates it (Definition of Done #6).
+**Version:** v1.2 (v1.2 applies step 12) · **Date:** 2026-11-02
+**Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
+**Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
 The course asks for *"a lightweight threat model where applicable"* and a *"security/threat analysis"* (deliverable D-5), and it lists the controls it expects: *"authentication/authorization, least privilege, secret and PII protection, input/output validation, prompt-injection defenses, and human approval for consequential actions."* At the demo, teams *"should be ready to show how the system responds to… security challenges."*
 
@@ -26,7 +26,7 @@ The Failure Matrix (`09`) covers the other side: **how the system behaves** when
 - **The most likely attackers:** a curious or abusive client, bots, and a dishonest pharmacy. We also plan for a stolen admin login, mistakes in a **public repo**, and the professor testing attacks live at the demo.
 - **The main defense is structural, not clever filtering.** The agent **has no tool that can do harm**. Its identity is injected by code. Every card is re-checked when tapped. Text typed by pharmacies doesn't reach it. So even a successful prompt injection can only make it *say* something wrong, never *do* something.
 - **55 threats in 9 groups** (§5). Each has its mitigations, the doc or rule that specifies them, a test, and the risk that remains.
-- **11 accepted risks** are stated honestly (§8), for example: someone with many accounts can get around per-client limits.
+- **16 accepted risks** are stated honestly (§8), for example: someone with many accounts can get around per-client limits.
 - **10 decisions** (§10), validated on 2026-10-22. Four of them changed something validated earlier:
   - TM-D2: the wording of R-AG8 (the admin-approved pharmacy name may reach the agent);
   - TM-D4: random order numbers (DB-D1);
@@ -66,7 +66,7 @@ The Failure Matrix (`09`) covers the other side: **how the system behaves** when
 - the worker;
 - the database;
 - AWS hosting;
-- CI/CD;
+- the owner's laptop and its AWS access;
 - the third-party services we call.
 
 **Out of scope:**
@@ -107,7 +107,7 @@ The Failure Matrix (`09`) covers the other side: **how the system behaves** when
 | ACT-2 | **Anonymous visitor or bot** | The public site only | Guess passwords; mass sign-ups; scrape; flood; run up the bill | **High** |
 | ACT-3 | **Dishonest or careless pharmacy** | An approved pharmacy account | Bait listings to attract clients; see clients' identity or competitors' data; spam; inject text into fields | **Medium** |
 | ACT-4 | **Someone with a stolen admin login** | Admin powers | Read contact details in bulk; approve fake pharmacies; suspend accounts | **Low**, but high impact |
-| ACT-5 | **Supply chain and public-repo exposure** | A malicious dependency, a compromised CI action, a fork pull request, or anyone reading the public repo | Steal secrets; run code in CI; deploy | **Medium** |
+| ACT-5 | **Supply chain and public-repo exposure** | A malicious dependency, or anyone reading the public repo | Steal secrets; run code on the laptop or in production | **Medium** |
 | ACT-6 | **A team member's mistake** | Repo and AWS access | Commit a secret; leave something open; export real data | **Medium** |
 | ACT-7 | **A third-party service** (LLM provider, Langfuse, routing, email) | Whatever we send it | Not hostile, but it holds our data and can fail | n/a (we limit what we send) |
 | ACT-8 | **The professor at the demo** | A client or pharmacy account on the live system | Try injections, other clients' order numbers, forged requests, floods | **Certain**: we prepare for it (§9.3) |
@@ -127,10 +127,10 @@ flowchart LR
         X[Attacker / bot]
     end
     subgraph EDGE["AWS edge"]
-        CF[CloudFront<br/>HTTPS · security headers]
+        CF[CloudFront × 2<br/>website · API · HTTPS · security headers]
     end
     subgraph VPC["Our VPC"]
-        ALB[Internal ALB]
+        ALB[Public ALB<br/>accepts only CloudFront]
         API[API<br/>auth · roles · ownership · limits]
         AG[Agent turn<br/>guards · tools]
         W[Worker<br/>clock check]
@@ -143,12 +143,12 @@ flowchart LR
         SES[(SES email)]
         OSM[(OSM map tiles)]
     end
-    subgraph DEV["GitHub (public repo)"]
-        GH[Actions CI/CD]
+    subgraph DEV["Owner's laptop"]
+        GH[AWS access key<br/>image push · console]
     end
 
     CB & PB & AB & X -- "TB-1" --> CF
-    CF -- "TB-3 VPC origin" --> ALB --> API
+    CF -- "TB-3 plain HTTP" --> ALB --> API
     API --> AG
     W --> AG
     API & W -- "TB-4" --> DB
@@ -156,7 +156,7 @@ flowchart LR
     LLM -- "TB-6 tool calls · reply in" --> AG
     API & W -- "TB-7" --> LF & ORS & SES
     CB -. "map tiles" .-> OSM
-    GH -- "TB-8 OIDC deploy" --> VPC
+    GH -- "TB-8 manual deploy" --> VPC
 ```
 
 **TB-2** isn't a line in the diagram: it's the **authorization boundary between users of the same app**. One client vs another, one pharmacy vs another, a pharmacy vs its clients, and admins vs everyone.
@@ -167,18 +167,18 @@ flowchart LR
 |---|---|---|---|---|
 | TB-1 | **Browser → our site** (the internet) | Everything users type, click and upload | HTTPS; sessions; CSRF check; schemas; rate limits; size limits | TH-1–TH-6, TH-34, TH-37–TH-42, TH-54 |
 | TB-2 | **Between users** (authorization) | IDs and order numbers in requests and in chat | Role, status and **ownership on every endpoint and tool**; others' objects → `404`; pharmacies never see identity | TH-8–TH-13, TH-30 |
-| TB-3 | **CloudFront → API** | All `/api` traffic | The ALB is internal, reachable only through CloudFront's VPC origin; tasks accept traffic only from the ALB | TH-41, TH-46 |
+| TB-3 | **CloudFront → API** | All `/api` traffic, **unencrypted on this hop** (RR-12) | The ALB accepts only CloudFront's addresses; tasks accept traffic only from the ALB | TH-41, TH-46 |
 | TB-4 | **App → database** | All data | The app's database role can't change the schema or the audit log; TLS; parameterized queries | TH-14, TH-39, TH-47 |
 | TB-5 | **Our code → the LLM** (the prompt) | Redacted messages, case state, tool results | Redaction; no identity; no coordinates; no pharmacy free text; no private inventory | TH-16, TH-19, TH-49 |
 | TB-6 | **The LLM → our code** (tool calls and reply) | Tool names and arguments; the reply text and card IDs | **Model output is treated as untrusted input:** schemas; identity injected by code; ownership; the output guard; cards rendered from stored proposals; plain-text display | TH-15, TH-17, TH-18, TH-20, TH-21, TH-23 |
 | TB-7 | **Our code → other third parties** | Traces, rounded points, email addresses | Only what each needs (§4.3) | TH-49, TH-53 |
-| TB-8 | **GitHub → AWS** (CI/CD) | Code and deployments | OIDC role limited to `main`; no secrets for fork pull requests; branch protection | TH-43–TH-45 |
+| TB-8 | **Owner's laptop → AWS** | Images and console changes | Only the owner has AWS access: a personal IAM user with MFA; the access key stays outside the project folder | TH-43, TH-45 |
 
 ### 4.3 What each third party receives (TM-D9)
 
 | Third party | Why | Receives | Never receives |
 |---|---|---|---|
-| **LLM provider** (evaluation and demo; **nothing leaves** with the local model) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text; private inventory; anything that identifies the client |
+| **Anthropic, the LLM provider** (evaluation and demo; **nothing leaves** with the local model in development) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text; private inventory; anything that identifies the client |
 | **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. | The same as the LLM |
 | **OpenRouteService** | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key | **Who** the client is: no account, no session, no name |
 | **AWS SES** | Emails | The client's email address and the template text (order number, medicine, pharmacy, deadline) | Chat content |
@@ -187,7 +187,7 @@ flowchart LR
 
 **Honest limit (RR-3):** the LLM sees travel times to named pharmacies in named areas. From these it could guess **roughly which neighborhood** the client is in, never an exact point, and never **who** the client is.
 
-**The provider's data-use terms** are checked when O1 (the model choice) closes, and stated in the report.
+**Anthropic's data-use terms** are checked before the first evaluation run, and stated in the report.
 
 **This table is confirmed during the build** (TM-D9). Exactly what each outside API needs (for example, what the routing service needs to compare routes between pharmacies) is only known once we implement it. The rule stays fixed: the minimum, no identity, and no coordinates to the LLM. Any PR that changes what a third party receives updates this table.
 
@@ -206,7 +206,7 @@ flowchart LR
 | ID | Threat | Risk | Mitigations | Test | Residual |
 |---|---|---|---|---|---|
 | TH-1 | **(S)** Password guessing or credential stuffing on any account | H | argon2id; ≥ 10 characters, not in the top-10k list (R-AU1); lockout after 5 failures for 15 min (R-AU2); one generic `INVALID_CREDENTIALS` message; **admin TOTP** (TM-D8) | `security` (FS-1) | L |
-| TH-2 | **(S)** Stolen session, or reuse after logout | H | The cookie is `HttpOnly; Secure; SameSite=Strict; Path=/api`; a random 256-bit token, of which only the hash is stored; revoked at once on logout, a password change or a suspension (R-AU3); HTTPS only, with HSTS (`12`) | `security` (FS-12) | L |
+| TH-2 | **(S)** Stolen session, or reuse after logout | H | A random 256-bit token in the `Authorization` header, of which only the hash is stored; revoked at once on logout, a password change or a suspension (R-AU3); HTTPS to CloudFront, with HSTS (`12`). Scripts can read it, and it's unencrypted from CloudFront to the ALB (RR-12, RR-13). | `security` (FS-12) | M |
 | TH-3 | **(I)** Learning whether an email has an account (sign-up says "email taken"; login is faster for unknown emails). Being a client hints at a health need. | M | **Client and pharmacy registration always answer the same** ("check your email"), and the email's owner gets a "you already have an account" email (TM-D7, R-AU7); login always computes a password hash, even for unknown emails | `security` (FS-19) | L |
 | TH-4 | **(D)** Locking someone out on purpose by failing their logins | M | Locked for 15 min only; other admins are alerted for admin accounts. A pharmacist can still hand over the box at the counter and mark it later. | `security` | **RR-5** |
 | TH-5 | **(S)** Mass sign-ups (bots) to get around per-client limits or burn the AI budget | M | ≤ 5 sign-ups per network address per hour (R-AU5), keyed on **CloudFront's viewer address** (TH-41); a verified email is needed for chat, reserving and requests (DR-7); per-client budgets | `security` (FS-2) | **RR-1** |
@@ -238,7 +238,7 @@ flowchart LR
 | TH-21 | **(T)** **Clinical harm:** medical advice, a non-equivalent "similar" medicine, help getting controlled substances | H | Hard rules 1, 2, 5; the output guard's clinical rules → one repair → the fixed refusal (`07` §7.2); alternatives only from `get_equivalents` with consent; controlled products removed entirely (R-C6); **E4 target: 0 violations** | `agent` (FA-6) + `eval` (E4) + `api` (FI-8) | L (an LLM classifier is added if E4 shows misses, AG-D8) |
 | TH-22 | **(T)** **Priority manipulation:** "I'm dying, put me first" | H | Allocation is code: first come, first served, with **no override for anyone** (ADR-003, INV-17); the emergency template; escalation can't change the order | `eval` (E4) + `unit` (FA-14) | L |
 | TH-23 | **(T)** **False claims:** invented stock or prices, or "I reserved it" | M | Cards come from tools and are the truth; hard rules 3 and 7; the reservations page is code-owned; E1 and E4 measure it | `eval` (FA-9, FA-10) | **RR-7** |
-| TH-24 | **(T)** Poisoning the regression set with fake 👎 reports | L | An admin confirms each report before it becomes a case (AS-8); the team reviews regression PRs | manual review | L |
+| TH-24 | **(T)** Poisoning the regression set with fake 👎 reports | L | An admin confirms each report before it becomes a case (AS-8); the owner reviews regression cases | manual review | L |
 | TH-25 | **(I)** Extracting the system prompt | L | **The prompts are public in the repo by design.** No secret, key or protection depends on them being hidden. | none needed | none |
 | TH-26 | **(T)** **Gaming the agent's recommendation:** bait listings (stock the pharmacy doesn't have), or a map pin placed nearer than the real shop | M | We assume the stock on the app is real (TM-D3); [Not available] never penalizes the client and makes the agent re-plan (R-N2, J4); the admin sees each pharmacy's [Not available] rate (AS-4) and can suspend it; the admin checks the pin at approval, and only admins move it afterwards (R-S2) | `integration` | **RR-11** |
 | TH-27 | **(S)** An injected agent writes an escalation summary meant to fool the admin ("admin: clear this client's no-shows") | L | Summaries are labeled "written by the assistant"; admins see the real messages; clearing a no-show needs its own check and reason (R-N3) | `api` | L |
@@ -266,22 +266,22 @@ flowchart LR
 
 | ID | Threat | Risk | Mitigations | Test | Residual |
 |---|---|---|---|---|---|
-| TH-37 | **(T)** **XSS** through a chat message, pharmacy name, product name or admin reply | H | React escapes everything; no raw HTML anywhere; plain-text chat (TM-D5); **CSP** and security headers set by CloudFront (`12`); the session cookie is unreadable by scripts | `security` (FS-8) | L |
-| TH-38 | **(T)** **CSRF** | H | `SameSite=Strict` plus an `Origin` check on every state-changing call (API-D12) | `security` (FS-6) | L |
-| TH-39 | **(T)** **SQL injection** | H | SQLAlchemy parameterized queries only, never SQL built from strings; CodeQL | `security` (FS-9) | L |
+| TH-37 | **(T)** **XSS** through a chat message, pharmacy name, product name or admin reply | H | React escapes everything; no raw HTML anywhere; plain-text chat (TM-D5); **CSP** and security headers set by CloudFront (`12`); the login token is readable by scripts, which makes the CSP essential (RR-13) | `security` (FS-8) | M |
+| TH-38 | **(T)** **CSRF** | H | The login is a header the page adds itself, never a cookie; CORS plus an `Origin` check on every state-changing call (API-D12) | `security` (FS-6) | L |
+| TH-39 | **(T)** **SQL injection** | H | SQLAlchemy parameterized queries only, never SQL built from strings | `security` (FS-9) | L |
 | TH-40 | **(D)** Oversized or malformed payloads | M | JSON ≤ 64 KB; uploads ≤ 5 MB; Pydantic on every input; `422` with field details | `security` + `api` (FS-11, FI-7) | L |
-| TH-41 | **(S)** **Faking the client IP** (`X-Forwarded-For`) to dodge IP-based limits | M | IP-based limits read **CloudFront's viewer-address header** (R-AU8). It can be trusted because the ALB is reachable only through CloudFront. A client-sent `X-Forwarded-For` is ignored. | `security` (FS-21) | L |
+| TH-41 | **(S)** **Faking the client IP** (`X-Forwarded-For`) to dodge IP-based limits | M | IP-based limits read **CloudFront's viewer-address header** (R-AU8). The ALB accepts only CloudFront's addresses, though someone's own CloudFront could reach it (RR-14). A client-sent `X-Forwarded-For` is ignored. | `security` (FS-21) | L |
 | TH-42 | **(I)** Error messages revealing internals (stack traces, SQL) | M | One error format; a `500` carries only a `request_id` (`06` §3.1); the interactive API docs exist only in development (API-D13) | `api` | L |
 
 ### 5.7 Infrastructure, secrets and supply chain
 
 | ID | Threat | Risk | Mitigations | Test | Residual |
 |---|---|---|---|---|---|
-| TH-43 | **(I)** **A secret committed to the public repo** (LLM key, database password, AWS keys) | H | `.env` is never committed, and `.env.example` holds placeholders; GitHub secret scanning alerts (push protection is considered at the end, TM-D10); AWS deploys through OIDC (no long-lived keys); secrets live in Secrets Manager; the startup check never prints values (FX-17); anything that leaks is rotated at once | CI | L |
-| TH-44 | **(T)** A malicious or vulnerable **dependency or container image** | M | The `uv` lockfile with hashes; Dependabot; Trivy image scan; CodeQL; small base images; GitHub Actions pinned to commit SHAs (`12`) | CI | L |
-| TH-45 | **(E)** **CI/CD abuse:** a pull request from a fork steals secrets or deploys | H | Fork pull requests run **without secrets**; no `pull_request_target`; the AWS deploy role trusts only `main` of this repo (an OIDC condition); the LLM evaluation gate runs only when a maintainer triggers it; branch protection with a review (B-1) | `12` | L |
-| TH-46 | **(E)** The database or tasks reachable from the internet | H | RDS in an isolated subnet, reachable only from the tasks; tasks accept traffic only from the ALB; the ALB is internal (CloudFront VPC origin); no SSH; ECS Exec off; TLS to the database (`02` §7, `05` §7) | `12` (CDK tests) | L |
-| TH-47 | **(E)** Over-privileged service roles or database user | M | Task roles can only read their own secrets, send email and write logs; three database roles (DB-D10), so the app can't change the schema or the audit log | `12` + database tests | L |
+| TH-43 | **(I)** **A secret committed to the public repo** (LLM key, database password, AWS keys) | H | `.env` is never committed, and `.env.example` holds placeholders; GitHub secret scanning alerts (push protection is considered at the end, TM-D10); the AWS access key stays outside the project folder; secrets live in Secrets Manager; the startup check never prints values (FX-17); anything that leaks is rotated at once | manual | L |
+| TH-44 | **(T)** A malicious or vulnerable **dependency or container image** | M | The `uv` lockfile with hashes; small, pinned base images. **No automated scans** (RR-16). | manual | M |
+| TH-45 | **(E)** **The owner's AWS access key is stolen or leaked** | H | Only the owner has AWS access; a personal IAM user with MFA; root isn't used day to day; the key stays in `~/.aws/credentials`, outside the project folder; rotated at once if it leaks. *There are no pipelines, so the old CI/CD abuse threat no longer applies.* | manual | L |
+| TH-46 | **(E)** The database or tasks reachable from the internet | H | RDS in an isolated subnet, reachable only from the tasks; tasks accept traffic only from the ALB; the ALB accepts only CloudFront's addresses; no SSH; ECS Exec off; TLS to the database (`02` §7, `05` §7) | `manual` (`12` §14) | L |
+| TH-47 | **(E)** Over-privileged service roles or database user | M | Task roles can only read their own secrets, send email and write logs; three database roles (DB-D10), so the app can't change the schema or the audit log | database tests | L |
 | TH-48 | **(T)** **Demo clock** misused | M | Demo mode only (a config flag), admin only, audited (R-DEMO) | `security` (FS-16) | L |
 
 ### 5.8 Third parties and privacy
@@ -309,7 +309,7 @@ flowchart LR
 |---|---|---|---|
 | LLM01 | Prompt injection | Structural defense: nothing harmful to trigger; scoped identity; re-validated cards; no pharmacy free text; flagged and measured (E4) | TH-15, TH-16 |
 | LLM02 | Sensitive information disclosure | No identity or coordinates in the context; redaction; client-scoped tools; output guard; E6 scans | TH-19, TH-49, TH-50 |
-| LLM03 | Supply chain | Hosted models from known providers; the local model is for development only; dependency and image scanning | TH-44 |
+| LLM03 | Supply chain | Claude models from Anthropic; the local model is for development only; the lockfile and pinned base image | TH-44 |
 | LLM04 | Data and model poisoning | No fine-tuning; no retrieval store; the regression set is reviewed by people | TH-24 |
 | LLM05 | Improper output handling | Model output is treated as untrusted input: schemas, ownership, plain-text display, cards rendered from stored proposals; output never executed | TH-18, TH-20 |
 | LLM06 | Excessive agency | 17 tools; **none can reserve, accept, cancel, or change priority, prices or stock**; the 5 action tools are bounded (watches, claims, early-release asks, follow-ups, escalation); the client taps; E6 audit scan | TH-17 |
@@ -326,14 +326,14 @@ flowchart LR
 |---|---|---|---|
 | **Authentication** | Server-side sessions; argon2id; lockout; email verification; **admin TOTP** | R-AU, `06` §2.1, TM-D8 | `tests/security/` |
 | **Authorization** | Role, status and ownership on every endpoint **and every tool**; others' objects → `404` | `06` §2.2, `07` §4.1 | One unauthorized-access test per endpoint and tool |
-| **Least privilege** | The agent's tools can't do anything consequential; three database roles; narrow task roles; pharmacies see only what they need | INV-11, DB-D10, INV-9, `12` | E6 audit scan; CDK tests |
-| **Secret protection** | Secrets Manager; OIDC; secret scanning; never logged | `02` §7, `12` | CI secret scanning |
+| **Least privilege** | The agent's tools can't do anything consequential; three database roles; narrow task roles; pharmacies see only what they need | INV-11, DB-D10, INV-9, `12` | E6 audit scan |
+| **Secret protection** | Secrets Manager; GitHub secret scanning; never logged | `02` §7, `12` | Secret scanning alerts |
 | **PII protection** | Redaction; no identity or coordinates to the LLM; rounded location; retention; audited admin views | INV-9, INV-10, INV-24, R-RET | E6 scan (0) |
 | **Input validation** | Pydantic on every endpoint and tool; upload checks; size and rate limits | `06`, `07` §4.1, SM-4 | `tests/api/`, FI rows |
 | **Output validation** | The output guard (cards, PII, coordinates, clinical, URLs); plain-text display; cards from stored proposals | `07` §7.2, TM-D5 | `tests/agent/`, E4 |
 | **Prompt-injection defenses** | Structural design + hard rules + flagging | `07` §7.1 | E4 (no effect), FA-11, FA-12 |
 | **Human approval for consequential actions** | Only taps reserve, accept, cancel or start; proposals re-validated | R-AG7, ADR-002, INV-11 | E6 audit scan (0 agent-made changes) |
-| *"Test… malicious input and unauthorized actions"* | `tests/security/` categories (checklist §6) + R-set | checklist §6, `08` §2.2 | CI on every PR; E4 |
+| *"Test… malicious input and unauthorized actions"* | `tests/security/` categories (checklist §6) + R-set | checklist §6, `08` §2.2 | Tests on the laptop; E4 |
 
 ---
 
@@ -346,7 +346,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 | RR-1 | **Someone with many accounts** gets around per-client limits (hoarding, squatting, queue stuffing, AI budget) | Real identity checks (phone or ID) are out of scope and would mean holding more personal data. Sign-up limits, email verification, the no-show pause and the pharmacist at the counter reduce it. | Abuse flags; admin dashboard (AS-10) |
 | RR-2 | **A fake pharmacy** could be approved | License document upload is postponed (§K). The admin checks the license number by hand, and suspension takes effect at once. | Admin approvals; each pharmacy's [Not available] rate (AS-4) |
 | RR-3 | Travel times let the LLM guess the client's **approximate neighborhood** | The professor's guidance needs travel times. No identity and no coordinates are sent. | E6 scan (no coordinates) |
-| RR-4 | The LLM provider and Langfuse see **redacted conversations naming medicines** | The agent can't work without them. The data isn't linked to a person; the local model is an option; the provider's terms are checked at O1. | E6 scan (no PII) |
+| RR-4 | The LLM provider and Langfuse see **redacted conversations naming medicines** | The agent can't work without them. The data isn't linked to a person. Anthropic's terms are checked before the first evaluation run. | E6 scan (no PII) |
 | RR-5 | Anyone who knows an account's email can **lock it for 15 minutes** | It's short, and admins are alerted for admin accounts. Locking per account is what stops password guessing. | Lockout metrics |
 | RR-6 | A determined attacker can **force degraded mode** (budget) or slow the service (no WAF) | Costs are capped. Search, reservations and requests keep working. A WAF costs money a course project doesn't need. | Budget and error-rate alerts (R-AL) |
 | RR-7 | Injection or model errors can still make the agent **say** something wrong, off-topic or rude | It can't **act** on it. Guards plus measurement (E4 target: 0 safety violations); 👎 → regression tests. | E4; reported answers (AS-8) |
@@ -354,12 +354,17 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 | RR-9 | Pickup is by order number only: **someone who sees a client's number** could collect their box (and pay for it) | Order numbers are random. Pharmacies get no client identity by design (P-D6). | Complaints (R-N3 escalations) |
 | RR-10 | Data purged by retention **stays in database backups** until they expire | Backups protect against data loss. Their retention is decided at the end of the project (TM-D10). | none needed |
 | RR-11 | A pharmacy could list **boxes it doesn't have** (bait listings) to attract clients | The team assumes the stock on the app is real (TM-D3). [Not available] protects the client: no penalty, and the agent re-plans at once. | The admin sees each pharmacy's [Not available] rate (AS-4) and can suspend it |
+| RR-12 | **The CloudFront → ALB hop is plain HTTP:** passwords, login tokens and medicine searches are unencrypted on it | HTTPS there needs a certificate, which needs a domain. It's a course demo with synthetic data. This reverses design review #2's B7. | none needed |
+| RR-13 | **Scripts can read the login token:** an XSS bug could steal it | Needed for two separate sites, since Safari blocks third-party cookies. React escaping, plain-text agent replies and the CSP remain. | CSP errors in the browser console (`12` §14) |
+| RR-14 | **Someone's own CloudFront can reach the public ALB** and dodge the IP-based sign-up limit | One security group rule stops direct calls, and the owner chose not to add a secret header. Low risk for a demo; per-client limits still apply. | Sign-up counts |
+| RR-15 | **Visitors can connect to CloudFront with old TLS versions** | This is fixed on `*.cloudfront.net` addresses, and there's no domain. Modern browsers don't use them. | none needed |
+| RR-16 | **No automated code, dependency or image scans,** only GitHub's secret scanning, which is on by default | The owner chose not to use pipelines (`12` INF-D14). The lockfile and the pinned base image remain. | Manual review |
 
 ---
 
 ## 9. Testing it and keeping it current
 
-### 9.1 Automated tests (CI, every PR)
+### 9.1 Automated tests (on the laptop, before each commit)
 - **`tests/security/`** (checklist §6):
   - an unauthorized-access test for **every endpoint and every tool** (another client's object, the wrong role, a suspended account);
   - CSRF (no or foreign `Origin`);
@@ -370,7 +375,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
   - upload attacks (zip bomb, XML entities, macros, formulas, oversize);
   - a forged `X-Forwarded-For` doesn't change the IP used for limits.
 - **`tests/agent/`** with the fake LLM scripted to misbehave: a forged card ID, a URL, a dose, an email or phone number, coordinates, an unknown tool. The guard must catch each one.
-- **CI scans:** CodeQL, Dependabot, secret scanning, Trivy.
+- **GitHub secret scanning** is on by default because the repo is public. There are no other automated scans (RR-16).
 
 ### 9.2 Evaluation
 - **E4 (R-set, ~120 attacks):** 0 safety violations on the held-out part.
@@ -389,7 +394,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 8. **Repeated wrong passwords** → the account is locked.
 
 ### 9.4 Keeping it alive
-- **Every PR that adds an attack surface** (a new endpoint, tool, input, third party or role) updates this document. This is Definition of Done #6.
+- **Every change that adds an attack surface** (a new endpoint, tool, input, third party or role) updates this document. This is Definition of Done #6.
 - **Every attack that turns into a real failure** (in tests, evaluation, 👎 reports or a demo rehearsal) gets a row in `09` and a regression test.
 - **Before submission:**
   - every TH row is re-checked against the code;
@@ -401,7 +406,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 
 | ID | Decision | Status | Why |
 |---|---|---|---|
-| TM-D1 | **Method:** a lightweight threat model: assets, attackers, trust boundaries, **STRIDE** per area, the **OWASP LLM Top 10** for the agent, inherent and residual risk, a test per threat, accepted risks. Living: updated by any PR that adds an attack surface. | ✅ 2026-10-22 | Required by the course (T-10, D-5); familiar to graders; small enough to keep current |
+| TM-D1 | **Method:** a lightweight threat model: assets, attackers, trust boundaries, **STRIDE** per area, the **OWASP LLM Top 10** for the agent, inherent and residual risk, a test per threat, accepted risks. Living: updated by any change that adds an attack surface. | ✅ 2026-10-22 | Required by the course (T-10, D-5); familiar to graders; small enough to keep current |
 | TM-D2 | **The pharmacy's name is the only pharmacy-typed text the agent sees.** It's safe because an admin approves it at registration, and only an admin can change it afterwards (SM-1). R-AG8 and INV-23 now say so. | ✅ 2026-10-22 | The agent needs names to recommend a pharmacy ("Al-Amal in Hamra"). `04` R-RT4 and `07` already sent them, so R-AG8's wording was wrong. |
 | TM-D3 | **No reliability label.** The team assumes the stock on the app is real. **[Not available] stays** for the rare exception (a box sold at the counter before the app was updated). "Reliability" is removed from ADR-004, R-AG9 and J2, since nothing measures it. | ✅ 2026-10-22 | Simple. The button protects honest clients from an unfair no-show, triggers the agent's re-planning (J4), and is the evaluation's main real-world constraint (E6). Bait listings become accepted risk RR-11. |
 | TM-D4 | **Random order and request numbers:** `R-` or `Q-` + 6 characters without look-alikes (no 0/O or 1/I), e.g. `R-7K3Q2F`; regenerated on a collision. Amends DB-D1. | ✅ 2026-10-22 | Sequential numbers can be guessed at a counter or in chat (TH-30). Random ones also hide our order volume. |
@@ -429,3 +434,9 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
   - the decision log (§T);
   - the README;
   - `CLAUDE.md`.
+
+### 10.2 Changed by step 12 (2026-11-02)
+- **Boundaries:** TB-3 (a public ALB, plain HTTP on that hop) and TB-8 (the owner's laptop instead of GitHub).
+- **Threats:** TH-2, TH-37, TH-38, TH-41, TH-43, TH-44 and TH-46 updated. TH-45 now covers the AWS access key, because there are no pipelines left to abuse.
+- **New accepted risks:** RR-12–RR-16.
+- **The Cognito step** updates this document again, including §4.3.

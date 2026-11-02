@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.1 · **Date:** 2026-10-22
+**Version:** v3.2 · **Date:** 2026-11-02
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -560,7 +560,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
 | Email | The address is resolved at send time, not copied into the outbox |
 | Secrets | Password hashes (argon2id), session and token hashes, and the admins' TOTP secrets encrypted with a key from Secrets Manager. No plain-text secrets in tables. |
-| **Database roles** | `dawalink_migrator`: DDL, used only by migrations. `dawalink_app`: DML on app tables, **INSERT/SELECT only on `audit_events`**, no DDL. `dawalink_retention`: deletes for retention only. |
+| **Database roles** | `dawalink_migrator`: DDL, used only by migrations. `dawalink_app`: DML on app tables, **INSERT/SELECT only on `audit_events`**, no DDL. `dawalink_retention`: deletes for retention only. The `prepare_db` step creates them (`12` §7). |
 | At rest / in transit | RDS encryption at rest; TLS required for connections; credentials in Secrets Manager |
 
 ---
@@ -590,7 +590,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Pricing tiers | Seeded from config (`04` N-4) |
 | Admins | `backend/scripts/create_admin.py` (the only way to create an admin, A-D1) |
 | **Demo and simulation data** | `backend/scripts/seed_demo.py --seed 42`: synthetic pharmacies (with hours and pickup days), inventory and clients. **Same seed → same data** (reproducibility). |
-| **Migrations** | Alembic; one reviewed revision per PR that changes the schema; functions and triggers live in migrations. CI runs `upgrade` and `downgrade` on a real Postgres. Production runs `upgrade head` as a one-off ECS task before each deploy. |
+| **Migrations** | Alembic; one reviewed revision per change to the schema; functions and triggers live in migrations. `upgrade` and `downgrade` are run on a real Postgres before committing. A migration keeps the previous version working (add first, remove later). In AWS, `prepare_db` runs `upgrade head` as a one-off ECS task before each service update, and downgrades are never run there (`12` §7). |
 
 ---
 
