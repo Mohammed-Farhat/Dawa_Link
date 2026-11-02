@@ -50,8 +50,9 @@
 
 **Still open:**
 - O1: which Claude model we use (chosen by measurement). We use Anthropic's Claude API;
-- O2: who pays for it. It's only needed for the evaluation runs and the demo; development uses a free local model;
 - O5: where the Ministry price file lives.
+
+**Paying for the AI:** the owner's Claude Max plan includes $100 of API credits per billing cycle, which covers the evaluation runs and the demo. Development uses a free local model.
 
 **Who does what during the build:**
 - **Claude** writes the code;
@@ -352,7 +353,7 @@ The initial design for the website, on desktop and mobile, is drawn on a design 
   - **Reserve:** today or tomorrow, the days of use, and a clear "lasts your 12 days".
   - **Pickup ticket:** a dark screen with a huge order number to show at the counter.
   - **My medicines:** one tracker per medicine, from searching to ready to pick up.
-  - **Ask:** the chat, which works in Arabic too, right to left.
+  - **Ask:** the chat, which works in Arabic too, right to left, with a line that says it's an AI assistant.
 - **Pharmacy:**
   - a **Today** screen built around the counter: a big order-number box, with [Picked up] and [Not available];
   - a clear check of the inventory file before [Apply].
@@ -377,7 +378,7 @@ The initial design for the website, on desktop and mobile, is drawn on a design 
 | Background work | One worker loop, the **clock check**: every few seconds it handles everything that is due, such as expiring offers, ending windows and running agent turns. There is no jobs table. |
 | Frontend | React + TypeScript + Mantine, styled with the design in §11; maps with Leaflet + OpenStreetMap |
 | Routes | OpenRouteService (free), cached, with a straight-line fallback |
-| AI by stage | A fake scripted AI in tests ($0) · Ollama `qwen2.5:7b` on the laptop for development · a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo |
+| AI by stage | A fake scripted AI in tests ($0) · Ollama `qwen2.5:7b` on the laptop for development · a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from the owner's Claude Max plan |
 | Tracing | Langfuse + our own `agent_runs` tables |
 | Login | Our own login first; Cognito replaces it before we deploy |
 | Hosting | AWS in Ireland, set up by hand after the project is finished: two CloudFronts (website on S3, API on a public load balancer), ECS Fargate (one backend image, running as API + worker), RDS, SES. No domain. |

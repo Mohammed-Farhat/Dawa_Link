@@ -28,11 +28,11 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-11-02:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–V). **Current versions:**
-  - `01` v5.2 · `02` v3.2 · `03` v4.3 · `04` v4.2 · `05` v3.2;
+  - `01` v5.2 · `02` v3.2 · `03` v4.4 · `04` v4.2 · `05` v3.2;
   - `06` v1.3 · `07` v1.3 · `08` v1.2;
   - `09` v1.3 (living: every change updates it) · `10` v1.2 (threat model; living: a change that adds an attack surface updates it);
   - `12` v2.0 (infrastructure and deployment);
-  - `11` v1.2 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
+  - `11` v1.3 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
@@ -122,7 +122,8 @@ The details are in the linked docs. If a request or code change would break one 
   - no medical advice;
   - alternatives must have the same composition, and are offered only with the client's consent;
   - controlled substances are excluded entirely;
-  - a prescription notice by default (the pharmacist checks at the counter).
+  - a prescription notice by default (the pharmacist checks at the counter);
+  - the chat and the request thread always show the AI notice (`11` §6).
 - **Observability:** every agent turn and tool call is recorded, in Langfuse plus our own `agent_runs` / `agent_tool_calls` tables.
 - **Security:** follow the [threat model](docs/10_threat_model.md). A change that adds an attack surface (an endpoint, tool, input, third party or role) updates it. Order and request numbers are random (`R-7K3Q2F`). Registration never reveals whether an email has an account. Admins log in with TOTP. The login token travels in the `Authorization` header.
 

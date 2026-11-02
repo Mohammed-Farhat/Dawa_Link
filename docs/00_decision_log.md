@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-11-02, covers steps 01–12, design review #2 and the professor's guidance. Sections A–F and I–V validated (2026-10-13 to 2026-11-02; §U amended on 2026-10-23 with the v2 design, UI-D13). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-11-02, covers steps 01–12, design review #2 and the professor's guidance. Sections A–F and I–V validated (2026-10-13 to 2026-11-02; §U amended on 2026-10-23 with the v2 design, UI-D13, and on 2026-11-02 with the AI notice, UI-D14). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -334,6 +334,7 @@ From [`11_ui_design.md`](11_ui_design.md) and the design canvas. Validated by th
 | UI-D11 | **Frontend structure and tests:** React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, Playwright demo flows; screenshots in every frontend PR | 11 §13 | ✅ 2026-10-22 |
 | UI-D12 | **The design canvas is the visual reference;** `11` wins on rules; screens not drawn reuse the same components. *Since UI-D13, the reference is the v2 canvas.* | 11 §14 | ✅ 2026-10-22 (updated by UI-D13) |
 | UI-D13 | **The v2 design direction** (v2 canvas, 15 boards: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx):<br>• deep navy and a friendly blue, yellow for savings only;<br>• Readex Pro for English and Arabic; rounded cards and pill buttons; 17 px text;<br>• a floating menu Home · Medicines · Ask · Me, with a **My medicines** tracker;<br>• compact search rows showing the saving;<br>• a dark pickup ticket;<br>• the pharmacy's Today screen built around the counter;<br>• a navy admin bar.<br>It **replaces** the look of UI-D1 and the navigation of UI-D3, and **updates** UI-D4 (blue "Recommended"), UI-D5 (the ticket) and UI-D12.<br>**Later** (previewed on the boards): the savings total on Home, the text-size setting, Undo on [Picked up], the reminder button, the List/Map switch, the "why" chips. | 11 v1.1 §2, §3, §5, §14 | ✅ 2026-10-23 |
+| UI-D14 | **The AI notice:** one line that's always visible at the top of the chat and above a request's thread: "You're chatting with an AI assistant, not a pharmacist." Anthropic's Usage Policy requires it. | 11 §6; 03 CS-9, CS-16 | ✅ 2026-11-02 |
 
 *Also from this step:*
 - `03` v4.2 (the "Home" tab, folded alternatives, a stale zone label removed);

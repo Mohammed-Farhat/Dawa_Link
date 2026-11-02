@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.3 · **Date:** 2026-10-23
+**Version:** v4.4 · **Date:** 2026-11-02
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -197,6 +197,7 @@ flowchart TD
 | Pharmacy closed now | Allowed: "Pick up by closing time on their next open day: Tue 21:00." |
 
 #### CS-9 Assistant (chat)
+- **The AI notice is always visible** at the top of the chat: "You're chatting with an AI assistant, not a pharmacist." (UI-D14).
 - **Blocks the agent can show** (every card is produced by a tool; the agent chooses which):
 
 | Block | Purpose |
@@ -294,6 +295,7 @@ In-app list (see §1.7).
   - asking pharmacies;
   - watching for new stock;
   - not found in time.
+- **The same AI notice** is always visible above the thread (UI-D14).
 - **Cards appear in the thread:**
   - plan cards [Reserve these];
   - offer cards [Accept];

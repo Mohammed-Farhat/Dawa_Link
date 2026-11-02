@@ -1,11 +1,13 @@
 # DawaLink: UI Design
 
-**Version:** v1.2 · **Date:** 2026-11-02
+**Version:** v1.3 · **Date:** 2026-11-02
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
 **Status:** ✅ validated by the team (2026-10-22, decision log §U). **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
+
+**v1.3 (2026-11-02):** the AI notice is added to the assistant's screen and the request thread (UI-D14).
 
 **v1.2 (2026-11-02, step 12):** fonts are self-hosted, the API client sends the login token in a header, and screenshots go to the owner instead of pull requests.
 
@@ -33,7 +35,7 @@
   - per-portal code splitting.
 - **Accessible:** WCAG 2.1 AA, checked automatically in tests and by hand before the demo.
 - **Frontend:** React + TypeScript + Mantine, API types generated from OpenAPI, and every user-facing string in one file.
-- **13 decisions** (§14): UI-D1–UI-D12 validated on 2026-10-22, and UI-D13 (the v2 direction) on 2026-10-23.
+- **14 decisions** (§14): UI-D1–UI-D12 validated on 2026-10-22, UI-D13 (the v2 direction) on 2026-10-23, and UI-D14 (the AI notice) on 2026-11-02.
 
 ---
 
@@ -183,6 +185,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 8. **Cards never vanish:** a used or expired card shows its state ("Reserved ✓", "This option expired").
 9. **New messages are announced** to screen readers (`aria-live="polite"`) and are kept when the page reloads. Polling picks up messages posted by the worker (N-28).
 10. **The agent has no human name or face.** It's "DawaLink" with the logo mark, and the header says "Finds medicine. You confirm. No medical advice."
+11. **The AI notice is always visible** at the top of the chat and above a request's thread, as one small line that can't be dismissed: "You're chatting with an AI assistant, not a pharmacist." Anthropic's Usage Policy requires this (UI-D14).
 
 ---
 
@@ -337,6 +340,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | ID | Decision | Status | Why |
 |---|---|---|---|
 | UI-D13 | **The v2 design direction** (the v2 canvas, 15 boards): deep navy and a friendly blue, yellow for savings only, Readex Pro for English and Arabic, rounded cards and pill buttons, 17 px text; a floating menu Home · Medicines · Ask · Me with a **My medicines** tracker; compact search rows with the saving; a dark pickup ticket; the pharmacy's Today screen built around the counter; a navy admin bar. It **replaces** the look of UI-D1 and the navigation of UI-D3, and **updates** UI-D4 (blue for "Recommended"), UI-D5 (the ticket) and UI-D12 (the v2 canvas is the reference). | ✅ 2026-10-23 | Friendlier and easier for our users (older clients, cheap phones, Arabic speakers); the saving is the point of DawaLink; a stronger demo. The extras wait so the build stays agent-first. |
+| UI-D14 | **The AI notice** | One line that's always visible at the top of the chat and above a request's thread: "You're chatting with an AI assistant, not a pharmacist." | Anthropic's Usage Policy requires chatbots to tell users they're talking to an AI; it also reminds clients that the assistant gives no medical advice |
 
 ### 14.2 Later (previewed on the v2 boards, decided during the build)
 - the savings total on Home;
