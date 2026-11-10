@@ -43,6 +43,8 @@ This is the last planning step. It says **how we work, where DawaLink runs, and 
 ## 2. Local development
 
 - **One command:** `docker compose up` starts `postgres`, `api`, `worker`, `web` and `mailpit`. Ollama runs on the laptop.
+  - `mailpit` joins when email is built.
+  - The local database is reachable at `127.0.0.1:5433`, because a locally installed PostgreSQL often holds port 5432.
 - **Mailpit** catches every email and shows it at `http://localhost:8025`.
 - **LLM:** Ollama `qwen2.5:7b`, or the fake scripted model in tests.
 - **Routing:** OpenRouteService with a personal key. With no key, travel times fall back to straight-line distance (R-RT1).
@@ -177,7 +179,7 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
 | `dawalink-ops` | `python -m dawalink.ops.<command>` | 0.25 vCPU, 0.5 GB | By hand, one-off |
 
 - **Regular Fargate, no Spot.** ECS Exec is off and there is no SSH.
-- **API health check:** the ALB calls `/api/v1/health`.
+- **API health check:** the ALB calls `/api/v1/health`. Set its timeout to 6 s or more: when the database is unreachable, `/health` can take a few seconds to say so (about 4 s in the local test).
 - **`/health` always answers `200` while the process runs,** with `db: "ok"` or `"down"` in the body. If it answered `503` during a database outage, ECS would keep killing healthy API tasks instead of letting them answer "try again" (FX-10). This changes `06` §6.1.
 - **Worker health check:** each clock-check pass writes a heartbeat, and the task definition's health check fails if it's older than 2 minutes. ECS then replaces the worker, so a stuck worker restarts on its own (FX-13, FX-14).
 - **Two workers overlapping** during an update is safe (`SKIP LOCKED`, `05` §10).

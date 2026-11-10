@@ -33,6 +33,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 
 | # | Document | Content | Status |
 |---|---|---|---|
+| ✔ | [Build plan and progress](build_plan.md) | The build steps in order, what is done, what is next, what was left for later | 🟡 living |
 | ✔ | [Requirements checklist](requirements_checklist.md) | Every course requirement → artifact, location, phase; Definition of Done | 🟡 living |
 | 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–V validated |
 | 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.2 |

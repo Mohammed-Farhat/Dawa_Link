@@ -25,7 +25,7 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth. As of 2026-11-02:
+The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-10:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–V). **Current versions:**
   - `01` v5.2 · `02` v3.2 · `03` v4.4 · `04` v4.2 · `05` v3.2;
@@ -53,9 +53,9 @@ The status column in [docs/README.md](docs/README.md) is the source of truth. As
     - build the validated login first, then switch to Cognito behind our API before deploying (`12` §10);
     - the owner and Claude check everything and write the datasets.
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
-- **Planning is finished. Next: the build.** ⚠️ **Don't start it until the user explicitly says to.**
-- **Then:** build → test → evaluate → switch to Cognito → deploy → report and demo.
-- **No code exists yet.** The repo holds the planning docs; the user commits and pushes doc updates themselves.
+- **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
+- **Built so far:** step 1 of 12, the code skeleton (2026-11-10). The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
+- **Next: step 2, the domain core** (the pure rules of `04`). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O5: where the Ministry price file lives (decided later);
@@ -161,12 +161,18 @@ The details are in the linked docs. If a request or code change would break one 
   - a fake scripted LLM in tests;
   - Ollama `qwen2.5:7b` for development;
   - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from the owner's Max plan ($100 per billing cycle, no rollover).
-- **Commands:** none yet. Add the run, test and lint commands here when the code skeleton lands.
+- **Commands** (the full list is in the root [README.md](README.md)):
+  - everything: `docker compose up --build` (website http://localhost:5173, API http://localhost:8000);
+  - backend, inside `backend/`: `uv run --env-file ../.env pytest` · `uv run ruff check .` · `uv run ruff format .` · `uv run mypy`;
+  - after an API change: `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json`, then `npm run gen:api` inside `frontend/`;
+  - website, inside `frontend/`: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 
 ## 7. Environment notes
 
 - **Machine:** Windows 11. PowerShell is the main shell; Git Bash is also available.
 - **Local LLM:** Ollama 0.40.3 on an RTX 3070 Laptop (8 GB VRAM, 16 GB RAM).
+- **Local ports:** the project's PostgreSQL container is at `127.0.0.1:5433` (a Windows PostgreSQL service holds 5432). Use `127.0.0.1`, not `localhost`, for the database: `localhost` tries IPv6 first here and waits for seconds.
+- **Slow downloads:** `npm install` and Docker pulls can take many minutes on this connection; run them in the background.
 - **Console encoding:** the console uses cp1252, so printing emoji from Python fails. Set `PYTHONIOENCODING=utf-8` or avoid printing them.
 - **Helper scripts:** write multi-line Python helpers to a file and run them. Don't inline them in shell heredocs.
 - **Doc conventions:**

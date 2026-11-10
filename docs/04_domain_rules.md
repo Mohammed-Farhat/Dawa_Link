@@ -490,7 +490,7 @@ In **demo mode only** (a config flag: it's on in our AWS deployment, which is th
 | N-37 | Agent turn time limit | 60 s in chat · 90 s in the worker | new (`07` §8) |
 | N-38 | Circuit breaker | 3 LLM failures in 5 min → degraded mode for 2 min | new (`07` §8) |
 | N-39 | Agent follow-ups | one pending per request · 15–300 min ahead · inside the window · ≤ 4 per request | new (`07` AG-D11) |
-| N-40 | Database statement timeout | 5 s | new (`09` FM-D8) |
+| N-40 | Database timeouts | a statement 5 s · connecting 2 s | new (`09` FM-D8); connecting added in the build |
 | N-41 | Outbound HTTP timeout (non-LLM: SES, Langfuse, routing) | 10 s | new (`09` FM-D8) |
 | N-42 | Same-day pickup | "Today" is offered only if the pharmacy stays open at least 1 h more | new (§S) |
 | N-43 | Location and travel times | client location rounded to ~100 m (3 decimals); travel-time cache kept 24 h | new (§S) |

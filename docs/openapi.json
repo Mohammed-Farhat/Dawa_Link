@@ -1,0 +1,66 @@
+{
+  "components": {
+    "schemas": {
+      "Health": {
+        "properties": {
+          "db": {
+            "enum": [
+              "ok",
+              "down"
+            ],
+            "title": "Db",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "db",
+          "version"
+        ],
+        "title": "Health",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "DawaLink API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "description": "Always 200 while the process runs.\n\nThe load balancer only needs to know the process is alive. If this answered 503 when the\ndatabase is down, healthy API tasks would be killed instead of answering \"try again\" (FX-10).",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

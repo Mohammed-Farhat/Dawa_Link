@@ -57,14 +57,14 @@ A change is committed only when **all** of the following hold:
 | G-6 | Safe handling of bad or malicious input and external failures | Failure Matrix (`09` ✅: 122 modes, principles P1–P8) + failure-injection tests (`09` §8) | `09`, `tests/` | Build | 🟡 |
 | G-7 | Public, authorized or synthetic data with provenance and ToS | MoPH source and date on every product; dataset description sheets; seeded synthetic generators | `04` R-C1, `eval/datasets/README.md` | Build + Evaluate | 🟡 |
 | G-8 | Track model/API usage, system cost, **cost per successful task** | Langfuse + `agent_runs` + AWS cost; cost per fulfilled request reported per model (E2, E5) | `08` E2/E5, results, report | Evaluate + Deploy | 🟡 |
-| G-9 | Students responsible for AI-written code | The owner checks every change (DoD #7); an **AI-usage statement** in the README and report | Commits, README, report | Build + Submit | ⏳ |
+| G-9 | Students responsible for AI-written code | The owner checks every change (DoD #7); an **AI-usage statement** in the README and report | Commits, README, report | Build + Submit | 🟡 |
 
 ## 3. Final submission deliverables
 
 | ID | Deliverable | What exactly | Where | Phase | Status |
 |---|---|---|---|---|---|
 | D-1 | Live demo + poster | Demo script covering the 17 scenarios (`01` §6) and the security challenges (`10` §9.3), **including failures and attacks**; the **demo clock** (AS-12, demo mode only); a recorded backup | `01` §6, `docs/demo_script.md` | Submit | 🟡 |
-| D-2 | Full GitHub repo with setup and reproducibility docs | README: run everything locally with one command; seed data; how to run tests and reproduce the evaluation; `.env.example` | repo root | Build | ⏳ |
+| D-2 | Full GitHub repo with setup and reproducibility docs | README: run everything locally with one command; seed data; how to run tests and reproduce the evaluation; `.env.example` | repo root | Build | 🟡 |
 | D-3 | Evaluation suite, experiments, results | Plan ✅ (`08`): U-set, R-set, simulation, P-set; suites E1–E6; results in `eval/results/` | `eval/`, `08` | Evaluate | 🟡 |
 | D-4 | Agent traces and operational metrics | Langfuse project + **exported traces and metrics** in the repo | `docs/evidence/`, `eval/results/` | Evaluate + Deploy | ⏳ |
 | D-5 | Failure analysis and security/threat analysis | Failure Matrix (`09` ✅), threat model (`10` ✅), failure analysis of evaluation errors | `09`, `10`, `08` | Design + Build + Evaluate | 🟡 |
@@ -91,7 +91,7 @@ A change is committed only when **all** of the following hold:
 | T-13 | API and interface contracts: schemas, validation, auth, error behavior | Endpoint contracts (`06` ✅) + generated OpenAPI + contract tests (3 per endpoint, every error code, Schemathesis) | `06`, `tests/api/` | Design + Build | 🟡 |
 | T-14 | Clean, modular code: separation of concerns, naming, no duplication, centralized config, secure dependencies and secrets, consistent errors, **no dead code** | Repo structure, `config.py`, linters, the `uv` lockfile, review checklist | `02` §6 | Build | ⏳ |
 | T-15 | UI designed around the user, not chat by default | A search-first home (not chat by default); the assistant's cards rendered from stored proposals; role-specific portals. UI design ✅ (`11` + the design canvas) | `03`, `11` | Design + Build | 🟡 |
-| T-16 | Reproducibility | Docker Compose, uv lockfile, seeds, "reproduce the results" commands | README, `eval/` | Build + Evaluate | ⏳ |
+| T-16 | Reproducibility | Docker Compose, uv lockfile, seeds, "reproduce the results" commands | README, `eval/` | Build + Evaluate | 🟡 |
 
 ## 5. Bonus engineering practices (up to +10%)
 

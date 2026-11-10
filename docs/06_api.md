@@ -121,6 +121,7 @@ That is what the course asks for: *"interfaces between major components, includi
 | `FORBIDDEN` | 403 | Wrong role | §2.2 |
 | `ORIGIN_REJECTED` | 403 | A state-changing request from another site | §2.1 |
 | `NOT_FOUND` | 404 | Doesn't exist, **or isn't yours** | §2.2 |
+| `METHOD_NOT_ALLOWED` | 405 | A real path called with a method it doesn't support | |
 | `RATE_LIMITED` | 429 | Too many requests; `Retry-After` header set | §4 |
 | `IDEMPOTENCY_KEY_REQUIRED` | 400 | A creating call without the header | §1 |
 | `INTERNAL_ERROR` | 500 | Unexpected error (logged with `request_id`) | |

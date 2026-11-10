@@ -27,7 +27,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
   1. **Fail closed** where people or stock could be hurt (stock, money, safety, privacy): when unsure, don't act.
   2. **Degrade gracefully** where only convenience is lost (the AI, email, tracing): keep everything else working and say so plainly.
 - **Every row has a test** in a named folder. Failures are **injected on purpose** in tests (§8): AI down, email down, database cut, worker killed, clock moved.
-- **Status per row:** ⏳ designed · 🔨 implemented · ✅ tested. Today every row is ⏳; the build moves them.
+- **Status per row:** ⏳ designed · 🔨 implemented · ✅ tested. A row with no mark is ⏳; the build adds the mark and the test's path to its Test cell.
 
 ---
 
@@ -69,14 +69,14 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FX-7 | **Email (SES) down or throttled** | SES error | Outbox: FAILED → retry 1 m, 5 m, 30 m → DEAD + alert (SM-12). In-app notifications are unaffected. | The in-app notification still appears; the email arrives late or never | `failure` (fake mailer) | M |
 | FX-8 | **Email bounces / invalid address** | An error from SES when sending | Marked DEAD; the client sees in-app notifications only. Later bounces: SES's suppression list stops repeat sends; no bounce webhook (`12` §9). | Nothing (in-app works) | `failure` | L |
 | FX-9 | **SES sandbox** blocks unverified addresses (demo) | SES error | As FX-7. We stay in the sandbox by default: **demo addresses are verified one by one**, and production access is optional (`12` §9). Cognito sends the sign-up email. | A notification email doesn't arrive; the in-app notification still appears | `manual` (demo checklist) | M |
-| FX-10 | **Database down** | Connection error | API returns `503 SERVICE_UNAVAILABLE`; the worker pauses and retries every 10 s; nothing half-written (transactions) | "DawaLink is temporarily unavailable" | `failure` (stop the database container) | H |
+| FX-10 | **Database down** | Connection error | API returns `503 SERVICE_UNAVAILABLE`; the worker pauses and retries every 10 s; nothing half-written (transactions) | "DawaLink is temporarily unavailable" | 🔨 API part: `tests/failure/test_database_down.py`; the worker part comes with its first task | H |
 | FX-11 | **Database slow / statement timeout** (5 s) | Statement timeout | Transaction rolled back; API `503` (safe to retry: idempotency); the clock check retries on the next pass | "Please try again" | `failure` | M |
 | FX-12 | **Connection pool exhausted** | Pool timeout | Request fails fast with `503`; logged; an alert if repeated. No connection is held during LLM calls (turn lease), so this is unlikely. | "Please try again" | `failure` (tiny pool) | M |
-| FX-13 | **Worker process crashes, gets stuck or restarts** | ECS restarts it; a stale heartbeat fails its health check (`12` §6); clock-check delay metric | Nothing is lost: deadlines live on the rows (P3). The next pass handles everything overdue; each row is handled once (`SKIP LOCKED` + re-check). | At most a short delay | `failure` (kill the worker mid-pass) | M |
+| FX-13 | **Worker process crashes, gets stuck or restarts** | ECS restarts it; a stale heartbeat fails its health check (`12` §6); clock-check delay metric | Nothing is lost: deadlines live on the rows (P3). The next pass handles everything overdue; each row is handled once (`SKIP LOCKED` + re-check). | At most a short delay | 🔨 heartbeat and loop: `tests/unit/test_worker.py`; `failure` (kill the worker mid-pass) comes with its first task | M |
 | FX-14 | **Clock check falls behind** (> 2 min) | Lag metric | Alert (R-AL); it catches up in deadline order | Offers or expiries a little late (never early) | `failure` | L |
 | FX-15 | **API task restarts during a chat stream** | Stream closed | The client's message is already saved; the turn either saved its reply or will be retried by the user | The next poll shows the reply, or a [Retry] | `failure` | L |
 | FX-16 | **SSE connection cut** by a proxy or a mobile network | Stream closed | The reply is saved regardless; heartbeat every 15 s keeps idle connections open | The reply appears at the next poll | `failure` | L |
-| FX-17 | **Secrets unavailable at startup** | Startup check | The service refuses to start and logs which secret is missing (never its value) | Deploy fails visibly; the old version keeps running | `manual` + deploy check | M |
+| FX-17 | **Secrets unavailable at startup** | Startup check | The service refuses to start and logs which secret is missing (never its value) | Deploy fails visibly; the old version keeps running | 🔨 `tests/unit/test_config.py`; `manual` deploy check | M |
 | FX-18 | **Routing service down, slow or over its free quota** | Error or timeout (N-41) | **Straight-line distance** with an estimated time, labeled "about" (`source = straight`); the cache keeps recent times; alert if it lasts (R-RT1) | Times shown as "about 3 km" | `failure` (fake router) | L |
 
 ---

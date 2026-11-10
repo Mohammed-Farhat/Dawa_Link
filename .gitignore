@@ -16,3 +16,8 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Test reports and website builds
+.coverage
+htmlcov/
+dist/

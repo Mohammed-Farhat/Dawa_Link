@@ -1,0 +1,25 @@
+# Local stand-in for the website's S3 bucket + CloudFront (docs/12 §4.1).
+# Keep these headers the same as the CloudFront response headers policy.
+# (Strict-Transport-Security is left out here: the local site has no HTTPS.)
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self' ${API_ORIGIN}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
+
+    # File names under /assets contain a hash of their content, so browsers can keep them a year.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # Everything else is the app: unknown paths get index.html, which is always re-checked.
+    location / {
+        expires -1;
+        try_files $uri /index.html;
+    }
+}

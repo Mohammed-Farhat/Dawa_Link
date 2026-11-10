@@ -52,7 +52,7 @@ The team's strongest language is Python, and the team must be able to read, revi
 | **Maps (browser)** | **Leaflet + OpenStreetMap tiles**: the pharmacy pins itself at registration; clients see the pharmacy on a map | Free and open; drawn in the browser, so nothing goes to the AI | Google Maps |
 | LLM tracing | **Langfuse Cloud** (free tier) | Traces, tokens, cost, prompt versions | LangSmith |
 | Logs | **structlog** JSON → CloudWatch | One request and trace ID across API, worker and agent | none |
-| Quality | **ruff, mypy, pytest** + coverage; ESLint, Vitest | Standard | none |
+| Quality | **ruff, mypy, pytest** + coverage; oxlint, Vitest | Standard | none |
 | CI/CD | **None.** The owner and Claude run the tests and check each change on the laptop. | Simple; the owner's choice (`12` INF-D14) | GitHub Actions and automated scanners |
 | Infrastructure | **AWS console, by hand,** following the checklist in `12` §11 | Simple; only the owner touches AWS | CDK, CloudFormation, Terraform |
 | Hosting | **Ireland (`eu-west-1`): ECS Fargate (regular, no Spot) + public ALB + two CloudFronts (website on S3, API on the ALB) + RDS + SES** | Team has Fargate experience; production-like; no domain or certificate needed | EC2 + Compose |
