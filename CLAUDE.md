@@ -54,8 +54,8 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - the owner and Claude check everything and write the datasets.
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
 - **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
-- **Built so far:** step 1 of 12, the code skeleton (2026-11-10). The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
-- **Next: step 2, the domain core** (the pure rules of `04`). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
+- **Built so far:** steps 1 and 2 of 12 (2026-11-10): the code skeleton, and the domain core (`backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python). The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
+- **Next: step 3, the database** (`05`: tables, constraints, triggers, migrations, roles, seed). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O5: where the Ministry price file lives (decided later);
@@ -117,7 +117,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **No jobs table:** one **clock check** loop acts on deadlines stored on the rows (04 R-T10).
 - **Derived values are never stored.** The expiry zone and the discount price are computed live.
 - **Money** is stored as LBP integers and shown as LBP + ≈USD. **Quantities** are counted in units.
-- **Numbers** (windows, limits, timers) live only in [04 §5](docs/04_domain_rules.md). Reference them by ID; don't repeat them.
+- **Numbers** (windows, limits, timers) live only in [04 §5](docs/04_domain_rules.md). Reference them by ID; don't repeat them. In code they live only in `backend/src/dawalink/domain/numbers.py`.
 - **Safety:**
   - no medical advice;
   - alternatives must have the same composition, and are offered only with the client's consent;
