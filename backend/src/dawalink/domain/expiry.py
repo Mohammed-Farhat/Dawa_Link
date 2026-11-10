@@ -1,4 +1,4 @@
-"""Expiry dates, zones and the expiry fit (docs/04 R-T7, R-T9, SM-3, R-F1).
+"""Expiry dates, zones and the expiry fit (docs/04 R-T7, R-T9, SM-3, R-F1, R-F6).
 
 Zones are never stored: they're computed from the expiry date and today, every time.
 """
@@ -65,3 +65,14 @@ def last_day_of_use(pickup_day: date, days_of_use: int) -> date:
 def fits(expiry_date: date, pickup_day: date, days_of_use: int) -> bool:
     """The box is still valid on the client's last day of use (R-F1)."""
     return expiry_date >= last_day_of_use(pickup_day, days_of_use)
+
+
+def last_pickup_day_that_fits(expiry_date: date, days_of_use: int) -> date:
+    """The latest pickup day from which the box still lasts the days of use (R-F6).
+
+    A later pickup leaves fewer days before the box expires: a box that fits today may
+    not fit on the last day the pharmacy allows.
+    """
+    if days_of_use < 1:
+        raise ValueError("Days of use start at 1.")
+    return expiry_date - timedelta(days=days_of_use - 1)

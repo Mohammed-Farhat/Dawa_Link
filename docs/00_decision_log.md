@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-11-02, covers steps 01–12, design review #2 and the professor's guidance. Sections A–F and I–V validated (2026-10-13 to 2026-11-02; §U amended on 2026-10-23 with the v2 design, UI-D13, and on 2026-11-02 with the AI notice, UI-D14). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-11-10, covers steps 01–12, design review #2, the professor's guidance and the decisions taken during the build (§W). Sections A–F and I–W validated (2026-10-13 to 2026-11-10; §U amended on 2026-10-23 with the v2 design, UI-D13, and on 2026-11-02 with the AI notice, UI-D14). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -369,6 +369,20 @@ From [`12_infrastructure.md`](12_infrastructure.md). The owner set this directio
 - R-D54–R-D56 (`04`) and API-D16 (`06`);
 - open item O5 (the Ministry price file);
 - **what it gives up:** most of bonus B-1, B-2, B-3, B-4 and B-6, and the infrastructure-as-code part of B-7 (checklist §5).
+
+## W. Decisions taken during the build
+
+Questions found while building ([build plan](build_plan.md) §5) and decided by the owner. Each one changes validated docs, so it is recorded here.
+
+| ID | Decision | Where | Validated |
+|---|---|---|---|
+| BLD-D1 | **One set of pickup days everywhere.** The search filter, the reserve screen and the agent's tools all use the rule's days: today (if the pharmacy stays open long enough), or the pharmacy's next open days within its pickup time, **3 open days at most**. A pickup day is a **date**; the "today / tomorrow" choice in `03`, `06`, `07` and `11` is gone. The agent takes the date from a list of upcoming days it is given, and never works one out (N-49). | 04 R-F3, N-49; 03 CS-6, CS-8; 06 §5.3, §6.2; 07 §3.1, §4.2, §6.2; 11 §5 | ✅ 2026-11-10 (owner) |
+| BLD-D2 | **A later pickup day leaves fewer days before the box expires, and the agent takes that into account.** It passes the day the client said to the tools, and the fit is counted from that day. Each option lists the days on which it still lasts, and flags when the expiry, not the pharmacy, rules a later day out; the client is then told the last day that works.<br>*The owner's example:* 2 days of use, a box expiring in 7 days, picked up on the third day → 5 days are left, so it still fits. With 7 days of use, the same box fits today or tomorrow, but not on the third day. | 04 R-F1, R-F6; 06 §5.3; 07 §4.2, §5.2 (rule 11); 09 FA-27 | ✅ 2026-11-10 (owner) |
+
+*Also from this step:*
+- new rule code with the owner's example as tests: `pickup_choice`, `pharmacy_pickup_days` and `upcoming_days` (`domain/pickup.py`), `last_pickup_day_that_fits` (`domain/expiry.py`);
+- `08`: the U-set labels the pickup day as a number of days from today;
+- **read as:** each pharmacy keeps its own pickup time setting (1–3 open days, default 1; N-6). 3 is the most a pharmacy can allow, not a new fixed value for every pharmacy.
 
 ## G. Default numbers (superseded)
 

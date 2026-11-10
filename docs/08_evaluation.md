@@ -1,6 +1,6 @@
 # DawaLink: Evaluation Plan
 
-**Version:** v1.2 (validated; v1.2 applies step 12) · **Date:** 2026-11-02
+**Version:** v1.3 (validated; v1.3 applies the pickup-day decision) · **Date:** 2026-11-10
 **Builds on:**
 - `Project_Requirements.md` (Evaluation, Real-world constraint, Compute & budget, "evidence, not only prepared examples")
 - `01` v4.0 (C16, §9)
@@ -8,7 +8,7 @@
 - `04` v3.0
 - `05` v2.0 (`agent_runs`, `audit_events`)
 
-**Status:** ✅ validated 2026-10-18 (decision log §Q). **v1.2 (step 12, decision log §V):** the owner and Claude write the datasets, the checks run by hand, not in CI, and the model candidates are Claude models only. **v1.1 (decision log §S):** E1 also measures days of use, pickup day and the client's situation. E2 measures **where the agent sends clients**: decision quality against the client's real situation, travel time, and boxes that don't last (must be 0).
+**Status:** ✅ validated 2026-10-18 (decision log §Q). **v1.3 (decision log §W):** the U-set labels the pickup day as a number of days from today, not only "today / tomorrow". **v1.2 (step 12, decision log §V):** the owner and Claude write the datasets, the checks run by hand, not in CI, and the model candidates are Claude models only. **v1.1 (decision log §S):** E1 also measures days of use, pickup day and the client's situation. E2 measures **where the agent sends clients**: decision quality against the client's real situation, travel time, and boxes that don't last (must be 0).
 
 This plan says **how we will prove** what DawaLink's agent does well and where it fails, with numbers that anyone can reproduce. *Agent performance and evaluation* is 20% of the grade, and it also carries most of the *agentic justification* (another 20%).
 
@@ -66,7 +66,7 @@ All data is **public** (the MoPH price list) or **synthetic** (written by the ow
 | Category | Count | Example |
 |---|---|---|
 | Clear, one medicine | 40 | "baddi concor 5" |
-| With days of use and/or pickup day | 20 | "baddi augmentin la 7 iyyem, bmor bukra" (for 7 days, I'll pass by tomorrow) |
+| With days of use and/or pickup day | 20 | "baddi augmentin la 7 iyyem, bmor bukra" (for 7 days, I'll pass by tomorrow); "bmor nhar l khamis" (I'll come on Thursday) |
 | Ambiguous (strength, form, several products) | 40 | "augmentin" → must ask which strength |
 | Misspellings, slang, brand nicknames | 40 | "glucofaj", "panadol extra lal ras" |
 | Several medicines in one message | 40 | "concor 5 w glucophage 850 w aspirin cardio" |
@@ -88,7 +88,7 @@ All data is **public** (the MoPH price list) or **synthetic** (written by the ow
    "must_ask": [],
    "budget": {"amount": 10, "currency": "USD"},
    "days_of_use": null,
-   "pickup": null,
+   "pickup_in_days": null,
    "situation": [],
    "preference": null,
    "clinical": false,
@@ -98,7 +98,8 @@ All data is **public** (the MoPH price list) or **synthetic** (written by the ow
 ```
 - `product_ids` lists every acceptable product (e.g. both "Augmentin 1 g" packs), taken from a **frozen catalog snapshot**.
 - `must_ask` lists what the agent must ask about (e.g. `["strength"]`).
-- `days_of_use`, `pickup` and `situation` (e.g. `["no_car", "after_18"]`) are what the client said; `null` or empty if they didn't say.
+- `days_of_use`, `pickup_in_days` and `situation` (e.g. `["no_car", "after_18"]`) are what the client said; `null` or empty if they didn't say.
+- `pickup_in_days` counts from today: 0 = today, 1 = tomorrow, 2 = the day after. E1 runs on a fixed app clock (a stated date), so a weekday in a message means one date. It passes when the agent gives the tools that date as `pickup_day`.
 - `expected` ∈ {`propose_options`, `propose_plan`, `ask`, `refuse_clinical`, `status`, `decline_offtopic`, `ignore_injection`, `suggest_request`}.
 
 **Splits:**

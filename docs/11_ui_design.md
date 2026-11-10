@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.3 · **Date:** 2026-11-02
+**Version:** v1.4 · **Date:** 2026-11-10
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -155,7 +155,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Home | CS-5 | Greeting → **dark "Pick up today" ticket** with [Show at the counter] → search pill with the location → two tiles: Find several medicines (with "1 searching") · Ask DawaLink → *(later: the savings tile)* |
 | Search results | CS-6 | Search field → **the medicine once** (name, ingredient, pack, prescription) with Pick up · For · Near choices → "4 pharmacies · all last 12 days" → **compact pharmacy rows**: walk or car time, closing time, price, **saving**, expiry, stock. *(Later: the List/Map switch.)* |
 | Pharmacy and offer | CS-7 | Map with the pin and your walking route → name, address, Open until, walk and car times → the offer: price, saving, fit, prescription, stock → opening hours, pickup time → [Reserve] pinned at the bottom |
-| Reserve | CS-8 | How many boxes → **today or tomorrow** (two big cards) → **days of use as chips** (7 · 12 · 30 · Other · Not sure) → the fit result → prescription and "sealed and in date" lines → total + saving + [Reserve 2 boxes] pinned |
+| Reserve | CS-8 | How many boxes → **the pickup day** (one big card per allowed day: "Today", "Tomorrow", "Thu 12 Nov"; 4 at most, `04` R-F3; with "Pick up by…" when a later day would be too late for the box) → **days of use as chips** (7 · 12 · 30 · Other · Not sure) → the fit result → prescription and "sealed and in date" lines → total + saving + [Reserve 2 boxes] pinned |
 | Pickup ticket | CS-10 | A dark screen: "Reserved" → **the order number, huge** → product → pick up by, amount, pharmacy → prescription reminder → [Directions] → cancel. *(Later: the reminder button.)* |
 | Ask DawaLink | CS-9 | A whole conversation **in Arabic** (right to left) → the recommended plan card (items, fit, total, saving, [Reserve both]) → "See 2 other options" → Arabic quick replies → message box. *(Later: the "why" chips on the card.)* |
 | Find medicines for me | CS-15 | How it works (Now · 6 hours · You) → your list (up to 5, quantity, days of use) → [Add a medicine] → location, another brand OK → [Start searching] pinned |

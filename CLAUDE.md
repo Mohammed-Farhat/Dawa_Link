@@ -27,12 +27,12 @@ DawaLink connects clients who can't afford a medicine at full price with pharmac
 
 The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-10:
 
-- **Planning steps 00–12 are all validated** (decision log sections A–V). **Current versions:**
-  - `01` v5.2 · `02` v3.2 · `03` v4.4 · `04` v4.2 · `05` v3.2;
-  - `06` v1.3 · `07` v1.3 · `08` v1.2;
-  - `09` v1.3 (living: every change updates it) · `10` v1.2 (threat model; living: a change that adds an attack surface updates it);
+- **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
+  - `01` v5.3 · `02` v3.2 · `03` v4.5 · `04` v4.3 · `05` v3.2;
+  - `06` v1.4 · `07` v1.4 · `08` v1.3;
+  - `09` v1.4 (living: every change updates it) · `10` v1.2 (threat model; living: a change that adds an attack surface updates it);
   - `12` v2.0 (infrastructure and deployment);
-  - `11` v1.3 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
+  - `11` v1.4 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
@@ -52,6 +52,9 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - the login token travels in the `Authorization` header (`localStorage`), with CORS;
     - build the validated login first, then switch to Cognito behind our API before deploying (`12` §10);
     - the owner and Claude check everything and write the datasets.
+  - build decisions (§W, 2026-11-10), from questions found while building:
+    - one set of pickup days everywhere, as dates: today or the pharmacy's next open days, 3 at most;
+    - a later pickup day leaves fewer days before the box expires, and the agent passes the client's day to the tools.
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
 - **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
 - **Built so far:** steps 1 and 2 of 12 (2026-11-10): the code skeleton, and the domain core (`backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python). The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
@@ -98,6 +101,10 @@ If the user's first message is general ("let's continue"), summarize where we ar
    - **No PII is ever sent to the LLM.**
 9. **Communication:** plain language, short, a recommendation rather than a survey of options. Explain technical terms the first time.
 10. **Held-out data:** the held-out datasets are written in a separate Claude session. In the working session, never open those files.
+11. **Don't follow the docs blindly** (the owner's rule, 2026-11-10).
+    - When something looks wrong, missing or unproven (in a doc, in the code, or in your own assumption), check it and test it before building on it.
+    - Fix what is clearly a mistake, and say so. Raise what needs a decision, with a recommendation.
+    - Record both in [docs/build_plan.md](docs/build_plan.md) §5.
 
 ## 4. Design rules that must never be broken
 
@@ -107,7 +114,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **Cards come only from tools** (stored proposals); a tap sends the proposal ID, and the API re-validates it. **Text typed by pharmacies never reaches the LLM**, except the admin-approved pharmacy name (04 R-AG7, R-AG8). **Agent replies are shown as plain text** (no links, images or HTML; `10` TM-D5).
 - **Priority is first come, first served, in code.** Nobody can change it: not the LLM, not an admin ([ADR-003](docs/adr/ADR-003-priority-is-a-rule-not-the-llm.md), amended).
 - **The agent decides where the client goes** (ADR-004): code computes the travel times, routes and expiry fit; the agent weighs them with what the client said and recommends one pharmacy with a reason. **Coordinates never reach the LLM** (04 INV-24): location is stored rounded, outside `case_state`.
-- **A box is offered only if it lasts the client's days of use** from the chosen pickup day (04 R-F1, INV-25); unknown days → 1 day + an expiry warning.
+- **A box is offered only if it lasts the client's days of use** from the chosen pickup day (04 R-F1, INV-25); unknown days → 1 day + an expiry warning. **One set of pickup days everywhere** (search, the reserve sheet, the agent's tools): a date among today and the pharmacy's next open days, 3 at most. A later day leaves fewer days before expiry, and the agent never works out a date itself (04 R-F3, R-F6, N-49).
 - **Urgent needs:** requests and watches search for 6 hours and can only be started during request hours. Reservations are **instant** (no pharmacy confirmation); the pharmacy marks [Picked up] or [Not available]; the pickup time is set per pharmacy. A prescription is a **notice** only (04 §1, SM-5, R-P1).
 - **Our tables are the source of truth** ([ADR-001](docs/adr/ADR-001-conversation-state-and-agent-turns.md)):
   - LangGraph is stateless per turn;

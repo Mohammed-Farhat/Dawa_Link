@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.2 · **Date:** 2026-11-02
-**Status:** ✅ validated by the team (2026-10-20). **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.3 · **Date:** 2026-11-10
+**Status:** ✅ validated by the team (2026-10-20). **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -23,7 +23,7 @@
 
 ## 1. Goal
 
-Connect **clients who cannot afford a medicine at full price** with **pharmacies selling near-expiry stock at a discount**, so the client gets the medicine **when they need it, now**, and the pharmacy doesn't throw it away. Near-expiry medicine suits **urgent needs**: the client picks it up today or tomorrow, and the box must **last the days they'll use it**.
+Connect **clients who cannot afford a medicine at full price** with **pharmacies selling near-expiry stock at a discount**, so the client gets the medicine **when they need it, now**, and the pharmacy doesn't throw it away. Near-expiry medicine suits **urgent needs**: the client picks it up today or on one of the pharmacy's next open days (3 at most), and the box must **last the days they'll use it**.
 
 **The agent's purpose, in the professor's words:** *bring the client's need to the right pharmacy.* **The agent decides** which pharmacy the client should go to (or the route, for several medicines). It bases this on travel time, opening hours, price, stock and the expiry fit, together with what the client tells it.
 
@@ -82,7 +82,7 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
 2. **Collects what matters:**
    - quantity;
    - **days of use**;
-   - **pickup day** (today or tomorrow);
+   - **pickup day** (today, or one of the pharmacy's next open days, 3 at most; a later day leaves fewer days before the box expires);
    - location (shared, or a district);
    - budget;
    - alternatives OK;

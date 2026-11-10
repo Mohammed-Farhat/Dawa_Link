@@ -9,6 +9,7 @@ This is the one place that says **what is built, what comes next, and what was l
 ## In short
 
 - **Done:** steps 1 and 2: the code skeleton and the domain core (the exact rules as tested code).
+- **No question is waiting.** The pickup-day question (Q1) was decided on 2026-11-10 and applied (§3, §5; decision log §W).
 - **Next:** step 3, the database. It starts only when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
@@ -93,7 +94,7 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | `planning.py` | **The multi-medicine planner** (`plan_basket`) and the best visiting order |
 
 **Checked:**
-- 303 backend tests pass (263 of them for these rules); ruff and mypy are clean; every rule module is fully covered.
+- 304 backend tests pass (264 of them for these rules); ruff and mypy are clean; every rule module is fully covered.
 - Boundaries from the docs: days left −1, 0, 180, 181, 270, 271; request hours 07:59, 08:00, 20:00; "today" with 60 and 59 minutes of opening time left; the examples of R-F1 and R-T4; both daylight-saving changes of 2026.
 - The planner's first plan matches an independent brute-force search on about 290 random baskets, and it answers in 0.3 s at its largest size.
 - First come, first served gives the same result however the claims are ordered (INV-17).
@@ -102,6 +103,25 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 **Details added to the docs:**
 - `04` N-48: a plan visits at most 4 pharmacies, and the planner weighs at most 16.
 - `04` R-RQ5: only the plans that cover the most units are returned.
+
+### After step 2: the pickup-day decision (2026-11-10) ✅
+
+The owner decided Q1 (§5): one set of pickup days everywhere, and a later pickup day leaves fewer days before the box expires (decision log §W).
+
+**Built** (rules only; search, the reserve check and the agent's tools use them in steps 4 and 5):
+- `domain/pickup.py`:
+  - `pharmacy_pickup_days`: the days a pharmacy accepts (today, then its next open days, 3 at most);
+  - `pickup_choice`: the days on which one box still lasts, and whether the expiry is what rules a later day out;
+  - `upcoming_days`: the 7 days the agent can name (N-49).
+- `domain/expiry.py`: `last_pickup_day_that_fits`.
+
+**Checked:**
+- 316 backend tests pass (276 of them for the rules); ruff and mypy are clean; every rule module is fully covered.
+- The owner's example is a test: a box expiring in 7 days, a pharmacy that allows 3 days. Picked up on the third day, 5 days are left. 2 days of use fit on every day; 7 days of use fit today and tomorrow only; 8 days today only; 9 days never.
+- On 500 random opening schedules, the days that fit are always the pharmacy's earliest days, and never more than 4 days are offered.
+- `last_pickup_day_that_fits` agrees with the fit rule on every combination tried (about 3,500).
+
+**Docs changed:** `01` v5.3 · `03` v4.5 · `04` v4.3 (R-F1, R-F3, R-F6, N-49) · `06` v1.4 · `07` v1.4 (tools, hard rule 11, case state, worked turn A2) · `08` v1.3 · `09` v1.4 (FA-27) · `11` v1.4 · decision log §W.
 
 ---
 
@@ -120,10 +140,36 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | Rounding locations and the straight-line travel estimate (R-RT1) | Step 4, with routing |
 | The client's early-release limits (R-E5) | Step 4 |
 | Retry schedules (SM-12) and the escalation, report and flag states (SM-9 to SM-11) | Steps 4 and 5, with what uses them |
+| Search and the check at the tap take the pickup day as a date, and return `pickup_days_allowed` and `expiry_limits_pickup` (`06` v1.4) | Step 4, with search and reservations |
+| The agent's tools take `pickup_day`; the context lists the upcoming days; hard rule 11 (`07` v1.4) | Step 5 |
+| The reserve board on the v2 canvas still shows two cards ("Today", "Tomorrow"). `11` v1.4 wins: one card per allowed day | Step 8 |
 
 ---
 
-## 5. Good to know on this laptop
+## 5. Found while building: checked, or waiting for a decision
+
+The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that looks wrong, missing or unproven is checked and tested, then written here.
+
+### Checked
+
+| What | Result |
+|---|---|
+| The planner assumes an extra stop never shortens a trip. Real road times can be irregular. | Measured on 1,331 random baskets. With regular distances it always finds the best plan. With times bent by up to 30%, 1.7% of baskets get a trip about 2 minutes longer. It never covers fewer units. A test now guards this. |
+| The price formula in `05` §5 uses decimals and has no cap at the public price. | The code uses whole numbers and caps the price. The database function must do the same in step 3. |
+
+### Decided
+
+| # | What the docs disagreed on | The owner's decision |
+|---|---|---|
+| Q1 | **Pickup day.** The rule let a client pick today or the pharmacy's next 1–3 **open** days, but the reserve screen, the search filter and the agent's tools only knew "today / tomorrow". | **2026-11-10:** the rule and the agent use the same pickup days (3 open days at most), as dates. The agent must also know that a later pickup day leaves fewer days before the box expires. Applied in the docs and the rule code (decision log §W, BLD-D1 and BLD-D2). |
+
+### Waiting for a decision
+
+Nothing is waiting.
+
+---
+
+## 6. Good to know on this laptop
 
 - A Windows PostgreSQL service holds port 5432, so the project's database is at `127.0.0.1:5433`.
 - Use `127.0.0.1` for the database, not `localhost`: `localhost` tries IPv6 first here and waits for seconds.

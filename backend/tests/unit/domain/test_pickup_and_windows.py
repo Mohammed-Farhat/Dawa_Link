@@ -1,11 +1,23 @@
-"""Pickup days and deadlines, request hours and windows (docs/04 R-T3, R-T4, R-T8, R-F3)."""
+"""Pickup days and deadlines, request hours and windows.
 
+docs/04 R-T3, R-T4, R-T8, R-F3, R-F6, N-49.
+"""
+
+import random
 from datetime import date, timedelta
 
 import pytest
 
+from dawalink.domain.expiry import days_left, last_pickup_day_that_fits
 from dawalink.domain.opening_hours import WeeklyHours
-from dawalink.domain.pickup import pickup_days_allowed, pickup_deadline
+from dawalink.domain.pickup import (
+    PickupChoice,
+    pharmacy_pickup_days,
+    pickup_choice,
+    pickup_days_allowed,
+    pickup_deadline,
+    upcoming_days,
+)
 from dawalink.domain.windows import (
     early_release_respond_by,
     in_request_hours,
@@ -105,6 +117,95 @@ class TestPickupDays:
             pickup_days_allowed(
                 DAILY, setting, beirut_at(TODAY, "10:00"), expiry_date=FAR_EXPIRY, days_of_use=1
             )
+
+
+class TestALaterPickupDay:
+    """R-F6, the owner's example: a box expiring in 7 days, a pharmacy that holds for 3 days.
+
+    Picked up on the third day, only 5 days are left before it expires.
+    """
+
+    now = beirut_at(TODAY, "10:00")
+    box = TODAY + timedelta(days=7)
+    second_day = TODAY + timedelta(days=1)
+    third_day = TODAY + timedelta(days=2)
+    fourth_day = TODAY + timedelta(days=3)
+
+    def choice(self, days_of_use: int) -> PickupChoice:
+        return pickup_choice(DAILY, 3, self.now, expiry_date=self.box, days_of_use=days_of_use)
+
+    def test_the_pharmacy_accepts_today_and_its_next_three_open_days(self) -> None:
+        days = pharmacy_pickup_days(DAILY, 3, self.now)
+
+        assert days == [TODAY, self.second_day, self.third_day, self.fourth_day]
+
+    def test_five_days_are_left_on_the_third_day(self) -> None:
+        assert days_left(self.box, TODAY) == 7
+        assert days_left(self.box, self.third_day) == 5
+
+    def test_two_days_of_use_fit_on_every_day(self) -> None:
+        choice = self.choice(2)
+
+        assert choice.days == (TODAY, self.second_day, self.third_day, self.fourth_day)
+        assert not choice.expiry_limits_pickup
+
+    def test_seven_days_of_use_fit_today_and_tomorrow_but_not_on_the_third_day(self) -> None:
+        choice = self.choice(7)
+
+        assert choice.days == (TODAY, self.second_day)
+        assert choice.expiry_limits_pickup
+        assert last_pickup_day_that_fits(self.box, 7) == self.second_day
+
+    def test_eight_days_of_use_fit_today_only(self) -> None:
+        assert self.choice(8).days == (TODAY,)
+
+    def test_nine_days_of_use_never_fit(self) -> None:
+        choice = self.choice(9)
+
+        assert choice.days == ()
+        assert choice.expiry_limits_pickup
+
+    def test_the_days_that_fit_are_always_the_earliest_ones(self) -> None:
+        numbers = random.Random(7)
+        for _ in range(500):
+            hours = WeeklyHours.of(
+                {weekday: [("08:00", "21:00")] for weekday in numbers.sample(range(7), 4)}
+            )
+            setting = numbers.randrange(1, 4)
+            expiry = TODAY + timedelta(days=numbers.randrange(0, 12))
+            days_of_use = numbers.randrange(1, 10)
+
+            pharmacy_days = pharmacy_pickup_days(hours, setting, self.now)
+            choice = pickup_choice(
+                hours, setting, self.now, expiry_date=expiry, days_of_use=days_of_use
+            )
+
+            assert list(choice.days) == pharmacy_days[: len(choice.days)]
+            assert len(pharmacy_days) <= setting + 1
+            last_fitting = last_pickup_day_that_fits(expiry, days_of_use)
+            assert all(day <= last_fitting for day in choice.days)
+            assert all(day > last_fitting for day in pharmacy_days[len(choice.days) :])
+
+
+class TestUpcomingDays:
+    """N-49: the days the agent can name."""
+
+    def test_they_are_today_and_the_next_six_days(self) -> None:
+        days = upcoming_days(beirut_at(TODAY, "10:00"))
+
+        assert days[0] == TODAY
+        assert days[-1] == TODAY + timedelta(days=6)
+        assert len(days) == 7
+
+    def test_every_weekday_appears_exactly_once(self) -> None:
+        days = upcoming_days(beirut_at(TODAY, "10:00"))
+
+        assert sorted(day.weekday() for day in days) == list(range(7))
+
+    def test_today_is_the_beirut_date(self) -> None:
+        # Just after midnight in Beirut it is still the day before in UTC.
+        assert upcoming_days(beirut_at(TODAY, "00:10"))[0] == TODAY
+        assert upcoming_days(beirut_at(TODAY, "23:30"))[0] == TODAY
 
 
 class TestPickupDeadline:

@@ -4,7 +4,15 @@ from datetime import date, timedelta
 
 import pytest
 
-from dawalink.domain.expiry import Zone, days_left, fits, last_day_of_use, parse_expiry, zone_of
+from dawalink.domain.expiry import (
+    Zone,
+    days_left,
+    fits,
+    last_day_of_use,
+    last_pickup_day_that_fits,
+    parse_expiry,
+    zone_of,
+)
 from tests.unit.domain.helpers import TODAY
 
 
@@ -85,3 +93,18 @@ class TestExpiryFit:
     def test_days_of_use_start_at_one(self, days_of_use: int) -> None:
         with pytest.raises(ValueError, match="start at 1"):
             fits(self.box, TODAY, days_of_use)
+        with pytest.raises(ValueError, match="start at 1"):
+            last_pickup_day_that_fits(self.box, days_of_use)
+
+    def test_the_last_pickup_day_that_fits_is_the_same_rule_turned_around(self) -> None:
+        """R-F6: a box fits from a pickup day exactly when that day isn't too late."""
+        for left in range(15):
+            expiry = TODAY + timedelta(days=left)
+            for days_of_use in range(1, 15):
+                last = last_pickup_day_that_fits(expiry, days_of_use)
+                for ahead in range(-2, 15):
+                    pickup_day = TODAY + timedelta(days=ahead)
+                    assert fits(expiry, pickup_day, days_of_use) == (pickup_day <= last)
+
+    def test_one_day_of_use_can_be_picked_up_until_the_expiry_day(self) -> None:
+        assert last_pickup_day_that_fits(self.box, 1) == self.box

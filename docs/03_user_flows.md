@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.4 · **Date:** 2026-11-02
+**Version:** v4.5 · **Date:** 2026-11-10
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -11,7 +11,7 @@
 **v4.0 applies the professor's guidance** (decision log §S):
 - **the agent decides where the client should go** and recommends one pharmacy (or route) with a reason;
 - **real locations:** "Use my location" or a district; pharmacies pin themselves on a map; travel times by car and on foot;
-- **days of use and pickup day:** a box is offered only if it lasts the client's days of use.
+- **days of use and pickup day:** a box is offered only if it lasts the client's days of use, counted from the day they'll pick it up (today, or one of the pharmacy's next open days, 3 at most).
 
 **v3.0 applied design review #2** (decision log §N):
 - **urgent needs:** requests and watches search for 6 hours and can only be started 08:00–20:00;
@@ -137,7 +137,7 @@ flowchart TD
 #### CS-6 Search results
 - Search box with catalog autocomplete and fuzzy matching ("Did you mean Augmentin?").
 - **Location:** [📍 Use my location], or the profile's district.
-- **Filters:** max price, "include same-composition alternatives", **days of use** (optional) and **pickup: today / tomorrow**.
+- **Filters:** max price, "include same-composition alternatives", **days of use** (optional) and the **pickup day** (optional: today, tomorrow or a later day). With a pickup day, only pharmacies that accept that day are shown, and the fit is counted from it (`04` R-F3, R-F6). Without one, each pharmacy is shown for its earliest day.
 - **Sort:** best match (lasts your days of use → nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
 - **Layout (`11` v1.1):** the medicine (product, pack, prescription notice) is shown once at the top, then one compact row per pharmacy, with what the client saves.
 - **Each pharmacy row:**
@@ -173,7 +173,7 @@ flowchart TD
 │ Expires: 12 Jan 2027             │
 │ 📄 Prescription needed: bring it  │
 │    to the pharmacy.              │
-│ Pick up: (•) Today ( ) Tomorrow  │
+│ Pick up: (•)Today ( )Wed ( )Thu  │
 │ Days of use: [ 12 ] (optional)   │
 │ ✓ Lasts your 12 days             │
 │ ✅ Reserved immediately.          │
@@ -182,6 +182,7 @@ flowchart TD
 │ [ Cancel ]  [ Reserve ]          │
 └──────────────────────────────────┘
 ```
+- **Pickup day:** the sheet lists the pharmacy's allowed days with their dates (`04` R-F3): today if it stays open long enough, then its next open days within its pickup time, 3 at most. A day on which the box wouldn't last isn't offered. When that removes a day, a line says so: "Pick up by Wed 21 Oct: after that, the box won't last your 12 days." (R-F6).
 - **Group version** (from a plan): lists the card's items with **checkboxes (all ticked)** and the total. **[Reserve these]** reserves the ticked items **all or none**. Unticked items stay with the agent, which keeps looking for them.
 - **On tap:** the order is created and the stock locked at once → "Reserved ✅ R-7K3Q2F: show this number at the counter" → the chat or request thread gets a status card, and the pharmacy is notified.
 - **Failures:**
@@ -318,7 +319,7 @@ In-app list (see §1.7).
 | AF-2 | Ambiguous ("augmentin") | Chips [1g] [625mg] [457mg syrup]. It never guesses. |
 | AF-3 | Unknown name | Asks for the spelling or the ingredient on the box; after 2 tries, suggests the Search page. |
 | AF-4 | **Several medicines** ("baddi concor 5 w glucophage 850") | Calls `plan_basket` → **plan cards per pharmacy**, with the route ("Pharmacy C has both: 1 trip, 9 min by car, total …") → [Reserve these]. If the client prefers cheapest over fewest trips, it re-plans and explains. |
-| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. |
+| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. When the client says they'll come on a later day, the options are counted from that day: a box that lasts from today may not last from the last day, and the agent says by which day to pick it up (R-F6). |
 | AF-6 | Option taken at tap time | Offers the next option. |
 | AF-7 | **Pharmacy marks a reservation not available** | **Decision event** → the agent re-plans with the next options. |
 | AF-8 | Nothing fits | Explains what exists outside the constraints, then decides: early release (asks up to 3 **open** pharmacies) and/or a 6-hour watch, **or suggests a sourcing request** if there are several items. |
@@ -412,6 +413,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 | D11 | Requests and watches only 08:00–20:00 | ✅ (review #2) |
 | D12 | Location shared per search, chat or request (or a district); stored rounded; never sent to the AI | ✅ (§S) |
 | D13 | Days of use (default 1) and pickup day; only boxes that last are offered | ✅ (§S) |
+| D14 | One set of pickup days everywhere: today or the pharmacy's next open days, 3 at most; a later day leaves fewer days before the box expires | ✅ (§W) |
 
 ---
 

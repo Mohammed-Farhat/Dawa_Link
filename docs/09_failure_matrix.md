@@ -1,6 +1,6 @@
 # DawaLink: Failure Matrix (living)
 
-**Version:** v1.3 (validated; v1.3 applies step 12) · **Date:** 2026-11-02
+**Version:** v1.4 (validated; v1.4 adds FA-27, the pickup day) · **Date:** 2026-11-10
 **Builds on:** `04` v4.1 (rules, invariants) · `05` v3.1 (locks, clock check) · `06` v1.2 (error codes) · `07` v1.2 (agent limits, guards) · `08` v1.1 (evaluation) · `10` (threat model)
 **Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every change updates it (Definition of Done #6).
 
@@ -16,7 +16,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 
 ## In short
 
-- **122 failure modes in 6 groups:**
+- **123 failure modes in 6 groups:**
   - FX: external components (the LLM, email, database, workers…);
   - FA: the agent;
   - FR: races and timing;
@@ -111,6 +111,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FA-24 | **Context too long** for the model | Token count before the call | Older messages dropped first (the last 20 are already a cap); the case state is capped at 8 KB (N-33) | Nothing | `agent` | L |
 | FA-25 | **The model ignores per-item reporting** | `eval` (E2 check on the first reply) | Prompt + examples; failures → regression set. The request page always shows each item's status (code-owned). | The page is still complete | `eval` (E2) | L |
 | FA-26 | **The agent recommends a box that doesn't last, or a closed pharmacy** | Impossible by design: tools only return boxes that fit, with their hours; `propose_reservation` re-checks the fit; the output guard checks the `recommended` card (R-F5) | The proposal is refused with `DOES_NOT_FIT`; the agent picks another | Only valid recommendations | `agent` | M |
+| FA-27 | **The model passes a wrong pickup day** (a past date, a date it worked out itself, or a day no pharmacy accepts) | Tool input validation; the pharmacy's allowed days (R-F3); the upcoming days in the context (N-49) | A past date → `PICKUP_DAY_INVALID`, and the model corrects it or asks the client. A day nobody accepts → no options, with the latest pickup day that would work. The tap re-checks the day anyway (R-F5). | "The latest day you can pick this up is Fri 13 Nov." | 🔨 rule: `tests/unit/domain/test_pickup_and_windows.py`; `agent` (fake LLM script) and `eval` (E1) to come | M |
 
 ---
 
@@ -145,7 +146,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FR-25 | **New price list lowers the public price below an override** | R-C8 | The override is capped at the new public price; existing reservations keep their snapshot | New price on listings | `integration` | L |
 | FR-26 | **Out-of-date inventory: the client arrives and there's nothing** | Pharmacy presses [Not available] (O3) | Reservation cancelled for those units; the agent re-plans (request or chat orders); never a client penalty | "Pharmacy A didn't have it after all. Here's another option…" | `integration` + `eval` (E6) | M |
 | FR-27 | **The pharmacy forgets to press [Picked up]** after the client really collected the medicine | Deadline passes while still RESERVED | The reservation expires and would count as a no-show. **The client can contest it (FM-D9):** the expiry notice (CN-7) has a [I picked it up] button, which opens an escalation (`complaint`). An admin checks and removes the no-show (lifting a pause if one was set). The pharmacy's dashboard lists "pickups due today" as a reminder, and its stock is corrected with its next edit or upload. | "Expired: did you pick it up? [I picked it up]" | `integration` + `api` | M |
-| FR-28 | **A box stops fitting before the tap** (midnight passes, or the client changes the pickup day to tomorrow) | Fit re-checked at the tap (R-F5) | `DOES_NOT_FIT`; nothing reserved; other boxes offered | "This box expires on 21 Oct, before your last day of use." | `api` (time boundaries) | M |
+| FR-28 | **A box stops fitting before the tap** (midnight passes, or the client changes the pickup day to a later day, R-F6) | Fit re-checked at the tap (R-F5) | `DOES_NOT_FIT`; nothing reserved; other boxes offered | "This box expires on 21 Oct, before your last day of use." | `api` (time boundaries) | M |
 
 ---
 

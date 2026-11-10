@@ -1,8 +1,8 @@
 # DawaLink: API Contracts
 
-**Version:** v1.3 (validated; v1.3 applies step 12) · **Date:** 2026-11-02
+**Version:** v1.4 (validated; v1.4 applies the pickup-day decision) · **Date:** 2026-11-10
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
-**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI.
+**Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI. **v1.4 applies the pickup-day decision** (decision log §W): search takes a `pickup_day` date instead of "today / tomorrow", and a listing says when its expiry limits the pickup days.
 
 This document defines **every action** the website can ask the server to do, and **every interface between the main components** (the browser, the API, the agent, the worker and the database). For each endpoint it gives:
 - who may call it;
@@ -293,7 +293,8 @@ class Listing(BaseModel):        # a visible inventory item (04 SM-3)
     is_alternative: bool         # same composition, other brand (R-S4)
     travel: Travel               # from the client's location
     fits: bool | None            # lasts the client's days of use (R-F1); None = days unknown → warning
-    pickup_days_allowed: list[date]   # the days the client may choose (R-F3)
+    pickup_days_allowed: list[date]   # the days the client may choose (R-F3): the pharmacy's days on which the box still lasts
+    expiry_limits_pickup: bool   # the pharmacy accepts a later day, but the box wouldn't last from it (R-F6)
 
 class Reservation(BaseModel):    # an order (04 SM-5)
     id: UUID
@@ -466,7 +467,7 @@ All paths are relative to `/api/v1`.
 | `GET /catalog/products?q=&limit=` | logged in | → `{items: list[ProductSummary], did_you_mean: list[str]}` (fuzzy; brand or ingredient; **controlled products never returned**) | | R-C6, CS-6 |
 | `GET /catalog/products/{id}` | logged in | → `ProductSummary` + `{ingredients: [{name, strength}], atc_code}` | `NOT_FOUND` | R-C2 |
 | `GET /catalog/products/{id}/equivalents` | logged in | → `list[ProductSummary]` (same equivalence group only) | `NOT_FOUND` | R-C5 |
-| `GET /listings?product_id=\|q=&lat=&lon=\|district_id=&days_of_use=&pickup=today\|tomorrow&max_price=&currency=&include_alternatives=&sort=best\|nearest\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. Without `lat`/`lon`, the profile's district is used. With `days_of_use`, boxes that don't last are left out, and an empty result says why (`no_match: {latest_expiry}`). | `VALIDATION_ERROR` | R-S1–R-S5, R-F1 |
+| `GET /listings?product_id=\|q=&lat=&lon=\|district_id=&days_of_use=&pickup_day=&max_price=&currency=&include_alternatives=&sort=best\|nearest\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. Without `lat`/`lon`, the profile's district is used. With `days_of_use`, boxes that don't last are left out, and an empty result says why (`no_match: {latest_expiry, latest_pickup_day}`). With `pickup_day` (a date, today or later), only pharmacies that accept that day are returned, and the fit is counted from it; without it, from each pharmacy's earliest allowed day. | `VALIDATION_ERROR` | R-S1–R-S5, R-F1, R-F3, R-F6 |
 | `GET /listings/{id}` | client | → `Listing` + `{pharmacy_hours: [...], other_offers_count}` | `NOT_FOUND` (also when it stopped being visible) | CS-7 |
 
 ### 6.3 Reservations and offers (client)
@@ -755,6 +756,7 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | API-D14 | **New numbers** to add to `04` §5: polling 3 s · API rate limit 120 per minute per session · proposal validity 2 h · max page size 50 | ✅ 2026-10-18 | Numbers live only in `04` §5 |
 | API-D15 | **Threat-model changes** (`10`, §T): registration answers "check your email" whatever the email (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random refs; new limits (§4); IP limits from CloudFront | ✅ 2026-10-22 | Accounts can't be discovered; the admin account is protected; order numbers can't be guessed |
 | API-D16 | **Step 12 changes** (`12`, §V): the login token in the `Authorization` header; CORS for the website's address; `/health` always `200` while the process runs | ✅ 2026-11-02 | Two separate sites; a database outage must not kill healthy API tasks |
+| API-D17 | **Pickup days as dates** (decision log §W): `GET /listings` takes `pickup_day` (a date) instead of `pickup=today\|tomorrow`; a `Listing` carries `expiry_limits_pickup`; an empty result also gives the latest pickup day that would work | ✅ 2026-11-10 | One set of pickup days everywhere; a later pickup leaves fewer days before expiry |
 
 **Applied on validation (2026-10-18):**
 - the API-D14 numbers are in `04` §5 (N-28–N-31);

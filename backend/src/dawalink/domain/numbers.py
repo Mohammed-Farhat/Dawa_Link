@@ -24,6 +24,7 @@ SEARCH_WINDOW = timedelta(hours=6)  # N-11
 OFFER_VALIDITY = timedelta(hours=2)  # N-12
 WINDOW_CHECK_BEFORE_END = timedelta(hours=1)  # N-24
 DEFAULT_DAYS_OF_USE = 1  # N-44
+UPCOMING_DAYS_NAMED = 7  # N-49: the days given to the agent, one of each weekday
 
 # --- Client limits (N-10) ---
 MAX_OPEN_ORDERS = 5
