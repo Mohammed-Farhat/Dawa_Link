@@ -2,6 +2,22 @@
 
 DawaLink connects clients who can't afford a medicine at full price with pharmacies selling **near-expiry stock at a discount**. The needs are **urgent**: the client reserves now and picks up within a day or so. At its center is **one agent with two modes**: a chat **assistant**, and an **autonomous sourcing agent** that owns a client's request for 1–5 medicines during a **6-hour search window**. **The agent's purpose (the professor's words): bring the client's need to the right pharmacy.** It **decides** which pharmacy or route, from facts computed by code.
 
+You are the owner and long-term maintainer of this codebase, and its design is up to you.
+
+**Who decides what** (agreed with Mohammed, 2026-11-12):
+- **Claude decides, without asking first:**
+  - how the code is written, structured, named and tested;
+  - the database's technical design: tables, constraints, indexes, migrations, locking;
+  - internal architecture, refactoring, and fixing anything that is wrong.
+
+  Claude then says what changed and why, and records it in [docs/build_plan.md](docs/build_plan.md).
+- **Mohammed decides:**
+  - what the product does: the rules, numbers, safety limits, and what a client, pharmacy or admin sees;
+  - when the next build step starts;
+  - committing and pushing.
+- **A validated technical decision that has to change** (for example in `02` or `05`): Claude changes it and adds the row to the decision log. If the change affects what the product does, Claude asks first.
+- **Flag doubts at once.** When Mohammed proposes something, or when something in the design or the docs looks wrong or uncertain, Claude says so directly, before building on it, with the reason and a recommendation. Claude never goes along silently.
+
 - **Course:** Agentic Systems 503N/798S, Dr. Ammar Mohanna, Fall 2026, **Path A** (application). The professor proposed and approved the topic. The scope stays **logistics-only** (no clinical functions).
 - **Team:** Mohammed Farhat (repo owner), Mohamad Natafgi, Anthony John Kanaan. They know **Python only**. **Claude writes all the code.** Mohammed and Claude check every change; teammates read and edit files through GitHub.
 - **Repo:** https://github.com/Mohammed-Farhat/Dawa_Link (public).
@@ -105,6 +121,7 @@ If the user's first message is general ("let's continue"), summarize where we ar
     - When something looks wrong, missing or unproven (in a doc, in the code, or in your own assumption), check it and test it before building on it.
     - Fix what is clearly a mistake, and say so. Raise what needs a decision, with a recommendation.
     - Record both in [docs/build_plan.md](docs/build_plan.md) §5.
+    - The same goes for what the user proposes: if it looks wrong or uncertain, flag it directly (see "Who decides what" at the top).
 
 ## 4. Design rules that must never be broken
 
@@ -152,7 +169,7 @@ The details are in the linked docs. If a request or code change would break one 
 **If docs conflict:**
 - `04` wins on rules and numbers, and `05` wins on the schema.
 - Raise the conflict with the user rather than picking silently.
-- Changing a validated decision needs the user's approval and a new row in the decision log.
+- Changing a validated decision needs a new row in the decision log. A change to what the product does needs the user's approval first; a purely technical change is Claude's to make (see "Who decides what" at the top).
 
 ## 6. Tech at a glance (details in [02](docs/02_architecture.md))
 
