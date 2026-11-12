@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.2 (v1.2 applies step 12) · **Date:** 2026-11-02
+**Version:** v1.3 (v1.3 adds the Ministry's website to §4.3) · **Date:** 2026-11-12
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
@@ -182,6 +182,7 @@ flowchart LR
 | **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. | The same as the LLM |
 | **OpenRouteService** | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key | **Who** the client is: no account, no session, no name |
 | **AWS SES** | Emails | The client's email address and the template text (order number, medicine, pharmacy, deadline) | Chat content |
+| **The Ministry of Public Health's website** (from the owner's laptop only, when the catalog is rebuilt; the running app never calls it) | The price list and the drug database pages | Plain requests for public pages | Anything about a user |
 | **OpenStreetMap tiles** (fetched by the browser, not our server) | The map | The viewer's IP address and the map area shown | Anything from our server |
 | **OpenStreetMap directions** (a link the client taps, `11` §11) | Directions to a pharmacy | The pharmacy's pin as the destination, and the viewer's IP address | The client's location: it is never put in the link |
 
@@ -413,7 +414,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 | TM-D5 | **Agent replies are plain text:** no links, images, HTML or Markdown; the output guard removes URLs | ✅ 2026-10-22 | Blocks phishing links and image-based data leaks from an injected agent (OWASP LLM05) |
 | TM-D6 | **Layered cost caps:**<br>• per client per day;<br>• global per day (10% of the monthly budget);<br>• global per month;<br>• the provider's own spend limit as a hard backstop;<br>• ≤ 10 location updates per hour per client.<br>(N-46, N-47) | ✅ 2026-10-22 | One bad day can't burn the month; a bug in our counting can't cause a surprise bill; the routing quota is protected |
 | TM-D7 | **Registration never reveals whether an email has an account** (R-AU4, R-AU7):<br>• client and pharmacy registration always answer "check your email";<br>• an existing account's owner gets "you already have an account" (CN-18, ≤ 1 per address per day);<br>• the verification link logs the user in;<br>• pharmacies confirm their email before entering the approval queue;<br>• login takes the same time for unknown emails. | ✅ 2026-10-22 | Having a DawaLink account hints at a health need, so it mustn't be discoverable. The pharmacy form follows the same rule because emails are unique across all accounts. |
-| TM-D8 | **Admin two-factor login (TOTP)**, set up by `create_admin.py`; a lost phone means re-running the script. Contact-detail views (`pii.view`) ≤ 30 per hour per admin, with an alert. Restores A-D2. | ✅ 2026-10-22 | The most powerful account, and a public repo; a small, well-known library (`pyotp`) |
+| TM-D8 | **Admin two-factor login (TOTP)**, set up by the `create_admin` command; a lost phone means running it again. Contact-detail views (`pii.view`) ≤ 30 per hour per admin, with an alert. Restores A-D2. | ✅ 2026-10-22 | The most powerful account, and a public repo; a small, well-known library (`pyotp`) |
 | TM-D9 | **What each third party receives** is stated (§4.3) and kept to the minimum. `06` §2.3 is corrected: the routing service gets the rounded point, with no identity. **The exact data each outside API needs is confirmed during the build**, and §4.3 is updated then. | ✅ 2026-10-22 | An honest data map for the privacy constraint (G-4) and the report |
 | TM-D10 | **End-of-project hygiene:** scan evidence before exporting it, turn on push protection, set backup retention, delete everything after the demo | ⏸ postponed to the end of the project (the team's choice) | Handled when we finish |
 

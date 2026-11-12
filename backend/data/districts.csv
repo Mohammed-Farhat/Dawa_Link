@@ -1,0 +1,32 @@
+# Lebanon's 26 districts (qada) in its 9 governorates (mohafaza), with a reference point each.
+# The reference point is used when a client picks a district instead of sharing a location
+# (docs/04 R-S2). It is the district's main town, to about 1 km: approximate coordinates
+# written by hand from general map knowledge (OpenStreetMap), NOT an official dataset.
+# TO CHECK on a map before the demo. An id is never changed or reused once it is in use.
+id,district,governorate,ref_lat,ref_lon
+1,Beirut,Beirut,33.89380,35.50180
+2,Akkar,Akkar,34.54280,36.07970
+3,Tripoli,North,34.43670,35.84970
+4,Zgharta,North,34.39750,35.89440
+5,Bsharri,North,34.25110,36.01140
+6,Batroun,North,34.25530,35.65810
+7,Koura,North,34.30000,35.80000
+8,Miniyeh-Danniyeh,North,34.47060,35.93640
+9,Keserwan,Keserwan-Jbeil,33.98080,35.61780
+10,Jbeil,Keserwan-Jbeil,34.12300,35.65190
+11,Matn,Mount Lebanon,33.89470,35.56250
+12,Baabda,Mount Lebanon,33.83390,35.54420
+13,Aley,Mount Lebanon,33.80530,35.60000
+14,Chouf,Mount Lebanon,33.69530,35.58030
+15,Zahle,Beqaa,33.84670,35.90200
+16,West Beqaa,Beqaa,33.63000,35.78000
+17,Rashaya,Beqaa,33.50080,35.84360
+18,Baalbek,Baalbek-Hermel,34.00580,36.21810
+19,Hermel,Baalbek-Hermel,34.39420,36.38470
+20,Sidon,South,33.56310,35.36890
+21,Tyre,South,33.27330,35.19390
+22,Jezzine,South,33.54420,35.58500
+23,Nabatieh,Nabatieh,33.37890,35.48390
+24,Marjeyoun,Nabatieh,33.36060,35.59140
+25,Hasbaya,Nabatieh,33.39780,35.68500
+26,Bint Jbeil,Nabatieh,33.11940,35.43360

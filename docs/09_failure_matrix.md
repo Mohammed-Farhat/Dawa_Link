@@ -1,6 +1,6 @@
 # DawaLink: Failure Matrix (living)
 
-**Version:** v1.4 (validated; v1.4 adds FA-27, the pickup day) · **Date:** 2026-11-10
+**Version:** v1.5 (validated; v1.5 marks the rows build step 3 covers) · **Date:** 2026-11-12
 **Builds on:** `04` v4.1 (rules, invariants) · `05` v3.1 (locks, clock check) · `06` v1.2 (error codes) · `07` v1.2 (agent limits, guards) · `08` v1.1 (evaluation) · `10` (threat model)
 **Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every change updates it (Definition of Done #6).
 
@@ -142,7 +142,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FR-21 | **DST change in Beirut** | Time-zone database | Business times in Beirut time, stored in UTC; tested around the change dates | Correct times | ✅ `tests/unit/domain/test_clock.py` | L |
 | FR-22 | **Pharmacy suspended with active offers and reservations** | SM-1 | OFFERED → cancelled (requests re-plan); RESERVED kept and can be picked up | "Pharmacy unavailable: we're looking elsewhere" (offers only) | `integration` | M |
 | FR-23 | **Client suspended mid-request** | SM-2 | Sessions revoked; open orders cancelled; requests and watches cancelled | Logged out | `integration` | M |
-| FR-24 | **Product becomes controlled after a catalog import** | Import script + O6 | Listings hidden; open orders cancelled by the system; claims cancelled | "This medicine is no longer available on DawaLink." | `integration` | M |
+| FR-24 | **Product becomes controlled after a catalog import** | Import script + O6 | Listings hidden; open orders cancelled by the system; claims cancelled | "This medicine is no longer available on DawaLink." | 🔨 the flag and the hidden listing: `tests/db/test_catalog_import.py`; cancelling open orders (O6) comes with the services | M |
 | FR-25 | **New price list lowers the public price below an override** | R-C8 | The override is capped at the new public price; existing reservations keep their snapshot | New price on listings | `integration` | L |
 | FR-26 | **Out-of-date inventory: the client arrives and there's nothing** | Pharmacy presses [Not available] (O3) | Reservation cancelled for those units; the agent re-plans (request or chat orders); never a client penalty | "Pharmacy A didn't have it after all. Here's another option…" | `integration` + `eval` (E6) | M |
 | FR-27 | **The pharmacy forgets to press [Picked up]** after the client really collected the medicine | Deadline passes while still RESERVED | The reservation expires and would count as a no-show. **The client can contest it (FM-D9):** the expiry notice (CN-7) has a [I picked it up] button, which opens an escalation (`complaint`). An admin checks and removes the no-show (lifting a pause if one was set). The pharmacy's dashboard lists "pickups due today" as a reminder, and its stock is corrected with its next edit or upload. | "Expired: did you pick it up? [I picked it up]" | `integration` + `api` | M |
@@ -166,10 +166,10 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FI-10 | **Upload: bad rows** (bad date, negative or non-numeric quantity, past expiry, unmatched product, controlled) | R-U5 | Row errors with "did you mean…"; other rows unaffected | Summary: "13 errors [Download errors]" | `unit` + `api` | L |
 | FI-11 | **Upload: duplicate rows, odd encodings, YYYY-MM dates** | R-U1, R-T7 | Duplicates summed; UTF-8/UTF-8-BOM accepted (others → row errors); month-only dates = last day of the month | Correct summary | `unit` | L |
 | FI-12 | **Manual add of an existing batch** | Unique key | `ITEM_EXISTS` with the item to edit instead | "This batch exists: edit it instead" | `api` | L |
-| FI-13 | **Override above the public price; negative price** | R-PR1 + trigger | `PRICE_ABOVE_PUBLIC` / `422`; the database trigger is a second guard | Clear message | `api` + `integration` | M |
+| FI-13 | **Override above the public price; negative price** | R-PR1 + trigger | `PRICE_ABOVE_PUBLIC` / `422`; the database trigger is a second guard | Clear message | 🔨 trigger: `tests/db/test_triggers.py`; `api` to come | M |
 | FI-14 | **Early-release answer with too many units or a too-high price** | R-E6 | `UNITS_INVALID` / `PRICE_ABOVE_PUBLIC` | Clear message | `api` | L |
 | FI-15 | **Opening hours that overlap or are invalid** | Service check | `422` with the conflicting range | Form error | `api` | L |
-| FI-16 | **Catalog import file malformed** (missing columns, new format) | Import script | Aborts with a report; the old catalog stays (one transaction) | Admins see the import report | `integration` | M |
+| FI-16 | **Catalog import file malformed** (missing columns, new format) | Import script | Aborts with a report; the old catalog stays (one transaction) | Admins see the import report | ✅ `tests/unit/catalog/test_moph.py` (a changed layout is refused before anything is written), `tests/db/test_catalog_import.py` | M |
 | FI-17 | **Expired or reused verification link** | R-AU4 | `TOKEN_INVALID` | "This link expired. [Resend]" | `api` | L |
 | FI-18 | **Location not shared, or GPS inaccurate** | No coordinates, or accuracy > 1 km reported by the browser | The profile's district is used; times labeled "about"; the client can share again | "Showing times from Hamra. [Use my location]" | `api` | L |
 | FI-19 | **Client doesn't know the days of use** | Field empty / the agent asked | 1 day assumed (N-44); every card shows the expiry date with the warning (R-F2) | "Expires 25 Oct: make sure that's enough; the pharmacist can check your prescription." | `api` + `eval` (E1) | L |
@@ -209,7 +209,7 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 
 | ID | Failure | Detected by | What the system does | User sees | Test | Sev |
 |---|---|---|---|---|---|---|
-| FO-1 | **Migration fails during deploy** | One-off `prepare_db` task fails | Don't update the services; the old version keeps running; migrations are tested up **and down** before committing (`12` §7) | Nothing | `manual` + `12` | H |
+| FO-1 | **Migration fails during deploy** | One-off `prepare_db` task fails | Don't update the services; the old version keeps running; migrations are tested up **and down** before committing (`12` §7) | Nothing | 🔨 up, down and up again: `tests/db/test_schema.py`; run twice: `tests/db/test_seed_and_prepare.py`; `manual` at the deploy | H |
 | FO-2 | **Bad release** (errors after deploy) | Health check, app alerts (R-AL) | Roll back to the previous task definition (`12` §12) | A short disruption at most | `manual` runbook | M |
 | FO-3 | **Reconciliation finds stock that doesn't add up** (INV-2) | The daily reconciliation query (`05` §4) | Alert with the item IDs; investigated by hand; regression test added | Nothing | `integration` | H |
 | FO-4 | **Retention task fails** | Clock-check daily task error | Retried the next day; alert if 2 days in a row | Nothing | `failure` | L |

@@ -53,7 +53,7 @@ docker compose up -d postgres
 | Type check | `uv run mypy` |
 | Run the API | `uv run --env-file ../.env uvicorn dawalink.api.main:create_app --factory --reload` |
 | Run the worker | `uv run --env-file ../.env python -m dawalink.worker` |
-| Prepare the database | `uv run --env-file ../.env python -m dawalink.ops.prepare_db` |
+| Prepare the database (logins, tables, catalog, demo data) | `uv run --env-file ../.env python -m dawalink.ops.prepare_db` |
 | Re-export the API description | `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json` |
 
 **Website** (run these inside `frontend/`):
@@ -65,6 +65,24 @@ docker compose up -d postgres
 | Lint and type check | `npm run lint` and `npm run typecheck` |
 | Run with live reload | `npm run dev` (stop the `web` container first: `docker compose stop web`) |
 | Regenerate the API types | `npm run gen:api` |
+
+## The medicine catalog
+
+The catalog is the Ministry of Public Health's public price list, joined with its Lebanon
+National Drugs Database (both on [moph.gov.lb](https://www.moph.gov.lb)). The Ministry's files
+are **not in this repository**: download them once, inside `backend/`:
+
+| Step | Command |
+|---|---|
+| 1. Download the price list and the database pages (about 5 minutes) | `uv run python -m dawalink.ops.fetch_moph --date 2026-11-11` |
+| 2. Join them into `data/moph/catalog.csv` | `uv run python -m dawalink.ops.build_catalog` |
+| 3. Load them (also done by "Prepare the database" when there are no products yet) | `uv run --env-file ../.env python -m dawalink.ops.import_catalog` |
+
+`--date` is the date of a list on the Ministry's
+[price list page](https://www.moph.gov.lb/en/DynamicPages/index/3/37424/drugs-public-price-list-).
+The team's own rules (controlled medicines, the no-prescription list, corrections) are in
+`backend/data/catalog_overrides.toml`. Without the catalog file everything still runs, with
+nothing to search for.
 
 ## What's where
 

@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 
-**Status of this log:** 2026-11-10, covers steps 01–12, design review #2, the professor's guidance and the decisions taken during the build (§W). Sections A–F and I–W validated (2026-10-13 to 2026-11-10; §U amended on 2026-10-23 with the v2 design, UI-D13, and on 2026-11-02 with the AI notice, UI-D14). §G is superseded by `04` §5; §H is open.
+**Status of this log:** 2026-11-12, covers steps 01–12, design review #2, the professor's guidance and the decisions taken during the build (§W). Sections A–F and I–W validated (2026-10-13 to 2026-11-10; §U amended on 2026-10-23 with the v2 design, UI-D13, and on 2026-11-02 with the AI notice, UI-D14). §G is superseded by `04` §5; §H is open.
 
 ---
 
@@ -309,7 +309,7 @@ From [`10_threat_model.md`](10_threat_model.md). The team validated these on 202
 | TM-D5 | **Agent replies are plain text;** the output guard removes URLs | 07 §7.2 | ✅ 2026-10-22 |
 | TM-D6 | **Layered cost caps:** per client per day; global per day (10% of the month); global per month; the provider's own spend limit; ≤ 10 location updates per hour | 04 R-AS, N-46, N-47 | ✅ 2026-10-22 |
 | TM-D7 | **Registration never reveals whether an email has an account:** always "check your email"; an existing account's owner gets CN-18; the verification link logs the user in; pharmacies confirm their email before the approval queue | 04 R-AU4, R-AU7; 06 §6.1; 03 CS-2, PS-1 | ✅ 2026-10-22 |
-| TM-D8 | **Admin two-factor login (TOTP)** restored (A-D2), set up by `create_admin.py`; contact-detail views limited to 30 per hour per admin | 04 R-AU6, N-47; 05 `users` | ✅ 2026-10-22 |
+| TM-D8 | **Admin two-factor login (TOTP)** restored (A-D2), set up by the `create_admin` command; contact-detail views limited to 30 per hour per admin | 04 R-AU6, N-47; 05 `users` | ✅ 2026-10-22 |
 | TM-D9 | **What each third party receives** is stated (`10` §4.3) and kept to the minimum; `06` §2.3 corrected (the routing service gets the rounded point, with no identity). The exact data each outside API needs is confirmed during the build, and the table is updated then. | 10 §4.3; 06 §2.3 | ✅ 2026-10-22 |
 | TM-D10 | **End-of-project hygiene:** scan evidence before export, push protection, backup retention, delete everything after the demo | 10 §10 | ⏸ postponed to the end of the project (team's choice) |
 
@@ -378,6 +378,8 @@ Questions found while building ([build plan](build_plan.md) §5) and decided by 
 |---|---|---|---|
 | BLD-D1 | **One set of pickup days everywhere.** The search filter, the reserve screen and the agent's tools all use the rule's days: today (if the pharmacy stays open long enough), or the pharmacy's next open days within its pickup time, **3 open days at most**. A pickup day is a **date**; the "today / tomorrow" choice in `03`, `06`, `07` and `11` is gone. The agent takes the date from a list of upcoming days it is given, and never works one out (N-49). | 04 R-F3, N-49; 03 CS-6, CS-8; 06 §5.3, §6.2; 07 §3.1, §4.2, §6.2; 11 §5 | ✅ 2026-11-10 (owner) |
 | BLD-D2 | **A later pickup day leaves fewer days before the box expires, and the agent takes that into account.** It passes the day the client said to the tools, and the fit is counted from that day. Each option lists the days on which it still lasts, and flags when the expiry, not the pharmacy, rules a later day out; the client is then told the last day that works.<br>*The owner's example:* 2 days of use, a box expiring in 7 days, picked up on the third day → 5 days are left, so it still fits. With 7 days of use, the same box fits today or tomorrow, but not on the third day. | 04 R-F1, R-F6; 06 §5.3; 07 §4.2, §5.2 (rule 11); 09 FA-27 | ✅ 2026-11-10 (owner) |
+| BLD-D3 | **The catalog comes from the Ministry of Public Health's two public sources, kept outside git.** The price list (.xls) gives the products and prices; the Lebanon National Drugs Database pages add the ATC code, brand or generic, and the ingredients. They are joined by name and price, then strength and form; a product that can't be matched safely is left out. The Ministry's files and the catalog file built from them stay in `backend/data/moph/` on the laptop and are **never committed**; the small catalog file ships inside the backend image. Corrects O3 and closes O5. | 04 §2; 05 §9, §12 | ✅ 2026-11-12. **The owner decided:** download the marketed price list, and keep the Ministry's files outside git. **Claude decided, and reported it:** also reading the 200 public database pages (the price list has no ingredients), the join, and leaving out the products that can't be matched safely. |
+| BLD-D4 | **The database as built.** The technical changes to `05` made while building: the price function in whole numbers with a cap, frozen numbers guarded by tests, four database addresses with fixed logins, the audit log's delete rule by login, commands as modules (DB-D19–DB-D23). | 05 §12 | ✅ 2026-11-12 (Claude, under "Who decides what") |
 
 *Also from this step:*
 - new rule code with the owner's example as tests: `pickup_choice`, `pharmacy_pickup_days` and `upcoming_days` (`domain/pickup.py`), `last_pickup_day_that_fits` (`domain/expiry.py`);
@@ -418,6 +420,8 @@ Questions found while building ([build plan](build_plan.md) §5) and decided by 
 |---|---|---|
 | O1 | Which Claude model (chosen by measurement). The provider is settled: Anthropic's Claude API (T14). | Evaluation step |
 | O2 | ~~Who pays for the real LLM~~ → the owner's Claude Max plan (T15) | ✅ |
-| O3 | Catalog source: **checked 2026-10-13.** The MoPH "Lebanon National Drugs Database" price list is public, with downloadable .xls/.xlsx per exchange-rate date. Columns: ATC, Name, B/G, Ingredients (with strengths), Dosage, Form, Price (LBP). **No pack size, no prescription/OTC flag, no controlled flag** (there is a separate Narcotics section). The rules for this gap are in `04` §2. | Step 04 decisions |
+| O3 | Catalog source: **checked 2026-10-13.** *Corrected 2026-11-12 (BLD-D3): the price list has no ATC code, brand/generic or ingredients; those are on the drug database's web pages. It does have a pack size, a code and a registration number.* The MoPH "Lebanon National Drugs Database" price list is public, with downloadable .xls/.xlsx per exchange-rate date. Columns: ATC, Name, B/G, Ingredients (with strengths), Dosage, Form, Price (LBP). **No pack size, no prescription/OTC flag, no controlled flag** (there is a separate Narcotics section). The rules for this gap are in `04` §2. | Step 04 decisions |
 | O4 | ~~Values in §G~~ → done in `04` §5 | ✅ |
-| O5 | Where the Ministry price file lives (in the repo or uploaded separately) | Before the catalog import in AWS |
+| O5 | ~~Where the Ministry price file lives~~ → outside git, in `backend/data/moph/` on the laptop; the catalog file built from it ships inside the backend image (BLD-D3) | ✅ |
+| O6 | **The controlled list needs a pharmacist's check.** The Ministry publishes no downloadable list, so it is built from the international schedules, ATC classes, tramadol and pregabalin (`backend/data/catalog_overrides.toml`; 168 products hidden) | Before the demo |
+| O7 | **The no-prescription (OTC) list is empty,** so every product shows the prescription notice. The team fills it in the same file. | Before the demo |

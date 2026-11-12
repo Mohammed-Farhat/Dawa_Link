@@ -1,8 +1,8 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.0 · **Date:** 2026-11-02
+**Version:** v2.1 · **Date:** 2026-11-12
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
-**Status:** ✅ validated by the owner (2026-11-02, decision log §V). It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
+**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
 This is the last planning step. It says **how we work, where DawaLink runs, and how it gets there**. Everything is done by hand. Nothing here has been run yet, so the first deploy is also its first test.
 
@@ -198,9 +198,11 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
 **Migrations run by hand, before the services update** (the validated one-off task, `05` §9). `python -m dawalink.ops.prepare_db` does the following, and running it twice is safe:
 1. Creates or updates the three database roles (DB-D10), and sets the app role's 5 s statement timeout (N-40).
 2. Runs `alembic upgrade head`.
-3. If the catalog is empty, imports it. Where the Ministry price file lives is decided later (O5).
-4. If demo mode is on and there are no pharmacies, seeds the demo data. Demo account passwords come from the secret, never from the repo.
+3. Gives the app and retention logins exactly their privileges, and writes the reference data (discount tiers, districts).
+4. If the catalog is empty, imports it from the catalog file inside the image (`data/moph/catalog.csv`). That file is built on the laptop from the Ministry's downloads and is **never committed** (decision log BLD-D3, O5 closed): **build it before building the image** (`fetch_moph`, then `build_catalog`; `05` §9). Without it, the step still succeeds and logs a warning.
+5. If demo mode is on and there are no pharmacies, seeds the demo data. Demo account passwords come from the secret, never from the repo.
 
+- **It needs all four database addresses** (`DATABASE_ADMIN_URL`, `DATABASE_MIGRATOR_URL`, `DATABASE_URL`, `DATABASE_RETENTION_URL`), each using its own fixed login name. The API gets only `DATABASE_URL`; the worker also gets the retention one (§8).
 - **If it fails, don't update the services.** The old version keeps running (FO-1).
 - **A rollback restores code, not the database.** So a migration must keep the previous version working: add first, remove later. Renaming or dropping a column takes two releases.
 - **Local:** Claude runs `upgrade` and `downgrade` before any commit that changes the schema.
@@ -254,7 +256,7 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
 - **Registration must still never reveal an account:** Cognito reports existing emails, so our API hides that and always says "check your email".
 - **Cost:** free up to 10,000 monthly users.
 - **Local tests** use a fake. Cognito itself runs in AWS, so development needs a real user pool from this step on.
-- **The docs change in that step,** including how admins are created, which replaces `create_admin.py`.
+- **The docs change in that step,** including how admins are created, which replaces the `create_admin` command.
 - **If we deploy before switching:** verification emails reach only SES-verified addresses unless production access is granted, and creating an admin needs a one-off task.
 
 ---

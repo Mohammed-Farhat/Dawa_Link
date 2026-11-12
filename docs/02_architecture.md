@@ -1,6 +1,6 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.2 · **Date:** 2026-11-02
+**Version:** v3.3 (v3.3 updates the repository layout in §6 to what is built) · **Date:** 2026-11-12
 **Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 **Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
@@ -210,15 +210,16 @@ dawalink/
 │   ├── src/dawalink/
 │   │   ├── config.py
 │   │   ├── domain/        # pure: state machines, rules, deadlines, pricing, zones, allocator, plan_basket
-│   │   ├── db/            # models, session, repositories
+│   │   ├── db/            # models, session, logins and their privileges, reference data
+│   │   ├── catalog/       # the Ministry's lists: reading, joining, "same medicine" keys, import
 │   │   ├── services/      # use cases (reservations, requests, matching, uploads…)
 │   │   ├── api/           # routers, auth (sessions), SSE, errors
 │   │   ├── agent/         # graph, tools, proposals, guards, prompts/
 │   │   ├── worker/        # the clock check loop, email outbox
-│   │   ├── ops/           # one-off commands (prepare_db)
+│   │   ├── ops/           # one-off commands: prepare_db, fetch_moph, build_catalog,
+│   │   │                  #   import_catalog, seed_demo (create_admin comes with logins)
 │   │   └── observability/
-│   ├── scripts/           # catalog import, create admin, seed data
-│   ├── data/              # districts.csv, catalog_overrides.yaml
+│   ├── data/              # districts.csv, catalog_overrides.toml; moph/ (downloads, not in git)
 │   ├── migrations/
 │   └── tests/
 ├── frontend/              # client (search, assistant, requests), pharmacy, admin

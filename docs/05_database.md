@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.2 · **Date:** 2026-11-02
+**Version:** v3.3 · **Date:** 2026-11-12
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -181,10 +181,12 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid | PK |
-| import_id | uuid | FK catalog_imports (provenance, `04` R-C1) |
+| moph_code | int | NN, U: **the Ministry's own code**; what a new list is matched on |
+| import_id | uuid | FK catalog_imports: the last import that contained the product (`04` R-C1) |
+| registration_number, presentation_text, manufacturer | text | As in the source. The presentation is the pack: "30", "100ml". |
 | moph_name | text | NN |
 | search_name | text | NN, normalized (lowercase, no punctuation) · **GIN trigram index** |
-| brand_generic | char(1) | `IN ('B','G')` |
+| brand_generic | text | `IN ('B','G','BioTech','BioHuman')`, as the Ministry classes products; nullable |
 | ingredients_raw, dosage_text, form_text | text | As in the source |
 | form_group | text | e.g. `tablet`, `capsule`, `tablet_mr` (`04` R-C5) |
 | atc_code | text | indexed |
@@ -192,11 +194,11 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | units_per_pack | int | NN, default 1, ≥ 1 (INV-19) |
 | prescription_required | boolean | NN, default **true** (`04` R-C7; drives the notice R-P1 only) |
 | controlled | boolean | NN, default false (`04` R-C6) |
-| equivalence_key | text | nullable (null = no equivalents); indexed |
+| equivalence_key | text | nullable (null = no equivalents); indexed. The ingredients with their strengths, the form group and the ATC code (`04` R-C5). |
 
 **`product_ingredients`**: PK (product_id, position) · name · `name_normalized` (**GIN trigram**, so clients can search by ingredient) · strength_value numeric · strength_unit text.
 
-**`pricing_tiers`**: min_days · max_days · discount_pct. Seeded from config (`04` N-4); read by the price function. This keeps a single source for the tiers.
+**`pricing_tiers`**: min_days · max_days · discount_pct. Seeded from config (`04` N-4); read by the price function. This keeps a single source for the tiers. **Tiers can't overlap** (an exclusion constraint), so a number of days left has at most one discount.
 
 ### 3.3 Inventory
 
@@ -404,7 +406,7 @@ When a tap arrives, the API checks the owner, `used_at IS NULL`, `expires_at > n
 
 ### 3.7 Admin
 
-**`escalations`**: id uuid · client_id · conversation_id · request_id nullable · `reason IN ('client_asked_human','emergency_claim','cannot_resolve','window_ending','suspicious','complaint')` · `summary` (≤ 300) · `notes` jsonb (later escalations appended while this one is open) · `state IN ('OPEN','IN_PROGRESS','RESOLVED')` · resolution_note · resolved_by · created_at · resolved_at.
+**`escalations`**: id uuid · client_id · conversation_id (`ON DELETE SET NULL`, so the 30-day chat purge isn't blocked) · request_id nullable · `reason IN ('client_asked_human','emergency_claim','cannot_resolve','window_ending','suspicious','complaint')` · `summary` (≤ 300) · `notes` jsonb (later escalations appended while this one is open) · `state IN ('OPEN','IN_PROGRESS','RESOLVED')` · resolution_note · resolved_by · created_at · resolved_at.
 - `UNIQUE (client_id) WHERE state <> 'RESOLVED'` gives one open escalation per client; a new one is **appended** to `notes` (`04` SM-9).
 - Admin replies are stored as `chat_messages` with `author='admin'`.
 - **There is no priority column anywhere:** priority can't be changed (`04` R-PRI4).
@@ -426,7 +428,7 @@ Index `(next_attempt_at) WHERE state IN ('QUEUED','FAILED')`.
 |---|---|
 | id | bigint PK |
 | occurred_at | timestamptz |
-| actor_type | `IN ('client','pharmacy','admin','agent','system')` |
+| actor_type | `IN ('CLIENT','PHARMACY','ADMIN','AGENT','SYSTEM')`: the rules' own list of actors |
 | actor_id | uuid nullable |
 | entity_type, entity_id | text, uuid |
 | action | text (e.g. `order.reserve`, `order.not_available`, `claim.allocate`, `pii.view`, `clock.advance`) |
@@ -434,7 +436,7 @@ Index `(next_attempt_at) WHERE state IN ('QUEUED','FAILED')`.
 | reason | text |
 
 Indexes: (entity_type, entity_id, occurred_at) and (occurred_at).
-**Append-only:** the app role has `INSERT, SELECT` only, plus a trigger that rejects UPDATE and DELETE (only the retention role may delete rows older than 1 year).
+**Append-only:** the app login has `INSERT, SELECT` only. A trigger rejects every UPDATE and TRUNCATE, from anyone, and every DELETE except by the retention login. The retention task deletes rows older than 1 year, with the cutoff taken from the app clock (§12).
 
 **`travel_time_cache`**: PK (pharmacy_id, origin_cell, mode) · `origin_cell` text (the client's rounded location) · `mode IN ('car','walk')` · minutes int · km numeric(6,2) · `source IN ('road','straight')` · computed_at. Entries older than 24 h (N-43) are ignored and purged daily (`04` R-RT1).
 
@@ -491,12 +493,16 @@ HAVING ii.qty_reserved <> COALESCE(SUM(o.qty_locked), 0);
 
 ```sql
 -- Policy price (04 SM-3), tiers from the pricing_tiers table (04 N-4)
+-- As built: whole-number maths only, and never above the public price (INV-5).
+-- NULL when no tier covers the days left: the box is outside the published window.
 CREATE FUNCTION effective_price_lbp(public_price bigint, override bigint, days_left int)
 RETURNS bigint LANGUAGE sql STABLE AS $$
-  SELECT COALESCE(override,
-         (floor(public_price * (1 - t.discount_pct / 100.0) / 1000) * 1000)::bigint)
-  FROM pricing_tiers t
-  WHERE days_left BETWEEN t.min_days AND t.max_days
+  SELECT CASE
+    WHEN override IS NOT NULL THEN LEAST(GREATEST(override, 0), public_price)
+    ELSE (SELECT public_price * (100 - t.discount_pct) / 100 / 1000 * 1000
+          FROM pricing_tiers t
+          WHERE days_left BETWEEN t.min_days AND t.max_days)
+  END
 $$;
 
 -- The only definition of "visible to clients" (INV-16)
@@ -530,7 +536,7 @@ RETURNS smallint LANGUAGE sql STABLE AS $$
 $$;
 ```
 
-Travel times aren't computed in SQL: the routing service is called from Python (`04` R-RT1). The window bounds (0, 180) and the early-release zone (181–270) come from config, in a later revision of these functions. They're shown as literals here for clarity.
+Travel times aren't computed in SQL: the routing service is called from Python (`04` R-RT1). The window bounds (0, 180) and the early-release zone (181–270) are literals in the migration, which must stay a fixed record. Tests compare every function with the Python rules over all boundaries, so a changed number can't go unnoticed (§12). A fifth function, `expiry_zone(days_left)`, gives the zone itself.
 
 ---
 
@@ -560,7 +566,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
 | Email | The address is resolved at send time, not copied into the outbox |
 | Secrets | Password hashes (argon2id), session and token hashes, and the admins' TOTP secrets encrypted with a key from Secrets Manager. No plain-text secrets in tables. |
-| **Database roles** | `dawalink_migrator`: DDL, used only by migrations. `dawalink_app`: DML on app tables, **INSERT/SELECT only on `audit_events`**, no DDL. `dawalink_retention`: deletes for retention only. The `prepare_db` step creates them (`12` §7). |
+| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours and claim skips.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims; nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
 | At rest / in transit | RDS encryption at rest; TLS required for connections; credentials in Secrets Manager |
 
 ---
@@ -585,18 +591,20 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 
 | What | How |
 |---|---|
-| **Catalog** | `backend/scripts/import_catalog.py --file <MoPH .xls> --date <list date> --rate <LBP per USD>` creates a `catalog_imports` row and upserts products and ingredients. It then applies the team file `backend/data/catalog_overrides.yaml` (controlled, OTC list, equivalence fixes, `units_per_pack`). |
-| Districts | `backend/data/districts.csv` (district, governorate; source cited in the file) |
+| **Catalog** | Three commands, run inside `backend/`:<br>1. `python -m dawalink.ops.fetch_moph --date <list date>` downloads the Ministry's price list (.xls) and its drug database pages into `backend/data/moph/`, which is **never committed** (decision log O5);<br>2. `python -m dawalink.ops.build_catalog` joins them into `catalog.csv` (the date and exchange rate are read from the list);<br>3. `python -m dawalink.ops.import_catalog` creates a `catalog_imports` row, then inserts or updates products (matched on the Ministry's code) and their ingredients.<br>The import applies the team file `backend/data/catalog_overrides.toml` (controlled medicines, the no-prescription list, corrections for single products). |
+| Districts | `backend/data/districts.csv` (26 districts, 9 governorates, a reference point each; written by `prepare_db`) |
 | Pricing tiers | Seeded from config (`04` N-4) |
-| Admins | `backend/scripts/create_admin.py` (the only way to create an admin, A-D1) |
-| **Demo and simulation data** | `backend/scripts/seed_demo.py --seed 42`: synthetic pharmacies (with hours and pickup days), inventory and clients. **Same seed → same data** (reproducibility). |
+| Admins | A `create_admin` command (the only way to create an admin, A-D1). Built with logins, in build step 7. |
+| **Demo and simulation data** | `python -m dawalink.ops.seed_demo --seed 42`: synthetic pharmacies (with hours and pickup days), inventory and clients. **Same seed → same data** (reproducibility). The accounts get their passwords in build step 7. |
 | **Migrations** | Alembic; one reviewed revision per change to the schema; functions and triggers live in migrations. `upgrade` and `downgrade` are run on a real Postgres before committing. A migration keeps the previous version working (add first, remove later). In AWS, `prepare_db` runs `upgrade head` as a one-off ECS task before each service update, and downgrades are never run there (`12` §7). |
 
 ---
 
 ## 10. Database tests
 
-- **Constraints and triggers:** each CHECK, partial unique index and trigger has a test that tries to break it.
+*Built in step 3 (`backend/tests/db/`): the constraint, trigger, function, login and migration tests. The concurrency and clock-check tests come with the services, in step 4.*
+
+- **Constraints and triggers:** each CHECK, partial unique index and trigger has a test that tries to break it. A test fails if a constraint is added without one.
 - **Concurrency:** two connections race:
   - for the last unit;
   - on a group reserve against a single reserve;
@@ -639,3 +647,44 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | DB-D16 | Locations | **Pharmacy pin; district reference points; the client's location rounded to ~100 m** on conversations, requests and claims, outside `case_state` | The routes the professor asked for, with the least personal data and none of it reaching the LLM | ✅ 2026-10-20 (§S) |
 | DB-D17 | Expiry fit and travel times | **`pickup_day` / `days_of_use` columns + a `fits()` function; a 24 h travel-time cache** | One definition of "fits"; fewer calls to the routing service | ✅ 2026-10-20 (§S) |
 | DB-D18 | Admin two-factor login | **`users.totp_secret` (encrypted) + `totp_last_step`** | The admin is the most powerful account (`10` TM-D8) | ✅ 2026-10-22 (§T) |
+| DB-D19 | Catalog source | **The Ministry's price list joined with its drug database pages;** products keyed by the Ministry's code | The price list alone has no ingredients | ✅ 2026-11-12 (build; decision log BLD-D3) |
+| DB-D20 | SQL functions | **Whole-number maths; frozen literals compared with the Python rules by tests;** `expiry_zone()`; tiers can't overlap | One behavior in SQL and Python; a migration stays a fixed record | ✅ 2026-11-12 (build, Claude) |
+| DB-D21 | Logins | **Four addresses, fixed login names, grants rebuilt from lists** | Least privilege that can't drift | ✅ 2026-11-12 (build, Claude) |
+| DB-D22 | Audit log | **Append-only for everyone; only the retention login deletes** | No rule depends on the database's clock | ✅ 2026-11-12 (build, Claude) |
+| DB-D23 | Commands and files | **`python -m dawalink.ops.…`; `catalog_overrides.toml`; `districts.csv`** | One image; no extra library | ✅ 2026-11-12 (build, Claude) |
+
+---
+
+## 12. As built (build step 3, 2026-11-12)
+
+The schema is the first migration, `backend/migrations/versions/20261112_1816_initial_schema.py`; the models are in `backend/src/dawalink/db/models/`. What changed from v3.2, and why:
+
+| Change | Why |
+|---|---|
+| **The catalog comes from two Ministry sources, joined** (DB-D19) | The price list (.xls) has no ATC code, no brand/generic and no ingredients. Those are on the Lebanon National Drugs Database web pages. Without ingredients there is no "same medicine, another brand". |
+| **The "same medicine" key includes the ATC code** | Found in the real list: 4 groups mixed different uses, because a form doesn't always say what a product is for (eye and ear drops, a mouth gel and a skin gel, two kinds of insulin). With the ATC code in the key, none do. |
+| `products` gains `moph_code` (unique), `registration_number`, `presentation_text`, `manufacturer` | The Ministry's code is the key a new list is matched on, so a product keeps its ID. The presentation is the pack ("30", "100ml"), which the price list does have. |
+| `brand_generic` has four values: `B`, `G`, `BioTech`, `BioHuman` | That is what the Ministry uses |
+| **The price function uses whole numbers and caps at the public price;** tiers can't overlap (an exclusion constraint) (DB-D20) | The v3.2 formula used decimals, had no cap, and returned two rows if tiers overlapped |
+| A new function `expiry_zone(days_left)` | One SQL definition of the zones, for early release too |
+| **Frozen numbers, guarded by tests** (DB-D20) | A migration can't import the app's numbers, or changing a number would silently change old migrations. `tests/db/test_functions.py` compares every SQL function with the Python rule over all boundaries. |
+| **The audit log's delete rule is by login, not by age** (DB-D22) | A trigger can't ask "older than 1 year" without the database's own clock (DB-D6). Only the retention login may delete; its task passes the cutoff from the app clock. Nobody can update or truncate. |
+| `audit_events.actor_type` uses the rules' own list: `CLIENT`, `PHARMACY`, `ADMIN`, `AGENT`, `SYSTEM` | One list instead of two spellings |
+| `escalations.conversation_id` is `ON DELETE SET NULL` | With the default it would have blocked the 30-day chat purge |
+| **Four database addresses, fixed login names, grants rebuilt from lists on every run** (DB-D21) | `prepare_db` needs the master and migrator logins; the API and worker get only the app login. The app login can't write the catalog, the reference data or the schema. `tests/db/test_roles.py` connects as each login. |
+| **Commands are modules in the one image** (`python -m dawalink.ops.…`), and the catalog rules file is TOML (DB-D23) | One image for everything (`12` §6); TOML needs no extra library |
+| Checks added: order and request numbers must have the right shape; a reservation needs a pickup day; an accepted early-release ask needs its quantity and price | Cheap guards for rules that already existed |
+
+**The catalog on 2026-11-12** (the Ministry's list of 11 November 2026, rate 89,500 LBP per USD):
+
+| Step | Products |
+|---|---|
+| On the price list | 5,739 |
+| With a price | 5,725 |
+| Matched to the drug database, and imported | **5,628** (98.3%) |
+| Left out: not clear which database row it is / not in the database | 95 / 2 |
+| With an equivalence key | 5,467 |
+| With at least one equivalent (another product with the same key) | 3,405 |
+| Flagged as controlled | 168 |
+
+**Left for the services (step 4):** the race tests and the clock-check tests of §10, the reconciliation queries (INV-2, INV-18), cancelling open orders when a product becomes controlled (O6), and the retention task itself.

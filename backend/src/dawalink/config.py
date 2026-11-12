@@ -18,7 +18,13 @@ class Settings(BaseSettings):
 
     app_env: Literal["local", "test", "aws"] = "local"
     app_version: str = "dev"
+    # The app's own login: the API and the worker read and write rows with it (docs/05 §7).
     database_url: str
+    # The other three logins. Only the commands that need one are given it (docs/12 §8):
+    # the master and migrator logins prepare the database, the retention login deletes old rows.
+    database_admin_url: str | None = None
+    database_migrator_url: str | None = None
+    database_retention_url: str | None = None
     # The website's origin: the only site the API accepts browser calls from (docs/06 §2.1).
     website_url: str
     demo_mode: bool = False
@@ -34,6 +40,14 @@ class Settings(BaseSettings):
         if parts.path not in ("", "/") or parts.query or parts.fragment:
             raise ValueError("must be an origin without a path")
         return f"{parts.scheme}://{parts.netloc}"
+
+
+def required(settings: Settings, *names: str) -> list[str]:
+    """The values of settings a command can't run without, or a ConfigError naming the missing."""
+    missing = sorted(name.upper() for name in names if not getattr(settings, name))
+    if missing:
+        raise ConfigError("Missing or invalid settings: " + ", ".join(missing))
+    return [str(getattr(settings, name)) for name in names]
 
 
 def load_settings() -> Settings:

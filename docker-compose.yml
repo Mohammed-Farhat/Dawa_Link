@@ -10,7 +10,20 @@ x-backend: &backend
     LOG_LEVEL: ${LOG_LEVEL:-INFO}
     DEMO_MODE: ${DEMO_MODE:-true}
     WEBSITE_URL: ${WEBSITE_URL:-http://localhost:5173}
-    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    # The app's own login: the only one the API has (docs/05 §7, docs/12 §8).
+    DATABASE_URL: postgresql+psycopg://dawalink_app:${APP_DB_PASSWORD:-app-local-only}@postgres:5432/${POSTGRES_DB}
+
+# The worker also deletes what has passed its retention time, with its own login.
+x-worker-env: &worker-env
+  <<: *backend-env
+  DATABASE_RETENTION_URL: &retention-url postgresql+psycopg://dawalink_retention:${RETENTION_DB_PASSWORD:-retention-local-only}@postgres:5432/${POSTGRES_DB}
+
+# Only the one-off database step gets the master and migrator logins. It creates the others.
+x-prepare-env: &prepare-env
+  <<: *backend-env
+  DATABASE_RETENTION_URL: *retention-url
+  DATABASE_ADMIN_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  DATABASE_MIGRATOR_URL: postgresql+psycopg://dawalink_migrator:${MIGRATOR_DB_PASSWORD:-migrator-local-only}@postgres:5432/${POSTGRES_DB}
 
 services:
   postgres:
@@ -33,6 +46,7 @@ services:
   # Runs once before the services start, exactly like the one-off task in AWS (docs/12 §7).
   prepare-db:
     <<: *backend
+    environment: *prepare-env
     command: ["python", "-m", "dawalink.ops.prepare_db"]
     depends_on:
       postgres:
@@ -53,6 +67,7 @@ services:
 
   worker:
     <<: *backend
+    environment: *worker-env
     command: ["python", "-m", "dawalink.worker"]
     depends_on:
       prepare-db:

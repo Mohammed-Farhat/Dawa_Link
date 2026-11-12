@@ -30,11 +30,20 @@ src = ["src", "tests", "migrations"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "PT", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# Generated table definitions and SQL text have long lines.
+"migrations/versions/*" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 files = ["src", "tests", "migrations"]
+
+[[tool.mypy.overrides]]
+# Reads the Ministry's .xls price list; it ships no type information.
+module = ["xlrd"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -47,4 +56,5 @@ dev = [
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.4",
+    "xlrd>=2.0.2",
 ]

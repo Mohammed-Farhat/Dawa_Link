@@ -1,0 +1,87 @@
+# DawaLink catalog rules, maintained by the team (docs/04 R-C5, R-C6, R-C7).
+# The catalog import reads this file. After changing it, run the import again.
+
+# ---------------------------------------------------------------------------------------
+# Controlled medicines (R-C6). A controlled product never appears anywhere on DawaLink:
+# it can't be uploaded, listed, searched, reserved, watched or requested.
+#
+# The Ministry publishes no downloadable list, so this list is built from:
+#   - the international schedules: the INCB "Yellow List" (narcotic drugs, 1961 Convention)
+#     and "Green List" (psychotropic substances, 1971 Convention), which Lebanon's
+#     Law 673/1998 refers to;
+#   - the WHO ATC classes that group those substances;
+#   - tramadol and pregabalin, which are not on the international schedules but are widely
+#     restricted in the region.
+# When in doubt a medicine is listed: wrongly hiding one is safer than wrongly showing one.
+# TO CHECK with a pharmacist against the Ministry's own narcotics and psychotropics lists.
+# ---------------------------------------------------------------------------------------
+[controlled]
+# A product is controlled if its ATC code starts with one of these.
+atc_prefixes = [
+    "N01AH",  # opioid anaesthetics (fentanyl, sufentanil, remifentanil)
+    "N01AF",  # barbiturate anaesthetics (thiopental)
+    "N02A",   # opioid analgesics, alone or combined (morphine, oxycodone, codeine, tramadol)
+    "N03AA",  # barbiturates (phenobarbital, primidone)
+    "N03AE",  # benzodiazepines used in epilepsy (clonazepam)
+    "N05BA",  # benzodiazepine anxiolytics (diazepam, alprazolam, bromazepam, lorazepam)
+    "N05CA",  # barbiturate hypnotics
+    "N05CB",  # barbiturates, combinations
+    "N05CD",  # benzodiazepine hypnotics (midazolam, nitrazepam)
+    "N05CF",  # benzodiazepine-like hypnotics (zolpidem, zopiclone)
+    "N06BA",  # stimulants (methylphenidate, amfetamine, modafinil)
+    "N07BC",  # medicines for opioid dependence (methadone, buprenorphine)
+    "A08AA",  # centrally acting appetite suppressants (phentermine, amfepramone)
+]
+# ...or if one of its ingredients contains one of these words.
+ingredients = [
+    # narcotics
+    "morphine", "codeine", "dihydrocodeine", "ethylmorphine", "pholcodine", "opium",
+    "oxycodone", "hydrocodone", "hydromorphone", "oxymorphone", "pethidine", "meperidine",
+    "fentanyl", "sufentanil", "remifentanil", "alfentanil", "methadone", "buprenorphine",
+    "tramadol", "tapentadol", "nalbuphine", "pentazocine", "butorphanol", "dextropropoxyphene",
+    "ketamine", "esketamine", "dronabinol", "nabilone", "cannabidiol",
+    "diphenoxylate", "difenoxin", "piritramide", "tilidine", "levorphanol", "thebaine",
+    "dextromoramide", "nicomorphine", "oxybate", "hydroxybutyrate",
+    # barbiturates
+    "phenobarbital", "phenobarbitone", "primidone", "thiopental", "butalbital", "amobarbital",
+    "secobarbital", "pentobarbital", "barbital", "butobarbital", "cyclobarbital",
+    "allobarbital", "methylphenobarbital", "methaqualone", "glutethimide",
+    # benzodiazepines and similar
+    "diazepam", "alprazolam", "lorazepam", "bromazepam", "clonazepam", "clobazam",
+    "chlordiazepoxide", "clorazepate", "midazolam", "nitrazepam", "oxazepam", "prazepam",
+    "temazepam", "tetrazepam", "triazolam", "lormetazepam", "flunitrazepam", "estazolam",
+    "flurazepam", "medazepam", "zolpidem", "zopiclone", "eszopiclone", "zaleplon",
+    "meprobamate", "brotizolam", "clotiazepam", "cloxazolam", "ketazolam", "loprazolam",
+    "nordazepam", "loflazepate", "halazepam", "pinazepam", "mexazolam", "remimazolam",
+    "etizolam",
+    # stimulants and appetite suppressants
+    "methylphenidate", "dexmethylphenidate", "amfetamine", "amphetamine", "dexamfetamine",
+    "lisdexamfetamine", "modafinil", "armodafinil", "phentermine", "amfepramone",
+    "diethylpropion", "sibutramine", "mazindol", "fenfluramine", "phendimetrazine",
+    "benzphetamine", "fenproporex", "mefenorex", "pemoline", "fenetylline", "cathine",
+    "phencyclidine", "zipeprol",
+    # restricted in the region
+    "pregabalin",
+]
+
+# ---------------------------------------------------------------------------------------
+# Medicines sold without a prescription (R-C7). Every other product shows the notice
+# "Prescription needed: bring it to the pharmacy." The notice is all this list changes:
+# the pharmacist checks at the counter either way.
+#
+# A product is on the list when EVERY one of its ingredients contains one of these words.
+# The list starts empty, so every product shows the notice. TO FILL by the team.
+# ---------------------------------------------------------------------------------------
+[otc]
+ingredients = []
+
+# ---------------------------------------------------------------------------------------
+# Corrections for single products, by the Ministry's code. Example:
+#
+#   [products.12345]
+#   controlled = true
+#   prescription_required = false
+#   units_per_pack = 1
+#   equivalence_key = ""      # "" means: this product has no equivalents
+# ---------------------------------------------------------------------------------------
+[products]

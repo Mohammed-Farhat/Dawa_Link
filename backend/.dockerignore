@@ -4,3 +4,7 @@
 .ruff_cache
 __pycache__
 tests
+# The Ministry's raw downloads stay on the laptop; only the small catalog file ships.
+data/moph/pages
+data/moph/*.xls
+data/moph/*.log

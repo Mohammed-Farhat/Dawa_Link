@@ -591,7 +591,7 @@ In-app list (§2.4).
 - Email + password.
 - Accounts are created from the command line only (A-D1).
 - 5 failures → 15-min lock + alert.
-- **Then a 6-digit code from an authenticator app** (TOTP, `04` R-AU6). It's set up when `create_admin.py` creates the admin; a lost phone means re-running the script.
+- **Then a 6-digit code from an authenticator app** (TOTP, `04` R-AU6). It's set up when the `create_admin` command creates the admin; a lost phone means re-running the script.
 
 #### AS-2 Overview
 ```

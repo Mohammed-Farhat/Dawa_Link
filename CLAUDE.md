@@ -44,10 +44,10 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-10:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.2 · `03` v4.5 · `04` v4.3 · `05` v3.2;
+  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.4 · `05` v3.3 (the schema as built);
   - `06` v1.4 · `07` v1.4 · `08` v1.3;
-  - `09` v1.4 (living: every change updates it) · `10` v1.2 (threat model; living: a change that adds an attack surface updates it);
-  - `12` v2.0 (infrastructure and deployment);
+  - `09` v1.5 (living: every change updates it) · `10` v1.3 (threat model; living: a change that adds an attack surface updates it);
+  - `12` v2.1 (infrastructure and deployment);
   - `11` v1.4 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
@@ -70,14 +70,20 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - Mohammed and Claude check everything and write the datasets.
   - build decisions (§W, 2026-11-10), from questions found while building:
     - one set of pickup days everywhere, as dates: today or the pharmacy's next open days, 3 at most;
-    - a later pickup day leaves fewer days before the box expires, and the agent passes the client's day to the tools.
+    - a later pickup day leaves fewer days before the box expires, and the agent passes the client's day to the tools;
+    - the catalog is the Ministry's price list joined with its drug database pages; the Ministry's files stay outside git, in `backend/data/moph/` (BLD-D3, 2026-11-12).
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
 - **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
-- **Built so far:** steps 1 and 2 of 12 (2026-11-10): the code skeleton, and the domain core (`backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python). The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
-- **Next: step 3, the database** (`05`: tables, constraints, triggers, migrations, roles, seed). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
+- **Built so far:** steps 1 to 3 of 12:
+  - the code skeleton and the domain core (2026-11-10; `backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python);
+  - the database (2026-11-12): the 34 tables and the first migration, four database logins, the catalog import (5,628 real medicines) and the demo seed. `05` §12 lists what changed while building.
+
+  The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
+- **Next: step 4, the services** (search, reserve, pickup, claims and matching, offers, early release, requests, the clock check). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
-  - O5: where the Ministry price file lives (decided later);
+  - O6: the controlled-medicines list needs a pharmacist's check (`backend/data/catalog_overrides.toml`);
+  - O7: the no-prescription list is empty, so every product shows the prescription notice;
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
@@ -188,6 +194,9 @@ The details are in the linked docs. If a request or code change would break one 
 - **Commands** (the full list is in the root [README.md](README.md)):
   - everything: `docker compose up --build` (website http://localhost:5173, API http://localhost:8000);
   - backend, inside `backend/`: `uv run --env-file ../.env pytest` · `uv run ruff check .` · `uv run ruff format .` · `uv run mypy`;
+  - the database, inside `backend/`: `uv run --env-file ../.env python -m dawalink.ops.prepare_db` (logins, migrations, privileges, reference data, catalog, demo data);
+  - the catalog, inside `backend/`: `uv run python -m dawalink.ops.fetch_moph --date <list date>`, then `uv run python -m dawalink.ops.build_catalog`;
+  - after a schema change: `uv run --env-file ../.env alembic revision --autogenerate -m "..."` with `DATABASE_URL` set to the migrator address, then add functions and triggers by hand and run the tests;
   - after an API change: `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json`, then `npm run gen:api` inside `frontend/`;
   - website, inside `frontend/`: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
 
@@ -196,6 +205,9 @@ The details are in the linked docs. If a request or code change would break one 
 - **Machine:** Windows 11. PowerShell is the main shell; Git Bash is also available.
 - **Local LLM:** Ollama 0.40.3 on an RTX 3070 Laptop (8 GB VRAM, 16 GB RAM).
 - **Local ports:** the project's PostgreSQL container is at `127.0.0.1:5433` (a Windows PostgreSQL service holds 5432). Use `127.0.0.1`, not `localhost`, for the database: `localhost` tries IPv6 first here and waits for seconds.
+- **Docker Desktop** may be off after a restart: start it before `docker compose` or the tests.
+- **Database logins:** `.env` holds four addresses (master, migrator, app, retention). The tests need all four, and prepare their own `dawalink_test` database.
+- **The Ministry's files** are in `backend/data/moph/` (ignored by git). Never commit them, and never paste rows from them into tracked files; tests use invented products.
 - **Slow downloads:** `npm install` and Docker pulls can take many minutes on this connection; run them in the background.
 - **Console encoding:** the console uses cp1252, so printing emoji from Python fails. Set `PYTHONIOENCODING=utf-8` or avoid printing them.
 - **Helper scripts:** write multi-line Python helpers to a file and run them. Don't inline them in shell heredocs.

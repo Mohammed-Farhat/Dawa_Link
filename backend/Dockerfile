@@ -18,6 +18,8 @@ WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY alembic.ini ./
 COPY migrations ./migrations
+# Reference data, the catalog rules and, when it was built on this laptop, the catalog file.
+COPY data ./data
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 USER dawalink
 EXPOSE 8000
