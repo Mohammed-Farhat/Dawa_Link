@@ -61,13 +61,13 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - compact search rows; a dark pickup ticket; the pharmacy's counter-first Today screen.
 
     The v2 extras wait until later: the savings total on Home, text size, Undo on [Picked up], the reminder button, the List/Map switch, and the "why" chips.
-  - infrastructure (§V, 2026-11-02): a simple, manual deployment, chosen by the owner:
+  - infrastructure (§V, 2026-11-02): a simple, manual deployment, chosen by Mohammed:
     - develop locally in Docker, then deploy once to AWS (Ireland) after the project is finished; only Mohammed touches AWS;
     - AWS is set up by hand in the console. No CDK, CloudFormation, CI/CD, PR reviews or advanced GitHub features: don't propose them again;
     - two CloudFronts (website on S3, API on a public ALB), no domain, no certificate;
     - the login token travels in the `Authorization` header (`localStorage`), with CORS;
     - build the validated login first, then switch to Cognito behind our API before deploying (`12` §10);
-    - the owner and Claude check everything and write the datasets.
+    - Mohammed and Claude check everything and write the datasets.
   - build decisions (§W, 2026-11-10), from questions found while building:
     - one set of pickup days everywhere, as dates: today or the pharmacy's next open days, 3 at most;
     - a later pickup day leaves fewer days before the box expires, and the agent passes the client's day to the tools.
@@ -80,7 +80,7 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
   - O5: where the Ministry price file lives (decided later);
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
-  - the owner and Claude write and label the ~300-request understanding set and the ~120-request safety set;
+  - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
   - the team creates realistic inventory files in the upload template.
 
 If the user's first message is general ("let's continue"), summarize where we are and ask before starting the next step.
@@ -117,7 +117,7 @@ If the user's first message is general ("let's continue"), summarize where we ar
    - **No PII is ever sent to the LLM.**
 9. **Communication:** plain language, short, a recommendation rather than a survey of options. Explain technical terms the first time.
 10. **Held-out data:** the held-out datasets are written in a separate Claude session. In the working session, never open those files.
-11. **Don't follow the docs blindly** (the owner's rule, 2026-11-10).
+11. **Don't follow the docs blindly** (Mohammed's rule, 2026-11-10).
     - When something looks wrong, missing or unproven (in a doc, in the code, or in your own assumption), check it and test it before building on it.
     - Fix what is clearly a mistake, and say so. Raise what needs a decision, with a recommendation.
     - Record both in [docs/build_plan.md](docs/build_plan.md) §5.
@@ -184,7 +184,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **LLM by stage:**
   - a fake scripted LLM in tests;
   - Ollama `qwen2.5:7b` for development;
-  - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from the owner's Max plan ($100 per billing cycle, no rollover).
+  - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from Mohammed's Max plan ($100 per billing cycle, no rollover).
 - **Commands** (the full list is in the root [README.md](README.md)):
   - everything: `docker compose up --build` (website http://localhost:5173, API http://localhost:8000);
   - backend, inside `backend/`: `uv run --env-file ../.env pytest` · `uv run ruff check .` · `uv run ruff format .` · `uv run mypy`;
