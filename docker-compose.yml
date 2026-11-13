@@ -13,9 +13,12 @@ x-backend: &backend
     # The app's own login: the only one the API has (docs/05 §7, docs/12 §8).
     DATABASE_URL: postgresql+psycopg://dawalink_app:${APP_DB_PASSWORD:-app-local-only}@postgres:5432/${POSTGRES_DB}
 
-# The worker also deletes what has passed its retention time, with its own login.
+# The worker also deletes what has passed its retention time, with its own login,
+# and sends the queued emails to the local mail catcher.
 x-worker-env: &worker-env
   <<: *backend-env
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
   DATABASE_RETENTION_URL: &retention-url postgresql+psycopg://dawalink_retention:${RETENTION_DB_PASSWORD:-retention-local-only}@postgres:5432/${POSTGRES_DB}
 
 # Only the one-off database step gets the master and migrator logins. It creates the others.
@@ -72,11 +75,20 @@ services:
     depends_on:
       prepare-db:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-m", "dawalink.worker.alive"]
       interval: 30s
       timeout: 5s
       retries: 1
+
+  # Catches every email the worker sends: read them at http://localhost:8025.
+  # Nothing leaves this machine.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:8025:8025"
 
   web:
     build:

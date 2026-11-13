@@ -54,6 +54,14 @@ class ClaimKind(StrEnum):
     REQUEST_ITEM = "REQUEST_ITEM"
 
 
+class ClaimSource(StrEnum):
+    """Where a claim was created, which decides where its events go (docs/04 R-AG5)."""
+
+    SEARCH = "search"  # [Notify me] on the search page: notifications only
+    ASSISTANT = "assistant"  # the agent's watch in a chat: the client's chat
+    REQUEST = "request"  # a waiting request item: the request's thread
+
+
 class ConversationKind(StrEnum):
     CHAT = "chat"
     REQUEST = "request"

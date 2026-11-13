@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.3 (v1.3 adds the Ministry's website to §4.3) · **Date:** 2026-11-12
+**Version:** v1.4 (v1.4 confirms what an email holds, §4.3) · **Date:** 2026-11-12
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
@@ -181,7 +181,7 @@ flowchart LR
 | **Anthropic, the LLM provider** (evaluation and demo; **nothing leaves** with the local model in development) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text; private inventory; anything that identifies the client |
 | **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. | The same as the LLM |
 | **OpenRouteService** | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key | **Who** the client is: no account, no session, no name |
-| **AWS SES** | Emails | The client's email address and the template text (order number, medicine, pharmacy, deadline) | Chat content |
+| **AWS SES** (in development: a mail catcher on the laptop, so nothing leaves it) | Emails | The recipient's email address and the template text: order or request number, medicine, packs, price, pharmacy name, pick-up or answer time. Only the client's "Reserved" email also has the pharmacy's address and that day's opening hours. *(confirmed as built, step 4)* | Chat content; the client's name, phone or location; to a pharmacy, anything about who the client is |
 | **The Ministry of Public Health's website** (from the owner's laptop only, when the catalog is rebuilt; the running app never calls it) | The price list and the drug database pages | Plain requests for public pages | Anything about a user |
 | **OpenStreetMap tiles** (fetched by the browser, not our server) | The map | The viewer's IP address and the map area shown | Anything from our server |
 | **OpenStreetMap directions** (a link the client taps, `11` §11) | Directions to a pharmacy | The pharmacy's pin as the destination, and the viewer's IP address | The client's location: it is never put in the link |

@@ -36,7 +36,7 @@ from dawalink.db.models.orders import REF_CHARACTERS
 from dawalink.domain.claims import ClaimState
 from dawalink.domain.early_release import AskState, EarlyReleaseState
 from dawalink.domain.requests import ItemState, RequestOutcome, RequestState
-from dawalink.domain.vocabulary import ClaimKind, LocationSource
+from dawalink.domain.vocabulary import ClaimKind, ClaimSource, LocationSource
 
 LIVE_CLAIM = "state IN ('ACTIVE', 'OFFER_PENDING')"
 # A rounded coordinate: 3 decimals, about 100 m (docs/04 N-43).
@@ -117,6 +117,7 @@ class Claim(Base):
     __tablename__ = "claims"
     __table_args__ = (
         values_check("kind", ClaimKind),
+        values_check("source", ClaimSource),
         values_check("state", ClaimState),
         check(
             "request_item_only_for_its_kind",
@@ -149,6 +150,8 @@ class Claim(Base):
 
     id: Mapped[UuidKey]
     kind: Mapped[str] = mapped_column(Text)
+    # Where it was created: decides where its events go (docs/04 R-AG5).
+    source: Mapped[str] = mapped_column(Text, server_default=text("'search'"))
     client_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"))
     request_item_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, references("request_items.id"), unique=True
@@ -195,6 +198,13 @@ class EarlyReleaseRequest(Base):
         Index(
             "ix_early_release_requests_client_open",
             "client_id",
+            postgresql_where=text("state = 'OPEN'"),
+        ),
+        # A need has one early-release request at a time (docs/04 SM-6).
+        Index(
+            "uq_early_release_requests_one_open_per_claim",
+            "claim_id",
+            unique=True,
             postgresql_where=text("state = 'OPEN'"),
         ),
         Index("ix_early_release_requests_claim_id", "claim_id"),

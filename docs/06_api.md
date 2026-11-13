@@ -1,6 +1,6 @@
 # DawaLink: API Contracts
 
-**Version:** v1.4 (validated; v1.4 applies the pickup-day decision) · **Date:** 2026-11-10
+**Version:** v1.5 (validated; v1.5 adds two error codes from build step 4) · **Date:** 2026-11-12
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
 **Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI. **v1.4 applies the pickup-day decision** (decision log §W): search takes a `pickup_day` date instead of "today / tomorrow", and a listing says when its expiry limits the pickup days.
 
@@ -156,6 +156,8 @@ That is what the course asks for: *"interfaces between major components, includi
 | `WATCH_EXISTS` | 409 | Already watching this product; `details.watch_id` | R-W2 |
 | `PRODUCT_NOT_ALLOWED` | 422 | A controlled product | R-C6 |
 | `REQUEST_CLOSED` | 409 | Acting on a closed request | R-RQ9 |
+| `CLAIM_NOT_ACTIVE` | 409 | Asking pharmacies for a need that is already met, ended or cancelled (an agent tool's answer) | R-E1 |
+| `LIMIT_EARLY_RELEASE` | 409 | Already 5 open early-release requests, or the same medicine asked again within 24 h; `details.retry_after` (an agent tool's answer) | R-E5 |
 | **Agent and conversations** | | | |
 | `PROPOSAL_EXPIRED` | 409 | The card is too old; the agent can make a new one | API-D3 |
 | `PROPOSAL_USED` | 409 | The card's button was already used | INV-21 |
@@ -593,7 +595,7 @@ class ExecuteResult(BaseModel):
 | `POST /pharmacy/reservations/{id}/picked-up` | APPROVED / SUSPENDED (own) | → reservation (PICKED_UP) | `RESERVATION_NOT_ACTIVE` ("already picked up"), `PICKUP_DEADLINE_PASSED` | O2, INV-7 |
 | `POST /pharmacy/reservations/{id}/not-available` | APPROVED / SUSPENDED (own) | `{units}` → reservation (still RESERVED with fewer units, or NOT_AVAILABLE) | `UNITS_INVALID`, `RESERVATION_NOT_ACTIVE` | O3 |
 | `GET /pharmacy/inventory/template` | APPROVED | → `text/csv` with the template columns | | SM-4 |
-| `POST /pharmacy/inventory/uploads` 🔑 | APPROVED | multipart `file` (CSV/XLSX) → **201** `{id, status: "VALIDATED", rows_total, rows_ok, rows_error, summary: {new, changed, zeroed, reserved_kept}, errors: list[{row, column, problem, did_you_mean}]}` (first 500) | `UPLOAD_FAILED`, `FILE_TOO_LARGE` | SM-4, R-U5, R-C9 |
+| `POST /pharmacy/inventory/uploads` 🔑 | APPROVED | multipart `file` (CSV/XLSX; **CSV only as built so far**, XLSX joins with the endpoint) → **201** `{id, status: "VALIDATED", rows_total, rows_ok, rows_error, summary: {new, changed, zeroed, reserved_kept}, errors: list[{row, column, problem, did_you_mean}]}` (first 500) | `UPLOAD_FAILED`, `FILE_TOO_LARGE` | SM-4, R-U5, R-C9 |
 | `GET /pharmacy/inventory/uploads/{id}/errors.csv` | APPROVED (own) | → all row errors as CSV | `NOT_FOUND` | PS-6 |
 | `POST /pharmacy/inventory/uploads/{id}/apply` | APPROVED (own) | → `{applied: summary, warnings}`; matching runs | `UPLOAD_NOT_VALIDATED` | SM-4, R-U1–R-U4 |
 | `POST /pharmacy/inventory/uploads/{id}/discard` | APPROVED (own) | → **204** | `UPLOAD_NOT_VALIDATED` | SM-4 |

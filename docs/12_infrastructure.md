@@ -1,8 +1,8 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.1 · **Date:** 2026-11-12
+**Version:** v2.2 · **Date:** 2026-11-12
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
-**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
+**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
 This is the last planning step. It says **how we work, where DawaLink runs, and how it gets there**. Everything is done by hand. Nothing here has been run yet, so the first deploy is also its first test.
 
@@ -43,7 +43,7 @@ This is the last planning step. It says **how we work, where DawaLink runs, and 
 ## 2. Local development
 
 - **One command:** `docker compose up` starts `postgres`, `api`, `worker`, `web` and `mailpit`. Ollama runs on the laptop.
-  - `mailpit` joins when email is built.
+  - The worker sends email to `mailpit` through `SMTP_HOST` and `SMTP_PORT`, set in `docker-compose.yml`. Without them (the tests, a worker run by hand), an email is only written to the log. The sender for SES is written with the deployment (step 11).
   - The local database is reachable at `127.0.0.1:5433`, because a locally installed PostgreSQL often holds port 5432.
 - **Mailpit** catches every email and shows it at `http://localhost:8025`.
 - **LLM:** Ollama `qwen2.5:7b`, or the fake scripted model in tests.

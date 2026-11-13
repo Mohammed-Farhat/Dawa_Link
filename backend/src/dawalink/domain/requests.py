@@ -57,12 +57,15 @@ ITEM_MACHINE = StateMachine(
         (ItemState.WAITING, ItemState.SECURED): by(Actor.CLIENT),
         # Unticked on the card, reserved only in part, or the card failed or expired (R-RQ6).
         (ItemState.PROPOSED, ItemState.SEARCHING): by(Actor.CLIENT, Actor.SYSTEM),
-        # A reservation was marked not available, or cancelled by the system.
+        # A reservation was marked not available, or cancelled by the system: the item waits
+        # again if a claim is open for it, and is searched for again otherwise.
         (ItemState.SECURED, ItemState.WAITING): by(Actor.PHARMACY, Actor.SYSTEM),
-        # The client cancelled the item's reservation while the request is open (O5).
-        (ItemState.SECURED, ItemState.CANCELLED): by(Actor.CLIENT),
-        **{(state, ItemState.UNAVAILABLE): by(Actor.SYSTEM) for state in _NOT_FINAL},
+        (ItemState.SECURED, ItemState.SEARCHING): by(Actor.PHARMACY, Actor.SYSTEM),
+        # The client cancelled the item's reservation while the request is open (O5), or
+        # didn't come for it (O4): DawaLink doesn't look for that medicine again.
+        (ItemState.SECURED, ItemState.CANCELLED): by(Actor.CLIENT, Actor.SYSTEM),
         **{(state, ItemState.CANCELLED): by(Actor.CLIENT) for state in _NOT_FINAL},
+        **{(state, ItemState.UNAVAILABLE): by(Actor.SYSTEM) for state in _NOT_FINAL},
     },
 )
 

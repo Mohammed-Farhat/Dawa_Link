@@ -124,11 +124,31 @@ def test_only_a_client_tap_secures_an_item() -> None:
 
 def test_items_become_unavailable_only_by_the_system_and_cancelled_only_by_the_client() -> None:
     """R-RQ4: the agent never gives up on an item by itself."""
-    for (_, target), actors in ITEM_MACHINE.transitions.items():
+    for (current, target), actors in ITEM_MACHINE.transitions.items():
         if target is ItemState.UNAVAILABLE:
             assert actors == frozenset({Actor.SYSTEM})
-        if target is ItemState.CANCELLED:
+        if target is ItemState.CANCELLED and current is not ItemState.SECURED:
             assert actors == frozenset({Actor.CLIENT})
+        assert Actor.AGENT not in actors or target in (
+            ItemState.PROPOSED,
+            ItemState.WAITING,
+            ItemState.SEARCHING,
+        )
+
+
+def test_a_secured_item_ends_when_the_client_cancels_or_misses_its_reservation() -> None:
+    """O5 and O4: the client's cancel, or the system's no-show. Nothing is searched again."""
+    ITEM_MACHINE.check(ItemState.SECURED, ItemState.CANCELLED, Actor.CLIENT)
+    ITEM_MACHINE.check(ItemState.SECURED, ItemState.CANCELLED, Actor.SYSTEM)
+    CLAIM_MACHINE.check(ClaimState.FULFILLED, ClaimState.CANCELLED, Actor.CLIENT)
+    CLAIM_MACHINE.check(ClaimState.FULFILLED, ClaimState.CANCELLED, Actor.SYSTEM)
+    assert not ITEM_MACHINE.allows(ItemState.SECURED, ItemState.CANCELLED, Actor.AGENT)
+    assert not CLAIM_MACHINE.allows(ClaimState.ACTIVE, ClaimState.CANCELLED, Actor.SYSTEM)
+
+
+def test_a_secured_item_with_no_claim_is_searched_for_again_when_its_units_are_lost() -> None:
+    ITEM_MACHINE.check(ItemState.SECURED, ItemState.SEARCHING, Actor.PHARMACY)
+    ITEM_MACHINE.check(ItemState.SECURED, ItemState.SEARCHING, Actor.SYSTEM)
 
 
 def test_a_secured_item_reopens_when_its_reservation_is_marked_not_available() -> None:
@@ -156,7 +176,8 @@ def test_claim_transitions_of_sm_7() -> None:
     assert frozenset({C.ACTIVE, C.OFFER_PENDING}) == LIVE_STATES
     assert CLAIM_MACHINE.is_terminal(C.EXPIRED)
     assert CLAIM_MACHINE.is_terminal(C.CANCELLED)
-    assert not CLAIM_MACHINE.allows(C.FULFILLED, C.CANCELLED, Actor.CLIENT)
+    assert not CLAIM_MACHINE.allows(C.FULFILLED, C.CANCELLED, Actor.PHARMACY)
+    assert not CLAIM_MACHINE.allows(C.FULFILLED, C.CANCELLED, Actor.AGENT)
 
 
 def test_early_release_transitions_of_sm_6() -> None:

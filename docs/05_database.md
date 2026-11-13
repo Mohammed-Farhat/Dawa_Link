@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.3 · **Date:** 2026-11-12
+**Version:** v3.4 · **Date:** 2026-11-12
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -687,4 +687,18 @@ The schema is the first migration, `backend/migrations/versions/20261112_1816_in
 | With at least one equivalent (another product with the same key) | 3,405 |
 | Flagged as controlled | 168 |
 
-**Left for the services (step 4):** the race tests and the clock-check tests of §10, the reconciliation queries (INV-2, INV-18), cancelling open orders when a product becomes controlled (O6), and the retention task itself.
+**Added by the services (build step 4, the second migration):**
+
+| Change | Why |
+|---|---|
+| `claims.source` (`search`, `assistant` or `request`) | An offer's card must be posted where the need was created: the chat, the request's thread, or nowhere for a watch made from the search page. The claim is the only row that knows. |
+| `orders.reminder_sent_at`, with an index on the reservations still waiting for theirs | The pickup reminder (N-8) is sent once. The clock check finds what is due from the row, as for every other deadline (R-T10). |
+| A unique index: one OPEN early-release request per claim | Two agent turns, or one turn retried, can't ask the same pharmacies twice for one need (R-AG6). |
+
+**How the services use the database** (`backend/src/dawalink/services/`):
+- a service never commits: the caller opens one transaction per tap or per clock-check row, and follow-up work (matching, closing a request) runs after the commit, each in its own transaction;
+- rows are locked in one order everywhere: the client, the inventory items (sorted), the orders, the request's rows and claims, then the conversation;
+- matching takes an advisory lock per medicine group, so two runs never allocate the same box;
+- the daily purge runs with the retention login, and every cutoff comes from the app clock.
+
+**Tested in step 4:** the races of §10 with two real connections (`tests/races/`: the last box, a double tap, two tabs at a limit, two [Picked up] clicks, two offers for one need, two matching runs, two workers and one email; and the clock check against a tap: a no-show against [Picked up], a no-show against a new reservation of the same box, an offer expiring against accept), the clock-check tasks, the reconciliation of INV-2 and INV-18 after **every** service test and every race, cancelling open orders when a product becomes controlled, and the retention task with its real login.

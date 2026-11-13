@@ -8,9 +8,9 @@ This is the one place that says **what is built, what comes next, and what was l
 
 ## In short
 
-- **Done:** steps 1 to 3: the code skeleton, the domain core (the exact rules as tested code) and the database (tables, logins, the real catalog, demo data).
-- **Three questions are waiting for the owner** (§5, Q2 to Q4): the controlled list, the no-prescription list, and how strict "same medicine" is. None of them blocks step 4.
-- **Next:** step 4, the services. It starts only when the owner says so.
+- **Done:** steps 1 to 4: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data) and the services (everything the app does with those tables, and the worker's tasks).
+- **Seven questions are waiting for the owner** (§5): Q2 to Q4 from the database step, and Q5 to Q8 from the services. Each has a safe default in place, and none blocks step 5.
+- **Next:** step 5, the agent, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
 ---
@@ -35,8 +35,8 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | 1 | **Code skeleton** | Docker Compose; settings and logs; the API with `/health`, the error format and CORS; the worker loop and its heartbeat; the database step; the website shell; the root README | `02`, `06` §1–§3, `12` | ✅ 2026-11-10 |
 | 2 | **Domain core** | The exact rules as plain, tested Python with no database: expiry zones and prices, the expiry fit, pickup days and deadlines, request hours, the state machines, order numbers, first come first served, the multi-medicine planner (`plan_basket`), the app clock | `04` | ✅ 2026-11-10 |
 | 3 | **Database** | Every table, constraint, trigger and index; migrations; the three database roles; the catalog import and the demo seed | `05` | ✅ 2026-11-12 |
-| 4 | **Services** | Search, reserve and group reserve, [Picked up] and [Not available], claims and matching, offers, early release, sourcing requests, the notification outbox, and the worker's clock-check tasks | `04`, `05` §6 | ⏳ next |
-| 5 | **The agent** | The 17 tools and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ⏳ |
+| 4 | **Services** | Search, reserve and group reserve, [Picked up] and [Not available], claims and matching, offers, early release, sourcing requests, the notification outbox, and the worker's clock-check tasks | `04`, `05` §6 | ✅ 2026-11-12 |
+| 5 | **The agent** | The 17 tools and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ⏳ next |
 | 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | ⏳ |
 | 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling, contract tests | `06`, `10` | ⏳ |
 | 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ⏳ |
@@ -151,30 +151,72 @@ The owner decided Q1 (§5): one set of pickup days everywhere, and a later picku
 
 **Docs changed:** `05` v3.3 (§12 "As built", DB-D19–DB-D23) · `04` v4.4 (the catalog's real sources, R-C2, R-C5–R-C7) · `09` v1.5 · `10` v1.3 · `12` v2.1 · decision log (BLD-D3, BLD-D4; O5 closed; O6 and O7 opened).
 
+### Step 4: the services (2026-11-12) ✅
+
+The services are the code between the rules (step 2) and the tables (step 3): each one does one thing a client, a pharmacy, the agent or the clock can do, inside one database transaction. Nothing here has a screen or an endpoint yet: the agent's tools (step 5) and the API (step 7) will call these same functions.
+
+| # | Slice | Status |
+|---|---|---|
+| S0 | Foundations: the `services/` package (transaction context, error codes, audit, app clock with the demo offset, notifications and email outbox, chat events), the second migration, the service test setup (runs as the app login) | ✅ |
+| S1 | Catalog search, listing search, travel times (cache + straight-line estimate) | ✅ |
+| S2 | Reserve (single and group), client cancel, [Picked up], [Not available] | ✅ |
+| S3 | Clock check, part 1: no-shows and the pause, the pickup reminder, lifting a pause; the worker runs the tasks | ✅ |
+| S4 | Watches and claims, matching (first come, first served), offers: accept, decline, expire, withdraw | ✅ |
+| S5 | Early release: asks, a pharmacy's answer, expiry, resolution | ✅ |
+| S6 | Sourcing requests: create, items, decision events, the window check, closing | ✅ |
+| S7 | Inventory: manual edits, pause and resume, price override, CSV upload; system cancel when a product becomes controlled | ✅ |
+| S8 | Sending the email outbox (mailpit locally), the daily tasks (retention, stale inventory) | ✅ |
+| S9 | Race tests (two connections), reconciliation after every flow, docs | ✅ |
+
+**What exists** (`backend/src/dawalink/services/`):
+
+| File | What it does |
+|---|---|
+| `context.py`, `errors.py`, `audit.py`, `clock.py` | One transaction per action; work that must wait for the commit; the error codes of `06`; one audit event per state change; the app clock with the demo offset |
+| `catalog.py`, `search.py`, `travel.py`, `pharmacies.py`, `clients.py` | Finding medicines and visible boxes, with the days each box can be picked up and still last; travel times from the cache or a straight-line estimate |
+| `orders.py`, `counter.py` | Reserve (one box, or a group all-or-none), cancel, no-show and the pause, [Picked up], [Not available], offers |
+| `claims.py`, `matching.py`, `needs.py` | Watches, first come first served, what happens to a need when a reservation is gained or lost |
+| `early_release.py` | Asking up to 3 open pharmacies, their answers, expiry, the result |
+| `requests.py` | Sourcing requests: items, decision events for the agent, the window check, closing with an outcome |
+| `inventory.py`, `controlled.py` | Manual edits, CSV uploads (check, then apply), and ending what is open for a medicine that became controlled |
+| `notify.py`, `email.py`, `events.py` | In-app notifications, the email outbox and its sending, cards and decision events in a conversation |
+| `daily.py`, `clock_check.py` | The once-a-day purge and reminder; the 12 tasks the worker runs every 5 seconds |
+
+**Also changed:**
+- the second migration: `claims.source`, `orders.reminder_sent_at`, one open early-release request per claim (`05` §12);
+- `docker-compose.yml`: `mailpit` catches every email at http://localhost:8025, and nothing leaves the laptop;
+- the catalog import command ends open orders, watches and request items for a medicine that became controlled.
+
+**Decided for this step (Claude):** services use SQLAlchemy sessions and never commit themselves; the caller owns the transaction; matching and other follow-up work run after the commit, never inside a transaction that holds client or item locks; rows are always locked in the same order; each clock-check row is its own transaction. Recorded as BLD-D5 in the decision log.
+
+**Checks:**
+- 898 backend tests pass (unit 414, database 200, services 250, races 15, API 13, security 4, failure 2); 96% of the code is covered; `ruff` and `mypy` are clean. The website is unchanged.
+- The service tests run **as the app login**, so a missing database privilege fails there and not later in Docker.
+- The race tests use a throwaway database and two real connections. Both actions are started inside open transactions before either may continue, so the result never depends on luck. They cover two taps at once, and the clock check against a tap made a second before a deadline.
+- After **every** service test and every race, the stock and the requests are reconciled (INV-2, INV-18), and every queued email is checked for a complete subject.
+- Tried in Docker from the rebuilt images: the second migration applied; a demo client reserved a box through the services inside the worker container; both emails arrived in mailpit within seconds, with the time in Beirut time and the price in LBP and USD; the purge ran with the real retention login and logged what it deleted.
+
+**Docs changed:** `04` v4.5 (N-50) · `05` v3.4 (§12) · `06` v1.5 (two error codes; CSV only so far) · `09` v1.6 (29 rows marked) · the requirements checklist (T-6, T-8 and T-14 are under way) · `10` v1.4 (what an email holds) · `12` v2.2 (mailpit and the email settings) · decision log (BLD-D5) · the root README.
+
 ---
 
 ## 4. Left for a later step
 
 | What | Joins in |
 |---|---|
-| `mailpit` in Docker Compose | Step 4, with email |
-| The worker's part of FX-10 (pause and retry when the database is down) | Step 4, with its first task |
-| FX-13's test that kills the worker in the middle of a pass | Step 4 |
-| The `Origin` check on state-changing calls (FS-6) | Step 7 |
-| The demo clock: reading its stored offset from `app_state` (the table exists) | Step 4, with the demo clock's service |
-| Two connections racing (the last unit, two [Picked up] clicks, two offers, two matching runs), and the clock-check tests (`05` §10) | Step 4, with the services |
-| The reconciliation queries (INV-2, INV-18) | Step 4 |
-| Cancelling open orders when a new import makes a product controlled (O6, FR-24) | Step 4 |
-| The retention task itself (the retention login and its privileges exist) | Step 4, with the daily tasks |
-| `create_admin`, password hashes and the demo accounts' passwords (they can't log in yet) | Step 7, with logins |
-| The districts' reference points should be checked on a map | Before the demo |
-| Upload rules (R-U1, R-U2, R-U4, R-U5) and month-only dates in files | Step 4, with uploads |
-| Rounding locations and the straight-line travel estimate (R-RT1) | Step 4, with routing |
-| The client's early-release limits (R-E5) | Step 4 |
-| Retry schedules (SM-12) and the escalation, report and flag states (SM-9 to SM-11) | Steps 4 and 5, with what uses them |
-| Search and the check at the tap take the pickup day as a date, and return `pickup_days_allowed` and `expiry_limits_pickup` (`06` v1.4) | Step 4, with search and reservations |
+| **Road travel times from OpenRouteService:** the adapter, its fake and the rest of FX-18. Until then every travel time is the straight-line estimate ("about N min"). **Needs a free OpenRouteService API key from the owner.** | Step 5, with the agent's tools |
+| Running an agent turn for a decision event: the services only store the event and mark the conversation (`pending_turn_at`) | Step 5 |
+| Executing a proposal (the tap on an agent's card), and the retry schedule of agent turns (SM-12) | Step 5 |
+| The escalation, answer-report and abuse-flag actions (SM-9 to SM-11); only the no-show abuse flag is raised so far | Steps 5 and 7, with what uses them |
 | The agent's tools take `pickup_day`; the context lists the upcoming days; hard rule 11 (`07` v1.4) | Step 5 |
+| Admin actions: approving, rejecting and suspending a pharmacy, suspending a client, and what they end (FR-22, FR-23); contesting a no-show (R-N3) | Step 7, with their endpoints |
+| XLSX inventory files (CSV works) | Step 7, with the upload endpoint |
+| The demo clock's admin endpoint (the service that moves the clock exists) | Step 7 |
+| The `Origin` check on state-changing calls (FS-6) | Step 7 |
+| `create_admin`, password hashes and the demo accounts' passwords (they can't log in yet) | Step 7, with logins |
 | The reserve board on the v2 canvas still shows two cards ("Today", "Tomorrow"). `11` v1.4 wins: one card per allowed day | Step 8 |
+| The sender for SES (the local one speaks plain SMTP to mailpit) | Step 11, with the deployment |
+| The districts' reference points should be checked on a map | Before the demo |
 
 ---
 
@@ -196,6 +238,17 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | The 30-day chat purge would have been blocked by an escalation pointing at the chat. | The link is emptied instead. |
 | An error while creating a database login would have printed the password in the logs. | The error names the login and nothing else. A test checks it. |
 | Road times: the reference points of the 26 districts were written by hand. | Each is inside Lebanon (a test), but they should be checked on a map before the demo. |
+| **Step 4.** The state machines of step 2 lacked three moves the flows need: a secured item goes back to searching after [Not available]; a secured item can be cancelled; a fulfilled claim is cancelled with its request. | Added, each with a test. |
+| A sold-out box in a group reserve was reported as "no longer listed". | It now says "not enough stock, 0 left", which is what the client needs to read. |
+| One email that couldn't be written (a bad value in its data) would have been tried first on every pass, and stopped every email behind it. | It fails on its own, is retried, then given up. The others go out. |
+| When a medicine became controlled, a client who was watching it was told nothing. | They get "watch ended" (CN-11). The Failure Matrix row FR-24 now says what really happens. |
+| The first emails printed the stored values as they were: times in UTC (2 to 3 hours off), prices as bare numbers. | Emails are now written in code: Beirut time, LBP with the USD amount. The "Reserved" email has the address and the opening hours, as R-NT asks. Every email queued by any service test is checked for a complete subject. |
+| Follow-up work (matching, closing a request, ending an early-release request) runs after the commit. If it failed, the caller would have seen an error for work that had succeeded, and nothing would have done the follow-up later. | The failure is logged and the rest still runs. The clock check now looks for all three kinds of follow-up on every pass, so it is done a few seconds later. |
+| With the mail server down, a pass of the clock check would have waited one timeout per queued email. | The first "server down" ends that pass's sending. One refused address (normal in the SES sandbox) doesn't stop the others. |
+| Ending everything open for a newly controlled medicine in one transaction would lock many clients at once. | One row per transaction, as in the clock check. |
+| The upload summary used other field names than `06`. | Aligned with `06` (`zeroed`, `reserved_kept`). |
+| `06` and N-15 say uploads are CSV or XLSX. | Only CSV is built; XLSX joins with the endpoint (§4). |
+| Can one need really have two offers at once (R-W3)? | Yes, but only one from matching and one from early release: a second pharmacy that accepts an ask is thanked, and nothing is held. A race test accepts both offers at the same moment: one wins, the other box goes back. |
 
 ### Decided
 
@@ -205,13 +258,17 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 
 ### Waiting for a decision
 
-None of these blocks step 4. Each has a safe default in place.
+None of these blocks step 5. Each has a safe default in place.
 
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
 | Q2 | **Which medicines are controlled?** The Ministry publishes no list that can be downloaded. | Built from the international narcotic and psychotropic schedules, the matching ATC classes, plus tramadol and pregabalin: 168 products are hidden. When in doubt, a medicine is hidden. Pseudoephedrine (in cold medicines) and gabapentin are **not** hidden. | Ask a pharmacist to check `backend/data/catalog_overrides.toml` against the Ministry's own list before the demo (open item O6). |
 | Q3 | **Which medicines need no prescription?** | The list is empty, so every product shows "Prescription needed: bring it to the pharmacy", even paracetamol. The notice is all it changes. | The team fills the list in the same file (open item O7). A short list of everyday medicines is enough for the demo. |
 | Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. A missed alternative only hides an option; a wrong one could hurt someone. A pharmacist can add safe pairs to the corrections in the same file. |
+| Q5 | **A client cancels a reservation that belongs to an open request, or doesn't come for it.** The rules say what happens after [Not available] (the search starts again), but not here. | The medicine is dropped from the request: its item becomes CANCELLED and nothing is searched again. The other medicines carry on. | Keep it. The client chose not to take that box, so searching again would only produce offers they didn't ask for. They can start a new request. |
+| Q6 | **Can the agent open a claim after 20:00 for a request that is still open?** A request started at 19:30 searches until 01:30, but R-W1 allows new claims only during request hours. | R-W1 is followed as written: after 20:00 the agent can't start waiting for a medicine of an open request. Claims opened before 20:00 keep working all night. | Allow it while the request is open. The request itself was started during request hours, and the 6 hours are the promise made to the client. Watches made from search or chat keep the rule. |
+| Q7 | **The straight-line travel estimate** (new number N-50), used when no road time is known: road distance = straight line × 1.4, 30 km/h by car, 4.5 km/h on foot. | In place, and shown as "about N min". Until the routing service is connected (§4), every travel time is this estimate. | Keep these values. They are common rules of thumb for a city; real road times replace them once the routing key is set. |
+| Q8 | **What the emails say.** `03` and R-NT name each email and list what "Reserved" holds, but not the wording. | A subject per email ("Reserved: R-7K3Q2F", "Reminder: pick up R-7K3Q2F today", "Can you release <medicine>?") and a body listing the facts: order number, medicine, packs, price, pharmacy, times. Only "Reserved" adds the address and the opening hours. A real example is in the step 4 report. | Keep it for now, and read the wording in `backend/src/dawalink/services/email.py` (`SUBJECTS` and `FACTS`). Once the website can reserve (step 8), every email shows up in mailpit, and wording is cheap to change then. |
 
 ---
 

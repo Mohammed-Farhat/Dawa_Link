@@ -41,13 +41,13 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-10:
+The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-12:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.4 · `05` v3.3 (the schema as built);
-  - `06` v1.4 · `07` v1.4 · `08` v1.3;
-  - `09` v1.5 (living: every change updates it) · `10` v1.3 (threat model; living: a change that adds an attack surface updates it);
-  - `12` v2.1 (infrastructure and deployment);
+  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.5 · `05` v3.4 (the schema as built);
+  - `06` v1.5 · `07` v1.4 · `08` v1.3;
+  - `09` v1.6 (living: every change updates it) · `10` v1.4 (threat model; living: a change that adds an attack surface updates it);
+  - `12` v2.2 (infrastructure and deployment);
   - `11` v1.4 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
@@ -74,16 +74,18 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - the catalog is the Ministry's price list joined with its drug database pages; the Ministry's files stay outside git, in `backend/data/moph/` (BLD-D3, 2026-11-12).
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
 - **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
-- **Built so far:** steps 1 to 3 of 12:
+- **Built so far:** steps 1 to 4 of 12:
   - the code skeleton and the domain core (2026-11-10; `backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python);
-  - the database (2026-11-12): the 34 tables and the first migration, four database logins, the catalog import (5,628 real medicines) and the demo seed. `05` §12 lists what changed while building.
+  - the database (2026-11-12): the 34 tables and the first migration, four database logins, the catalog import (5,628 real medicines) and the demo seed. `05` §12 lists what changed while building;
+  - the services (2026-11-12; `backend/src/dawalink/services/`): search, reserve and group reserve, the counter, watches and matching, offers, early release, sourcing requests, inventory and CSV uploads, the worker's clock-check tasks, email sending (caught locally by mailpit) and the daily purge. The second migration. Race tests with two real connections in `backend/tests/races/`.
 
   The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
-- **Next: step 4, the services** (search, reserve, pickup, claims and matching, offers, early release, requests, the clock check). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
+- **Next: step 5, the agent** (the 17 tools and `reply`, proposals, the turn graph, guards, prompts, the models, turns in the worker, tracing). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O6: the controlled-medicines list needs a pharmacist's check (`backend/data/catalog_overrides.toml`);
   - O7: the no-prescription list is empty, so every product shows the prescription notice;
+  - Q5 to Q8 in [docs/build_plan.md](docs/build_plan.md) §5: four product questions from step 4, each with a default in place;
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
@@ -206,6 +208,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **Local LLM:** Ollama 0.40.3 on an RTX 3070 Laptop (8 GB VRAM, 16 GB RAM).
 - **Local ports:** the project's PostgreSQL container is at `127.0.0.1:5433` (a Windows PostgreSQL service holds 5432). Use `127.0.0.1`, not `localhost`, for the database: `localhost` tries IPv6 first here and waits for seconds.
 - **Docker Desktop** may be off after a restart: start it before `docker compose` or the tests.
+- **Emails** sent by the local stack are caught by mailpit: http://localhost:8025.
 - **Database logins:** `.env` holds four addresses (master, migrator, app, retention). The tests need all four, and prepare their own `dawalink_test` database.
 - **The Ministry's files** are in `backend/data/moph/` (ignored by git). Never commit them, and never paste rows from them into tracked files; tests use invented products.
 - **Slow downloads:** `npm install` and Docker pulls can take many minutes on this connection; run them in the background.

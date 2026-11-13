@@ -28,6 +28,7 @@ docker compose up --build
 | http://localhost:5173 | The website |
 | http://localhost:8000/api/v1/health | The API's health check |
 | http://localhost:8000/api/v1/docs | The API's interactive documentation (local only) |
+| http://localhost:8025 | Every email the app sends, caught locally (nothing leaves this machine) |
 
 Use `localhost` in the address bar, not `127.0.0.1`: the API only accepts browser calls from
 the website's exact address.

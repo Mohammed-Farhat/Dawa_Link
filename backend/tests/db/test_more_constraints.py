@@ -223,6 +223,17 @@ class TestOrdersAndNeeds:
             "uq_early_release_requests_client_id_idempotency_key",
         )
 
+    def test_a_need_has_one_open_early_release_request(self, db: Connection) -> None:
+        claim = make.claim(db)
+        self.early_release_request(db, claim_id=claim, idempotency_key="a")
+
+        refused(
+            db,
+            lambda: self.early_release_request(db, claim_id=claim, idempotency_key="b"),
+            "uq_early_release_requests_one_open_per_claim",
+        )
+        self.early_release_request(db, claim_id=claim, idempotency_key="c", state="UNFULFILLED")
+
     def test_an_ask_goes_to_a_pharmacy_once_and_an_acceptance_has_its_terms(
         self, db: Connection
     ) -> None:

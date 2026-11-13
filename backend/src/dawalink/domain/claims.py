@@ -42,6 +42,9 @@ CLAIM_MACHINE = StateMachine(
         (ClaimState.OFFER_PENDING, ClaimState.EXPIRED): by(Actor.SYSTEM),
         (ClaimState.ACTIVE, ClaimState.CANCELLED): by(Actor.CLIENT),
         (ClaimState.OFFER_PENDING, ClaimState.CANCELLED): by(Actor.CLIENT),
+        # A request item's need ends when the client cancels its reservation (O5) or doesn't
+        # come for it (O4): DawaLink doesn't look for that medicine again.
+        (ClaimState.FULFILLED, ClaimState.CANCELLED): by(Actor.CLIENT, Actor.SYSTEM),
     },
 )
 

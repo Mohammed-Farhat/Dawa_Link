@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import structlog
+from sqlalchemy.exc import OperationalError
 
 from dawalink.domain.numbers import CLOCK_CHECK_INTERVAL_S
 from dawalink.worker.heartbeat import beat
@@ -26,10 +27,18 @@ class ClockCheck:
         self._interval_s = interval_s
 
     def run_pass(self) -> None:
-        """Run every task once. One failing task never stops the others."""
+        """Run every task once. One failing task never stops the others.
+
+        If the database can't be reached, the rest of the pass is skipped: the next pass
+        tries again, and nothing is lost because the deadlines live on the rows (FX-10).
+        The heartbeat is still written: the worker itself is alive.
+        """
         for task in self._tasks:
             try:
                 task()
+            except OperationalError:
+                log.warning("clock_check_paused", reason="the database can't be reached")
+                break
             except Exception:
                 log.exception("clock_task_failed", task=getattr(task, "__name__", repr(task)))
         beat(self._heartbeat_file)

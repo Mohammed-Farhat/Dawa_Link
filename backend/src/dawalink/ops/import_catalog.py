@@ -11,14 +11,18 @@ from pathlib import Path
 
 import structlog
 from sqlalchemy import Connection, create_engine, func, select
+from sqlalchemy.orm import sessionmaker
 
 from dawalink.catalog.importer import ImportResult, import_catalog
 from dawalink.catalog.moph import read_catalog
 from dawalink.catalog.rules import DEFAULT_RULES_FILE, load_rules
-from dawalink.config import load_settings, required
+from dawalink.config import Settings, load_settings, required
 from dawalink.db.models import Product
+from dawalink.db.session import make_engine
 from dawalink.observability.logging import configure_logging
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
+from dawalink.services import controlled
+from dawalink.services.clock import AppClock
 
 log = structlog.get_logger(__name__)
 DEFAULT_FOLDER = Path("data/moph")
@@ -59,6 +63,19 @@ def log_result(result: ImportResult) -> None:
     )
 
 
+def close_what_became_controlled(settings: Settings) -> controlled.Withdrawn:
+    """After an import: open orders, watches and request items for a medicine that is now
+    controlled are ended (docs/04 R-C6; docs/09 FR-24). Runs as the app, like any service.
+    """
+    engine = make_engine(settings.database_url)
+    try:
+        clock = AppClock(engine, demo_mode=settings.demo_mode)
+        sessions = sessionmaker(engine, expire_on_commit=False)
+        return controlled.withdraw_everything(sessions, clock)
+    finally:
+        engine.dispose()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--folder", type=Path, default=DEFAULT_FOLDER)
@@ -74,6 +91,13 @@ def main() -> None:
         log_result(result)
     finally:
         engine.dispose()
+    withdrawn = close_what_became_controlled(settings)
+    log.info(
+        "controlled_medicines_withdrawn",
+        orders_cancelled=withdrawn.orders,
+        claims_ended=withdrawn.claims,
+        request_items_ended=withdrawn.items,
+    )
 
 
 if __name__ == "__main__":

@@ -48,6 +48,9 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "rows_by_hand: the test builds orders or stock by hand, so the stock isn't reconciled after it",
+]
 
 [dependency-groups]
 dev = [

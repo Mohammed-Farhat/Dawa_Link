@@ -15,9 +15,12 @@ from dawalink.db.models import (
     Claim,
     ClientProfile,
     Conversation,
+    EarlyReleaseAsk,
+    EarlyReleaseRequest,
     InventoryItem,
     Order,
     Pharmacy,
+    PharmacyHours,
     Product,
     RequestItem,
     SourcingRequest,
@@ -66,7 +69,22 @@ def client(connection: Connection, status: str = "ACTIVE", **values: Any) -> uui
     return user_id
 
 
-def pharmacy(connection: Connection, status: str = "APPROVED", **values: Any) -> uuid.UUID:
+# Monday = 0. The default pharmacy is open every day from 08:00 to 21:00.
+EVERY_DAY = {weekday: [("08:00", "21:00")] for weekday in range(7)}
+
+
+def _minute(clock_time: str) -> int:
+    hours, minutes = clock_time.split(":")
+    return int(hours) * 60 + int(minutes)
+
+
+def pharmacy(
+    connection: Connection,
+    status: str = "APPROVED",
+    *,
+    hours: dict[int, list[tuple[str, str]]] | None = None,
+    **values: Any,
+) -> uuid.UUID:
     number = next(_numbers)
     defaults = {
         "owner_user_id": user(connection, "pharmacist"),
@@ -79,7 +97,19 @@ def pharmacy(connection: Connection, status: str = "APPROVED", **values: Any) ->
         "lon": 35.50,
         "status": status,
     }
-    return _insert(connection, Pharmacy, defaults | values)  # type: ignore[no-any-return]
+    pharmacy_id: uuid.UUID = _insert(connection, Pharmacy, defaults | values)
+    for weekday, ranges in (EVERY_DAY if hours is None else hours).items():
+        for seq, (opens, closes) in enumerate(ranges, start=1):
+            connection.execute(
+                insert(PharmacyHours).values(
+                    pharmacy_id=pharmacy_id,
+                    weekday=weekday,
+                    seq=seq,
+                    open_minute=_minute(opens),
+                    close_minute=_minute(closes),
+                )
+            )
+    return pharmacy_id
 
 
 def catalog_import(connection: Connection) -> uuid.UUID:
@@ -190,3 +220,30 @@ def conversation(connection: Connection, **values: Any) -> uuid.UUID:
         "last_activity_at": NOW,
     }
     return _insert(connection, Conversation, defaults | values)  # type: ignore[no-any-return]
+
+
+def early_release_request(connection: Connection, **values: Any) -> uuid.UUID:
+    client_id = values.pop("client_id", None) or client(connection)
+    defaults = {
+        "client_id": client_id,
+        "claim_id": values.pop("claim_id", None) or claim(connection, client_id=client_id),
+        "product_id": values.pop("product_id", None) or product(connection),
+        "qty": 1,
+        "idempotency_key": f"key-{next(_numbers)}",
+    }
+    return _insert(connection, EarlyReleaseRequest, defaults | values)  # type: ignore[no-any-return]
+
+
+def early_release_ask(connection: Connection, **values: Any) -> uuid.UUID:
+    pharmacy_id = values.pop("pharmacy_id", None) or pharmacy(connection)
+    product_id = values.pop("product_id", None) or product(connection)
+    defaults = {
+        "er_request_id": values.pop("er_request_id", None)
+        or early_release_request(connection, product_id=product_id),
+        "pharmacy_id": pharmacy_id,
+        "inventory_item_id": values.pop("inventory_item_id", None)
+        or item(connection, pharmacy_id=pharmacy_id, product_id=product_id, days_left=200),
+        "product_id": product_id,
+        "respond_by": NOW + timedelta(hours=2),
+    }
+    return _insert(connection, EarlyReleaseAsk, defaults | values)  # type: ignore[no-any-return]

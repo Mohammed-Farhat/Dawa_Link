@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     demo_mode: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     worker_heartbeat_file: Path = Path(tempfile.gettempdir()) / "dawalink-worker-heartbeat"
+    # Where the worker sends email: the local mail catcher in development. Without a
+    # host, emails are only noted in the log (in-app notifications are unaffected).
+    smtp_host: str | None = None
+    smtp_port: int = 1025
+    email_from: str = "DawaLink <no-reply@dawalink.invalid>"
 
     @field_validator("website_url")
     @classmethod
