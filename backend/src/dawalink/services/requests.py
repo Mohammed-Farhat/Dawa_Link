@@ -355,6 +355,10 @@ def open_claim(tx: Tx, request_item_id: uuid.UUID) -> Claim:
 
     The item's place in the queue is the moment this is called, from the app clock.
     Calling it again returns the same claim (R-AG6).
+
+    Request hours aren't checked here: the request itself was started during them, and
+    its 6 hours are what the client was promised, so the agent may start waiting for
+    one of its medicines at 21:00 (decision log BLD-D6). A watch keeps the rule.
     """
     seen = tx.session.get(RequestItem, request_item_id)
     if seen is None:
@@ -371,7 +375,6 @@ def open_claim(tx: Tx, request_item_id: uuid.UUID) -> Claim:
         raise ServiceError(Code.CLAIM_NOT_ACTIVE, "This item isn't being searched for any more.")
     if item.qty_secured >= item.qty:
         raise ServiceError(Code.CLAIM_NOT_ACTIVE, "This item is already secured.")
-    claims.require_request_hours(tx)
     product = catalog.allowed_product(tx, item.product_id)
     claim = Claim(
         id=uuid.uuid4(),

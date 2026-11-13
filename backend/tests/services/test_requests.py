@@ -10,7 +10,8 @@ from typing import Any
 import pytest
 
 from dawalink.domain.orders import OrderSource
-from dawalink.services import counter, orders, requests
+from dawalink.domain.vocabulary import ClaimSource
+from dawalink.services import claims, counter, orders, requests
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.orders import ReserveLine
 from dawalink.services.requests import RequestLine
@@ -381,6 +382,33 @@ class TestWaitingForStock:
         assert claim.created_at == NOW
         assert case.items(request_id)[0].state == "WAITING"
         assert self.waiting(case, request_id) == claim_id
+
+    def test_the_agent_can_start_waiting_after_20h_while_the_request_is_open(
+        self, case: Case, world: World
+    ) -> None:
+        """R-W1, BLD-D6: a request started at 19:00 searches until 01:00. At 21:00 the
+        agent may still start waiting for one of its medicines; a new watch may not start.
+        """
+        world.later(hours=9)
+        request_id = case.start(RequestLine(case.concor))
+        world.later(hours=2)
+
+        claim_id = self.waiting(case, request_id)
+
+        claim = world.one("SELECT * FROM claims WHERE id = :c", c=claim_id)
+        assert claim.created_at == NOW + timedelta(hours=11)
+        assert claim.ends_at == case.request(request_id).ends_at == NOW + timedelta(hours=15)
+        assert case.items(request_id)[0].state == "WAITING"
+        watch = refusal(
+            lambda: claims.create_watch(
+                world.tx(),
+                client_id=case.client,
+                product_id=case.aspirin,
+                location=HAMRA,
+                source=ClaimSource.SEARCH,
+            )
+        )
+        assert watch.code is Code.OUTSIDE_REQUEST_HOURS
 
     def test_new_stock_is_offered_in_the_thread_and_accepting_it_secures_the_item(
         self, case: Case, world: World

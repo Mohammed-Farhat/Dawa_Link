@@ -1,6 +1,6 @@
 # DawaLink: Build Plan and Progress
 
-**Updated:** 2026-11-12 · **Status:** 🟡 living: updated at the end of every build step.
+**Updated:** 2026-11-13 · **Status:** 🟡 living: updated at the end of every build step.
 
 This is the one place that says **what is built, what comes next, and what was left for later**. A new session reads it to continue exactly where the last one stopped. Decisions stay in the [decision log](00_decision_log.md); this file only tracks the build.
 
@@ -9,7 +9,7 @@ This is the one place that says **what is built, what comes next, and what was l
 ## In short
 
 - **Done:** steps 1 to 4: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data) and the services (everything the app does with those tables, and the worker's tasks).
-- **Seven questions are waiting for the owner** (§5): Q2 to Q4 from the database step, and Q5 to Q8 from the services. Each has a safe default in place, and none blocks step 5.
+- **One question is waiting for the owner** (§5): Q4, how strict "same medicine" is. The others were answered on 2026-11-13. It has a safe default in place, and doesn't block step 5.
 - **Next:** step 5, the agent, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
@@ -249,12 +249,19 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | The upload summary used other field names than `06`. | Aligned with `06` (`zeroed`, `reserved_kept`). |
 | `06` and N-15 say uploads are CSV or XLSX. | Only CSV is built; XLSX joins with the endpoint (§4). |
 | Can one need really have two offers at once (R-W3)? | Yes, but only one from matching and one from early release: a second pharmacy that accepts an ask is thanked, and nothing is held. A race test accepts both offers at the same moment: one wins, the other box goes back. |
+| **Is the controlled list right?** It was built from the international lists, not from a list of the Ministry's own. | Checked on the real catalog (2026-11-13). No visible product holds a substance of the international narcotic or psychotropic lists, and every product has an ATC code and its ingredients, so none escapes the check. About 9 products are hidden although not controlled (atomoxetine, one bupropion with naltrexone): their class is hidden as a whole. Not on those lists and left visible: gabapentin, pseudoephedrine, dextromethorphan, muscle relaxants, trihexyphenidyl. |
 
 ### Decided
 
 | # | What the docs disagreed on | The owner's decision |
 |---|---|---|
 | Q1 | **Pickup day.** The rule let a client pick today or the pharmacy's next 1–3 **open** days, but the reserve screen, the search filter and the agent's tools only knew "today / tomorrow". | **2026-11-10:** the rule and the agent use the same pickup days (3 open days at most), as dates. The agent must also know that a later pickup day leaves fewer days before the box expires. Applied in the docs and the rule code (decision log §W, BLD-D1 and BLD-D2). |
+| Q6 | **Can the agent open a claim after 20:00 for a request that is still open?** A request started at 19:30 searches until 01:30, but R-W1 allowed new claims only during request hours. | **2026-11-13:** yes, for as long as the request is open. Watches made from search or chat keep the request hours. Applied in `04` v4.6 (R-W1), the service and a test (decision log BLD-D6). |
+| Q8 | **What the emails say.** `03` and R-NT name each email, but not the wording. | **2026-11-13:** keep the wording as built (`backend/src/dawalink/services/email.py`), and review it once the project is finished. |
+| Q2 | **Which medicines are controlled?** The Ministry publishes no list that can be downloaded. | **2026-11-13:** the list as built is final, with no pharmacist's check (decision log BLD-D8; O6 closed). |
+| Q3 | **Which medicines need no prescription?** | **2026-11-13:** the list stays empty for now, so every product shows the notice. The tests cover both kinds with invented products. A short true list may be added before the demo (O7). |
+| Q5 | **A client cancels a reservation that belongs to an open request, or doesn't come for it.** | **2026-11-13:** that medicine is finished in the request and nothing is searched again; the others carry on (`04` R-RQ11, decision log BLD-D7). This is what was built. |
+| Q7 | **The straight-line travel estimate** (N-50). | **2026-11-13:** kept. It is only the fallback; road times come from OpenRouteService first, and the owner may switch to Google Maps later (decision log BLD-D9). |
 
 ### Waiting for a decision
 
@@ -262,13 +269,7 @@ None of these blocks step 5. Each has a safe default in place.
 
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
-| Q2 | **Which medicines are controlled?** The Ministry publishes no list that can be downloaded. | Built from the international narcotic and psychotropic schedules, the matching ATC classes, plus tramadol and pregabalin: 168 products are hidden. When in doubt, a medicine is hidden. Pseudoephedrine (in cold medicines) and gabapentin are **not** hidden. | Ask a pharmacist to check `backend/data/catalog_overrides.toml` against the Ministry's own list before the demo (open item O6). |
-| Q3 | **Which medicines need no prescription?** | The list is empty, so every product shows "Prescription needed: bring it to the pharmacy", even paracetamol. The notice is all it changes. | The team fills the list in the same file (open item O7). A short list of everyday medicines is enough for the demo. |
-| Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. A missed alternative only hides an option; a wrong one could hurt someone. A pharmacist can add safe pairs to the corrections in the same file. |
-| Q5 | **A client cancels a reservation that belongs to an open request, or doesn't come for it.** The rules say what happens after [Not available] (the search starts again), but not here. | The medicine is dropped from the request: its item becomes CANCELLED and nothing is searched again. The other medicines carry on. | Keep it. The client chose not to take that box, so searching again would only produce offers they didn't ask for. They can start a new request. |
-| Q6 | **Can the agent open a claim after 20:00 for a request that is still open?** A request started at 19:30 searches until 01:30, but R-W1 allows new claims only during request hours. | R-W1 is followed as written: after 20:00 the agent can't start waiting for a medicine of an open request. Claims opened before 20:00 keep working all night. | Allow it while the request is open. The request itself was started during request hours, and the 6 hours are the promise made to the client. Watches made from search or chat keep the rule. |
-| Q7 | **The straight-line travel estimate** (new number N-50), used when no road time is known: road distance = straight line × 1.4, 30 km/h by car, 4.5 km/h on foot. | In place, and shown as "about N min". Until the routing service is connected (§4), every travel time is this estimate. | Keep these values. They are common rules of thumb for a city; real road times replace them once the routing key is set. |
-| Q8 | **What the emails say.** `03` and R-NT name each email and list what "Reserved" holds, but not the wording. | A subject per email ("Reserved: R-7K3Q2F", "Reminder: pick up R-7K3Q2F today", "Can you release <medicine>?") and a body listing the facts: order number, medicine, packs, price, pharmacy, times. Only "Reserved" adds the address and the opening hours. A real example is in the step 4 report. | Keep it for now, and read the wording in `backend/src/dawalink/services/email.py` (`SUBJECTS` and `FACTS`). Once the website can reserve (step 8), every email shows up in mailpit, and wording is cheap to change then. |
+| Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. **The owner will decide later** (2026-11-13), and may also remove alternatives from the agent, leaving them to the pharmacist. Until then they are built as designed: removing them later means dropping one tool and one prompt rule. |
 
 ---
 

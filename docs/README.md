@@ -39,7 +39,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.3 |
 | 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.3 |
 | 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.5 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.5 |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.6 |
 | 05 | [Database design](05_database.md) | ER diagram, 34 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.4 |
 | 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.5 |
 | 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 17 tools + reply, prompts, memory, guardrails, limits, observability | ✅ v1.4 |

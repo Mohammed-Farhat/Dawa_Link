@@ -44,7 +44,7 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-12:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.5 · `05` v3.4 (the schema as built);
+  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.6 · `05` v3.4 (the schema as built);
   - `06` v1.5 · `07` v1.4 · `08` v1.3;
   - `09` v1.6 (living: every change updates it) · `10` v1.4 (threat model; living: a change that adds an attack surface updates it);
   - `12` v2.2 (infrastructure and deployment);
@@ -83,9 +83,9 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
 - **Next: step 5, the agent** (the 17 tools and `reply`, proposals, the turn graph, guards, prompts, the models, turns in the worker, tracing). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
-  - O6: the controlled-medicines list needs a pharmacist's check (`backend/data/catalog_overrides.toml`);
-  - O7: the no-prescription list is empty, so every product shows the prescription notice;
-  - Q5 to Q8 in [docs/build_plan.md](docs/build_plan.md) §5: four product questions from step 4, each with a default in place;
+  - O7: the no-prescription list stays empty for now (the owner's choice), so every product shows the prescription notice. A short true list may be added before the demo;
+  - Q4 in [docs/build_plan.md](docs/build_plan.md) §5 (how strict "same medicine" is). The owner will decide later, and may also remove alternatives from the agent. Until then they are built as designed;
+  - routing: OpenRouteService first; the owner may switch to Google Maps later (BLD-D9: Google's terms restrict storing travel times, to settle before switching);
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;

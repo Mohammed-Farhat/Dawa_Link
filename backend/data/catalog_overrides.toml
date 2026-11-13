@@ -13,7 +13,10 @@
 #   - tramadol and pregabalin, which are not on the international schedules but are widely
 #     restricted in the region.
 # When in doubt a medicine is listed: wrongly hiding one is safer than wrongly showing one.
-# TO CHECK with a pharmacist against the Ministry's own narcotics and psychotropics lists.
+# Checked on the real catalog (2026-11-13): no visible product holds a substance of those
+# lists, and every product has an ATC code and its ingredients. The owner treats this
+# list as final (decision log BLD-D8). It was not compared with a list of the Ministry's
+# own, because none is published.
 # ---------------------------------------------------------------------------------------
 [controlled]
 # A product is controlled if its ATC code starts with one of these.
