@@ -44,7 +44,6 @@ def create_watch(
     actor: Actor = Actor.CLIENT,
     qty: int = 1,
     days_of_use: int = DEFAULT_DAYS_OF_USE,
-    include_equivalents: bool = False,
     max_price_lbp: int | None = None,
 ) -> Claim:
     """[Notify me], or the agent's `create_watch` in a chat (R-W1).
@@ -83,7 +82,6 @@ def create_watch(
         source=source.value,
         client_id=client_id,
         product_id=product.id,
-        include_equivalents=include_equivalents,
         equivalence_key=product.equivalence_key,
         district_id=location.district_id or client.district_id,
         loc_lat=location.point.lat,

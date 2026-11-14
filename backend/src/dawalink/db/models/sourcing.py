@@ -157,7 +157,6 @@ class Claim(Base):
         Uuid, references("request_items.id"), unique=True
     )
     product_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("products.id"))
-    include_equivalents: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     equivalence_key: Mapped[str | None] = mapped_column(Text)
     district_id: Mapped[int | None] = mapped_column(SmallInteger, references("districts.id"))
     loc_lat: Mapped[Decimal | None] = mapped_column(RoundedCoordinate)
@@ -214,7 +213,6 @@ class EarlyReleaseRequest(Base):
     client_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"))
     claim_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("claims.id"))
     product_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("products.id"))
-    include_equivalents: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     qty: Mapped[int] = mapped_column(Integer)
     state: Mapped[str] = mapped_column(Text, server_default=text("'OPEN'"))
     idempotency_key: Mapped[str] = mapped_column(Text)

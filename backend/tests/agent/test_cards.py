@@ -4,12 +4,13 @@ Also the output guard, on whole turns: one chance to fix a reply, then our own w
 (docs/07 §7.2, AG-D9; docs/09 FA-5 to FA-8, FA-22, FA-23).
 """
 
+import json
 import uuid
 from typing import Any
 
 import pytest
 
-from dawalink.agent.llm import LLMRefused
+from dawalink.agent.llm import LLMRefused, ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, reply, say
 from dawalink.agent.turn import Status
 from dawalink.services import proposals
@@ -72,6 +73,51 @@ class TestWhatAReplyMayShow:
         assert (result.text, result.proposal_ids) == ("Which medicine do you need?", ())
         run = scene.run(result)
         assert (run.outcome, run.guardrails, run.llm_calls) == ("ok", ["card"], 2)
+
+    def test_this_turns_card_must_be_shown_not_only_an_older_one(self, scene: Scene) -> None:
+        """FA-37. Seen on a real run: "here is the reservation card", next to an older card."""
+        first = scene.turn(
+            call("propose_reservation", listing_id=str(scene.stock()), pickup_day=str(TODAY)),
+            proposal_from(scene),
+        )
+        (older,) = first.proposal_ids
+        elsewhere = scene.stock(pharmacy_id=scene.world.make.pharmacy())
+
+        def with_the_new_card(prompt: Prompt) -> ModelReply:
+            made = [
+                json.loads(result.content)
+                for message in prompt.messages
+                if isinstance(message, ToolResults)
+                for result in message.results
+                if result.name == "propose_reservation"
+            ]
+            return reply("Here is the card.", proposal_ids=[made[-1]["proposal_id"]])
+
+        result = scene.turn(
+            call("propose_reservation", listing_id=str(elsewhere), pickup_day=str(TODAY)),
+            reply("Here is the card.", proposal_ids=[str(older)]),
+            with_the_new_card,
+            text="And at the other pharmacy?",
+        )
+
+        (shown,) = result.proposal_ids
+        run = scene.run(result)
+        assert shown != older
+        assert (run.outcome, run.guardrails) == ("ok", ["card"])
+
+    def test_an_older_card_may_be_shown_again_when_no_card_was_made(self, scene: Scene) -> None:
+        first = scene.turn(
+            call("propose_reservation", listing_id=str(scene.stock()), pickup_day=str(TODAY)),
+            proposal_from(scene),
+        )
+        (older,) = first.proposal_ids
+
+        result = scene.turn(
+            reply("It is still here.", proposal_ids=[str(older)]), text="Show it again"
+        )
+
+        assert result.proposal_ids == (older,)
+        assert scene.run(result).guardrails == []
 
     def test_another_conversations_card_is_not_this_ones(self, scene: Scene) -> None:
         """FA-5: a real card, but of someone else's chat."""
@@ -358,7 +404,7 @@ class TestATap:
             "SELECT id FROM request_items WHERE request_id = :r AND position = 2", r=request
         ).id
         brands = scene.tool(
-            "propose_constraint_change", thread, request_id=request, allow_alternatives=True
+            "propose_constraint_change", thread, request_id=request, show_other_brands=True
         )
         removal = scene.tool("propose_remove_item", thread, request_id=request, item_id=item)
 

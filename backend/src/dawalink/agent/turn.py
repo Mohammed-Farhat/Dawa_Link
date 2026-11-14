@@ -58,7 +58,6 @@ from dawalink.agent.prompts import PROMPT_VERSION, system_parts
 from dawalink.agent.templates import Fixed, fixed
 from dawalink.agent.tools import (
     REPLY,
-    REPLY_SPEC,
     Reply,
     ToolError,
     ToolOutcome,
@@ -86,7 +85,7 @@ from dawalink.domain.numbers import (
     TURN_TIME_LIMIT_CHAT_S,
     TURN_TIME_LIMIT_WORKER_S,
 )
-from dawalink.domain.vocabulary import EscalationReason, RunOutcome
+from dawalink.domain.vocabulary import EscalationReason, RunOutcome, TurnTrigger
 from dawalink.services import conversations, escalations, proposals
 from dawalink.services.context import Tx, unit_of_work
 from dawalink.services.travel import RoutingService
@@ -94,6 +93,11 @@ from dawalink.services.travel import RoutingService
 log = structlog.get_logger(__name__)
 
 RunsIn = Literal["chat", "worker"]
+# Said to the model after the results of its last allowed tool call (N-17).
+NO_TOOL_CALLS_LEFT = (
+    "That was the last tool call of this turn. End the turn now with the reply tool, "
+    "using what you have; any other tool call will be refused."
+)
 # A guardrail note for a turn the model never ended with a usable reply.
 NO_REPLY = "no_reply"
 INJECTION = "injection"
@@ -299,6 +303,7 @@ def _load_context(graph_state: _State) -> _State:
         routing=agent.routing,
         clean=lambda text: redact(text, loaded.identity).text,
         key=f"{loaded.conversation_id}:{loaded.last_seq}",
+        by_client=loaded.trigger is TurnTrigger.CLIENT_MESSAGE,
     )
     work.messages = [UserText(loaded.block)]
     work.route = "guard_input"
@@ -368,12 +373,15 @@ def _agent(graph_state: _State) -> _State:
         # The model never ended the turn: our own words, with this turn's cards (FA-4).
         _use_template(work, Fixed.NEUTRAL, NO_REPLY)
         return graph_state
-    tools_left = work.tool_calls < MAX_TOOL_CALLS_PER_TURN
     prompt = Prompt(
         system=system_parts(work.loaded.mode),
         messages=tuple(work.messages),
-        # After the last allowed tool call, the model is only given `reply` (N-17).
-        tools=specs(work.loaded.mode) if tools_left else (REPLY_SPEC,),
+        # The same tools on every call of a turn. Claude ties its reasoning to the tool
+        # list it was made with, and rejects a request that sends that reasoning back
+        # with another list (found on 2026-11-14, when a turn first used all its tool
+        # calls). After the last allowed call the model is told to reply (`_tools`),
+        # and a tool it still calls is refused there (N-17).
+        tools=specs(work.loaded.mode),
     )
     with work.trace.span("llm", "generation", model=work.agent.model.name) as span:
         retries_before = work.retries
@@ -503,7 +511,10 @@ def _tools(graph_state: _State) -> _State:
     if work.candidate is not None:
         work.route = "guard_output"
         return graph_state
-    work.messages.append(ToolResults(tuple(work.pending_results)))
+    used_up = work.tool_calls >= MAX_TOOL_CALLS_PER_TURN
+    work.messages.append(
+        ToolResults(tuple(work.pending_results), note=NO_TOOL_CALLS_LEFT if used_up else "")
+    )
     work.route = "agent"
     return graph_state
 

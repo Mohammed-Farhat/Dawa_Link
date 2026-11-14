@@ -40,7 +40,6 @@ class Listing:
     days_left: int
     available: int  # shown exactly up to 5 (R-S5)
     more_available: bool
-    is_alternative: bool  # same medicine, another brand (R-S4)
     travel: Travel
     # Lasts the client's days of use. None: the client didn't say, so only a warning shows.
     fits: bool | None
@@ -130,7 +129,6 @@ def search_listings(
     client_id: uuid.UUID,
     product_ids: Sequence[uuid.UUID],
     location: Location,
-    include_alternatives: bool = False,
     days_of_use: int | None = None,
     pickup_day: date | None = None,
     max_price_lbp: int | None = None,
@@ -146,11 +144,9 @@ def search_listings(
         raise ServiceError(Code.PICKUP_DAY_INVALID, "The pickup day can't be in the past.")
     limit = max(1, min(limit, MAX_PAGE_SIZE))
 
-    asked = {catalog.allowed_product(tx, product_id).id for product_id in product_ids}
-    wanted = set(asked)
-    if include_alternatives:
-        for product_id in asked:
-            wanted.update(other.id for other in catalog.equivalents(tx, product_id))
+    # Exactly the products asked for, never another brand of them (R-S4). The agent's
+    # `find_options` is the one caller that passes other brands, to show them (R-C10).
+    wanted = {catalog.allowed_product(tx, product_id).id for product_id in product_ids}
     products = {
         product.id: product
         for product in tx.session.execute(select(Product).where(Product.id.in_(wanted))).scalars()
@@ -208,7 +204,6 @@ def search_listings(
                 days_left=box.days_left,
                 available=shown,
                 more_available=more,
-                is_alternative=box.product_id not in asked,
                 travel=travels[box.pharmacy_id],
                 fits=None if days_of_use is None else True,
                 pickup_days_allowed=choices[box.item_id].days,

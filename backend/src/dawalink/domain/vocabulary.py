@@ -98,6 +98,9 @@ class ProposalKind(StrEnum):
     REQUEST_SUMMARY = "request_summary"
     CONSTRAINT_CHANGE = "constraint_change"
     REMOVE_ITEM = "remove_item"
+    # Another brand of the medicine at a pharmacy: to read and to call about. A tap
+    # does nothing: only a pharmacist can say the brand suits the client (R-C10).
+    OTHER_BRAND = "other_brand"
 
 
 class AgentMode(StrEnum):

@@ -22,6 +22,7 @@ from dawalink.agent.tools.base import (
     ToolError,
     Turn,
     location_of,
+    note_asked,
     rate,
     road_times_first,
 )
@@ -150,9 +151,9 @@ class GetEquivalentsOut(Output):
 
 def get_equivalents(turn: Turn, tx: Tx, args: GetEquivalents) -> GetEquivalentsOut:
     catalog.allowed_product(tx, args.product_id)
-    return GetEquivalentsOut(
-        products=[product_out(tx, ref) for ref in catalog.equivalents(tx, args.product_id)]
-    )
+    others = catalog.equivalents(tx, args.product_id)
+    note_asked(turn, tx, args.product_id)
+    return GetEquivalentsOut(products=[product_out(tx, ref) for ref in others])
 
 
 # --- find_options ----------------------------------------------------------------------
@@ -162,7 +163,8 @@ class FindOptions(Arguments):
     product_ids: list[uuid.UUID] = Field(
         min_length=1,
         max_length=10,
-        description="The medicine first, then its equivalents if the client agreed to them.",
+        description="The medicine the client asked for first, then its other brands from "
+        "get_equivalents if the client agreed to hear about them.",
     )
     qty: Qty = 1
     days_of_use: Days = 1
@@ -183,6 +185,8 @@ class OptionOut(Output):
     listing_id: uuid.UUID
     product_id: uuid.UUID
     product: str
+    # True: another brand than the client asked for. Show it with show_other_brand;
+    # never propose_reservation for it unless the client then asks for that brand.
     is_alternative: bool
     prescription_required: bool
     pharmacy: PharmacyOut
@@ -234,6 +238,7 @@ def _prepare_find_options(turn: Turn, args: FindOptions) -> None:
 def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
     _same_medicine(tx, args.product_ids)
     asked = args.product_ids[0]
+    note_asked(turn, tx, asked)
     found = search.search_listings(
         tx,
         client_id=turn.client_id,
@@ -296,7 +301,6 @@ class BasketItemIn(Arguments):
     product_id: uuid.UUID
     qty: Qty = 1
     days_of_use: Days = 1
-    allow_alternatives: bool = False
     max_price: Money | None = None
 
 
@@ -313,7 +317,6 @@ class PlanItemOut(Output):
     product_id: uuid.UUID
     product: str
     listing_id: uuid.UUID
-    is_alternative: bool
     qty: int
     price: str
     expiry_date: date
@@ -375,7 +378,6 @@ def _lines(turn: Turn, tx: Tx, args: PlanBasket) -> list[BasketLine]:
             product_id=item.product_id,
             qty=item.qty,
             days_of_use=item.days_of_use,
-            allow_alternatives=item.allow_alternatives,
             max_price_lbp=display.in_lbp(item.max_price, money),
             request_item_id=items_of_request.get(item.product_id),
         )
@@ -412,17 +414,7 @@ def plan_basket(turn: Turn, tx: Tx, args: PlanBasket) -> PlanBasketOut:
         preference=args.preference or turn.state.preference,
         max_plans=args.max_plans,
     )
-    wanted = {item.product_id for item in args.items}
-    names = _names(
-        tx,
-        wanted
-        | {
-            pick.listing_product_id
-            for trip in found.trips
-            for stop in trip.stops
-            for pick in stop.picks
-        },
-    )
+    names = _names(tx, {item.product_id for item in args.items})
     money = rate(tx)
 
     def missing(gaps: Any) -> list[MissingOut]:
@@ -458,9 +450,8 @@ def plan_basket(turn: Turn, tx: Tx, args: PlanBasket) -> PlanBasketOut:
                         items=[
                             PlanItemOut(
                                 product_id=pick.product_id,
-                                product=names[pick.listing_product_id],
+                                product=names[pick.product_id],
                                 listing_id=pick.listing_id,
-                                is_alternative=pick.listing_product_id != pick.product_id,
                                 qty=pick.qty,
                                 price=display.money(pick.price_lbp, money),
                                 expiry_date=pick.expiry_date,
@@ -723,7 +714,8 @@ TOOLS = (
     Tool(
         "get_equivalents",
         "The other brands of exactly the same medicine (same ingredient, strength and form). "
-        "The only source of alternatives, and only after the client agreed to them.",
+        "The only source of other brands, and only after the client agreed to hear about them. "
+        "You never reserve one for the client: a pharmacist decides whether it suits them.",
         GetEquivalents,
         get_equivalents,
         BOTH,
@@ -732,7 +724,8 @@ TOOLS = (
         "find_options",
         "Where one medicine can be reserved now: pharmacies with a box that lasts the "
         "client's days of use from the pickup day, with travel time, opening hours, price "
-        "and expiry. Use it to decide which pharmacy to recommend.",
+        "and expiry. Use it to decide which pharmacy to recommend. An option with "
+        "is_alternative true is another brand: show it with show_other_brand, don't reserve it.",
         FindOptions,
         find_options,
         BOTH,
@@ -743,7 +736,8 @@ TOOLS = (
         "plan_basket",
         "Plans for several medicines at once: which pharmacies to visit, in which order, "
         "what to take from each, the total travel time and price, and what stays missing. "
-        "One plan is one trip on one day.",
+        "One plan is one trip on one day. A plan holds the asked medicines themselves, never "
+        "another brand.",
         PlanBasket,
         plan_basket,
         BOTH,

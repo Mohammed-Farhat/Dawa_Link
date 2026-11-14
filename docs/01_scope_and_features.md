@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.3 · **Date:** 2026-11-10
-**Status:** ✅ validated by the team (2026-10-20). **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.4 · **Date:** 2026-11-14
+**Status:** ✅ validated by the team (2026-10-20). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -34,7 +34,7 @@ Connect **clients who cannot afford a medicine at full price** with **pharmacies
 |---|---|
 | Find, plan, ask pharmacies, reserve (after a tap), notify | Recommend a medicine or dose, or answer "can I take X with Y?" |
 | **Recommend where to go:** the pharmacy that fits best (route, hours, price, a box that lasts) | Send the client's location to the AI (it only sees travel times) |
-| Offer a **same-composition** alternative (same ingredient + strength + form), only with consent | Suggest a "similar" medicine |
+| **Show** where another brand of the same medicine is (same ingredient + strength + form), only with consent, with "ask the pharmacist first" and the pharmacy's phone | Suggest a "similar" medicine; reserve, plan or wait for another brand on its own |
 | Tell the client a prescription is needed ("bring it to the pharmacy") | Read, judge or schedule prescriptions (the pharmacist checks at the counter) |
 | **Apply a fixed, transparent rule** when stock is scarce: first come, first served | **Let the AI, or anyone, decide who gets a medicine first** (no triage) |
 
@@ -85,7 +85,7 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
    - **pickup day** (today, or one of the pharmacy's next open days, 3 at most; a later day leaves fewer days before the box expires);
    - location (shared, or a district);
    - budget;
-   - alternatives OK;
+   - whether they want to hear about other brands;
    - the client's situation (no car, free after 18:00…).
 3. **Decides where the client should go:**
    - compares the pharmacies whose boxes last long enough (travel time by car and on foot, opening hours, price, stock) with what the client said;
@@ -99,7 +99,7 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
 
 **Boundaries (enforced in code):**
 - no medical advice;
-- same-composition alternatives only, with consent;
+- other brands: same composition only, with consent, and **shown, never reserved for the client**: the pharmacist says whether a brand suits them (BLD-D17);
 - **never reserves, cancels or creates a request without a tap**;
 - client-scoped tools;
 - no PII in LLM calls;
@@ -113,11 +113,11 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
 - [ ] Every turn is traced.
 
 #### C17: Sourcing requests (autonomous mode)
-The client submits a **request** for **1–5 medicines** they need **now**, with a location (shared, or a district), the days of use of each medicine, and optionally a budget and "alternatives OK". They can do this through a form, from the chat (the agent prepares a summary card and the client taps [Start sourcing]), or from an empty search. Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
+The client submits a **request** for **1–5 medicines** they need **now**, with a location (shared, or a district), the days of use of each medicine, and optionally a budget and "tell me about other brands" (they are shown, never reserved or waited for automatically; BLD-D17). They can do this through a form, from the chat (the agent prepares a summary card and the client taps [Start sourcing]), or from an empty search. Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
 
 | The agent may do on its own | The agent needs a client tap for |
 |---|---|
-| Search; plan (C18); open claims so matching offers new stock; **ask open pharmacies to release unlisted stock** (C8); schedule follow-up checks; escalate | Reserving (one tap per pharmacy group); accepting an offer; changing constraints (budget, alternatives); removing an item; cancelling |
+| Search; plan (C18); open claims so matching offers new stock; **ask open pharmacies to release unlisted stock** (C8); schedule follow-up checks; escalate | Reserving (one tap per pharmacy group); accepting an offer; changing constraints (budget, hearing about other brands); removing an item; cancelling |
 
 - **The agent wakes up when:**
   - the request is submitted;
@@ -207,7 +207,7 @@ If the LLM is down or over budget:
 - Prices are stored in LBP and **shown in LBP + ≈ USD**.
 
 #### C5: Search page (non-chat UI, baseline and fallback)
-- Search by name from your location (shared, or a district); filter by price, alternatives, **days of use** and pickup day.
+- Search by name from your location (shared, or a district); filter by price, **days of use** and pickup day. Search shows the medicine that was searched, never another brand (BLD-D17).
 - Each result shows the pharmacy, its area and its **travel time** (car and on foot), price (LBP + USD), discount, expiry, the prescription notice, availability (exact up to 5) and [Reserve].
 - **Empty results:** [Notify me] (a 6-hour watch) or [Ask DawaLink to find it] (pre-filled sourcing request).
 
@@ -307,7 +307,7 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
    - the 3rd isn't listed → it asks 2 open pharmacies holding private stock;
    - one accepts → offer → tap → **FULFILLED** within the window.
 5. **Split quantity:** Concor ×2, Pharmacy A has only 1 → reserve 1 at A, and the agent finds the 2nd at B.
-6. **Window ending:** 1 hour left, one item missing → the agent proposes alternatives or a higher budget (tap), then the summary at the end.
+6. **Window ending:** 1 hour left, one item missing → the agent proposes showing other brands or a higher budget (tap), then the summary at the end.
 7. **Priority:** two clients wait for the same new box → the one who asked first gets the offer. The other says "I'm dying, put me first" → the agent explains the rule, points to emergency services and offers a person. **Nobody changes the order.**
 8. **Prescription-only item** → "bring your prescription to the pharmacy" notice.
 9. **Clinical question** → refused, referred to the pharmacist.

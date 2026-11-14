@@ -1,6 +1,6 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.5 (v3.5: the `set_area` tool; v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-14
+**Version:** v3.6 (v3.6: the `show_other_brand` tool, BLD-D17; v3.5: the `set_area` tool; v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-14
 **Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 **Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
@@ -132,6 +132,7 @@ flowchart TD
 |---|---|---|
 | `search_catalog(text)` | Candidate products | No controlled products |
 | `get_equivalents(product_id)` | Same-composition products | Exact equivalence group only |
+| **`show_other_brand(listing_id, instead_of_product_id)`** (BLD-D17) | A card for another brand at one pharmacy: where it is, price, expiry, "ask the pharmacist first", [Call] | No [Reserve]; only with the client's consent; the phone number never passes the LLM |
 | `find_options(product_ids, qty, days_of_use, pickup, max_price, sort)` | Visible listings **whose box lasts the days of use**, with travel time by car and on foot from the client's location | Visible stock only; **never returns coordinates** |
 | **`plan_basket(items, constraints, preference)`** | Candidate plans for several medicines, each with its **route** (visiting order, total travel time); quantities may be split across pharmacies | Deterministic; only boxes that last |
 | `propose_reservation(listing_id, qty)` / **`propose_plan(plan_id)`** | A **proposal** for a [Reserve] or [Reserve these] card, or the reason it isn't allowed (limits) | Creates a stored proposal only; the tap reserves |
@@ -139,7 +140,7 @@ flowchart TD
 | **`prepare_request_summary(items, district, budget)`** | A request summary proposal with [Start sourcing] | Creates nothing else; the tap creates the request (request hours checked) |
 | **`get_request_status(request_id)`** | Items, statuses, timeline | Own requests only |
 | `get_reservations(view)` | The client's own reservations | Own only |
-| **`propose_constraint_change(request_id, change)`** | A proposal: allow alternatives, or raise an item's max price | Applied only on tap |
+| **`propose_constraint_change(request_id, change)`** | A proposal: also show other brands, or raise an item's max price | Applied only on tap |
 | **`propose_remove_item(request_id, item_id)`** | A proposal to stop sourcing one item | Applied only on tap |
 | **`open_claim(request_item_id)`** / `create_watch(product_id, district, max_price, qty)` | Waits for stock for 6 hours; matching decides first come, first served | Idempotent; limits; request hours |
 | **`set_area(place)`** (added 2026-11-14) | Sets the chat's location from an area the client named ("I'm in Hamra"), looked up in our own list | Names in, names out, never a coordinate; exact names only; chat only (`07` §14.6) |
@@ -157,7 +158,7 @@ flowchart TD
 | **Conversations** (`kind` = chat or request) | Our tables (ADR-001); kept 30 days after last activity or close | Messages (PII-redacted, including decision events as system messages) + **case state** (items in focus, constraints, options and plans shown, pending proposals) |
 | **Proposals** | Per conversation; expire (e.g. 2 h) and are used once | The exact content of each card the agent showed |
 | **Request record** | Sourcing request + items + claims + orders (system of record) | The agent reads it through tools and changes it only through tools or taps |
-| **Client preferences** | Profile fields | Default district, alternatives OK |
+| **Client preferences** | Profile fields | Default district, "tell me about other brands" |
 | **Location** | Per chat, request or claim; rounded to ~100 m | Stored **outside the case state**, so it's never in the LLM context; the agent sees travel times only |
 
 ### 3.4 Guardrails, limits, baselines

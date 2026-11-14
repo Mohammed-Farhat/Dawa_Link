@@ -134,6 +134,17 @@ class TestAsking:
         for pharmacy in nearest:
             assert world.notifications(town.owners[pharmacy]) == ["PN-7"]
 
+    def test_a_pharmacy_is_never_asked_about_another_brand(self, town: Town, world: World) -> None:
+        """R-C10 (BLD-D17)."""
+        other_brand = world.make.product(equivalence_key=KEY, public_price_lbp=1_000_000)
+        holder = world.make.pharmacy(lat=33.897, lon=35.483)
+        world.make.item(pharmacy_id=holder, product_id=other_brand, days_left=200, qty_on_hand=4)
+
+        asked = town.ask()
+
+        assert asked.pharmacies_asked == 0
+        assert town.asks() == {}
+
     def test_the_client_and_the_agent_only_learn_how_many_were_asked(
         self, town: Town, world: World
     ) -> None:

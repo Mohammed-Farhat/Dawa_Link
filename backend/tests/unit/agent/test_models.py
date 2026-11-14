@@ -139,6 +139,21 @@ class TestClaude:
             }
         ]
 
+    def test_a_note_of_ours_goes_after_the_tool_results_in_the_same_message(self) -> None:
+        """FA-36: what was already sent in a turn is never changed, only added to."""
+        model, _ = claude(answer())
+        results = ToolResults(
+            (ToolResult("call_1", "search_catalog", '{"ok":true}'),), note="Reply now."
+        )
+
+        sent = model.request(Prompt(PROMPT.system, (*PROMPT.messages[:2], results), PROMPT.tools))
+
+        assert [block["type"] for block in sent["messages"][-1]["content"]] == [
+            "tool_result",
+            "text",
+        ]
+        assert sent["messages"][-1]["content"][-1] == {"type": "text", "text": "Reply now."}
+
     def test_an_answer_is_read_into_text_tool_calls_and_tokens(self) -> None:
         thinking = SimpleNamespace(type="thinking", thinking="")
         text = SimpleNamespace(type="text", text="Looking.")

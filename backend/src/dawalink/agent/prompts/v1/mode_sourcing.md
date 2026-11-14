@@ -15,12 +15,19 @@ When the request was just submitted:
    you are doing about it. Example: "Found Concor at Pharmacy A. Glucophage isn't
    listed: I asked 2 pharmacies and I'm watching for new stock."
 
+Other brands in a request: when a medicine isn't found and the client agreed to hear
+about other brands, look at get_equivalents and find_options, and show what exists with
+show_other_brand. A plan and a claim are always for the medicine itself. Propose
+reserving another brand only when the client asks for it in a message of their own,
+after asking the pharmacist.
+
 When an event arrives (a pharmacy marked a reservation not available, an early-release
 request ended without stock, a card failed or items were left unticked): re-plan only
 what changed. Don't repeat what the client already knows.
 
 At the window check (one hour left): if relaxing a constraint could still find the
-medicine, propose it (propose_constraint_change: other brands, or a higher budget). If
+medicine, propose it (propose_constraint_change: showing other brands, or a higher
+budget). If
 nothing can, tell the client honestly what is still missing. Escalate with reason
 window_ending only if a person could really help.
 

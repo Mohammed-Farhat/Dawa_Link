@@ -1,4 +1,4 @@
-"""The 18 tools, called one by one as a model would call them (docs/07 §4, §11).
+"""The 19 tools, called one by one as a model would call them (docs/07 §4, §11).
 
 Each test sends JSON arguments and reads the JSON result: exactly what crosses the line
 between the model and our code. Rules covered: INV-8, INV-11, INV-21, INV-24; R-AG6 to
@@ -34,10 +34,10 @@ def keys_in(value: Any) -> set[str]:
 
 
 class TestTheToolList:
-    def test_there_are_18_tools_and_reply(self) -> None:
-        """AG-D2, BLD-D14: 6 that read, 6 that propose, 6 that act."""
-        assert len(ALL) == 18
-        assert len({tool.name for tool in ALL}) == 18
+    def test_there_are_19_tools_and_reply(self) -> None:
+        """AG-D2, BLD-D14, BLD-D17: 6 that read, 7 that make cards, 6 that act."""
+        assert len(ALL) == 19
+        assert len({tool.name for tool in ALL}) == 19
         assert REPLY_SPEC.name == "reply"
 
     def test_each_mode_has_its_own_tools(self) -> None:
@@ -635,7 +635,7 @@ class TestInARequest:
         )
 
         brands = scene.tool(
-            "propose_constraint_change", thread, request_id=request, allow_alternatives=True
+            "propose_constraint_change", thread, request_id=request, show_other_brands=True
         )
         budget = scene.tool(
             "propose_constraint_change",
@@ -655,7 +655,7 @@ class TestInARequest:
             "propose_constraint_change",
             thread,
             request_id=request,
-            allow_alternatives=True,
+            show_other_brands=True,
             item_id=first.id,
             max_price={"amount": 800_000, "currency": "LBP"},
         )

@@ -273,16 +273,16 @@ class TestWhichBoxIsOffered:
 
         assert [o.inventory_item_id for o in market.offers(claim)] == [cheap]
 
-    def test_another_brand_only_if_the_client_allowed_alternatives(self, market: Market) -> None:
-        """G4: alternatives need the client's consent."""
-        strict = market.watch()
+    def test_another_brand_is_never_offered(self, market: Market) -> None:
+        """R-C10 (BLD-D17): nothing is held for a client that a pharmacist hasn't agreed to."""
+        claim = market.watch()
         market.stock(1, product_id=market.other_brand)
 
-        market.sweep()
-        open_to_it = market.watch(include_equivalents=True)
+        made = market.sweep()
 
-        assert market.offers(strict) == []
-        assert len(market.offers(open_to_it)) == 1
+        assert made == 0
+        assert market.offers(claim) == []
+        assert market.claim(claim).state == "ACTIVE"
 
     def test_private_stock_is_never_offered_by_matching(self, market: Market) -> None:
         """INV-8: early-release stock is reached only by asking the pharmacy."""

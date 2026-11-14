@@ -9,7 +9,7 @@ This is the one place that says **what is built, what comes next, and what was l
 ## In short
 
 - **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the tools, cards, guards, prompts, the models, worker turns, routing, tracing). **After step 5 (2026-11-14):** the 18th tool, `set_area` ("I'm in Hamra"), and tracing proven on the real Langfuse.
-- **One question is waiting for the owner** (§5): Q4 (how strict "same medicine" is). It has a default in place and doesn't block step 6. **Decided, to build with the website:** a client can pick their place on a map (Q15, BLD-D16). Q9 to Q14 were answered on 2026-11-14: the list of areas now comes from OpenStreetMap (1,853 places), and a name that exists in several districts is always asked about.
+- **No question is waiting for the owner.** Q4 was answered on 2026-11-14: another brand is shown with "ask the pharmacist first" and is never reserved or waited for automatically (BLD-D17). **To confirm when step 6 starts:** the proposed split of how a simulated client reacts to an "another brand" card (`08` §2.4). **Decided, to build with the website:** a client can pick their place on a map (Q15, BLD-D16). Q9 to Q14 were answered on 2026-11-14: the list of areas now comes from OpenStreetMap (1,853 places), and a name that exists in several districts is always asked about.
 - **Next:** step 6, the simulator and the evaluation, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
@@ -294,6 +294,38 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 
 ---
 
+### After step 5: another brand is shown, never reserved (2026-11-14) ✅
+
+**The owner answered Q4** (decision log BLD-D17): the agent still finds the strict alternatives, but it doesn't offer to reserve one. It shows which pharmacies have another brand, with the pharmacy's name, place and phone, and tells the client to ask the pharmacist first.
+
+**Built:**
+- **Nothing is held for another brand.** Matching offers a claim its own medicine only; pharmacies are asked to release that medicine only; a multi-medicine plan holds the asked medicines only; a watch has no "also other brands". The fifth migration drops the two columns that said otherwise.
+- **The "another brand" card** (the 19th tool, `show_other_brand`; card kind `other_brand`): instead of which medicine, the pharmacy, price, expiry, travel time, "Call the pharmacy and ask the pharmacist if this brand suits you". A tap changes nothing. The phone number is added when the card is displayed and never passes the model.
+- **No reserve card for another brand** unless the client asks for that brand in a message of their own; never in a turn that no client message started. Code knows what "another brand" is (in a request, from the item; in a chat, the first product searched of a medicine is the client's), and checks the client's consent.
+- **The reply guard** also catches "take it instead", "works the same", "this brand suits you". Prompt v1.3, with a ninth worked example.
+- "Other brands OK" (profile, request) now means "tell me about other brands".
+
+**Found on the real runs and fixed** (decision log BLD-D18):
+- A "yes" to other brands in the message being answered didn't count, so the card was refused in the very turn the client agreed.
+- **An older bug, shown for the first time:** when a turn used all 6 tool calls, the request for the final reply was rejected by Claude, and the client would have seen "unavailable". We sent a shorter tool list for that last call, and Claude ties its reasoning to the tool list. The list now never changes within a turn; a note after the tool results tells the model to reply. No earlier turn had used all 6 calls.
+- The model once wrote "here is the reservation card" and attached an older card. The reply guard now asks for a correction.
+- The model offered "Pharmacist agreed, reserve Pharmacy B" as a quick reply. One tap would have claimed a call that never happened: forbidden in the prompt, and refused by the reply guard.
+
+**What code can't guarantee** (`07` §14.7): in a chat, that the client really said "the pharmacist agreed" or "yes, other brands" (the model's word, accepted only in a turn the client wrote, and logged), and that the agent searched the client's own medicine before another brand. In a request, code knows what was asked. All of it goes into the safety evaluation.
+
+**On Claude Haiku 5.5, 11 turns, $0.032:** asked for a medicine that only exists as another brand, with a yes to other brands → two "another brand" cards with [Call]; then "the pharmacist said it is fine, reserve the one at Pharmacy B" → the reservation card.
+
+**The owner's clarifications, the same day:**
+- **Search shows only what was searched.** The "include alternatives" filter is removed from the search service and from the design; another brand is only ever shown by the assistant.
+- **Nobody checks the call.** What the pharmacist says is outside DawaLink. When the client asks for the brand it is reserved; the pharmacist decides at the counter, and the client was told to ask first.
+- **The evaluation doesn't simulate the call.** A simulated client who is shown another brand says thanks, asks to reserve it, or asks to keep looking.
+
+**Left for registration and the website:** the format check and the admin's approval of a pharmacy's phone number come with registration (`10` TH-59).
+
+**Docs changed:** `01` v5.4 · `02` v3.6 · `03` v4.8 (CS-6, AF-13) · `04` v5.0 (R-C10, INV-26) · `05` v3.8 (§12) · `06` v1.7 · `07` v1.8 (§14.7) · `08` v1.4 (three proposed numbers) · `09` v1.10 (FA-34 to FA-38) · `10` v1.8 (TH-59) · `11` v1.6 (the card) · decision log (BLD-D17, BLD-D18) · `CLAUDE.md`.
+
+**Checks:** 1,273 backend tests pass (unit 609, database 210, services 253, races 18, API 13, security 4, failure 2, agent 164); 94% of the code is covered; `ruff` and `mypy` are clean. The privacy run now goes through 19 tools, and the pharmacy's phone is not in anything the model was sent. The Docker stack was rebuilt with the fifth migration.
+
 ## 4. Left for a later step
 
 | What | Joins in |
@@ -306,6 +338,7 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 | A last look, on a map, at the 10 centres still written by hand in `backend/data/areas.csv` (Beirut as a whole, Bint Jbeil, Clemenceau, Ramlet el Baida, Cola, Downtown, Sassine, Sodeco, Mathaf, Ain el Remmaneh). Every other centre is the map's own since BLD-D15. | Before the demo |
 | The limit on location updates (N-47, 10 per hour) for the location shared from the phone. Not needed for `set_area`, whose points come from a fixed list. | Step 7, with the location endpoint. That endpoint must also clear `loc_area_id` (a database check refuses the write otherwise). |
 | **"Pick on the map" for clients** (BLD-D16): the pin sheet, reusing the pharmacy's map component. The server needs nothing new: the location endpoint already takes a point. | Step 8, with the website screens (the location endpoint is step 7) |
+| The format check and the admin's approval of a pharmacy's phone number, which the "another brand" card shows (`10` TH-59); the card's [Call] button on the website | Step 7 (registration) and step 8 (the screens) |
 | Admin actions: approving, rejecting and suspending a pharmacy, suspending a client, and what they end (FR-22, FR-23); contesting a no-show (R-N3) | Step 7, with their endpoints |
 | XLSX inventory files (CSV works) | Step 7, with the upload endpoint |
 | The demo clock's admin endpoint (the service that moves the clock exists) | Step 7 |
@@ -381,14 +414,15 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q13 | **Where the list of areas comes from.** | **2026-11-14:** OpenStreetMap, after one download approved by the owner. The hand-written list keeps the districts and the well-known neighbourhoods (BLD-D15). |
 | Q14 | **A well-known area that shares its name with a village elsewhere** ("Hamra" in Beirut, "El Hamra" in Nabatieh; 10 of our 94 well-known areas). | **2026-11-14:** the agent keeps asking which one, with the choices as quick replies. Code never chooses (BLD-D15). |
 | Q15 | **A client who wants to mark their place on a map**, on a computer or without sharing the device's location. | **2026-11-14:** yes. "Pick on the map" becomes a third choice wherever the website asks for the location; the point is treated like a shared location (BLD-D16). Built with the website screens. |
+| Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** And should the agent offer alternatives at all? | **2026-11-14:** matching stays strict, and it only decides what is **shown**. Another brand is never reserved, planned or waited for automatically: the client calls the pharmacy and asks the pharmacist first, then asks for the brand themselves (BLD-D17). |
 
 ### Waiting for a decision
 
-None of these blocks step 6. Each has a default in place.
+Nothing here blocks step 6.
 
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
-| Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. **The owner will decide later** (2026-11-13), and may also remove alternatives from the agent, leaving them to the pharmacist. Until then they are built as designed: removing them later means dropping one tool and one prompt rule. |
+| – | **Nothing is waiting for a decision.** To confirm when step 6 starts: the proposed split of how a simulated client reacts to an "another brand" card (`08` §2.4): 40% say thanks and stop, 40% ask to reserve it, 20% ask to keep looking for their own medicine. | | |
 
 ---
 
@@ -398,7 +432,7 @@ None of these blocks step 6. Each has a default in place.
 - **The database has four logins.** `.env` holds their four addresses; `.env.example` shows them. If your `.env` is older than 2026-11-12, copy the new lines from `.env.example`.
 - **The Ministry's files** live in `backend/data/moph/` and are ignored by git. A teammate gets them with the commands in the root README.
 - **The outside keys** are in the owner's `.env` since 2026-11-13: `ORS_API_KEY` (OpenRouteService, now served from `api.heigit.org`) and `ANTHROPIC_API_KEY`. The Langfuse keys are there since 2026-11-14. **`.env` also needs the model's settings** (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_MONTHLY_BUDGET_USD`): copy them from `.env.example`.
-- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.055 (34 development turns on Claude Haiku 5.5). Development turns cost cents and need no estimate; every bigger run does.
+- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.087 (45 development turns on Claude Haiku 5.5). Development turns cost cents and need no estimate; every bigger run does.
 - **Talking to the agent:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"`. `--new` starts a new chat, `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step, `--at` sets the time, `--no-location` starts a chat with no location (to try "ana bel Hamra"). With `--steps`, nothing is sent to Langfuse.
 
 - A Windows PostgreSQL service holds port 5432, so the project's database is at `127.0.0.1:5433`.

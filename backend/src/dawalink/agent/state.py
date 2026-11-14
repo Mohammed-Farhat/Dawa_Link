@@ -22,6 +22,7 @@ MAX_NOTES = 5
 MAX_SITUATION_NOTES = 3
 MAX_FOCUS_ITEMS = 5
 MAX_SHOWN_LISTINGS = 30
+MAX_ASKED_MEDICINES = 20
 MAX_PLANS_KEPT = 3
 
 
@@ -81,6 +82,10 @@ class CaseState(BaseModel):
     # Written by code.
     shown_listing_ids: list[uuid.UUID] = Field(default_factory=list)
     open_proposal_ids: list[uuid.UUID] = Field(default_factory=list)
+    # The client's medicines in this chat: for each medicine, the first product that was
+    # searched. Any other brand of one of them is "another brand" for the rest of the
+    # chat: shown, never proposed for reserving unless the client asks for it (R-C10).
+    asked_product_ids: list[uuid.UUID] = Field(default_factory=list)
     plans: dict[str, PlanRef] = Field(default_factory=dict)
     escalated: bool = False
     followups_used: int = 0
@@ -141,6 +146,7 @@ def tidy(state: CaseState, today: date) -> CaseState:
     if tidied.pickup_day is not None and tidied.pickup_day < today:
         tidied.pickup_day = None
     tidied.shown_listing_ids = tidied.shown_listing_ids[-MAX_SHOWN_LISTINGS:]
+    tidied.asked_product_ids = tidied.asked_product_ids[-MAX_ASKED_MEDICINES:]
     while len(tidied.plans) > MAX_PLANS_KEPT:
         del tidied.plans[next(iter(tidied.plans))]
     # Too big: the oldest of what code remembers goes first, then the agent's notes.
@@ -178,7 +184,13 @@ def for_model(state: CaseState) -> dict[str, Any]:
     shown = state.model_dump(
         mode="json",
         exclude_defaults=True,
-        exclude={"shown_listing_ids", "plans", "followups_used", "read_up_to"},
+        exclude={
+            "shown_listing_ids",
+            "asked_product_ids",
+            "plans",
+            "followups_used",
+            "read_up_to",
+        },
     )
     if state.plans:
         shown["plan_ids"] = list(state.plans)

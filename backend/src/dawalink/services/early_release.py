@@ -98,7 +98,7 @@ def _candidates(
     location = matching.location_of(tx, claim)
     if location is None:
         return [], {}
-    wanted = catalog.products_in_group(tx, product, with_equivalents=claim.include_equivalents)
+    wanted = [product.id]  # never another brand (R-C10)
     rows = tx.session.execute(
         select(InventoryItem, Pharmacy)
         .join(Pharmacy, Pharmacy.id == InventoryItem.pharmacy_id)
@@ -233,7 +233,6 @@ def request_early_release(
         client_id=claim.client_id,
         claim_id=claim.id,
         product_id=claim.product_id,
-        include_equivalents=claim.include_equivalents,
         qty=claim.qty_missing,
         idempotency_key=idempotency_key,
     )

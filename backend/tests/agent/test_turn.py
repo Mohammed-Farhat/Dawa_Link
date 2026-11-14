@@ -7,7 +7,7 @@ from typing import Any
 
 from dawalink.agent.llm import LLMUnavailable, ToolResults, UserText
 from dawalink.agent.llm.scripted import call, calls, reply, say
-from dawalink.agent.turn import Status
+from dawalink.agent.turn import NO_TOOL_CALLS_LEFT, Status
 from tests.agent.conftest import Scene
 
 
@@ -33,7 +33,7 @@ class TestAPlainTurn:
         assert agent_message.agent_run_id == result.run_id
         run = scene.run(result)
         assert (run.mode, run.trigger, run.outcome) == ("assistant", "client_message", "ok")
-        assert (run.model, run.prompt_version) == ("scripted", "v1.2")
+        assert (run.model, run.prompt_version) == ("scripted", "v1.3")
         assert (run.llm_calls, run.tool_calls, run.tokens_in, run.tokens_out) == (1, 0, 100, 20)
         assert run.ended_at is not None
         assert run.langfuse_trace_id
@@ -127,15 +127,33 @@ class TestWhatTheModelMayGetWrong:
         assert answer["error_code"] == "INVALID_ARGUMENTS"
         assert {p["argument"] for p in answer["details"]["problems"]} == {"query", "limit", "extra"}
 
-    def test_after_six_tool_calls_only_reply_is_left(self, scene: Scene) -> None:
+    def test_after_six_tool_calls_the_model_is_told_to_reply_and_more_are_refused(
+        self, scene: Scene
+    ) -> None:
         """FA-3, N-17."""
         search = call("search_catalog", query="augmentin")
         result = scene.turn(*[search] * 6, search, reply("Here you go."))
 
         assert scene.run(result).tool_calls == 6
-        assert [tool.name for tool in scene.model.seen[6].tools] == ["reply"]
+        after_the_sixth = scene.model.seen[6].messages[-1]
+        assert isinstance(after_the_sixth, ToolResults)
+        assert after_the_sixth.note == NO_TOOL_CALLS_LEFT
         assert results_of(scene)[0]["error_code"] == "TOOL_LIMIT_REACHED"
         assert result.text == "Here you go."
+
+    def test_the_tools_are_the_same_on_every_call_of_a_turn(self, scene: Scene) -> None:
+        """FA-36: Claude rejects its own earlier reasoning when the tool list changes."""
+        search = call("search_catalog", query="augmentin")
+        scene.turn(*[search] * 6, search, reply("Here you go."))
+
+        offered = [[tool.name for tool in prompt.tools] for prompt in scene.model.seen]
+        earlier = [
+            message for message in scene.model.seen[5].messages if isinstance(message, ToolResults)
+        ]
+        assert len(offered) == 8
+        assert all(names == offered[0] for names in offered)
+        assert "search_catalog" in offered[0]
+        assert all(message.note == "" for message in earlier)
 
     def test_a_model_that_never_replies_is_stopped(self, scene: Scene) -> None:
         """N-34: eight model calls, then our own words."""

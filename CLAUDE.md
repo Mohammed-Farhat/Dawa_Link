@@ -45,11 +45,11 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-14:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.5 · `03` v4.7 · `04` v4.9 · `05` v3.7 (the schema as built);
-  - `06` v1.6 · `07` v1.7 (§14: the agent as built) · `08` v1.3;
-  - `09` v1.9 (living: every change updates it) · `10` v1.7 (threat model; living: a change that adds an attack surface updates it);
+  - `01` v5.4 · `02` v3.6 · `03` v4.8 · `04` v5.0 · `05` v3.8 (the schema as built);
+  - `06` v1.7 · `07` v1.8 (§14: the agent as built) · `08` v1.4;
+  - `09` v1.10 (living: every change updates it) · `10` v1.8 (threat model; living: a change that adds an attack surface updates it);
   - `12` v2.4 (infrastructure and deployment);
-  - `11` v1.5 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
+  - `11` v1.6 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
@@ -82,6 +82,7 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
   - the agent (2026-11-13; `backend/src/dawalink/agent/`): the turn graph, the 17 tools and `reply`, cards and what a tap does, the guards, the prompts, the models (scripted for tests, Claude, Ollama as a spare), worker turns, road times from OpenRouteService, tracing. The third migration. `07` §14 says what is where and what changed while building. Talk to it with `python -m dawalink.ops.chat`.
   - after step 5 (2026-11-14, decision log BLD-D12 to BLD-D14): the owner's answers to Q9 to Q12; **the 18th tool, `set_area`** ("I'm in Hamra": the name is looked up in our own list, `backend/data/areas.csv` → the `areas` table; exact names only; the agent gets names, never a point); the fourth migration; prompts v1.1; **Langfuse proven with real keys** (only our own steps are exported). `07` §14.6;
   - the place list from OpenStreetMap (2026-11-14, decision log BLD-D15): `backend/data/areas_osm.csv`, **generated** (never edit it by hand), adds 1,733 towns and villages to the hand-written `areas.csv`: 1,853 places; the hand-written centres are the map's own; prompts v1.2. A name that exists in several districts ("Hamra" in Beirut, "El Hamra" in Nabatieh) is asked about, never chosen (confirmed by the owner, Q14);
+  - **another brand is shown, never reserved** (2026-11-14, decision log BLD-D17, `07` §14.7): the 19th tool, `show_other_brand`, makes a card with "ask the pharmacist first" and the pharmacy's phone (added on display; it never passes the model). `propose_reservation` refuses another brand unless the client asked for it in a message of their own; watches, waiting items, offers, early release and plans are for the medicine itself. The fifth migration; prompts v1.3. Found on the real runs and fixed (BLD-D18): the tool list sent to Claude never changes within a turn;
   - decided, not built yet (BLD-D16, 2026-11-14): **a client can pick their place on a map** ("Pick on the map"), for a computer or a client who won't share the device's location. The point is treated like a shared location. It is built with the website screens (step 8).
 
   The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
@@ -89,9 +90,10 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O7: the no-prescription list stays empty for now (the owner's choice), so every product shows the prescription notice. A short true list may be added before the demo;
-  - Q4 in [docs/build_plan.md](docs/build_plan.md) §5, with a default in place: how strict "same medicine" is (the owner may also remove alternatives from the agent);
+  - to confirm when step 6 starts: the proposed split of how a simulated client reacts to an "another brand" card (`08` §2.4);
+  - with registration (step 7): the check of a pharmacy's phone number (`10` TH-59);
   - routing: OpenRouteService first; the owner may switch to Google Maps later (BLD-D9: Google's terms restrict storing travel times, to settle before switching);
-  - **the Claude credit:** $100 until 2026-12-09, which is after the demo. One budget for development (the app's budget setting is $20, BLD-D13), the evaluation and the demo. Development turns on Haiku are approved (cents each). **Give a cost estimate and get the user's ok before every bigger paid run.** Spent so far: $0.055;
+  - **the Claude credit:** $100 until 2026-12-09, which is after the demo. One budget for development (the app's budget setting is $20, BLD-D13), the evaluation and the demo. Development turns on Haiku are approved (cents each). **Give a cost estimate and get the user's ok before every bigger paid run.** Spent so far: $0.087;
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
@@ -152,6 +154,7 @@ The details are in the linked docs. If a request or code change would break one 
   - LangGraph is stateless per turn;
   - one agent turn runs at a time per conversation (a lease on the conversation row);
   - informational events post template cards with no LLM call; decision events run an agent turn.
+- **Within one agent turn, nothing already sent to the model is changed:** the same tools on every call, and notes are only added at the end. Claude rejects its own earlier reasoning otherwise (BLD-D18).
 - **Time is injected:** `today` and `now` always come from the app's clock (the simulated and demo clocks). Never `CURRENT_DATE`/`now()` for business logic in SQL, or `date.today()` in domain code. `created_at` may be real time (it only orders "who came first") ([04](docs/04_domain_rules.md) R-T11, [05](docs/05_database.md) DB-D6).
 - **No jobs table:** one **clock check** loop acts on deadlines stored on the rows (04 R-T10).
 - **Derived values are never stored.** The expiry zone and the discount price are computed live.
@@ -159,7 +162,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **Numbers** (windows, limits, timers) live only in [04 §5](docs/04_domain_rules.md). Reference them by ID; don't repeat them. In code they live only in `backend/src/dawalink/domain/numbers.py`.
 - **Safety:**
   - no medical advice;
-  - alternatives must have the same composition, and are offered only with the client's consent;
+  - **another brand is only ever shown** (same composition only, and only with the client's consent): with "ask the pharmacist first" and the pharmacy's phone. It is never reserved, planned or waited for automatically; the client asks for it themselves, and nobody checks the call: the pharmacist decides at the counter. Search shows only what was searched (04 R-C10, R-S4, INV-26);
   - controlled substances are excluded entirely;
   - a prescription notice by default (the pharmacist checks at the counter);
   - the chat and the request thread always show the AI notice (`11` §6).

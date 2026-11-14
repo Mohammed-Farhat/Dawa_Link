@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.7 · **Date:** 2026-11-14
+**Version:** v3.8 · **Date:** 2026-11-14
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -140,7 +140,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | status | text | `IN ('UNVERIFIED','ACTIVE','PAUSED','SUSPENDED')` (`04` SM-2) |
 | paused_until | timestamptz | `CHECK (status <> 'PAUSED' OR paused_until IS NOT NULL)` |
 | district_id | smallint | FK districts |
-| alternatives_ok_default | boolean | default false |
+| alternatives_ok_default | boolean | default false. "Tell me about other brands" (R-C10) |
 | status_reason | text | admin reason for suspend or lift |
 
 **`sessions`** (`04` R-AU3): id uuid PK · user_id FK · `token_hash` bytea U (the browser holds only the random token) · created_at · expires_at (7 days; admins 12 h) · last_seen_at · revoked_at.
@@ -310,8 +310,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | client_id | uuid | FK |
 | request_item_id | uuid | U, nullable; `CHECK ((kind='REQUEST_ITEM') = (request_item_id IS NOT NULL))` |
 | product_id | uuid | FK |
-| include_equivalents | boolean | |
-| equivalence_key | text | copied in, used for matching |
+| equivalence_key | text | copied in: one allocator per medicine group, and the per-group cap (R-L2). A claim is only ever offered its own `product_id` (R-C10) |
 | district_id | smallint | for display |
 | **loc_lat / loc_lon** | numeric(7,3) | the client's rounded location; the reach is travel time from here (N-23) |
 | **days_of_use** | smallint | NN, default 1; only boxes that fit are offered (`04` R-F1) |
@@ -328,7 +327,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 
 **`claim_skips`**: PK (claim_id, inventory_item_id) · skip_until. A claim that declined an offer or let it expire skips that item for 24 h (`04` O10).
 
-**`early_release_requests`**: id uuid PK · client_id · **claim_id FK NN** (the need; DR2-A7) · product_id · include_equivalents · qty · `state IN ('OPEN','FULFILLED','UNFULFILLED','CANCELLED')` · idempotency_key (U with client) · created_at · closed_at. Index `(client_id) WHERE state='OPEN'` (≤ 5).
+**`early_release_requests`**: id uuid PK · client_id · **claim_id FK NN** (the need; DR2-A7) · product_id · qty · `state IN ('OPEN','FULFILLED','UNFULFILLED','CANCELLED')` · idempotency_key (U with client) · created_at · closed_at. Index `(client_id) WHERE state='OPEN'` (≤ 5).
 
 **`early_release_asks`**
 | Column | Type | Rules |
@@ -379,7 +378,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | id | uuid | PK (sent by the tap) |
 | conversation_id | uuid | FK (`ON DELETE CASCADE`) |
 | client_id | uuid | FK: only this client can use it |
-| kind | text | `IN ('reserve','reserve_group','accept_offer','cancel','request_summary','constraint_change','remove_item')` |
+| kind | text | `IN ('reserve','reserve_group','accept_offer','cancel','request_summary','constraint_change','remove_item','other_brand')`. `other_brand` is the one kind a tap can't execute: it shows where another brand is (R-C10) |
 | payload | jsonb | NN: the exact content shown (items, quantities, prices, pharmacy); the card is rendered from it |
 | agent_run_id | uuid | FK: which turn created it (traceability) |
 | expires_at | timestamptz | NN: 2 h (`04` N-30), or the offer's own expiry for `accept_offer` |
@@ -723,6 +722,17 @@ The schema is the first migration, `backend/migrations/versions/20261112_1816_in
 - `conversations.turn_owner` is the turn's own run ID: the save is refused unless that turn still holds the lease.
 
 **Tested in step 5:** the new unique rule (`tests/db/test_more_constraints.py`); two turns taking one lease, an event at the moment a turn is saved, and a double tap on a card, each with two real connections (`tests/races/test_agent_races.py`).
+
+**Changed for other brands (2026-11-14, the fifth migration, decision log BLD-D17):**
+
+| Table | Change | Why |
+|---|---|---|
+| `claims`, `early_release_requests` | `include_equivalents` dropped | Nothing waits for another brand any more (R-C10): matching and early release use the claim's own product. A column that could say "yes" would contradict the rule |
+| `proposals` | `kind` also accepts `other_brand` | The "another brand" card. Its payload holds the pharmacy's id; the phone number is read when the card is displayed and is never stored in the card's text, which the model sees |
+
+Going back restores the two columns as false for every row and deletes the `other_brand` cards. `sourcing_requests.alternatives_ok` and `client_profiles.alternatives_ok_default` stay: they now mean "tell me about other brands".
+
+**Tested:** `tests/services/test_matching.py`, `test_early_release.py`, `test_requests.py` (new stock of another brand makes no offer; no pharmacy is asked about one; a request that allows other brands still waits for its own medicine), `tests/agent/test_other_brand.py`.
 
 **Added for named areas (2026-11-14, the fourth migration, decision log BLD-D14):**
 

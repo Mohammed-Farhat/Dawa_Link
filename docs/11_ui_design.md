@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.5 · **Date:** 2026-11-14
+**Version:** v1.6 · **Date:** 2026-11-14
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -129,11 +129,12 @@
 | **Price block** | Everywhere a price appears | `436,000 LBP` (bold) · about $4.9 · **Save 145,750** in yellow (public price − our price) | none | none |
 | **Prescription notice** | Options, sheet, reservation | A file icon + "Prescription needed: bring it" | none | none |
 | **Search row** (v2) | Search results | The medicine once at the top (name, pack, prescription, "all last your 12 days"), then one compact row per pharmacy: initial tile · name · walk or car time · closing time · price · saving · expiry and stock | Tap the row → pharmacy and offer → [Reserve] | none |
-| **Option card** | CS-9 | Product + pack · pharmacy + area · fact row · fit badge · prescription · availability (≤ 5, then "5+") · price block | [Reserve] | **Recommended** (blue border + badge + a one-line reason) · alternative ("Same medicine, another brand") · used ("Reserved ✓") · expired (dashed, grey) |
+| **Option card** | CS-9 | Product + pack · pharmacy + area · fact row · fit badge · prescription · availability (≤ 5, then "5+") · price block | [Reserve] | **Recommended** (blue border + badge + a one-line reason) · used ("Reserved ✓") · expired (dashed, grey) |
+| **Another brand card** (BLD-D17) | CS-9, CS-16 (never in search results: search shows only what was searched, R-S4) | "Another brand" badge · product + pack · "Instead of …" · "Same ingredient, strength and form" · pharmacy + area · fact row · price block · the amber line **"Ask the pharmacist before you go"** | **[Call]** (dials the pharmacy; the number comes from its record, never from the agent) · [Directions] | Expired (dashed, grey). **Never [Reserve]** (`04` R-C10) |
 | **Plan card** | CS-9, CS-16 | One pharmacy's items + subtotals · fact row · the route for multi-pharmacy plans ("A → C, 22 min by car") · fit badge · total | [Reserve these] | Recommended · used · expired · "1 item was taken" (re-planned) |
 | **Offer card** | CS-9, CS-16, CS-11 | **Amber border** · "valid until 13:05" · pharmacy + fact row · fit · price | [Accept and reserve] · [No thanks] | Accepted · expired · withdrawn ("No longer available") |
 | **Request summary card** | CS-9 (AF-24) | Items + quantities + days of use · from (location or district) · "searches up to 6 hours" | [Start sourcing] | Used · outside request hours (button disabled + "from 08:00") |
-| **Change card** | CS-16 | "Allow another brand?" / "Raise the max price to 800,000 LBP?" | [Yes] | Used · expired |
+| **Change card** | CS-16 | "Tell you about other brands?" / "Raise the max price to 800,000 LBP?" | [Yes] | Used · expired |
 | **Status card** | Chat and request threads | Template text (reserved, picked up, not available, expired, cancelled) | [Show at the counter] or [I picked it up] | none |
 | **Progress line** | Chat | "Searching…", "Planning your route…", "Asking pharmacies…" (`07` §3.2) | none | none |
 | **Quick-reply chips** | Chat | ≤ 4 chips, ≤ 40 characters each (`07` §4.5) | Sends the text | none |
@@ -158,10 +159,10 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Reserve | CS-8 | How many boxes → **the pickup day** (one big card per allowed day: "Today", "Tomorrow", "Thu 12 Nov"; 4 at most, `04` R-F3; with "Pick up by…" when a later day would be too late for the box) → **days of use as chips** (7 · 12 · 30 · Other · Not sure) → the fit result → prescription and "sealed and in date" lines → total + saving + [Reserve 2 boxes] pinned |
 | Pickup ticket | CS-10 | A dark screen: "Reserved" → **the order number, huge** → product → pick up by, amount, pharmacy → prescription reminder → [Directions] → cancel. *(Later: the reminder button.)* |
 | Ask DawaLink | CS-9 | A whole conversation **in Arabic** (right to left) → the recommended plan card (items, fit, total, saving, [Reserve both]) → "See 2 other options" → Arabic quick replies → message box. *(Later: the "why" chips on the card.)* |
-| Find medicines for me | CS-15 | How it works (Now · 6 hours · You) → your list (up to 5, quantity, days of use) → [Add a medicine] → location, another brand OK → [Start searching] pinned |
+| Find medicines for me | CS-15 | How it works (Now · 6 hours · You) → your list (up to 5, quantity, days of use) → [Add a medicine] → location, tell me about other brands → [Start searching] pinned |
 | Request tracker | CS-16 | A ring "2 of 3 reserved" + time left → each medicine with a 3-step bar → the offer (amber) with [Accept and reserve] → what DawaLink did. [Cancel request] lives in the ⋯ menu. |
 | My medicines | CS-10, CS-11, CS-16 | Active / History → one card per medicine: Ready (Show ticket) · Offer waiting (See the offer) · Watching (Stop) |
-| Me | CS-13 | Account → home area, another brand OK, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
+| Me | CS-13 | Account → home area, tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
 | Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → due today → the early-release ask → today in numbers. *(Later: Undo on [Picked up].)* |
 | Pharmacy · Inventory | PS-6 | 4 steps → summary tiles (ready, need fixing, new, set to 0) → "1 reserved box kept" → rows to fix with "Did you mean…?" → [Discard] [Apply 1,191 rows] |
 | Admin · Overview | AS-2, AS-10 | Navy bar → needs-attention tiles → the agent's 7 days (fulfilled, safety violations, turn time, cost per fulfilled request) with a daily chart → escalations |

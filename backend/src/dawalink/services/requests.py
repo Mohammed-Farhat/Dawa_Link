@@ -276,7 +276,6 @@ def change_constraints(
             .with_for_update()
         ).scalar()
         if claim is not None:
-            claim.include_equivalents = request.alternatives_ok
             claim.max_price_lbp = item.max_price_lbp
             matching.defer_for_product(tx, tx.session.get_one(Product, claim.product_id))
     audit.record(
@@ -384,7 +383,6 @@ def open_claim(tx: Tx, request_item_id: uuid.UUID) -> Claim:
         client_id=request.client_id,
         request_item_id=item.id,
         product_id=product.id,
-        include_equivalents=request.alternatives_ok,
         equivalence_key=product.equivalence_key,
         district_id=request.district_id,
         loc_lat=request.loc_lat,

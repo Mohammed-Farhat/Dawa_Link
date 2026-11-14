@@ -42,9 +42,6 @@ class CreateWatch(Arguments):
     product_id: uuid.UUID
     qty: Qty = 1
     days_of_use: Days = 1
-    include_alternatives: bool = Field(
-        default=False, description="True only if the client agreed to other brands."
-    )
     max_price: Money | None = None
 
 
@@ -65,7 +62,6 @@ def create_watch(turn: Turn, tx: Tx, args: CreateWatch) -> Watching:
             actor=Actor.AGENT,
             qty=args.qty,
             days_of_use=args.days_of_use,
-            include_equivalents=args.include_alternatives,
             max_price_lbp=display.in_lbp(args.max_price, rate(tx)),
         )
     except ServiceError as error:
@@ -282,7 +278,8 @@ TOOLS = (
     Tool(
         "create_watch",
         "Starts waiting for new stock of one medicine for the client, for 6 hours. The client "
-        "is offered the stock if some appears (first come, first served).",
+        "is offered the stock if some appears (first come, first served). It waits for that "
+        "medicine itself, never for another brand.",
         CreateWatch,
         create_watch,
         ASSISTANT,

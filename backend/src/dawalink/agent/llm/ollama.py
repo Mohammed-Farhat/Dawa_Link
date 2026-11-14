@@ -72,6 +72,8 @@ class OllamaModel:
                     {"role": "tool", "tool_name": result.name, "content": result.content}
                     for result in message.results
                 ]
+                if message.note:
+                    messages.append({"role": "user", "content": message.note})
         return {
             "model": self.name,
             "messages": messages,

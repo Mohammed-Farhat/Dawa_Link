@@ -82,7 +82,8 @@ def _best_box(tx: Tx, claim: Claim, boxes: list[Box], skipped: set[uuid.UUID]) -
         for box in boxes
         if box.qty_available >= 1
         and box.item_id not in skipped
-        and (claim.include_equivalents or box.product_id == claim.product_id)
+        # Never another brand: only a pharmacist can say it suits the client (R-C10).
+        and box.product_id == claim.product_id
         and (claim.max_price_lbp is None or box.price_lbp <= claim.max_price_lbp)
         and box.choice(claim.days_of_use).days
     ]

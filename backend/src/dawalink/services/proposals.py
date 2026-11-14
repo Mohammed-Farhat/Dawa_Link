@@ -13,8 +13,9 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from dawalink.db.models import Conversation, Order, Proposal, SourcingRequest
+from dawalink.db.models import Conversation, Order, Pharmacy, Proposal, SourcingRequest
 from dawalink.domain.numbers import PROPOSAL_VALIDITY
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ProposalKind
@@ -99,6 +100,14 @@ def of_conversation(
     return {proposal.id: proposal for proposal in rows}
 
 
+def made_in_run(tx: Tx, run_id: uuid.UUID) -> bool:
+    """Did this agent turn create a card?"""
+    made = tx.session.execute(
+        select(Proposal.id).where(Proposal.agent_run_id == run_id).limit(1)
+    ).first()
+    return made is not None
+
+
 def _own_open(tx: Tx, client_id: uuid.UUID, proposal_id: uuid.UUID) -> Proposal:
     proposal = tx.session.execute(
         select(Proposal)
@@ -135,6 +144,18 @@ def _lines(items: Sequence[dict[str, Any]]) -> list[ReserveLine]:
         )
         for item in items
     ]
+
+
+def call_number(session: Session, proposal: Proposal) -> str | None:
+    """The pharmacy's phone for an "another brand" card: what its [Call] button dials.
+
+    Read when the card is displayed, never stored in it: the card's text goes to the
+    model, and a phone number typed by a pharmacy must not (R-AG8).
+    """
+    if ProposalKind(proposal.kind) is not ProposalKind.OTHER_BRAND:
+        return None
+    pharmacy = session.get(Pharmacy, uuid.UUID(proposal.payload["pharmacy_id"]))
+    return pharmacy.phone if pharmacy is not None else None
 
 
 def execute(
@@ -191,6 +212,11 @@ def execute(
         )
     elif kind is ProposalKind.REMOVE_ITEM:
         requests.remove_item(tx, client_id, uuid.UUID(payload["request_item_id"]))
+    elif kind is ProposalKind.OTHER_BRAND:
+        raise ServiceError(
+            Code.VALIDATION_ERROR,
+            "This card reserves nothing: call the pharmacy and ask the pharmacist first.",
+        )
     else:
         # No tool creates an "accept offer" card: offers are system cards with their own
         # button (docs/06 §5.5). The kind stays in the vocabulary for a later version.

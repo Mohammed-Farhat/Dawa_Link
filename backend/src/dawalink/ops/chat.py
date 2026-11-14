@@ -92,6 +92,9 @@ def _show(session: Session, message: ChatMessage) -> None:
             _say(f"        {label}: {value}")
         if card.prescription_notice:
             _say("        Prescription needed: bring it to the pharmacy.")
+        phone = proposals.call_number(session, proposal)
+        if phone is not None:
+            _say(f"        [Call the pharmacy] {phone}")
     if message.quick_replies:
         _say("  chips: " + " | ".join(message.quick_replies))
     if message.agent_run_id:

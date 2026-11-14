@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.7 · **Date:** 2026-11-14
+**Version:** v4.8 · **Date:** 2026-11-14
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -137,7 +137,7 @@ flowchart TD
 #### CS-6 Search results
 - Search box with catalog autocomplete and fuzzy matching ("Did you mean Augmentin?").
 - **Location:** [📍 Use my location], **[Pick on the map]** (the client puts a pin where they are: for a computer, or for a client who doesn't want to share the device's location; BLD-D16), or the profile's district. The same three choices appear wherever the location is asked: the search, the chat and a new request.
-- **Filters:** max price, "include same-composition alternatives", **days of use** (optional) and the **pickup day** (optional: today, tomorrow or a later day). With a pickup day, only pharmacies that accept that day are shown, and the fit is counted from it (`04` R-F3, R-F6). Without one, each pharmacy is shown for its earliest day.
+- **Filters:** max price, **days of use** (optional) and the **pickup day** (optional: today, tomorrow or a later day). With a pickup day, only pharmacies that accept that day are shown, and the fit is counted from it (`04` R-F3, R-F6). Without one, each pharmacy is shown for its earliest day.
 - **Sort:** best match (lasts your days of use → nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
 - **Layout (`11` v1.1):** the medicine (product, pack, prescription notice) is shown once at the top, then one compact row per pharmacy, with what the client saves.
 - **Each pharmacy row:**
@@ -147,8 +147,8 @@ flowchart TD
   - expiry and days left, with ✓ "lasts your 12 days", or a ⚠ warning when days of use weren't given;
   - 📄 "Prescription needed";
   - availability (exact up to 5, then "5+");
-  - "alternative" badge;
   - [Reserve].
+- **Only what was searched:** search never shows another brand of the medicine (R-S4, BLD-D17). The assistant can show one, with "ask the pharmacist first".
 - **Empty results:** "No discounted stock for *Augmentin 1g* right now."
   - **[Notify me]** → a mini-form (max price) → a **watch for the next 6 hours**;
   - **[Ask DawaLink to find it]** → **CS-15 pre-filled**. The agent then sources it, including asking open pharmacies for unlisted stock.
@@ -245,7 +245,7 @@ In-app list (see §1.7).
 
 #### CS-13 Profile
 - Name, email (verified), phone, change password.
-- Default district; "alternatives OK by default".
+- Default district; "tell me about other brands by default".
 - "Missed pickups: 0 of 2".
 - *(Account deletion postponed.)*
 
@@ -259,7 +259,7 @@ In-app list (see §1.7).
 │ [ + Add medicine ]   (max 5)     │
 │ From: [📍 My location] or [Saida ▾]│
 │ Max price per medicine (optional)│
-│ [✓] Same-composition alternatives OK │
+│ [✓] Tell me about other brands       │
 │ DawaLink searches for up to 6 hours │
 │ and asks open pharmacies for you. │
 │ [ Start sourcing ]               │
@@ -300,7 +300,7 @@ In-app list (see §1.7).
 - **Cards appear in the thread:**
   - plan cards [Reserve these];
   - offer cards [Accept];
-  - constraint-change proposals ("Allow same-composition alternatives?" [Yes] · "Raise the max price to 800,000 LBP?" [Yes]).
+  - constraint-change proposals ("Tell you about other brands of the same medicines?" [Yes] · "Raise the max price to 800,000 LBP?" [Yes]).
 - **Timeline:** every agent action in plain language. It never shows private inventory details or other clients.
 - **Closing:** after 6 hours, or earlier when every item is resolved → a summary ("2 of 3 reserved"). An offer that arrived before the end stays valid for its 2 hours.
 
@@ -327,7 +327,7 @@ In-app list (see §1.7).
 | AF-10 | Early release failed | "The pharmacies I asked can't release it now." Offers a watch or a request. |
 | AF-11 | Watch hit | Offer card → [Accept] → reserved. |
 | AF-12 | "wen sar l order?" | Status cards; cancelling only through a Cancel card tap. |
-| AF-13 | "Anything cheaper that works the same?" | Same-composition products only, with consent; otherwise "ask your pharmacist". |
+| AF-13 | "Anything cheaper that works the same?" / the medicine isn't listed | Never a judgement. The agent asks whether the client wants to hear about **other brands of exactly the same medicine**. With a yes it shows "Another brand" cards: the pharmacy, travel time, price, expiry, **"Call the pharmacy and ask the pharmacist if this brand suits you"** and [Call]. No [Reserve]. When the client asks for that brand, the agent makes a normal reservation card (R-C10, BLD-D17). **Nobody checks the call:** the pharmacist decides at the counter as for any reservation, and the client was told to ask first. Nothing is reserved, planned or waited for another brand on the agent's own initiative. |
 | AF-14 | Clinical question | Fixed refusal → refers to the pharmacist or doctor → offers to keep searching. |
 | AF-15 | Off-topic | Polite decline. |
 | AF-16 | Injection or abuse | No effect; limits hold; logged. |
@@ -352,7 +352,7 @@ In-app list (see §1.7).
 | RF-3 | **A reservation marked not available** | The agent re-plans automatically: a new plan card, or "asking pharmacies". |
 | RF-4 | **Only part of a quantity found** (Concor ×2, Pharmacy A has 1) | The agent proposes 1 at A and **keeps looking for the 2nd box** at other pharmacies (or plans 1 at A + 1 at B from the start). |
 | RF-5 | **Lost a contested box** | "Someone who asked earlier was offered it first. I'm still watching." Never says who. |
-| RF-6 | **1 hour left, still missing** | The agent proposes options: allow alternatives, raise the budget (each a tap), consider pharmacies in other areas, or escalate (`window_ending`). Otherwise it prepares the client for the summary. |
+| RF-6 | **1 hour left, still missing** | The agent proposes options: also show other brands, raise the budget (each a tap), consider pharmacies in other areas, or escalate (`window_ending`). Otherwise it prepares the client for the summary. |
 | RF-7 | **Client writes in the thread** ("I can only go on Thursday") | The agent explains the pharmacy's pickup time (e.g. 1 day) and suggests reserving when the client can go, or choosing a pharmacy that holds longer. It can't change a reservation's deadline. |
 | RF-8 | **LLM down** | The page still shows statuses; offers and claims continue in code; "DawaLink will continue planning shortly". |
 | RF-9 | **Closed** (6 hours, or everything resolved) | Summary card + email: reserved items with order numbers, items not found with suggestions. |

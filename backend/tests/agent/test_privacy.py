@@ -1,4 +1,4 @@
-"""Nothing personal or private reaches the model: one run through all 18 tools.
+"""Nothing personal or private reaches the model: one run through all 19 tools.
 
 A scripted model uses every tool across a chat and a request, and keeps everything it was
 sent: the prompts, the facts, the conversation, every tool result. That text is then
@@ -37,7 +37,7 @@ def tap(scene: Scene, proposal_id: str) -> proposals.Executed:
     return done
 
 
-def test_all_18_tools_and_nothing_private_reaches_the_model(scene: Scene) -> None:
+def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> None:
     world = scene.world
     with world.as_owner():
         world.connection.exec_driver_sql(
@@ -91,6 +91,31 @@ def test_all_18_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         "ana 3and 33.8961, 35.4832. baddi augmentin",
     )
     (order,) = tap(scene, seen["reserve"]).orders  # a "reserved" card joins the history
+
+    # --- Turn 1b, in the chat: another brand, shown with "ask the pharmacist first" ------
+    scene.turn(
+        reply("I can show you other brands.", case_notes={"alternatives_ok": True}),
+        text="yes, tell me about other brands",
+    )
+
+    def show_brand(prompt: Prompt) -> ModelReply:
+        (option,) = [o for o in results(prompt)[0]["options"] if o["is_alternative"]]
+        return call(
+            "show_other_brand",
+            listing_id=option["listing_id"],
+            instead_of_product_id=str(scene.augmentin),
+        )
+
+    def show_brand_card(prompt: Prompt) -> ModelReply:
+        seen["brand"] = results(prompt)[0]["proposal_id"]
+        return reply("Another brand is at this pharmacy.", proposal_ids=[seen["brand"]])
+
+    scene.turn(
+        call("find_options", product_ids=[str(scene.augmentin), str(other_brand)]),
+        show_brand,
+        show_brand_card,
+        text="where is it?",
+    )
 
     # --- Turn 2, in the chat: status, a cancel card, a watch, asking pharmacies ----------
     def after_watch(prompt: Prompt) -> ModelReply:
@@ -153,7 +178,7 @@ def test_all_18_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
             ("get_request_status", {"request_id": str(request.id)}),
             (
                 "propose_constraint_change",
-                {"request_id": str(request.id), "allow_alternatives": True},
+                {"request_id": str(request.id), "show_other_brands": True},
             ),
         ),
         after_status,

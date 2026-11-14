@@ -137,6 +137,12 @@ class TestClinicalCheck:
             "mni7 lal waja3",
             "خذ حبتين باليوم",
             "حبة كل 8 ساعات",
+            # Saying another brand can replace the client's medicine (R-C10, BLD-D17).
+            "This brand is just as good, you can take it instead.",
+            "Clavox works the same as Augmentin.",
+            "Yes, this brand suits you.",
+            "hayda nafs el dawa, fik tekhdo badalo.",
+            "هذا نفس الدواء، يمكنك أخذه بدلاً منه.",
         ],
     )
     def test_advice_is_caught(self, text: str) -> None:
@@ -159,7 +165,16 @@ class TestClinicalCheck:
             "You can take the first option or the second.",
             "Pharmacy B is good for you if you finish work at 6.",
             "Glucophage 850mg isn't listed: I'm watching for new stock.",
+            # Another brand, said the way we want it said (R-C10, BLD-D17).
+            "Pharmacy C has another brand with the same ingredient, strength and form. "
+            "Call the pharmacy and ask the pharmacist if it suits you.",
+            "Ask the pharmacist whether this brand suits you before you go.",
+            "When the pharmacist agrees, tell me and I'll prepare the reservation.",
+            "fi brand tene bi nafs el tarkibe 3end Pharmacy C. tsal fihon w s2al el saydale.",
+            "يوجد صنف آخر بنفس التركيبة في صيدلية C. اتصل بالصيدلية واسأل الصيدلي قبل أن تذهب.",
+            "You can use the second card instead of the first.",
             # A refusal names the same things on purpose.
+            "I can't tell you whether this brand works the same; the pharmacist can.",
             "I can't advise on doses or interactions; a pharmacist or doctor can.",
             "ma b2dar 2ellak eza byenfa3 lal waja3, es2al l saydale",
             "لا أستطيع أن أنصح بالأدوية أو الجرعات؛ الصيدلي أو الطبيب يستطيع ذلك.",

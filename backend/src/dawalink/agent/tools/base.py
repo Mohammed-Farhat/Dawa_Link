@@ -28,10 +28,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from dawalink.agent import display
 from dawalink.agent.llm import ToolSpec
 from dawalink.agent.state import CaseState
-from dawalink.db.models import ClientProfile, Conversation
+from dawalink.db.models import ClientProfile, Conversation, Product
 from dawalink.domain.clock import Clock
 from dawalink.domain.vocabulary import AgentMode
-from dawalink.services import email, travel
+from dawalink.services import catalog, email, travel
 from dawalink.services.context import Tx, unit_of_work
 from dawalink.services.errors import ServiceError
 from dawalink.services.travel import Location, RoutingService
@@ -53,6 +53,33 @@ class ToolError(StrEnum):
     FOLLOWUP_NOT_ALLOWED = "FOLLOWUP_NOT_ALLOWED"
     AREA_NOT_FOUND = "AREA_NOT_FOUND"
     AREA_AMBIGUOUS = "AREA_AMBIGUOUS"
+    ASK_PHARMACIST_FIRST = "ASK_PHARMACIST_FIRST"
+    OTHER_BRANDS_NOT_AGREED = "OTHER_BRANDS_NOT_AGREED"
+
+
+def _medicine(tx: Tx, product_id: uuid.UUID) -> str:
+    return catalog.medicine_group(tx.session.get_one(Product, product_id))
+
+
+def note_asked(turn: "Turn", tx: Tx, product_id: uuid.UUID) -> None:
+    """Remembers the client's medicine: the first product of a medicine searched in a chat.
+
+    A later search of another brand of it doesn't replace it. That keeps a brand "another
+    brand" even when the agent searches it by itself afterwards (R-C10).
+    """
+    asked = turn.state.asked_product_ids
+    medicine = _medicine(tx, product_id)
+    if all(_medicine(tx, earlier) != medicine for earlier in asked):
+        asked.append(product_id)
+
+
+def is_another_brand_in_chat(turn: "Turn", tx: Tx, product_id: uuid.UUID) -> bool:
+    """Is this product another brand of a medicine the client asked for in this chat?"""
+    medicine = _medicine(tx, product_id)
+    return any(
+        earlier != product_id and _medicine(tx, earlier) == medicine
+        for earlier in turn.state.asked_product_ids
+    )
 
 
 class Refused(Exception):
@@ -93,6 +120,9 @@ class Turn:
     clean: Callable[[str], str] = str
     # Stable across a retry of the same turn, so a write tool finds its own earlier work.
     key: str = ""
+    # True when a message the client wrote started this turn. Only then can the client
+    # have asked for something in their own words (a worker turn has no such message).
+    by_client: bool = False
     # The cards this turn's tools created, in order.
     created_proposals: list[uuid.UUID] = field(default_factory=list)
 

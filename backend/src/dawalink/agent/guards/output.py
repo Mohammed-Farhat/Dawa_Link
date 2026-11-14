@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from dawalink.agent.guards.clinical import clinical_reasons
 from dawalink.agent.guards.redact import has_personal_details
 from dawalink.agent.tools import ALL, Reply
+from dawalink.domain.vocabulary import ProposalKind
 from dawalink.services import proposals
 from dawalink.services.context import Tx
 
@@ -38,6 +39,13 @@ _INTERNALS = re.compile(
     re.IGNORECASE,
 )
 _LATIN = re.compile(r"[A-Za-z]")
+# A quick reply that would say "the pharmacist agreed" or reserve a brand, in one tap.
+_CLAIMS_THE_CALL = re.compile(
+    # The pharmacist, not the pharmacy ("saydaliyye", "صيدلية"): [Call the pharmacy] is fine.
+    r"\bpharmacist\b|\bpharmacien(?:ne)?\b|\bsa[yi]dal[ei]\b|صيدلي(?!ة)|صيدلاني|"
+    r"\breserve\b|\bbook\b|\b[ei]?7jez\w*|احجز|حجز",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -112,6 +120,36 @@ def check(
                 CARD,
                 "proposal_ids holds IDs that aren't open cards of this conversation. Use only "
                 "proposal IDs returned by tools in this turn, or leave the list empty.",
+            )
+        )
+
+    elif (
+        usable
+        and not any(known[proposal_id].agent_run_id == run_id for proposal_id in usable)
+        and proposals.made_in_run(tx, run_id)
+    ):
+        # Seen on a real run: "here is the reservation card", next to an older card.
+        violations.append(
+            Violation(
+                CARD,
+                "You made a card in this turn, but proposal_ids shows only older cards. Show "
+                "the card you just made (its proposal_id from this turn's tool result); "
+                "older cards may stay next to it.",
+            )
+        )
+
+    # Next to an "another brand" card, no quick reply may say the pharmacist agreed or
+    # reserve the brand: one tap would claim a call that never happened (R-C10).
+    shows_another_brand = any(
+        known[proposal_id].kind == ProposalKind.OTHER_BRAND.value for proposal_id in usable
+    )
+    if shows_another_brand and any(_CLAIMS_THE_CALL.search(chip) for chip in cleaned.quick_replies):
+        violations.append(
+            Violation(
+                CARD,
+                "Next to another brand's card, don't offer a quick reply that says the "
+                "pharmacist agreed or that reserves the brand. The client writes that "
+                "themselves after calling the pharmacy.",
             )
         )
 

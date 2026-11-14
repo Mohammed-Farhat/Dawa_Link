@@ -36,7 +36,6 @@ class BasketLine:
     product_id: uuid.UUID
     qty: int = 1
     days_of_use: int = 1
-    allow_alternatives: bool = False
     max_price_lbp: int | None = None
     request_item_id: uuid.UUID | None = None
 
@@ -44,7 +43,6 @@ class BasketLine:
 @dataclass(frozen=True)
 class PlannedPick:
     product_id: uuid.UUID  # the medicine that was asked for
-    listing_product_id: uuid.UUID  # the box's own product: another brand if alternatives are on
     listing_id: uuid.UUID
     qty: int
     price_lbp: int
@@ -100,21 +98,15 @@ def _checked(tx: Tx, lines: Sequence[BasketLine]) -> dict[uuid.UUID, Product]:
     return products
 
 
-def _boxes_by_line(
-    tx: Tx, lines: Sequence[BasketLine], products: dict[uuid.UUID, Product]
-) -> dict[uuid.UUID, list[Box]]:
-    """The visible boxes that are the asked medicine, or an allowed other brand of it."""
-    wanted = {
-        line.product_id: set(
-            catalog.products_in_group(
-                tx, products[line.product_id], with_equivalents=line.allow_alternatives
-            )
-        )
-        for line in lines
-    }
-    boxes = visible_boxes(tx, product_ids=list(set().union(*wanted.values())))
+def _boxes_by_line(tx: Tx, lines: Sequence[BasketLine]) -> dict[uuid.UUID, list[Box]]:
+    """The visible boxes of each asked medicine itself.
+
+    Never another brand: a plan's card reserves everything with one tap, and only a
+    pharmacist can say another brand suits the client (R-C10).
+    """
+    boxes = visible_boxes(tx, product_ids=[line.product_id for line in lines])
     return {
-        line.product_id: [box for box in boxes if box.product_id in wanted[line.product_id]]
+        line.product_id: [box for box in boxes if box.product_id == line.product_id]
         for line in lines
     }
 
@@ -141,7 +133,8 @@ def _usable(
 
 def pharmacies_in_play(tx: Tx, lines: Sequence[BasketLine]) -> list[uuid.UUID]:
     """The pharmacies a plan for this basket could visit: whose road times are worth asking."""
-    by_line = _boxes_by_line(tx, lines, _checked(tx, lines))
+    _checked(tx, lines)
+    by_line = _boxes_by_line(tx, lines)
     return sorted({box.pharmacy_id for boxes in by_line.values() for box in boxes})
 
 
@@ -165,8 +158,8 @@ def plan(
     clients.require_search(clients.profile(tx, client_id))
     if pickup_day is not None and pickup_day < tx.today:
         raise ServiceError(Code.PICKUP_DAY_INVALID, "The pickup day can't be in the past.")
-    products = _checked(tx, lines)
-    by_line = _boxes_by_line(tx, lines, products)
+    _checked(tx, lines)
+    by_line = _boxes_by_line(tx, lines)
 
     every_box = [box for boxes in by_line.values() for box in boxes]
     first_days = [box.pharmacy_days[0] for box in every_box if box.pharmacy_days]
@@ -218,7 +211,6 @@ def plan(
                     picks=tuple(
                         PlannedPick(
                             product_id=uuid.UUID(pick.item_key),
-                            listing_product_id=by_listing[pick.listing_id].product_id,
                             listing_id=uuid.UUID(pick.listing_id),
                             qty=pick.qty,
                             price_lbp=pick.price_lbp,

@@ -292,7 +292,7 @@ class TestTracing:
             "conversation_id": None,
             "request_id": None,
             "model": "scripted",
-            "prompt_version": "v1.2",
+            "prompt_version": "v1.3",
             "client_ref": None,
             "runs_in": "chat",
             "outcome": "ok",

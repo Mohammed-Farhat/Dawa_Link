@@ -103,6 +103,22 @@ GOOD_FOR = re.compile(
     r"\b(?:try|take|use|i\s+recommend|i\s+suggest)\b)",
     re.IGNORECASE,
 )
+# 6. Saying another brand can replace the client's medicine. Whether it can is the
+# pharmacist's to say (R-C10): the agent says where the brand is and "ask the pharmacist".
+# "Ask the pharmacist if it suits you" is the wording we want, so "if" and "whether"
+# right before are let through.
+SUBSTITUTION = re.compile(
+    r"(?:\b(?:take|use|have|get)\s+(?:it|this|that|them|one|\w+)\s+instead\b|"
+    r"\b(?:just\s+as\s+good|works?\s+(?:just\s+)?the\s+same|(?:the\s+)?same\s+effect|"
+    r"equally\s+effective|interchangeable|no\s+difference\s+between)\b|"
+    r"(?<!\bif )(?<!whether )\b(?:it|this(?:\s+brand)?|that(?:\s+brand)?)\s+"
+    r"(?:suits|will\s+suit|is\s+suitable\s+for|is\s+right\s+for)\s+you\b|"
+    r"\b(?:fik|fiki|btefdar|bte2dar|bt2dar)\s+tekh[do]\w*\s+badal\w*|"
+    r"\bnafs\s+(?:l\s*|el\s*)?(?:maf3oul|maf3ool|ta2sir|fa3aliyye)\b|"
+    r"يمكنك\s+(?:أخذه|استعماله|استخدامه)\s+بدل|"
+    r"(?:نفس|بنفس|بذات)\s+(?:المفعول|التأثير|الفعالية))",
+    re.IGNORECASE,
+)
 _REFUSING = re.compile(_REFUSAL, re.IGNORECASE)
 _SENTENCES = re.compile(r"[^.!?؟\n]+")
 _CHECKS = (
@@ -111,6 +127,7 @@ _CHECKS = (
     ("advice", ADVICE, False),
     ("safety_claim", SAFETY_CLAIM, True),
     ("good_for", GOOD_FOR, True),
+    ("substitution", SUBSTITUTION, True),
 )
 
 

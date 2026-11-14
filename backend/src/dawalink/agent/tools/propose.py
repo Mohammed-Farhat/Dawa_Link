@@ -21,7 +21,9 @@ from dawalink.agent.tools.base import (
     Tool,
     ToolError,
     Turn,
+    is_another_brand_in_chat,
     location_of,
+    note_asked,
     rate,
 )
 from dawalink.agent.tools.read import BOTH, Days, Qty, own_request
@@ -131,6 +133,41 @@ class ProposeReservation(Arguments):
     recommended: bool = Field(
         default=False, description="True for the one pharmacy you recommend for this medicine."
     )
+    client_asked_for_this_brand: bool = Field(
+        default=False,
+        description="Only for another brand than the client first asked for (is_alternative). "
+        "True only when the client, in the message you are answering, asked you to reserve "
+        "this brand, after you told them to ask the pharmacist. Never on your own.",
+    )
+
+
+def _another_brand(turn: Turn, tx: Tx, product_id: uuid.UUID, item_id: uuid.UUID | None) -> bool:
+    """Is this box another brand than the medicine the client asked for?
+
+    In a request the item says what was asked. In a chat it is the first product of that
+    medicine that was searched (`note_asked`): code can't read the client's words, so a
+    brand the agent searched first, before the client's own, is not caught here.
+    """
+    if item_id is not None:
+        return tx.session.get_one(RequestItem, item_id).product_id != product_id
+    return is_another_brand_in_chat(turn, tx, product_id)
+
+
+def _only_at_the_clients_word(turn: Turn, args: ProposeReservation) -> None:
+    """R-C10: another brand is reserved only when the client asked for it themselves."""
+    if not args.client_asked_for_this_brand:
+        raise Refused(
+            ToolError.ASK_PHARMACIST_FIRST,
+            "This is another brand than the client asked for. Show it with show_other_brand "
+            "and tell the client to call the pharmacy and ask the pharmacist first. Propose "
+            "a reservation only after the client asks you to reserve this brand.",
+        )
+    if not turn.by_client:
+        raise Refused(
+            ToolError.ASK_PHARMACIST_FIRST,
+            "Only the client can ask for another brand, in a message of their own. Nothing "
+            "they wrote started this turn: show the brand with show_other_brand instead.",
+        )
 
 
 def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Proposed:
@@ -139,6 +176,9 @@ def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Propose
         raise ServiceError(Code.LISTING_NOT_AVAILABLE, "This option is no longer available.")
     box = boxes[0]
     item_id = _item_of_request(turn, tx, box.product_id)
+    another_brand = _another_brand(turn, tx, box.product_id, item_id)
+    if another_brand:
+        _only_at_the_clients_word(turn, args)
     line = ReserveLine(args.listing_id, args.qty, box.price_lbp, args.days_of_use, item_id)
     orders.check_reservable(tx, client_id=turn.client_id, lines=[line], pickup_day=args.pickup_day)
     product = tx.session.get_one(Product, box.product_id)
@@ -154,6 +194,10 @@ def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Propose
             ("Pick up", display.day(args.pickup_day)),
             ("Expires", display.day(box.expiry_date) + f" {box.expiry_date.year}"),
             ("Travel", _trip(way)),
+            *(
+                [("Brand", "Another brand than you first asked for, at your request")]
+                * another_brand
+            ),
         ],
         prescription_notice=product.prescription_required,
         recommended=args.recommended,
@@ -171,6 +215,108 @@ def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Propose
     if item_id is not None and turn.request_id is not None:
         requests.items_proposed(tx, turn.request_id, [item_id])
     return proposed
+
+
+# --- show_other_brand ------------------------------------------------------------------
+
+
+class ShowOtherBrand(Arguments):
+    listing_id: uuid.UUID = Field(
+        description="An option of find_options whose is_alternative is true."
+    )
+    instead_of_product_id: uuid.UUID = Field(
+        description="The medicine the client asked for, which this is another brand of."
+    )
+    days_of_use: Days = 1
+    client_agreed: bool = Field(
+        default=False,
+        description="In a chat: true when the client, in the message you are answering, said "
+        "yes to hearing about other brands. Not needed once it is noted, and not used in a "
+        "request, whose own setting decides.",
+    )
+
+
+def _agreed_to_other_brands(turn: Turn, tx: Tx, args: ShowOtherBrand) -> bool:
+    """G4: has the client said yes to hearing about other brands?
+
+    A request has its own setting, changed only by the client's tap. In a chat it is the
+    profile's default, a yes noted earlier, or a yes in the client's message that started
+    this turn: a turn nobody wrote to can't claim one.
+    """
+    if turn.request_id is not None:
+        return bool(tx.session.get_one(SourcingRequest, turn.request_id).alternatives_ok)
+    if turn.state.alternatives_ok is True or (args.client_agreed and turn.by_client):
+        return True
+    profile = tx.session.get(ClientProfile, turn.client_id)
+    return turn.state.alternatives_ok is None and bool(
+        profile is not None and profile.alternatives_ok_default
+    )
+
+
+def show_other_brand(turn: Turn, tx: Tx, args: ShowOtherBrand) -> Proposed:
+    """A card that says where another brand is, and to ask the pharmacist first (R-C10).
+
+    It has no [Reserve] button, and a tap changes nothing. The pharmacy's phone number is
+    added when the card is displayed (`proposals.call_number`): it never passes the model.
+    """
+    if not _agreed_to_other_brands(turn, tx, args):
+        raise Refused(
+            ToolError.OTHER_BRANDS_NOT_AGREED,
+            "The client hasn't agreed to hear about other brands. Ask them first. In a chat, "
+            "call again with client_agreed once they say yes; in a request, use "
+            "propose_constraint_change with show_other_brands.",
+        )
+    if turn.request_id is None:
+        turn.state.alternatives_ok = True  # remembered for the rest of this chat
+    boxes = visible_boxes(tx, item_ids=[args.listing_id])
+    if not boxes:
+        raise ServiceError(Code.LISTING_NOT_AVAILABLE, "This option is no longer available.")
+    box = boxes[0]
+    asked = catalog.allowed_product(tx, args.instead_of_product_id)
+    same_medicine = catalog.products_in_group(tx, asked, with_equivalents=True)
+    if box.product_id == asked.id or box.product_id not in same_medicine:
+        raise Refused(
+            ToolError.NOT_SAME_MEDICINE,
+            "This box isn't another brand of that medicine. Other brands come only from "
+            "get_equivalents; the medicine itself is proposed with propose_reservation.",
+        )
+    if turn.request_id is not None and not any(
+        item.product_id == asked.id and ItemState(item.state) not in FINAL_ITEM_STATES
+        for item in requests.items_of(tx, turn.request_id)
+    ):
+        raise ServiceError(
+            Code.VALIDATION_ERROR, "That isn't a medicine this request is still looking for."
+        )
+    if not box.choice(args.days_of_use).days:
+        raise ServiceError(
+            Code.DOES_NOT_FIT, "This box expires too early for the client's days of use."
+        )
+    product = tx.session.get_one(Product, box.product_id)
+    hours = pharmacies.weekly_hours(tx, [box.pharmacy_id])
+    pharmacy = pharmacies.cards(tx, [box.pharmacy_id], hours)[box.pharmacy_id]
+    way = travel.travel_to(tx, location_of(tx, turn), [box.pharmacy_id])[box.pharmacy_id]
+    card = CardText(
+        title=f"Another brand: {product.moph_name} at {pharmacy.name}",
+        lines=[
+            ("Instead of", asked.moph_name),
+            ("It has", "the same ingredient, strength and form"),
+            ("Pharmacy", f"{pharmacy.name}, {pharmacy.district}"),
+            ("Price", display.money(box.price_lbp, rate(tx))),
+            ("Expires", display.day(box.expiry_date) + f" {box.expiry_date.year}"),
+            ("Travel", _trip(way)),
+            ("Before you go", "Call the pharmacy and ask the pharmacist if this brand suits you"),
+        ],
+        prescription_notice=product.prescription_required,
+    )
+    payload: dict[str, object] = {
+        "listing_id": str(args.listing_id),
+        "product_id": str(box.product_id),
+        "instead_of_product_id": str(asked.id),
+        "pharmacy_id": str(box.pharmacy_id),
+    }
+    if turn.request_id is None:
+        note_asked(turn, tx, asked.id)
+    return _keep(turn, tx, ProposalKind.OTHER_BRAND, payload, card)
 
 
 # --- propose_plan ----------------------------------------------------------------------
@@ -332,7 +478,9 @@ class SummaryItem(Arguments):
 
 class PrepareRequestSummary(Arguments):
     items: list[SummaryItem] = Field(min_length=1, max_length=5)
-    alternatives_ok: bool = Field(description="Whether the client agreed to other brands.")
+    alternatives_ok: bool = Field(
+        description="Whether the client agreed to hear about other brands of the same medicine."
+    )
 
 
 def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> Proposed:
@@ -375,7 +523,7 @@ def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> 
             }
         )
     hours = int(SEARCH_WINDOW.total_seconds() // 3600)
-    lines.append(("Other brands of the same medicine", "allowed" if args.alternatives_ok else "no"))
+    lines.append(("Tell me about other brands", "yes" if args.alternatives_ok else "no"))
     lines.append(("DawaLink keeps searching for", f"{hours} hours"))
     card = CardText(title="Find these medicines for me", lines=lines, prescription_notice=notice)
     payload: dict[str, object] = {
@@ -394,8 +542,10 @@ def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> 
 
 class ProposeConstraintChange(Arguments):
     request_id: uuid.UUID
-    allow_alternatives: bool = Field(
-        default=False, description="Propose allowing other brands of the same medicines."
+    show_other_brands: bool = Field(
+        default=False,
+        description="Propose that the client also hears about other brands of the same "
+        "medicines. They are shown, never reserved or waited for automatically.",
     )
     item_id: uuid.UUID | None = Field(default=None, description="The item whose budget would rise.")
     max_price: Money | None = Field(default=None, description="The new, higher budget for item_id.")
@@ -405,8 +555,8 @@ class ProposeConstraintChange(Arguments):
         budget = self.item_id is not None and self.max_price is not None
         if (self.item_id is None) != (self.max_price is None):
             raise ValueError("item_id and max_price go together")
-        if budget == self.allow_alternatives:
-            raise ValueError("propose exactly one change: allow_alternatives, or a new max_price")
+        if budget == self.show_other_brands:
+            raise ValueError("propose exactly one change: show_other_brands, or a new max_price")
         return self
 
 
@@ -419,15 +569,18 @@ def propose_constraint_change(turn: Turn, tx: Tx, args: ProposeConstraintChange)
     request = own_request(tx, turn, args.request_id)
     _open(request)
     payload: dict[str, object] = {"request_id": str(request.id)}
-    if args.allow_alternatives:
+    if args.show_other_brands:
         if request.alternatives_ok:
-            raise Refused(ToolError.NOTHING_TO_CHANGE, "Other brands are already allowed.")
+            raise Refused(
+                ToolError.NOTHING_TO_CHANGE, "The client already agreed to hear about other brands."
+            )
         payload["alternatives_ok"] = True
         card = CardText(
-            title="Allow other brands?",
+            title="Tell you about other brands?",
             lines=[
                 ("Request", request.ref),
-                ("Change", "Also accept other brands of exactly the same medicines"),
+                ("Change", "Also show other brands of exactly the same medicines"),
+                ("Reserving one", "Only after you ask the pharmacist"),
             ],
         )
     else:
@@ -499,9 +652,20 @@ TOOLS = (
         "propose_reservation",
         "Creates a [Reserve] card for one option. It reserves nothing: only the client's tap "
         "does. Answers with a reason instead of a card when the reservation wouldn't be "
-        "allowed (a limit, the stock, the expiry, the pickup day).",
+        "allowed (a limit, the stock, the expiry, the pickup day). Not for another brand "
+        "than the client asked for: that is show_other_brand.",
         ProposeReservation,
         propose_reservation,
+        BOTH,
+    ),
+    Tool(
+        "show_other_brand",
+        "Creates a card for another brand of the client's medicine at one pharmacy: where it "
+        "is, its price and expiry, and a [Call] button. It has no [Reserve] button: the "
+        "client asks the pharmacist first. Only if the client agreed to hear about other "
+        "brands.",
+        ShowOtherBrand,
+        show_other_brand,
         BOTH,
     ),
     Tool(
@@ -529,8 +693,9 @@ TOOLS = (
     ),
     Tool(
         "propose_constraint_change",
-        "Creates a card proposing to relax a request: allow other brands, or raise one "
-        "medicine's budget. Applied only if the client taps.",
+        "Creates a card proposing to relax a request: also show other brands (they are "
+        "never reserved or waited for automatically), or raise one medicine's budget. "
+        "Applied only if the client taps.",
         ProposeConstraintChange,
         propose_constraint_change,
         SOURCING,

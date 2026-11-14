@@ -5,8 +5,10 @@ What is particular to Claude models is kept here:
 - **`effort` is always sent**, because its default differs from one model to another;
 - **thinking is left to the model** (adaptive); its blocks are sent back unchanged on the
   next call of the same turn, as the API requires;
-- **no forced tool choice**: the newer models reject it. "Only `reply` is left" is done by
-  giving the model only that tool;
+- **no forced tool choice**: the newer models reject it;
+- **the same tools on every call of a turn**: the model's thinking is tied to the tool
+  list it was made with, and a request that sends it back with another list is rejected.
+  After a turn's last allowed tool call, a note of ours follows the tool results;
 - a reply can stop with **`stop_reason: "refusal"`** when a safety classifier declines.
 
 The SDK's own retries are off: the turn decides when a retry is worth it (N-36).
@@ -85,7 +87,9 @@ class ClaudeModel:
                         "is_error": result.is_error,
                     }
                     for result in message.results
-                ],
+                ]
+                # A note of ours goes after the results, in the same message.
+                + ([{"type": "text", "text": message.note}] if message.note else []),
             }
         assert isinstance(message, AssistantTurn)
         if message.reply.raw is not None:

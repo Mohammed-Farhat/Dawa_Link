@@ -1,6 +1,6 @@
 # DawaLink: API Contracts
 
-**Version:** v1.6 (validated; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-13
+**Version:** v1.7 (validated; v1.7: other brands are shown, never reserved, BLD-D17; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-14
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
 **Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI. **v1.4 applies the pickup-day decision** (decision log §W): search takes a `pickup_day` date instead of "today / tomorrow", and a listing says when its expiry limits the pickup days.
 
@@ -292,7 +292,6 @@ class Listing(BaseModel):        # a visible inventory item (04 SM-3)
     days_left: int               # from the app clock
     available: int               # capped at 5 (R-S5)
     more_available: bool         # True when more than 5
-    is_alternative: bool         # same composition, other brand (R-S4)
     travel: Travel               # from the client's location
     fits: bool | None            # lasts the client's days of use (R-F1); None = days unknown → warning
     pickup_days_allowed: list[date]   # the days the client may choose (R-F3): the pharmacy's days on which the box still lasts
@@ -333,8 +332,7 @@ class Offer(BaseModel):          # an order in state OFFERED (O7, O8)
 ```python
 class Watch(BaseModel):          # a claim of kind WATCH (04 SM-7)
     id: UUID
-    product: ProductSummary
-    include_alternatives: bool
+    product: ProductSummary      # the medicine itself: a watch never waits for another brand (R-C10)
     district: District
     max_price: Money | None
     qty: int
@@ -367,7 +365,7 @@ class SourcingRequest(BaseModel):            # 04 SM-8
     state: Literal["OPEN", "CLOSED"]
     outcome: Literal["FULFILLED", "PARTIAL", "UNFULFILLED", "CANCELLED"] | None
     district: District
-    alternatives_ok: bool
+    alternatives_ok: bool        # "tell me about other brands": shown, never reserved or waited for (R-C10)
     ends_at: datetime
     items: list[RequestItem]
     conversation_id: UUID        # the request thread
@@ -427,6 +425,7 @@ class MessagesPage(BaseModel):   # the polling response
     server_now: datetime
 ```
 - **Internal `event` messages are never returned to clients.** These are the decision events the agent reads (`05` `chat_messages.kind='event'`). The client sees the matching status card or timeline line instead.
+- **Another brand (R-C10, BLD-D17):** search returns only the medicine that was searched (R-S4; `include_alternatives` and `is_alternative` are gone), so a listing is never "another brand". The agent's card of kind `other_brand` is information only: the website shows [Call], with the pharmacy's `call_number` read from its record when the card is served, and no action button. The agent's side is enforced in its tools (`07` §14.7).
 - **Cards come in two kinds (API-D3):**
   - **Agent cards** (`origin = "proposal"`) are created by a tool and stored in `proposals`. The LLM only chooses which ones to show. Their button calls `POST /proposals/{id}/execute`.
   - **System cards** (`origin = "system"`) are template cards, such as offers and status. Their button calls the object's own endpoint, such as `/offers/{id}/accept`.
@@ -469,7 +468,7 @@ All paths are relative to `/api/v1`.
 | `GET /catalog/products?q=&limit=` | logged in | → `{items: list[ProductSummary], did_you_mean: list[str]}` (fuzzy; brand or ingredient; **controlled products never returned**) | | R-C6, CS-6 |
 | `GET /catalog/products/{id}` | logged in | → `ProductSummary` + `{ingredients: [{name, strength}], atc_code}` | `NOT_FOUND` | R-C2 |
 | `GET /catalog/products/{id}/equivalents` | logged in | → `list[ProductSummary]` (same equivalence group only) | `NOT_FOUND` | R-C5 |
-| `GET /listings?product_id=\|q=&lat=&lon=\|district_id=&days_of_use=&pickup_day=&max_price=&currency=&include_alternatives=&sort=best\|nearest\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. Without `lat`/`lon`, the profile's district is used. With `days_of_use`, boxes that don't last are left out, and an empty result says why (`no_match: {latest_expiry, latest_pickup_day}`). With `pickup_day` (a date, today or later), only pharmacies that accept that day are returned, and the fit is counted from it; without it, from each pharmacy's earliest allowed day. | `VALIDATION_ERROR` | R-S1–R-S5, R-F1, R-F3, R-F6 |
+| `GET /listings?product_id=\|q=&lat=&lon=\|district_id=&days_of_use=&pickup_day=&max_price=&currency=&sort=best\|nearest\|cheapest\|latest_expiry&cursor=&limit=` | client (any status but SUSPENDED) | → `{items: list[Listing], next_cursor, server_now}`. Without `lat`/`lon`, the profile's district is used. With `days_of_use`, boxes that don't last are left out, and an empty result says why (`no_match: {latest_expiry, latest_pickup_day}`). With `pickup_day` (a date, today or later), only pharmacies that accept that day are returned, and the fit is counted from it; without it, from each pharmacy's earliest allowed day. | `VALIDATION_ERROR` | R-S1–R-S5, R-F1, R-F3, R-F6 |
 | `GET /listings/{id}` | client | → `Listing` + `{pharmacy_hours: [...], other_offers_count}` | `NOT_FOUND` (also when it stopped being visible) | CS-7 |
 
 ### 6.3 Reservations and offers (client)
@@ -491,7 +490,7 @@ All paths are relative to `/api/v1`.
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `POST /watches` 🔑 | client ACTIVE | `{product_id, include_alternatives, qty, days_of_use? (default 1), max_price?: MoneyIn, location?: LocationIn}` → **201** `Watch` (ends after the search window) | `OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `PRODUCT_NOT_ALLOWED`, `CLIENT_PAUSED` | R-W1, R-W2, R-T3 |
+| `POST /watches` 🔑 | client ACTIVE | `{product_id, qty, days_of_use? (default 1), max_price?: MoneyIn, location?: LocationIn}` → **201** `Watch` (ends after the search window) | `OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `PRODUCT_NOT_ALLOWED`, `CLIENT_PAUSED` | R-W1, R-W2, R-T3 |
 | `GET /watches?state=live\|all` | client | → `list[Watch]` | | CS-11 |
 | `POST /watches/{id}/cancel` | client (own) | → `Watch` (CANCELLED; its offers withdrawn) | `NOT_FOUND` | SM-7 |
 
@@ -553,6 +552,7 @@ class ExecuteResult(BaseModel):
     proposal_id: UUID
     kind: Literal["reserve", "reserve_group", "accept_offer", "cancel",
                   "request_summary", "constraint_change", "remove_item"]
+                 # an "other_brand" card is never executed: it has [Call], no action button
     reservations: list[Reservation] = []
     request: SourcingRequest | None = None
     message: str                 # "Reserved ✅ R-7K3Q2F: show this number at the counter"
@@ -567,7 +567,8 @@ class ExecuteResult(BaseModel):
 | `accept_offer` | Accepts an open offer the agent re-showed | as `/offers/{id}/accept` | O9 |
 | `cancel` | Cancels a reservation | `RESERVATION_NOT_ACTIVE` | O5 |
 | `request_summary` | Creates the sourcing request ([Start sourcing]) | as `POST /requests` | R-RQ1 |
-| `constraint_change` | Allows alternatives, or raises a max price, on an open request | `REQUEST_CLOSED` | R-RQ4 |
+| `constraint_change` | Turns on "tell me about other brands", or raises a max price, on an open request | `REQUEST_CLOSED` | R-RQ4 |
+| `other_brand` | **Nothing.** The card says where another brand is and to ask the pharmacist first; its [Call] button dials the pharmacy. Executing it answers `VALIDATION_ERROR` and changes nothing | `VALIDATION_ERROR` | R-C10 |
 | `remove_item` | Cancels one item of an open request | `REQUEST_CLOSED` | R-RQ4 |
 
 - **When a group fails:** nothing is reserved. The response lists the failed item(s) with reasons. **The server also gives the agent a turn**: it writes an `event` message and sets `pending_turn_at`. The agent then says which item failed, offers a new card with the rest, and keeps sourcing the failed one (R-RQ6).

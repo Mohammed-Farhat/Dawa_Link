@@ -201,19 +201,17 @@ class TestListingSearch:
         assert not hasattr(listing.pharmacy, "lat")
         assert result.total_found == 1
 
-    def test_alternatives_appear_only_when_asked_for_and_are_labelled(
+    def test_search_shows_what_was_searched_never_another_brand(
         self, world: World, setup: dict[str, uuid.UUID]
     ) -> None:
-        """R-S4."""
-        world.make.item(pharmacy_id=setup["near"], product_id=setup["panadol"])
-        other = world.make.item(pharmacy_id=setup["near"], product_id=setup["paratest"])
+        """R-S4 (BLD-D17): another brand of the same medicine is on the shelf, and stays out."""
+        mine = world.make.item(pharmacy_id=setup["near"], product_id=setup["panadol"])
+        world.make.item(pharmacy_id=setup["near"], product_id=setup["paratest"])
 
-        without = self.find(world, setup)
-        with_them = self.find(world, setup, include_alternatives=True)
+        found = self.find(world, setup)
 
-        assert [listing.is_alternative for listing in without.listings] == [False]
-        assert {found.id: found.is_alternative for found in with_them.listings}[other] is True
-        assert len(with_them.listings) == 2
+        assert [listing.id for listing in found.listings] == [mine]
+        assert {listing.product.id for listing in found.listings} == {setup["panadol"]}
 
     def test_the_best_match_is_the_shortest_trip_then_the_price(
         self, world: World, setup: dict[str, uuid.UUID]

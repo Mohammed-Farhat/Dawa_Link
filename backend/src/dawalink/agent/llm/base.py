@@ -65,6 +65,10 @@ class ToolResults:
     """Every tool call of the model's last message gets its result here, in one message."""
 
     results: tuple[ToolResult, ...]
+    # What code tells the model after the results ("that was your last tool call").
+    # Always added at the end: a provider ties the model's reasoning to everything sent
+    # before it, so what was already sent in a turn is never changed.
+    note: str = ""
 
 
 Message = UserText | AssistantTurn | ToolResults

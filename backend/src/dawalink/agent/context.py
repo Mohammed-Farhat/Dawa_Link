@@ -356,7 +356,8 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         f"Account status: {profile.status}. "
         + _location_line(tx, conversation, has_home_area=area is not None)
         + (f"Home area: {area}. " if area else "Home area: not set. ")
-        + f"Other brands OK by default: {'yes' if profile.alternatives_ok_default else 'no'}.",
+        + f"Wants to hear about other brands by default: "
+        f"{'yes' if profile.alternatives_ok_default else 'no'}.",
         f"Limits used: reservations {open_orders}/{MAX_OPEN_ORDERS}, "
         f"requests {open_requests}/{MAX_OPEN_REQUESTS}, watches {watches}/{MAX_WATCHES}, "
         f"early-release requests {asks}/{MAX_OPEN_EARLY_RELEASE_REQUESTS}.",

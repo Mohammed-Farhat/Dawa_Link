@@ -309,10 +309,10 @@ class TestThePlanCard:
             is Code.VALIDATION_ERROR
         )
 
-    def test_another_brand_only_if_the_client_allowed_alternatives(
+    def test_another_brand_serves_an_item_only_if_the_client_agreed_to_other_brands(
         self, case: Case, world: World
     ) -> None:
-        """G4."""
+        """G4. Since BLD-D17 the agent makes this card only when the client asks for the brand."""
         key = "bisoprolol=5mg | tablet | C07AB07"
         brand = world.make.product(equivalence_key=key)
         generic = world.make.product(equivalence_key=key)
@@ -634,7 +634,7 @@ class TestGivingUp:
 
 
 class TestChangingConstraints:
-    def test_the_budget_and_the_alternatives_follow_into_the_waiting_claim(
+    def test_the_budget_follows_into_the_waiting_claim_and_other_brands_never_do(
         self, case: Case, world: World
     ) -> None:
         request_id = case.start(RequestLine(case.concor, max_price_lbp=500_000))
@@ -652,9 +652,24 @@ class TestChangingConstraints:
 
         row = world.one("SELECT * FROM claims WHERE id = :c", c=claim)
         assert before == 0
-        assert (row.include_equivalents, row.max_price_lbp, row.state) == (
-            True,
-            700_000,
-            "OFFER_PENDING",
-        )
+        assert (row.max_price_lbp, row.state) == (700_000, "OFFER_PENDING")
         assert case.request(request_id).alternatives_ok is True
+
+    def test_agreeing_to_other_brands_never_makes_a_request_wait_for_one(
+        self, case: Case, world: World
+    ) -> None:
+        """R-C10 (BLD-D17): the request shows other brands; it holds only the medicine itself."""
+        key = "bisoprolol=5mg | tablet | C07AB07"
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE products SET equivalence_key = %s WHERE id = %s", (key, case.concor)
+            )
+        generic = world.make.product(equivalence_key=key)
+        request_id = case.start(RequestLine(case.concor), alternatives_ok=True)
+        claim = TestWaitingForStock().waiting(case, request_id)
+
+        case.stock(generic)
+        made = world.clock_tasks().matching_sweep()
+
+        assert made == 0
+        assert world.one("SELECT state FROM claims WHERE id = :c", c=claim).state == "ACTIVE"
