@@ -1,0 +1,131 @@
+# Places a client can name in chat instead of sharing a location ("I'm in Hamra"):
+# the 26 districts as a whole, then neighbourhoods and towns (docs/04 R-S2, BLD-D14).
+# The agent's set_area tool looks a name up here; the area's centre is then used to
+# count travel times. A name matches when it is written like `area` or one of
+# `other_names` (separated by |), ignoring case, accents, hyphens and the article.
+#
+# The centres are approximate (to about 1 km), written by hand from general map
+# knowledge (OpenStreetMap), NOT an official dataset. TO CHECK on a map before the demo.
+# ids 1-26 are the districts (same ids as districts.csv, whole = 1); areas start at 101.
+# An id is never changed or reused once it is in use.
+id,area,district,other_names,whole,ref_lat,ref_lon
+1,Beirut,Beirut,Beyrouth|Bayrut|Beirut city|بيروت,1,33.89380,35.50180
+2,Akkar,Akkar,Aakkar|عكار,1,34.54280,36.07970
+3,Tripoli,Tripoli,Trablos|Trablus|Tarablus|طرابلس,1,34.43670,35.84970
+4,Zgharta,Zgharta,Zghorta|زغرتا,1,34.39750,35.89440
+5,Bsharri,Bsharri,Bcharre|Bcharreh|Bsharre|بشري,1,34.25110,36.01140
+6,Batroun,Batroun,Batrun|البترون,1,34.25530,35.65810
+7,Koura,Koura,Kura|الكورة,1,34.30000,35.80000
+8,Miniyeh-Danniyeh,Miniyeh-Danniyeh,Minieh Danniyeh|Danniyeh|Dinniyeh|Donniyeh|الضنية,1,34.47060,35.93640
+9,Keserwan,Keserwan,Kesrouan|Kesrwan|Kesserwan|Kisrawan|كسروان,1,33.98080,35.61780
+10,Jbeil,Jbeil,Byblos|Jbail|Jubayl|جبيل,1,34.12300,35.65190
+11,Matn,Matn,Metn|Maten|المتن,1,33.89470,35.56250
+12,Baabda,Baabda,B3abda|بعبدا,1,33.83390,35.54420
+13,Aley,Aley,Alay|Aalay|عاليه,1,33.80530,35.60000
+14,Chouf,Chouf,Shouf|Shuf|الشوف,1,33.69530,35.58030
+15,Zahle,Zahle,Zahleh|Zahlah|زحلة,1,33.84670,35.90200
+16,West Beqaa,West Beqaa,West Bekaa|Western Bekaa|Bekaa West|البقاع الغربي,1,33.63000,35.78000
+17,Rashaya,Rashaya,Rachaya|Rashaya el Wadi|راشيا,1,33.50080,35.84360
+18,Baalbek,Baalbek,Baalbeck|Balbek|Ba3albak|بعلبك,1,34.00580,36.21810
+19,Hermel,Hermel,الهرمل,1,34.39420,36.38470
+20,Sidon,Sidon,Saida|Sayda|صيدا,1,33.56310,35.36890
+21,Tyre,Tyre,Sour|Sur|صور,1,33.27330,35.19390
+22,Jezzine,Jezzine,Jezzin|جزين,1,33.54420,35.58500
+23,Nabatieh,Nabatieh,Nabatiyeh|Nabatiye|Nabatieh city|النبطية,1,33.37890,35.48390
+24,Marjeyoun,Marjeyoun,Marjayoun|Marjaayoun|مرجعيون,1,33.36060,35.59140
+25,Hasbaya,Hasbaya,Hasbaiya|حاصبيا,1,33.39780,35.68500
+26,Bint Jbeil,Bint Jbeil,Bent Jbeil|Bint Jbail|بنت جبيل,1,33.11940,35.43360
+101,Hamra,Beirut,Hamra Street|7amra|الحمرا|الحمراء,0,33.89620,35.48250
+102,Ras Beirut,Beirut,Ras Beyrouth|راس بيروت,0,33.90000,35.47800
+103,Manara,Beirut,Manara Beirut|المنارة,0,33.90000,35.47100
+104,Raouche,Beirut,Raouché|Rawche|Rawsheh|Raoucheh|الروشة,0,33.88900,35.47400
+105,Ain el Mreisseh,Beirut,Ain Mreisseh|Ain el Mraisseh|Ain Mreise|عين المريسة,0,33.90100,35.48800
+106,Verdun,Beirut,Verdan|فردان,0,33.88500,35.48500
+107,Sanayeh,Beirut,Sanayeh Garden|Sanaye3|Sanayeh Beirut|الصنايع,0,33.89380,35.49400
+108,Clemenceau,Beirut,Clemanso|كليمنصو,0,33.89800,35.48800
+109,Zarif,Beirut,Zarif Beirut|الظريف,0,33.88950,35.49250
+110,Mousaitbeh,Beirut,Msaytbeh|Mousseitbeh|Msaitbeh|المصيطبة,0,33.88550,35.49250
+111,Mar Elias,Beirut,Mar Elias Beirut|مار الياس,0,33.88100,35.49000
+112,Tallet el Khayat,Beirut,Tallet Khayat|تلة الخياط,0,33.88100,35.48400
+113,Ramlet el Baida,Beirut,Ramlet Baida|Ramleh el Bayda|الرملة البيضاء,0,33.87700,35.48200
+114,Mazraa,Beirut,Corniche el Mazraa|Corniche Mazraa|Mazra3a|المزرعة,0,33.88000,35.49800
+115,Barbir,Beirut,Barbeer|البربير,0,33.87900,35.50600
+116,Tariq el Jdideh,Beirut,Tarik Jdideh|Tareek el Jdideh|Tari2 el Jdideh|طريق الجديدة,0,33.87350,35.49850
+117,Cola,Beirut,Kola|الكولا,0,33.87400,35.49600
+118,Basta,Beirut,Basta el Tahta|Basta el Fawqa|البسطة,0,33.88900,35.50200
+119,Ras el Nabaa,Beirut,Ras Nabaa|Ras el Naba3|راس النبع,0,33.88300,35.50900
+120,Downtown,Beirut,Downtown Beirut|Centre Ville|Wasat el Balad|Solidere|Balad|وسط البلد,0,33.89600,35.50500
+121,Gemmayzeh,Beirut,Gemmayze|Jemmayzeh|Gemayzeh|الجميزة,0,33.89500,35.51500
+122,Mar Mikhael,Beirut,Mar Mkhayel|Mar Mikhail|مار مخايل,0,33.89750,35.52500
+123,Achrafieh,Beirut,Ashrafieh|Achrafiyeh|Ashrafiyeh|Achrafiye|الاشرفية,0,33.88700,35.52000
+124,Sassine,Beirut,Sassine Square|Place Sassine|ساسين,0,33.88670,35.51950
+125,Sodeco,Beirut,Sodeco Square|السوديكو,0,33.88650,35.51050
+126,Badaro,Beirut,Badaro Street|بدارو,0,33.87600,35.51700
+127,Geitawi,Beirut,Jeitawi|Geitaoui|الجعيتاوي,0,33.89250,35.52800
+128,Karantina,Beirut,Quarantina|Quarantaine|الكرنتينا,0,33.90100,35.53100
+129,Sioufi,Beirut,Syoufi|السيوفي,0,33.88100,35.52400
+130,Adlieh,Beirut,Adliyeh|Adliye|العدلية,0,33.87700,35.52200
+131,Mathaf,Beirut,Museum|National Museum|Mat7af|المتحف,0,33.87850,35.51500
+140,Furn el Chebbak,Baabda,Furn el Shebbak|Furn Chebbak|Fern el Chebbak|فرن الشباك,0,33.87000,35.52700
+141,Ain el Remmaneh,Baabda,Ain Remmaneh|Ain el Rummaneh|عين الرمانة,0,33.86600,35.52300
+142,Chiyah,Baabda,Chiah|Shiyah|Chiyyah|الشياح,0,33.86100,35.51600
+143,Ghobeiry,Baabda,Ghobeireh|Ghobairy|الغبيري,0,33.85800,35.50600
+144,Haret Hreik,Baabda,Haret Hraik|حارة حريك,0,33.85200,35.50700
+145,Bourj el Barajneh,Baabda,Burj el Barajneh|Borj Barajneh|برج البراجنة,0,33.84700,35.50200
+146,Dahieh,Baabda,Dahiyeh|Dahye|Da7yeh|Southern Suburb|الضاحية,0,33.85200,35.50700
+147,Hadath,Baabda,Hadeth|Hadat|الحدث,0,33.83600,35.53100
+148,Hazmieh,Baabda,Hazmiyeh|Hazmiye|الحازمية,0,33.85500,35.54000
+149,Kfarchima,Baabda,Kfarshima|Kfar Chima|كفرشيما,0,33.82200,35.52800
+150,Ouzai,Baabda,Ouzaai|Ouza3i|الاوزاعي,0,33.84600,35.48700
+151,Bir Hassan,Baabda,Bir Hasan|بئر حسن,0,33.86300,35.49200
+152,Jnah,Baabda,Jnah Beirut|الجناح,0,33.86500,35.48500
+160,Sin el Fil,Matn,Sin Fil|Sinn el Fil|سن الفيل,0,33.87500,35.54000
+161,Bourj Hammoud,Matn,Burj Hammoud|Borj Hammoud|Bourj Hamoud|برج حمود,0,33.89300,35.54000
+162,Dora,Matn,Dawra|Daoura|الدورة,0,33.89700,35.55300
+163,Jdeideh,Matn,Jdeidet el Metn|Jdaideh|Jdeide|الجديدة,0,33.88900,35.56600
+164,Dekwaneh,Matn,Dekouaneh|Dekweneh|Dekwene|الدكوانة,0,33.87800,35.54800
+165,Mkalles,Matn,Mkales|Mkalless|المكلس,0,33.86600,35.54900
+166,Mansourieh,Matn,Mansouriyeh|Mansourieh el Metn|المنصورية,0,33.86100,35.57300
+167,Fanar,Matn,Fanar el Metn|الفنار,0,33.87900,35.57600
+168,Zalka,Matn,Zalqa|الزلقا,0,33.90100,35.57200
+169,Jal el Dib,Matn,Jal Dib|Jall el Dib|Jaleldib|جل الديب,0,33.90900,35.58000
+170,Antelias,Matn,Antilias|Antelyas|انطلياس,0,33.91500,35.59000
+171,Naccache,Matn,Nakkach|Naqqache|Naccach|النقاش,0,33.92100,35.59700
+172,Rabieh,Matn,Rabiyeh|Rabiye|الرابية,0,33.92000,35.61200
+173,Dbayeh,Matn,Dbaye|Dbaiyeh|Dbayyeh|ضبية,0,33.93600,35.59500
+174,Broummana,Matn,Brummana|Broumana|Brumana|برمانا,0,33.88100,35.62200
+175,Beit Mery,Matn,Beit Meri|Beit Mary|بيت مري,0,33.86200,35.60200
+176,Bikfaya,Matn,Bekfaya|Bikfayya|بكفيا,0,33.92000,35.68300
+177,Baabdat,Matn,Baabdath|بعبدات,0,33.88700,35.66000
+178,Dhour el Choueir,Matn,Dhour Choueir|Dhour Shweir|Choueir|ضهور الشوير,0,33.90800,35.71300
+190,Jounieh,Keserwan,Jounie|Juniyah|Jouniyeh|جونيه|جونية,0,33.98100,35.61800
+191,Kaslik,Keserwan,Kaslik Jounieh|الكسليك,0,33.97400,35.61100
+192,Zouk Mikael,Keserwan,Zouk Mkayel|Zouk Michael|Zouk Mikhael|ذوق مكايل,0,33.96700,35.61500
+193,Zouk Mosbeh,Keserwan,Zouk Mesbeh|Zouk Mousbeh|ذوق مصبح,0,33.95300,35.60500
+194,Adma,Keserwan,Adma wa Dafneh|ادما,0,34.00000,35.64000
+195,Tabarja,Keserwan,Tabarjah|طبرجا,0,34.03000,35.62500
+196,Ghazir,Keserwan,Ghazeer|غزير,0,34.01800,35.66700
+197,Ajaltoun,Keserwan,Aajaltoun|Ajaltun|عجلتون,0,33.96600,35.68700
+200,Amchit,Jbeil,Amsheet|Aamchit|Amshit|عمشيت,0,34.14800,35.64400
+205,Chekka,Batroun,Shekka|Chikka|شكا,0,34.32500,35.72800
+206,Amioun,Koura,Amyoun|اميون,0,34.30000,35.81000
+207,El Mina,Tripoli,Mina Tripoli|Al Mina|الميناء,0,34.45100,35.81200
+208,Minieh,Miniyeh-Danniyeh,Minyeh|Miniyeh|Menyeh|المنية,0,34.47700,35.93800
+209,Halba,Akkar,Halbah|حلبا,0,34.54280,36.07970
+220,Choueifat,Aley,Shweifat|Choueifate|Chouaifat|الشويفات,0,33.81100,35.51200
+221,Khalde,Aley,Khaldeh|Khalda|خلدة,0,33.78500,35.48000
+222,Aramoun,Aley,Aramoun Aley|Aramun|عرمون,0,33.76600,35.50800
+223,Bchamoun,Aley,Bshamoun|Bchamoune|بشامون,0,33.78200,35.52000
+224,Bhamdoun,Aley,Bhamdoun el Mhatta|Bhamdun|بحمدون,0,33.80700,35.65200
+230,Damour,Chouf,Damur|الدامور,0,33.73000,35.45500
+231,Jiyeh,Chouf,Jiye|Jieh|Jiyyeh|الجية,0,33.66500,35.42200
+232,Deir el Qamar,Chouf,Deir el Kamar|Deir Qamar|Deir al Amar|دير القمر,0,33.69700,35.56300
+233,Beiteddine,Chouf,Beit ed Dine|Beit el Din|Beiteddin|بيت الدين,0,33.69530,35.58030
+234,Baakline,Chouf,Baaqline|Baakleen|B3aklin|بعقلين,0,33.68000,35.55800
+235,Barja,Chouf,Barja el Chouf|برجا,0,33.65000,35.44300
+236,Chhim,Chouf,Shhim|Chehim|Shheem|شحيم,0,33.61800,35.48700
+240,Ghazieh,Sidon,Ghaziyeh|Ghazeye|الغازية,0,33.51800,35.36600
+241,Abra,Sidon,Abra Saida|عبرا,0,33.56000,35.40000
+250,Chtaura,Zahle,Chtoura|Shtaura|Shtoura|شتورا|شتورة,0,33.81500,35.85300
+251,Bar Elias,Zahle,Barelias|Bar Elyas|بر الياس,0,33.77500,35.90400
+252,Joub Jannine,West Beqaa,Jeb Jannine|Jib Janine|Joub Jenin|جب جنين,0,33.62700,35.78300

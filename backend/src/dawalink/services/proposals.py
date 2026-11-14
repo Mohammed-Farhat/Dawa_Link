@@ -286,11 +286,10 @@ def _start_request(tx: Tx, client_id: uuid.UUID, proposal: Proposal, key: str) -
     """[Start sourcing] on the agent's summary card (R-RQ1)."""
     payload = proposal.payload
     conversation = tx.session.get_one(Conversation, proposal.conversation_id)
-    if conversation.loc_lat is not None and conversation.loc_lon is not None:
-        location = travel.shared_location(str(conversation.loc_lat), str(conversation.loc_lon))
-    elif payload.get("district_id") is not None:
+    location = travel.conversation_location(tx, conversation)
+    if location is None and payload.get("district_id") is not None:
         location = travel.district_location(tx, int(payload["district_id"]))
-    else:
+    if location is None:
         raise ServiceError(Code.VALIDATION_ERROR, "Share your location or choose a district first.")
     return requests.create_request(
         tx,

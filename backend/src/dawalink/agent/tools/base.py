@@ -30,7 +30,6 @@ from dawalink.agent.llm import ToolSpec
 from dawalink.agent.state import CaseState
 from dawalink.db.models import ClientProfile, Conversation
 from dawalink.domain.clock import Clock
-from dawalink.domain.geo import Point
 from dawalink.domain.vocabulary import AgentMode
 from dawalink.services import email, travel
 from dawalink.services.context import Tx, unit_of_work
@@ -52,6 +51,8 @@ class ToolError(StrEnum):
     PLAN_NOT_FOUND = "PLAN_NOT_FOUND"
     NOTHING_TO_CHANGE = "NOTHING_TO_CHANGE"
     FOLLOWUP_NOT_ALLOWED = "FOLLOWUP_NOT_ALLOWED"
+    AREA_NOT_FOUND = "AREA_NOT_FOUND"
+    AREA_AMBIGUOUS = "AREA_AMBIGUOUS"
 
 
 class Refused(Exception):
@@ -222,24 +223,23 @@ def _in_a_transaction(turn: Turn, tool: Tool, parsed: Arguments) -> Output:
 
 
 def location_of(tx: Tx, turn: Turn) -> Location:
-    """Where this conversation's client is: the shared location, or the profile's district.
+    """Where this conversation's client is: the location shared from the phone, the area
+    they named in chat, or else the profile's district.
 
     It is read here, by code, for every tool call. It is never part of the case state or
     of a tool's output, so it can't reach the model (INV-24).
     """
     conversation = tx.session.get_one(Conversation, turn.conversation_id)
-    if conversation.loc_lat is not None and conversation.loc_lon is not None:
-        point = Point(conversation.loc_lat, conversation.loc_lon)
-        if conversation.loc_source == "district":
-            return Location(point, "district")
-        return Location(point, "shared")
+    known = travel.conversation_location(tx, conversation)
+    if known is not None:
+        return known
     profile = tx.session.get(ClientProfile, turn.client_id)
     if profile is not None and profile.district_id is not None:
         return travel.district_location(tx, profile.district_id)
     raise Refused(
         ToolError.LOCATION_NEEDED,
-        "The client's location isn't known. Ask them to tap 'Use my location' or to choose "
-        "a district in their profile.",
+        "The client's location isn't known. Ask them which area or town they are in, or to "
+        "tap 'Use my location'.",
     )
 
 

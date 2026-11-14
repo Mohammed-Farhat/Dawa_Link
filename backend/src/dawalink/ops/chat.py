@@ -5,6 +5,8 @@
     python -m dawalink.ops.chat --tap 1                     the client taps the 1st card shown
     python -m dawalink.ops.chat --work                      the worker runs the waiting turns
     python -m dawalink.ops.chat --request "any news?"      the client writes in their request
+    python -m dawalink.ops.chat --new --no-location "ana bel Hamra, baddi panadol"
+                                                            ...in a chat with no location yet
 
 Run it from `backend/` with `uv run --env-file ../.env`. There is no website yet, so this
 is how a developer sees the agent work: every message, tap and turn goes through the
@@ -124,7 +126,13 @@ def _newest_message_id(sessions: sessionmaker[Session]) -> int:
 
 
 def _conversation(
-    sessions: sessionmaker[Session], clock: Clock, client_id: uuid.UUID, *, thread: bool, new: bool
+    sessions: sessionmaker[Session],
+    clock: Clock,
+    client_id: uuid.UUID,
+    *,
+    thread: bool,
+    new: bool,
+    located: bool = True,
 ) -> uuid.UUID:
     """The client's chat (created, and given a location, if needed) or newest request thread."""
     with unit_of_work(sessions, clock) as tx:
@@ -148,7 +156,7 @@ def _conversation(
                 old.status = "ARCHIVED"
             tx.session.flush()
         chat = conversations.active_chat(tx, client_id)
-        if chat.loc_lat is None:
+        if chat.loc_lat is None and located:
             here = travel.shared_location(*DEFAULT_LOCATION)
             chat.loc_lat, chat.loc_lon = here.point.lat, here.point.lon
             chat.loc_source, chat.loc_set_at = "shared", tx.now
@@ -205,6 +213,11 @@ def main() -> None:
     parser.add_argument("--work", action="store_true", help="run the worker's waiting turns")
     parser.add_argument("--steps", action="store_true", help="print every step of each turn")
     parser.add_argument(
+        "--no-location",
+        action="store_true",
+        help="don't give a new chat a shared location (to say an area instead)",
+    )
+    parser.add_argument(
         "--at", metavar="YYYY-MM-DDTHH:MM", help="pretend it is this Beirut time (development)"
     )
     arguments = parser.parse_args()
@@ -229,7 +242,12 @@ def main() -> None:
     if client_id is None:
         raise ConfigError("No demo client found. Run: python -m dawalink.ops.prepare_db")
     conversation_id = _conversation(
-        sessions, clock, client_id, thread=arguments.request, new=arguments.new
+        sessions,
+        clock,
+        client_id,
+        thread=arguments.request,
+        new=arguments.new,
+        located=not arguments.no_location,
     )
     seen = _newest_message_id(sessions)
 

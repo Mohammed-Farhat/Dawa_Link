@@ -18,6 +18,8 @@ class LocationSource(StrEnum):
 
     SHARED = "shared"
     DISTRICT = "district"
+    # An area the client named in chat; its centre is used (decision log BLD-D14).
+    AREA = "area"
 
 
 class BrandOrGeneric(StrEnum):

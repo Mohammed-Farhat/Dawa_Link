@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, ValidationError, field_validator
+from pydantic import AliasChoices, Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,7 +55,11 @@ class Settings(BaseSettings):
     # Agent traces (docs/07 §9). Without keys, turns are recorded in our own tables only.
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
-    langfuse_host: str = "https://cloud.langfuse.com"
+    # Langfuse's own setup page calls it LANGFUSE_BASE_URL; older guides say LANGFUSE_HOST.
+    langfuse_host: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("langfuse_host", "langfuse_base_url"),
+    )
 
     @field_validator(
         "anthropic_api_key",

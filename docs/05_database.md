@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.5 · **Date:** 2026-11-13
+**Version:** v3.6 · **Date:** 2026-11-14
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -24,7 +24,7 @@
 
 ## In short
 
-- **34 tables in 7 areas:**
+- **35 tables in 7 areas:**
   - identity;
   - catalog;
   - inventory;
@@ -150,6 +150,8 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 **`email_verification_tokens`**: id uuid PK · user_id FK · `token_hash` bytea U · expires_at (24 h) · used_at.
 
 **`districts`**: id smallint PK · name U · `governorate` text NN · `ref_lat`, `ref_lon` numeric(8,5): the point used when a client picks a district instead of sharing their location (`04` R-S2).
+
+**`areas`** (added 2026-11-14, BLD-D14): id smallint PK · name NN · district_id FK · `other_names` text[] (other spellings, Arabic script) · `whole_district` boolean · `ref_lat`, `ref_lon` numeric(8,5): the area's centre. U (name, district_id). The places a client can name in chat instead of sharing a location (`04` R-S2): the 26 districts as a whole (same ids), then neighbourhoods and towns (ids from 101). Reference data: the app only reads it.
 
 **`pharmacies`**
 | Column | Type | Rules |
@@ -286,7 +288,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | state | text | `IN ('OPEN','CLOSED')` |
 | outcome | text | `IN ('FULFILLED','PARTIAL','UNFULFILLED','CANCELLED')`; `CHECK ((state='CLOSED') = (outcome IS NOT NULL))` |
 | district_id | smallint | FK (the client's district, for display) |
-| **loc_lat / loc_lon / loc_source** | numeric(7,3) ×2 / text | the client's location for this request, **rounded to ~100 m** (N-43); `loc_source IN ('shared','district')`; never sent to the LLM; purged with the request |
+| **loc_lat / loc_lon / loc_source** | numeric(7,3) ×2 / text | the client's location for this request, **rounded to ~100 m** (N-43); `loc_source IN ('shared','district','area')`; never sent to the LLM; purged with the request |
 | alternatives_ok | boolean | NN |
 | **ends_at** | timestamptz | NN: creation + the search window (`04` N-11), from the app clock |
 | window_checked_at | timestamptz | set when the window check (N-24) has run, so it runs once |
@@ -359,6 +361,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | status | text | `IN ('ACTIVE','ARCHIVED')` |
 | case_state | jsonb | NN, default `{}`: the agent's working memory (items in focus, constraints, plans shown, pending proposals) |
 | **loc_lat / loc_lon / loc_source / loc_set_at** | numeric(7,3) ×2 / text / timestamptz | the location shared in this chat, rounded. **Kept out of `case_state`**, so it's never loaded into the LLM context (INV-24). |
+| **loc_area_id** | smallint | FK areas: the area the client named, when the location is its centre. Set exactly when `loc_source = 'area'` (a check), so the name the agent is told is never stale. |
 | **turn_lease_until / turn_owner** | timestamptz / text | the turn lease (`04` R-AG2, N-27) |
 | **pending_turn_at / turn_attempts** | timestamptz / smallint | a decision event waiting for a turn (`04` R-AG4); retries (SM-12) |
 | **followup_at** | timestamptz | one follow-up scheduled by the agent (`07` AG-D11, `04` N-39); cleared when the turn runs |
@@ -593,6 +596,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 |---|---|
 | **Catalog** | Three commands, run inside `backend/`:<br>1. `python -m dawalink.ops.fetch_moph --date <list date>` downloads the Ministry's price list (.xls) and its drug database pages into `backend/data/moph/`, which is **never committed** (decision log O5);<br>2. `python -m dawalink.ops.build_catalog` joins them into `catalog.csv` (the date and exchange rate are read from the list);<br>3. `python -m dawalink.ops.import_catalog` creates a `catalog_imports` row, then inserts or updates products (matched on the Ministry's code) and their ingredients.<br>The import applies the team file `backend/data/catalog_overrides.toml` (controlled medicines, the no-prescription list, corrections for single products). |
 | Districts | `backend/data/districts.csv` (26 districts, 9 governorates, a reference point each; written by `prepare_db`) |
+| Areas | `backend/data/areas.csv` (the 26 districts as a whole and about 90 neighbourhoods and towns, each with its other spellings and a centre; written by `prepare_db` after the districts). The centres are approximate and written by hand: to check on a map before the demo. |
 | Pricing tiers | Seeded from config (`04` N-4) |
 | Admins | A `create_admin` command (the only way to create an admin, A-D1). Built with logins, in build step 7. |
 | **Demo and simulation data** | `python -m dawalink.ops.seed_demo --seed 42`: synthetic pharmacies (with hours and pickup days), inventory and clients. **Same seed → same data** (reproducibility). The accounts get their passwords in build step 7. |
@@ -719,3 +723,16 @@ The schema is the first migration, `backend/migrations/versions/20261112_1816_in
 - `conversations.turn_owner` is the turn's own run ID: the save is refused unless that turn still holds the lease.
 
 **Tested in step 5:** the new unique rule (`tests/db/test_more_constraints.py`); two turns taking one lease, an event at the moment a turn is saved, and a double tap on a card, each with two real connections (`tests/races/test_agent_races.py`).
+
+**Added for named areas (2026-11-14, the fourth migration, decision log BLD-D14):**
+
+| Table | Column | Why |
+|---|---|---|
+| `areas` (new) | see §3.1 | Our own list of places a client can name in chat. A table, like `districts`: a conversation points at the area it uses, and the app login can only read it |
+| `conversations` | `loc_area_id` smallint, FK `areas` | Which area the location is the centre of. With it, code tells the agent "the area the client named, Hamra (Beirut)" without a coordinate |
+| `conversations` | check `area_only_for_its_source` | `loc_source = 'area'` and `loc_area_id` go together. When the client later shares their phone's location, the area must be cleared in the same write |
+| `conversations`, `sourcing_requests` | `loc_source` also allows `'area'` | A request started from the chat keeps where its location came from |
+
+A request copies the point and its source; its thread also copies `loc_area_id`. Claims copy the point only, as before.
+
+**Tested:** the two new rules (`tests/db/test_more_constraints.py`); the areas file (`tests/db/test_seed_and_prepare.py`): every district can be named as a whole from the same point as picking it, every centre lies within 6 km (Beirut) or 25 km of its district's reference point, and no two areas are written alike.

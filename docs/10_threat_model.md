@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.5 (v1.5: what the agent sends out, as built and tested in step 5) · **Date:** 2026-11-13
+**Version:** v1.6 (v1.6: the `set_area` tool, and what Langfuse really received; v1.5: what the agent sends out, as built and tested in step 5) · **Date:** 2026-11-14
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
@@ -179,7 +179,7 @@ flowchart LR
 | Third party | Why | Receives | Never receives |
 |---|---|---|---|
 | **Anthropic, the LLM provider** (development, evaluation and demo, since BLD-D11; development and tests use **invented demo data only**) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, opening hours, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text (address, phone, licence); private inventory; anything that identifies the client. **Tested:** `tests/agent/test_privacy.py` runs all 17 tools and searches everything the model was sent. |
-| **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. | The same as the LLM |
+| **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. **Only the steps our code builds are exported:** on the first real run (2026-11-14) Anthropic's library also reported each call by itself (token counts, no text), and that is now filtered out. | The same as the LLM |
 | **OpenRouteService** (served from `api.heigit.org` since November 2026) | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key, in one matrix request | **Who** the client is: no account, no session, no name, no conversation or request ID. **Tested:** `tests/unit/agent/test_models.py` checks the request holds points and nothing else; its errors never quote a location. |
 | **AWS SES** (in development: a mail catcher on the laptop, so nothing leaves it) | Emails | The recipient's email address and the template text: order or request number, medicine, packs, price, pharmacy name, pick-up or answer time. Only the client's "Reserved" email also has the pharmacy's address and that day's opening hours. *(confirmed as built, step 4)* | Chat content; the client's name, phone or location; to a pharmacy, anything about who the client is |
 | **The Ministry of Public Health's website** (from the owner's laptop only, when the catalog is rebuilt; the running app never calls it) | The price list and the drug database pages | Plain requests for public pages | Anything about a user |
@@ -298,10 +298,11 @@ flowchart LR
 | ID | Threat | Risk | Mitigations | Test | Residual |
 |---|---|---|---|---|---|
 | TH-52 | **(D)** **Running up the LLM bill** (many accounts, long chats) | H | Layered caps (TM-D6): a **per-client daily** budget (R-AS); a **global daily** cap; a **global monthly** cap → degraded mode; and the **provider's own spend limit** as a hard backstop outside our code. Also 20 messages/min and 100/day; ≤ 6 tool calls and ≤ 8 LLM calls per turn (N-17, N-34). | `failure` (FX-4) + `api` (FA-19) | **RR-6** |
-| TH-53 | **(D)** **Burning the routing or email quota** (many location changes; repeated verification emails) | M | Travel times cached per rounded point for 24 h; **≤ 10 location updates per hour** per client; the straight-line fallback (FX-18); verification resend ≤ 1/min and ≤ 5/day; the "already registered" email ≤ 1 per address per day (TM-D6, TM-D7) | `security` | L |
+| TH-53 | **(D)** **Burning the routing or email quota** (many location changes; repeated verification emails) | M | Travel times cached per rounded point for 24 h; **≤ 10 location updates per hour** per client (for the phone's location; an area named in chat is one of about 120 fixed points, so the cache bounds it); the straight-line fallback (FX-18); verification resend ≤ 1/min and ≤ 5/day; the "already registered" email ≤ 1 per address per day (TM-D6, TM-D7) | `security` | L |
 | TH-54 | **(D)** **Flooding** the API or the chat | M | Rate limits (`06` §4); CloudFront with AWS Shield Standard (free); **no WAF** (it costs money) | `security` (FS-3) | **RR-6** |
 | TH-55 | **(D)** An event storm or many claims slowing the worker | L | Coalesced agent turns (FM-D5); per-client limits; at most 50 rows per clock-check query | `agent` (FA-20) | L |
 | TH-56 | **(D)** **Switching the assistant off for everyone** by sending messages the model's safety system refuses, so that the circuit breaker opens | M | A refusal is not a provider failure: the client gets our neutral text and the breaker is not touched (`07` §14.3) | `agent` (FA-29) | L |
+| TH-57 | **(T, I)** **Misusing `set_area`** (added 2026-11-14): making the agent set a place the client didn't name; typing an address or someone's details as the "place"; reading coordinates back out | L | The name is looked up in **our own list** and must equal a listed one, so free text can only select one of about 120 known areas; it goes to no outside service; the tool returns names, never a point (INV-24); it changes only the client's own chat, and the reply says which area is used; chat only, never an open request | `agent` (FA-31, FA-32; the privacy run) | L |
 
 ---
 
@@ -314,7 +315,7 @@ flowchart LR
 | LLM03 | Supply chain | Claude models from Anthropic; the local model is for development only; the lockfile and pinned base image | TH-44 |
 | LLM04 | Data and model poisoning | No fine-tuning; no retrieval store; the regression set is reviewed by people | TH-24 |
 | LLM05 | Improper output handling | Model output is treated as untrusted input: schemas, ownership, plain-text display, cards rendered from stored proposals; output never executed | TH-18, TH-20 |
-| LLM06 | Excessive agency | 17 tools; **none can reserve, accept, cancel, or change priority, prices or stock**; the 5 action tools are bounded (watches, claims, early-release asks, follow-ups, escalation); the client taps; E6 audit scan | TH-17 |
+| LLM06 | Excessive agency | 18 tools; **none can reserve, accept, cancel, or change priority, prices or stock**; the 6 action tools are bounded (watches, claims, early-release asks, follow-ups, escalation, an area from our own list); the client taps; E6 audit scan | TH-17 |
 | LLM07 | System prompt leakage | Nothing secret in the prompts (they're public) | TH-25 |
 | LLM08 | Vector and embedding weaknesses | **Not applicable:** no vector store (`07` §6.3) | none |
 | LLM09 | Misinformation | Clinical guard and refusal; cards are the truth; measured in E1 and E4 | TH-21, TH-23 |

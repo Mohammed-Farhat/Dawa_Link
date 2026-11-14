@@ -10,11 +10,18 @@ when it is recorded, not when it happened. The latencies used for the metrics co
 
 **Masking**: everything a trace holds was already redacted. The client's `mask` hook
 removes email, phone and coordinate patterns once more before anything leaves (TM-D9).
+
+**Only our own steps are sent.** Langfuse's client listens to every library that reports
+through OpenTelemetry, and Anthropic's library does: seen on the first real run
+(2026-11-14), each model call also arrived as a separate `anthropic.messages.create`
+entry. It held token counts and no text, but it counted every call's cost twice and it
+was nothing we had chosen to send. `should_export_span` keeps to what `send` builds.
 """
 
 from typing import Any
 
 from langfuse import Langfuse
+from langfuse.span_filter import is_langfuse_span
 
 from dawalink.agent.guards.redact import redact
 from dawalink.agent.tracing import Span, TurnTrace
@@ -43,6 +50,7 @@ class LangfuseTracer:
             release=release,
             timeout=HTTP_TIMEOUT_S,
             mask=mask,
+            should_export_span=is_langfuse_span,
         )
 
     def new_trace_id(self) -> str:

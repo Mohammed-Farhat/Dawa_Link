@@ -1,5 +1,5 @@
-"""The agent's tools: 6 that read, 6 that propose, 5 that act within bounds, and `reply`
-(docs/07 §4, AG-D2).
+"""The agent's tools: 6 that read, 6 that propose, 6 that act within bounds, and `reply`
+(docs/07 §4, AG-D2; `set_area` is the 18th, decision log BLD-D14).
 
 There is no tool here that creates, accepts or cancels an order or a request, or that
 changes stock, prices or priority (INV-11, INV-17). A test reads this list to prove it.

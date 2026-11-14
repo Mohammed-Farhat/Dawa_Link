@@ -49,6 +49,11 @@ class Conversation(Base):
         values_check("status", ConversationStatus),
         values_check("loc_source", LocationSource),
         check("request_only_for_its_kind", "(kind = 'request') = (request_id IS NOT NULL)"),
+        # The named area is kept exactly while the location comes from it.
+        check(
+            "area_only_for_its_source",
+            "(loc_source IS NOT DISTINCT FROM 'area') = (loc_area_id IS NOT NULL)",
+        ),
         check("turn_attempts_not_negative", "turn_attempts >= 0"),
         # One active chat per client (decision log D9).
         Index(
@@ -84,6 +89,8 @@ class Conversation(Base):
     loc_lat: Mapped[Decimal | None] = mapped_column(RoundedCoordinate)
     loc_lon: Mapped[Decimal | None] = mapped_column(RoundedCoordinate)
     loc_source: Mapped[str | None] = mapped_column(Text)
+    # The area the client named, when the location is its centre (source "area").
+    loc_area_id: Mapped[int | None] = mapped_column(SmallInteger, references("areas.id"))
     loc_set_at: Mapped[datetime | None] = mapped_column(Moment)
     # One agent turn at a time: whoever holds the lease runs the turn (docs/04 R-AG2).
     turn_lease_until: Mapped[datetime | None] = mapped_column(Moment)

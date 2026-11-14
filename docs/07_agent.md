@@ -1,6 +1,6 @@
 # DawaLink: Agent Specification
 
-**Version:** v1.5 (validated; v1.5 adds §14, the agent as built in build step 5) · **Date:** 2026-11-13
+**Version:** v1.6 (validated; v1.6 adds the `set_area` tool and §14.6; v1.5 added §14, the agent as built in build step 5) · **Date:** 2026-11-14
 **Builds on:**
 - `01` v5.0 (C6, C8, C9, C15–C18)
 - `02` v2.0 §3
@@ -35,10 +35,10 @@ It covers the course's *Agent Core*, *Tools & Memory*, *AgentOps* and *Reliabili
 
   Both run the same LangGraph graph. The mode changes only the prompt section and which tools are available.
 - **A turn** = load the context → check the input → the LLM thinks and calls tools (≤ 6) → check the output → save everything in one transaction. LangGraph keeps nothing between turns; **our tables are the memory** (ADR-001).
-- **17 tools + a final `reply`.** 
+- **18 tools + a final `reply`** (17 until 2026-11-14; `set_area` was added then, §14.6). 
   - **Read** tools: search, options, plans, status.
   - **Proposal** tools create cards that only a client tap can execute.
-  - A few **bounded action** tools: watch, claim, ask pharmacies, follow-up, escalate.
+  - A few **bounded action** tools: watch, claim, ask pharmacies, follow-up, escalate, set the area a client named.
 
   No tool can reserve, accept, cancel, change stock, prices or priority, or see private inventory.
 - **The LLM never does arithmetic or rule checks.** Tools convert currencies, sum plans, apply limits and time rules, and say "not allowed: LIMIT_OPEN_ORDERS".
@@ -104,6 +104,7 @@ These are the decisions we hand to the LLM. They are also what the evaluation co
 | `propose_cancellation` | ✅ | ✅ |
 | `prepare_request_summary` | ✅ | ❌ |
 | `create_watch` | ✅ | ❌ |
+| `set_area` | ✅ | ❌ |
 | `open_claim`, `propose_constraint_change`, `propose_remove_item`, `schedule_followup` | ❌ | ✅ |
 | `request_early_release` | ✅ (for a watch) | ✅ (for a request item) |
 | `escalate` | ✅ | ✅ |
@@ -206,6 +207,7 @@ Each one **runs the same checks as the real action, without locking anything**. 
 | Tool | Input | Output | Bounds |
 |---|---|---|---|
 | `create_watch` (assistant) | `product_id`, `qty: 1–3`, `days_of_use: int = 1`, `include_alternatives: bool`, `max_price: MoneyIn?` | `{watch_id, ends_display}` or an error code (`OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `CLIENT_PAUSED`) | R-W1, R-W2; the client sees a status card ("Watching until 16:00") and can stop it |
+| `set_area` (assistant; added 2026-11-14, BLD-D14) | `place: str` (2–60 characters: the area or town the client named, in Latin letters), `district: str?` (only after `AREA_AMBIGUOUS`) | `{area, district, precision: "area" \| "district", note}`, or `AREA_NOT_FOUND` with `closest: [{area, district}]`, or `AREA_AMBIGUOUS` with `choices` | R-S2: the name is looked up in **our own list** (`areas`); only a name written like a listed one is accepted. The area's centre becomes the chat's location and replaces an earlier one. **Names in, names out: never a coordinate** (INV-24). Not in sourcing mode: a request's location is fixed when it starts. |
 | `open_claim` (sourcing) | `request_item_id` | `{claim_id, ends_display}` | One per item (`05` U); idempotent |
 | `request_early_release` | `claim_id` | `{asked: n, answers_by_display}` or `{asked: 0, reason: "no_candidates" \| "none_open_now" \| "anti_spam" \| "limit" \| "asked_recently"}` | R-E1–R-E5: only open pharmacies, ≤ 3, anti-spam. **Returns only how many were asked** (R-E8). |
 | `schedule_followup` (sourcing) | `in_minutes: 15–300` | `{followup_display}` | **One pending follow-up per request** (a new one replaces it); ≤ 4 per request; must fall inside the window. Stored as `conversations.followup_at` (AG-D11). |
@@ -460,7 +462,7 @@ JSON logs (structlog) with `request_id`, `turn_id` and `trace_id` on every line,
 - **Model choice (O1)** is made **by measurement** in `08`: the cheapest Claude model that meets the quality and safety thresholds. Candidates are listed in `02` §10.
 - **No temperature setting on Claude models.** The API rejects `temperature`, `top_p` and `top_k`, so we don't send them. Temperature 0 applies to the local model only. Answers can vary between runs, so the evaluation runs several times to measure that.
 - **`effort` is set explicitly,** because its default differs by Claude model.
-- **A Claude reply can stop with `stop_reason: "refusal"`** when a safety classifier declines the request. *As built (§14.3, waiting for the owner's ok):* the client gets our neutral text, the run is recorded as `guardrail_blocked` with the note `model_refusal`, and the circuit breaker is not touched. E5 measures how often medicine messages trigger it.
+- **A Claude reply can stop with `stop_reason: "refusal"`** when a safety classifier declines the request. *As built (§14.3; approved by the owner on 2026-11-14, BLD-D12):* the client gets our neutral text, the run is recorded as `guardrail_blocked` with the note `model_refusal`, and the circuit breaker is not touched. E5 measures how often medicine messages trigger it.
 - **Token use is kept small:** compact tool outputs, the last 20 messages only, cached static prompt parts.
 
 ---
@@ -520,7 +522,7 @@ The order of who gets stock **doesn't change**.
 | ID | Decision | Validated | Why |
 |---|---|---|---|
 | AG-D1 | **One graph, two modes**; the mode changes only the prompt section and the tool set | ✅ 2026-10-18 | One thing to build, test and trace (ADR-002) |
-| AG-D2 | **17 tools + `reply`** (6 read, 6 proposal, 5 bounded action), per the tables in §4. New compared with `02`: `get_reservations`, `propose_remove_item`; `request_early_release` now takes a `claim_id` | ✅ 2026-10-18 | Covers every flow in `03`, nothing more |
+| AG-D2 | **17 tools + `reply`** (6 read, 6 proposal, 5 bounded action), per the tables in §4. New compared with `02`: `get_reservations`, `propose_remove_item`; `request_early_release` now takes a `claim_id`. *Since 2026-11-14: 18 tools, with `set_area` as a 6th bounded action (BLD-D14).* | ✅ 2026-10-18 | Covers every flow in `03`, nothing more |
 | AG-D3 | **Every turn ends with a `reply` tool** (text, card IDs, chips, notes), checked by the output guard | ✅ 2026-10-18 | Structured, checkable output; cards can't be invented |
 | AG-D4 | **Tool errors are returned as codes, not exceptions; identity is injected by code, never taken from the model** | ✅ 2026-10-18 | The agent can recover and explain; it can't act for another client |
 | AG-D5 | **Memory = last 20 messages + `case_state` + tools.** No memory across conversations, no vector store. | ✅ 2026-10-18 | Explicit scope, lifetime and retrieval (T-3); privacy |
@@ -561,11 +563,11 @@ What the agent is in the code, what changed while building it, and what a real m
 |---|---|---|
 | One turn | `agent/turn.py` | The LangGraph graph of §3: `load_context → guard_input → agent ⇄ tools → guard_output → save`, plus `fallback` |
 | What a turn reads | `agent/context.py` | The block of facts, written field by field: time, limits, case state, the request, the last 20 messages |
-| The tools | `agent/tools/` (`read.py`, `propose.py`, `act.py`, `base.py`) | The 17 tools and `reply`; one input model and one output model per tool |
+| The tools | `agent/tools/` (`read.py`, `propose.py`, `act.py`, `base.py`) | The 18 tools and `reply`; one input model and one output model per tool |
 | Working memory | `agent/state.py` | `CaseState`, `CaseNotes`, the 8 KB limit |
 | Guards | `agent/guards/` | `redact.py`, `injection.py`, `clinical.py`, `output.py` |
 | Our own texts | `agent/templates.py` | The fixed templates in English, Arabic and Arabizi |
-| Prompts | `agent/prompts/v1/` | `system_core.md`, `mode_assistant.md`, `mode_sourcing.md`, `examples.md`; version `v1.0` |
+| Prompts | `agent/prompts/v1/` | `system_core.md`, `mode_assistant.md`, `mode_sourcing.md`, `examples.md`; version `v1.1` since 2026-11-14 (§14.6) |
 | Models | `agent/llm/` | The `ChatModel` interface, `claude.py`, `ollama.py`, `scripted.py`, prices |
 | Budgets and the breaker | `agent/limits.py` | Counted from `agent_runs`, so the API and the worker agree |
 | Worker turns | `agent/pending.py` | Runs the conversations marked `pending_turn_at` or `followup_at` |
@@ -594,7 +596,7 @@ What the agent is in the code, what changed while building it, and what a real m
 |---|---|---|
 | A LangChain chat model per provider (§10, AG-D13) | Our own small `ChatModel` interface; Claude through Anthropic's SDK; LangGraph kept for the graph | Direct control of what Claude models need (`effort`, no sampling settings, thinking blocks returned unchanged, the refusal stop reason, cache tokens for the cost), and fewer libraries |
 | "After the 6th tool call, the model may only call `reply`" | The model is then **given only the `reply` tool**. A call to another tool gets `TOOL_LIMIT_REACHED`. | Newer Claude models reject a forced tool choice |
-| A model refusal is a failed call (§10) | Our neutral text; not counted by the circuit breaker | Otherwise one client could switch the assistant off for everyone by sending messages that get refused. **Changes what a client sees: waiting for the owner's ok.** |
+| A model refusal is a failed call (§10) | Our neutral text; not counted by the circuit breaker | Otherwise one client could switch the assistant off for everyone by sending messages that get refused. **Approved by the owner (2026-11-14, BLD-D12).** |
 | A recommended card comes from this turn (§7.2) | A recommended card may be shown again while it is open; still one per medicine | A real model re-shows open cards ("your cards are still waiting"); refusing that cost a repair call for nothing |
 | `find_options(product_ids)` | All of them must be **one medicine**: the first, or its equivalents. Otherwise `NOT_SAME_MEDICINE`. | Hard rule 2 enforced in code: a different medicine can't be slipped in as an "alternative" |
 | An option has `closes_at` | `open_until` (the end of the current opening range) **and `open_hours` for each pickup day**; a plan's group has `hours_on_pickup_day` | A pharmacy can close at midday and open again. With only the first closing time, the model told a client who finishes work at 17:00 that the pharmacy "closes at 13:00". |
@@ -602,14 +604,14 @@ What the agent is in the code, what changed while building it, and what a real m
 | `create_watch` answers `WATCH_EXISTS` | It answers with the existing watch and `already_watching: true` | A retried turn finds its own work |
 | `propose_constraint_change(change: …)` | Flat arguments: `allow_alternatives`, or `item_id` with `max_price` | Simpler for a model than a choice of shapes |
 | The tool time limit of 5 s (§8) | See §8: bounded by its parts | A wall-clock limit would need to interrupt a database call |
-| Daily token budget: placeholder 200,000 (R-AS) | 3,000,000, counting cached tokens too | Measured: a turn uses about 30,000 tokens, mostly the cached prompt. 200,000 was 6 turns a day. **The owner's number: waiting for his ok.** |
+| Daily token budget: placeholder 200,000 (R-AS) | 3,000,000, counting cached tokens too | Measured: a turn uses about 30,000 tokens, mostly the cached prompt. 200,000 was 6 turns a day. **Approved by the owner (2026-11-14, BLD-D12).** |
 | The neutral template "…Here's what I found:" | Used only with cards under it; with none: "Sorry, I couldn't answer that. Could you say it another way?" | "Here's what I found:" followed by nothing reads as a mistake |
 
 **New guard: internals.** A reply that shows a tool written as a call, a raw ID or JSON is caught like any other violation (one repair, then our text).
 
 **Not built, and why:**
 - **An "accept offer" card.** The kind exists in the vocabulary, but no tool creates it: offers are system cards with their own button (`06` §5.5).
-- **Setting a district from chat text.** If the client's location isn't known, the agent asks them to tap "Use my location" or to choose a district; it has no tool to set one. A question for the owner (build plan §5).
+- ~~**Setting a district from chat text.**~~ Built on 2026-11-14 as `set_area` (§14.6), after the owner's answer.
 - **The message limits of N-17** (20 per minute, 100 per day) and the chat stream belong to the API (step 7).
 
 ### 14.4 What a real model showed
@@ -635,12 +637,41 @@ Three problems it exposed were ours, and are fixed: the opening hours above, a r
 | Folder | What it proves |
 |---|---|
 | `tests/agent/test_turn.py` | A whole turn on a scripted model: the save, the tool loop and its limits, plain-text replies, retries, a lost lease |
-| `tests/agent/test_tools.py` | Each of the 17 tools called with JSON, as a model does: outputs, refusals, ownership, bounds |
+| `tests/agent/test_tools.py` | Each of the 18 tools called with JSON, as a model does: outputs, refusals, ownership, bounds |
 | `tests/agent/test_cards.py` | The output guard on whole turns (repair, then our text), and what a tap does for every kind of card |
 | `tests/agent/test_worker_turns.py` | Worker turns, retries and the hand-over to a person, budgets, the breaker, tracing, a client's message |
 | `tests/agent/test_context.py` | The block of facts for each kind of message; the case state and its size limit |
-| `tests/agent/test_privacy.py` | **One run through all 17 tools**, then a search of everything the model was sent for the client's name, email and phone, a pharmacy's address, phone and licence, any coordinate, and private stock |
+| `tests/agent/test_privacy.py` | **One run through all 18 tools**, then a search of everything the model was sent for the client's name, email and phone, a pharmacy's address, phone and licence, any coordinate, and private stock |
 | `tests/unit/agent/` | The guards as tables (true and false examples); the Claude, Ollama and OpenRouteService adapters against fake transports; the setup |
 | `tests/races/test_agent_races.py` | Two turns at once on one conversation; an event at the moment a turn is saved; a double tap on a card |
 
 No test can reach a paid service: the keys are removed before the settings are read, and under `app_env = "test"` the setup refuses to build a real model, routing service or tracer.
+
+### 14.6 After step 5: the owner's answers of 2026-11-14
+
+**"I'm in Hamra": the `set_area` tool** (decision log BLD-D14). The owner's rule: a client who doesn't want to share their location can say where they are, and the agent searches around that place. `03` AF-5 already said "share your location, or tell me your area"; step 5 had no tool for the second half.
+
+| Part | Where | What it does |
+|---|---|---|
+| The list | `backend/data/areas.csv` → the `areas` table (`05` §12) | The 26 districts as a whole and about 90 neighbourhoods and towns, each with its other spellings (Arabizi, French, Arabic script) and a centre |
+| Matching | `domain/places.py` | A name is simplified (case, accents, hyphens, the article "el/al/ال") and must then **equal** a listed one. Anything else comes back as up to 5 close names |
+| The service | `services/areas.py`, `travel.conversation_location` | Puts the area's rounded centre on the conversation (`loc_source = 'area'`, `loc_area_id`). One function now reads a conversation's location for the tools and for [Start sourcing] |
+| The tool | `agent/tools/act.py` | `set_area(place, district?)`, assistant mode only |
+| What the model is told | `agent/context.py` | "Location: the area the client named, Hamra (Beirut). Travel times are counted from its centre." Or "not known yet", so the agent asks before it searches |
+| The prompt | `prompts/v1/` (now **v1.1**) | Call `set_area` when the client names where they are; only a place the client named; never ask for a street address; say "about" for times from an area |
+
+**Why exact names only.** A wrong area would send the client to the wrong pharmacy without anyone noticing, so code never guesses: "Baabda" and "Baabdat" are two towns. On a miss, the model sees the close names and decides whether one is clearly the same place spelled differently, or asks the client. That judgement is the model's; the lookup is code's.
+
+**Why our own list and not a map service.** The name a client types stays inside the system (`10` §4.3), the lookup works in tests and in the simulator with no network, and the answer is the same every time. Google Maps isn't needed for this. The price: a village that isn't listed isn't found, and the agent asks for a better-known town nearby. The list can grow.
+
+**The location-update limit (N-47) is not applied to `set_area`:** every area is one of about 120 fixed points, so naming areas can't burn the routing quota (`10` TH-53).
+
+**Prompt v1.1** changes the location lines only. No evaluation exists yet to compare it with v1.0 (AG-D12): the first evaluation runs (step 6) start from v1.1.
+
+**Tried on Claude Haiku 5.5** (4 turns, $0.006): "ana bel hamra, baddi panadol" → `set_area("Hamra")` and the search, in one step; "3am rou7 3a el ashrafiyye, dawwerle honik" → `set_area("Ashrafieh")` → Achrafieh, and the reply said so.
+
+**Langfuse, for real.** With the owner's keys, a turn arrives as one `agent_turn` trace with its steps (3 model calls, 2 tool calls, the guards, the save). The first run also showed something no stand-in could: Anthropic's library reports each call through OpenTelemetry on its own, and Langfuse's client picked those up as separate entries (token counts, no text), which counted each call's cost twice. The client now exports **only the steps we build** (`should_export_span`). Still true: Langfuse shows a step at the moment the turn was sent; its real duration is in the step's metadata and in `agent_runs`.
+
+**Approved by the owner (BLD-D12):** the daily token budget of 3,000,000 per client; a model refusal gives our neutral text and doesn't count for the circuit breaker; the Arabic and Arabizi wording of our fixed texts.
+
+**Tests added:** `tests/unit/domain/test_places.py` (names and spellings), `tests/agent/test_tools.py` (`TestNamingAnArea`: 9 cases, including a request started from the chat keeping the area), the context lines, the privacy run (now 18 tools), and the tracer's export filter.

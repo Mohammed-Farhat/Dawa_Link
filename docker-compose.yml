@@ -16,11 +16,12 @@ x-backend: &backend
     LLM_PROVIDER: ${LLM_PROVIDER:-none}
     LLM_MODEL: ${LLM_MODEL:-}
     LLM_EFFORT: ${LLM_EFFORT:-medium}
-    LLM_MONTHLY_BUDGET_USD: ${LLM_MONTHLY_BUDGET_USD:-3}
+    LLM_MONTHLY_BUDGET_USD: ${LLM_MONTHLY_BUDGET_USD:-20}
     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ORS_API_KEY: ${ORS_API_KEY:-}
     LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
     LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-https://cloud.langfuse.com}
     # Ollama runs on this machine, outside Docker.
     OLLAMA_URL: http://host.docker.internal:11434
 

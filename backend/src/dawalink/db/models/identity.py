@@ -12,10 +12,11 @@ from sqlalchemy import (
     Numeric,
     SmallInteger,
     Text,
+    UniqueConstraint,
     Uuid,
     text,
 )
-from sqlalchemy.dialects.postgresql import CITEXT
+from sqlalchemy.dialects.postgresql import ARRAY, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dawalink.db.base import Base
@@ -67,6 +68,28 @@ class District(Base):
     name: Mapped[str] = mapped_column(Text, unique=True)
     governorate: Mapped[str] = mapped_column(Text)
     # The point used when a client picks a district instead of sharing a location (R-S2).
+    ref_lat: Mapped[Decimal] = mapped_column(Numeric(8, 5))
+    ref_lon: Mapped[Decimal] = mapped_column(Numeric(8, 5))
+
+
+class Area(Base):
+    """A place a client can name in chat instead of sharing a location: a neighbourhood,
+    a town, or a district as a whole (docs/04 R-S2, decision log BLD-D14).
+
+    Reference data, written by the import from `data/areas.csv`.
+    """
+
+    __tablename__ = "areas"
+    __table_args__ = (UniqueConstraint("name", "district_id"),)
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(Text)
+    district_id: Mapped[int] = mapped_column(SmallInteger, references("districts.id"))
+    # Other ways the same place is written: other spellings, Arabic script.
+    other_names: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    # True when the row stands for the whole district: its centre is only a rough start.
+    whole_district: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    # The area's centre: what travel times are counted from. Never sent to the LLM (INV-24).
     ref_lat: Mapped[Decimal] = mapped_column(Numeric(8, 5))
     ref_lon: Mapped[Decimal] = mapped_column(Numeric(8, 5))
 

@@ -1,8 +1,9 @@
 """The action tools: the few things the agent may do without a tap (docs/07 §4.4, R-RQ4).
 
 Each is bounded by a rule in code: request hours, limits, three pharmacies at most, one
-follow-up at a time. None of them reserves, accepts, cancels or decides who gets stock.
-Called twice with the same arguments, each finds its own earlier work (R-AG6).
+follow-up at a time, an area from our own list. None of them reserves, accepts, cancels
+or decides who gets stock. Called twice with the same arguments, each finds its own
+earlier work (R-AG6).
 """
 
 import uuid
@@ -25,11 +26,12 @@ from dawalink.agent.tools.base import (
 )
 from dawalink.agent.tools.propose import ASSISTANT, SOURCING
 from dawalink.agent.tools.read import BOTH, Days, Qty
-from dawalink.db.models import Claim, EarlyReleaseAsk, RequestItem, SourcingRequest
+from dawalink.db.models import Claim, Conversation, EarlyReleaseAsk, RequestItem, SourcingRequest
 from dawalink.domain.numbers import FOLLOWUP_MAX, FOLLOWUP_MIN, MAX_FOLLOWUPS_PER_REQUEST
+from dawalink.domain.places import Place
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import ClaimSource, EscalationReason
-from dawalink.services import claims, conversations, early_release, escalations, requests
+from dawalink.services import areas, claims, conversations, early_release, escalations, requests
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -75,6 +77,80 @@ def create_watch(turn: Turn, tx: Tx, args: CreateWatch) -> Watching:
             watch_id=existing.id, ends_display=display.when(existing.ends_at), already_watching=True
         )
     return Watching(watch_id=claim.id, ends_display=display.when(claim.ends_at))
+
+
+# --- set_area --------------------------------------------------------------------------
+
+
+class SetArea(Arguments):
+    place: str = Field(
+        min_length=2,
+        max_length=60,
+        description="The area, neighbourhood or town the client said they are in, in Latin "
+        "letters: 'Hamra', 'Jounieh'. Only a place the client named.",
+    )
+    district: str | None = Field(
+        default=None,
+        max_length=40,
+        description="Only after AREA_AMBIGUOUS: the district the client chose.",
+    )
+
+
+class NamedArea(Output):
+    area: str
+    district: str
+
+
+class AreaSet(Output):
+    area: str
+    district: str
+    # "area": times are counted from its centre. "district": from its main town, rougher.
+    precision: str
+    note: str
+
+
+def _names(places: list[Place]) -> list[dict[str, str]]:
+    return [NamedArea(area=place.name, district=place.district).model_dump() for place in places]
+
+
+def set_area(turn: Turn, tx: Tx, args: SetArea) -> AreaSet:
+    """ "I'm in Hamra": the centre of a listed area becomes this chat's location (R-S2).
+
+    The model passes a name and gets names back. The point stays in the database (INV-24).
+    """
+    found = areas.look_up(tx, args.place, args.district)
+    if not found.named:
+        raise Refused(
+            ToolError.AREA_NOT_FOUND,
+            "No listed area is written like this. If one of `closest` is clearly the same "
+            "place spelled differently, call set_area again with that name. Otherwise ask "
+            "the client for a better-known area or town nearby, or to tap 'Use my location'.",
+            closest=_names(found.close),
+        )
+    if len(found.named) > 1:
+        raise Refused(
+            ToolError.AREA_AMBIGUOUS,
+            "Several places have this name. Ask the client which one, then call set_area "
+            "again with the district.",
+            choices=_names(found.named),
+        )
+    place = found.named[0]
+    conversation = tx.session.get_one(Conversation, turn.conversation_id, with_for_update=True)
+    areas.use(tx, conversation, place.id)
+    if place.whole_district:
+        return AreaSet(
+            area=place.name,
+            district=place.district,
+            precision="district",
+            note="A whole district: travel times are counted from its main town and are "
+            "rough. A town or neighbourhood gives better ones.",
+        )
+    return AreaSet(
+        area=place.name,
+        district=place.district,
+        precision="area",
+        note="Travel times are now counted from the centre of this area.",
+    )
 
 
 # --- open_claim ------------------------------------------------------------------------
@@ -208,6 +284,14 @@ TOOLS = (
         create_watch,
         ASSISTANT,
         progress="Setting up a watch…",
+    ),
+    Tool(
+        "set_area",
+        "Sets where the client is from a place they named ('I'm in Hamra'), when they "
+        "don't share their phone's location. Searches then count travel times from it.",
+        SetArea,
+        set_area,
+        ASSISTANT,
     ),
     Tool(
         "open_claim",

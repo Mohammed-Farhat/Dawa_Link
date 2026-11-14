@@ -178,6 +178,7 @@ def create_request(
         loc_lat=location.point.lat,
         loc_lon=location.point.lon,
         loc_source=location.source,
+        loc_area_id=location.area_id,
         loc_set_at=tx.now,
         last_activity_at=tx.now,
     )

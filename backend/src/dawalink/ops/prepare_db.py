@@ -5,7 +5,7 @@ Run from the backend folder (where alembic.ini is). Running it twice is safe (do
 2. creates or updates the three database logins (docs/05 DB-D10);
 3. applies the migrations, as the migrator login;
 4. gives the app and retention logins exactly their privileges;
-5. writes the reference data (discount tiers, districts);
+5. writes the reference data (discount tiers, districts, areas);
 6. imports the catalog, if there are no products yet and the catalog file is there;
 7. in demo mode, adds the demo data if there are no pharmacies yet.
 
@@ -23,7 +23,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine
 
 from dawalink.config import ConfigError, Settings, load_settings, required
-from dawalink.db.reference import seed_districts, seed_pricing_tiers
+from dawalink.db.reference import seed_areas, seed_districts, seed_pricing_tiers
 from dawalink.db.roles import APP, MIGRATOR, RETENTION, ensure_roles, grant_privileges, login_of
 from dawalink.db.session import database_is_up, make_engine
 from dawalink.domain.clock import SystemClock
@@ -116,7 +116,8 @@ def prepare(
         with engine.begin() as connection:
             seed_pricing_tiers(connection)
             districts = seed_districts(connection)
-        log.info("reference_data_written", districts=districts)
+            areas = seed_areas(connection)
+        log.info("reference_data_written", districts=districts, areas=areas)
 
         with engine.begin() as connection:
             if not catalog_is_empty(connection):

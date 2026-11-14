@@ -1,6 +1,6 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.4 (v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-13
+**Version:** v3.5 (v3.5: the `set_area` tool; v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-14
 **Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 **Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
@@ -142,6 +142,7 @@ flowchart TD
 | **`propose_constraint_change(request_id, change)`** | A proposal: allow alternatives, or raise an item's max price | Applied only on tap |
 | **`propose_remove_item(request_id, item_id)`** | A proposal to stop sourcing one item | Applied only on tap |
 | **`open_claim(request_item_id)`** / `create_watch(product_id, district, max_price, qty)` | Waits for stock for 6 hours; matching decides first come, first served | Idempotent; limits; request hours |
+| **`set_area(place)`** (added 2026-11-14) | Sets the chat's location from an area the client named ("I'm in Hamra"), looked up in our own list | Names in, names out, never a coordinate; exact names only; chat only (`07` §14.6) |
 | `request_early_release(claim_id)` | Asks up to 3 open pharmacies | Returns only "asked N"; anti-spam; idempotent |
 | `schedule_followup(in_minutes)` | One later check-in, inside the window (`04` N-39) | Bounded; one pending per request |
 | `escalate(reason, summary)` | Hands off to an admin (including `emergency_claim`) | Admin-only visibility; no priority power |

@@ -27,6 +27,7 @@ WRITE: tuple[str, ...] = ("SELECT", "INSERT", "UPDATE")
 # Reference data and the catalog: changed only by the import and by migrations.
 _APP_READS_ONLY = (
     "districts",
+    "areas",
     "pricing_tiers",
     "catalog_imports",
     "products",

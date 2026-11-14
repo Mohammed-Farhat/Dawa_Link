@@ -10,7 +10,7 @@ from importlib import resources
 from dawalink.domain.vocabulary import AgentMode
 
 # Change it with any edit to the files of `v1/`.
-PROMPT_VERSION = "v1.0"
+PROMPT_VERSION = "v1.1"
 _FOLDER = "v1"
 
 

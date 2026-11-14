@@ -1,4 +1,4 @@
-"""Nothing personal or private reaches the model: one run through all 17 tools.
+"""Nothing personal or private reaches the model: one run through all 18 tools.
 
 A scripted model uses every tool across a chat and a request, and keeps everything it was
 sent: the prompts, the facts, the conversation, every tool result. That text is then
@@ -37,7 +37,7 @@ def tap(scene: Scene, proposal_id: str) -> proposals.Executed:
     return done
 
 
-def test_all_17_tools_and_nothing_private_reaches_the_model(scene: Scene) -> None:
+def test_all_18_tools_and_nothing_private_reaches_the_model(scene: Scene) -> None:
     world = scene.world
     with world.as_owner():
         world.connection.exec_driver_sql(
@@ -120,6 +120,16 @@ def test_all_17_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
     )
     request = tap(scene, seen["summary"]).request
     assert request is not None
+
+    # --- Turn 2b, in the chat: the client names an area instead of sharing a location ---
+    scene.turn(
+        calls(
+            ("set_area", {"place": "Jounieh"}),
+            ("find_options", {"product_ids": [str(scene.augmentin)]}),
+        ),
+        reply("Searching around Jounieh."),
+        text="halla2 ana bi Jounieh",
+    )
 
     # --- Turn 3, in the request's thread: the sourcing tools -----------------------------
     def after_status(prompt: Prompt) -> ModelReply:

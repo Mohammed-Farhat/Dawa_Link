@@ -24,6 +24,7 @@ from dawalink.agent.state import CaseState
 from dawalink.agent.tools.base import rate
 from dawalink.agent.tools.read import request_status
 from dawalink.db.models import (
+    Area,
     ChatMessage,
     Claim,
     ClientProfile,
@@ -265,6 +266,30 @@ _WHAT_NOW = {
 }
 
 
+def _location_line(tx: Tx, conversation: Conversation, *, has_home_area: bool) -> str:
+    """What the model is told about where the client is: a name at most, never a point."""
+    if conversation.loc_area_id is not None:
+        name, district, whole = tx.session.execute(
+            select(Area.name, District.name, Area.whole_district)
+            .join(District, District.id == Area.district_id)
+            .where(Area.id == conversation.loc_area_id)
+        ).one()
+        if whole:
+            return (
+                f"Location: the district the client named, {name}. Travel times are counted "
+                "from its main town: a rough start. "
+            )
+        return (
+            f"Location: the area the client named, {name} ({district}). Travel times are "
+            "counted from its centre. "
+        )
+    if conversation.loc_lat is not None:
+        return "Location: shared for this conversation. "
+    if has_home_area:
+        return ""
+    return "Location: not known yet. "
+
+
 def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loaded | None:
     """Everything a turn reads. None when there is nothing for a turn to answer."""
     conversation = tx.session.get_one(Conversation, conversation_id)
@@ -329,7 +354,7 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         "",
         "## Client",
         f"Account status: {profile.status}. "
-        + ("Location: shared for this conversation. " if conversation.loc_lat is not None else "")
+        + _location_line(tx, conversation, has_home_area=area is not None)
         + (f"Home area: {area}. " if area else "Home area: not set. ")
         + f"Other brands OK by default: {'yes' if profile.alternatives_ok_default else 'no'}.",
         f"Limits used: reservations {open_orders}/{MAX_OPEN_ORDERS}, "

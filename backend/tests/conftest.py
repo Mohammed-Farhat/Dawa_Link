@@ -18,7 +18,7 @@ from sqlalchemy.exc import OperationalError
 
 from dawalink.api.main import create_app
 from dawalink.config import Settings
-from dawalink.db.reference import seed_districts, seed_pricing_tiers
+from dawalink.db.reference import seed_areas, seed_districts, seed_pricing_tiers
 from dawalink.db.roles import APP, MIGRATOR, RETENTION, ensure_roles, grant_privileges, login_of
 from dawalink.domain.numbers import DB_CONNECT_TIMEOUT_S
 from dawalink.observability.logging import configure_logging
@@ -112,6 +112,7 @@ def prepare_database(urls: DatabaseUrls) -> None:
         with engine.begin() as connection:
             seed_pricing_tiers(connection)
             seed_districts(connection)
+            seed_areas(connection)
     finally:
         engine.dispose()
 

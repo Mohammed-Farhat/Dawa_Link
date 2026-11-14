@@ -90,13 +90,13 @@ VALUE_LISTS: dict[tuple[str, str], type[StrEnum]] = {
 }
 
 
-def test_the_database_has_the_34_tables_of_the_design(db: Connection) -> None:
+def test_the_database_has_the_35_tables_of_the_design(db: Connection) -> None:
     in_database = set(
         db.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")).scalars()
     ) - {"alembic_version"}
 
     assert in_database == set(Base.metadata.tables)
-    assert len(in_database) == 34
+    assert len(in_database) == 35
 
 
 @pytest.mark.parametrize(("table", "column"), sorted(VALUE_LISTS))

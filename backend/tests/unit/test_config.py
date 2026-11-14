@@ -34,6 +34,22 @@ def test_loads_from_the_environment(clean_environment: pytest.MonkeyPatch) -> No
     assert settings.app_env == "local"
 
 
+@pytest.mark.parametrize("name", ["LANGFUSE_HOST", "LANGFUSE_BASE_URL"])
+def test_the_tracing_address_has_two_names(
+    clean_environment: pytest.MonkeyPatch, name: str
+) -> None:
+    """Langfuse's setup page gives LANGFUSE_BASE_URL; both names are read."""
+    clean_environment.setenv("DATABASE_URL", "postgresql+psycopg://user:pw@db/dawalink")
+    clean_environment.setenv("WEBSITE_URL", "https://example.cloudfront.net")
+    clean_environment.delenv("LANGFUSE_HOST", raising=False)
+    clean_environment.delenv("LANGFUSE_BASE_URL", raising=False)
+    assert load_settings().langfuse_host == "https://cloud.langfuse.com"
+
+    clean_environment.setenv(name, "https://us.cloud.langfuse.com")
+
+    assert load_settings().langfuse_host == "https://us.cloud.langfuse.com"
+
+
 def test_missing_settings_are_named(clean_environment: pytest.MonkeyPatch) -> None:
     with pytest.raises(ConfigError) as failure:
         load_settings()

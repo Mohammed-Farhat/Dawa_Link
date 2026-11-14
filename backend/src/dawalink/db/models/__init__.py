@@ -15,6 +15,7 @@ from dawalink.db.models.agent import (
 )
 from dawalink.db.models.catalog import CatalogImport, PricingTier, Product, ProductIngredient
 from dawalink.db.models.identity import (
+    Area,
     ClientProfile,
     District,
     EmailVerificationToken,
@@ -47,6 +48,7 @@ __all__ = [
     "AgentToolCall",
     "AnswerReport",
     "AppState",
+    "Area",
     "AuditEvent",
     "CatalogImport",
     "ChatMessage",

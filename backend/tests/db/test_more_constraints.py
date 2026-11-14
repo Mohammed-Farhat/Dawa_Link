@@ -98,6 +98,19 @@ class TestAccountsAndPlaces:
             "uq_districts_name",
         )
 
+    def test_an_area_name_is_used_once_in_a_district(self, db: Connection) -> None:
+        def another(district: int) -> None:
+            db.execute(
+                text(
+                    "INSERT INTO areas (id, name, district_id, ref_lat, ref_lon) "
+                    "VALUES (:id, 'Hamra', :district, 33.9, 35.5)"
+                ),
+                {"id": 9000 + district, "district": district},
+            )
+
+        another(12)  # a Hamra in another district is another place
+        refused(db, lambda: another(1), "uq_areas_name_district_id")
+
 
 class TestCatalogAndStock:
     def test_a_public_price_is_never_negative(self, db: Connection) -> None:
@@ -289,6 +302,31 @@ class TestConversationsAndOperations:
             db,
             lambda: make.conversation(db, client_id=client, kind="request", request_id=request),
             "uq_conversations_request_id",
+        )
+
+    def test_a_named_area_is_kept_exactly_while_the_location_comes_from_it(
+        self, db: Connection
+    ) -> None:
+        """BLD-D14: source "area" and the area go together, so the name shown is never stale."""
+        place = {"loc_lat": 33.896, "loc_lon": 35.483}
+        make.conversation(db, **place, loc_source="area", loc_area_id=101)
+        make.conversation(db, **place, loc_source="shared")
+        make.conversation(db)
+
+        for wrong in (
+            {**place, "loc_source": "area"},
+            {**place, "loc_source": "shared", "loc_area_id": 101},
+            {"loc_area_id": 101},
+        ):
+            refused(
+                db,
+                lambda wrong=wrong: make.conversation(db, **wrong),  # type: ignore[misc]
+                "ck_conversations_area_only_for_its_source",
+            )
+        refused(
+            db,
+            lambda: make.conversation(db, **place, loc_source="area", loc_area_id=9999),
+            "fk_conversations_loc_area_id_areas",
         )
 
     def test_turn_attempts_are_counted_from_zero(self, db: Connection) -> None:

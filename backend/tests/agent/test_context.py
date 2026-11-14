@@ -17,8 +17,9 @@ from dawalink.agent.llm.scripted import reply
 from dawalink.agent.state import CaseNotes, CaseState, FocusItem, Money
 from dawalink.agent.tracing import Span, TurnTrace
 from dawalink.agent.turn import Status
+from dawalink.db.models import Conversation
 from dawalink.domain.numbers import CASE_STATE_MAX_BYTES
-from dawalink.services import conversations, events
+from dawalink.services import areas, conversations, events
 from dawalink.services.events import Decision
 from tests.agent.conftest import Scene
 from tests.conftest import logged
@@ -44,6 +45,32 @@ class TestTheFacts:
         assert text.count(" = 2026-") == 7
         assert "Location: shared for this conversation. Home area: Beirut." in text
         assert "reservations 0/5, requests 0/2, watches 0/5, early-release requests 0/5" in text
+
+    def test_a_named_area_is_given_by_its_name_only(self, scene: Scene) -> None:
+        """R-S2, INV-24, BLD-D14."""
+        tx = scene.world.tx()
+        chat = tx.session.get_one(Conversation, scene.chat)
+        scene.say("ana bel hamra")
+
+        areas.use(tx, chat, 101)
+        named = block(scene)
+        areas.use(tx, chat, 14)
+        whole = block(scene)
+
+        assert "Location: the area the client named, Hamra (Beirut). Travel times are" in named
+        assert "Location: the district the client named, Chouf." in whole
+        assert "33.8" not in named + whole
+        assert "35.4" not in named + whole
+
+    def test_a_client_who_is_nowhere_yet_is_asked(self, scene: Scene) -> None:
+        with scene.world.as_owner():
+            scene.world.connection.exec_driver_sql(
+                "UPDATE conversations SET loc_lat = NULL, loc_lon = NULL, loc_source = NULL"
+            )
+            scene.world.connection.exec_driver_sql("UPDATE client_profiles SET district_id = NULL")
+        scene.say("hello")
+
+        assert "Location: not known yet. Home area: not set." in block(scene)
 
     def test_at_night_it_says_that_nothing_new_can_start(self, scene: Scene) -> None:
         scene.world.later(hours=12)
@@ -270,6 +297,20 @@ class TestTheRestOfATurn:
 
 class TestSendingATraceToLangfuse:
     """The real client is replaced by one that records what it is given (no network)."""
+
+    def test_only_our_own_steps_are_exported(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Other libraries (Anthropic's) report on their own: that is not ours to send."""
+        from langfuse.span_filter import is_langfuse_span
+
+        from dawalink.agent import tracing_langfuse
+
+        built: dict[str, Any] = {}
+        monkeypatch.setattr(tracing_langfuse, "Langfuse", lambda **given: built.update(given))
+
+        tracing_langfuse.LangfuseTracer(public_key="pk", secret_key="sk", host="h", release="r")
+
+        assert built["should_export_span"] is is_langfuse_span
+        assert built["mask"] is tracing_langfuse.mask
 
     def test_a_trace_becomes_one_observation_per_step_with_masked_text(self) -> None:
         from dawalink.agent import tracing_langfuse

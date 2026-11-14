@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.5 · **Date:** 2026-11-10
+**Version:** v4.6 · **Date:** 2026-11-14
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -319,7 +319,7 @@ In-app list (see §1.7).
 | AF-2 | Ambiguous ("augmentin") | Chips [1g] [625mg] [457mg syrup]. It never guesses. |
 | AF-3 | Unknown name | Asks for the spelling or the ingredient on the box; after 2 tries, suggests the Search page. |
 | AF-4 | **Several medicines** ("baddi concor 5 w glucophage 850") | Calls `plan_basket` → **plan cards per pharmacy**, with the route ("Pharmacy C has both: 1 trip, 9 min by car, total …") → [Reserve these]. If the client prefers cheapest over fewest trips, it re-plans and explains. |
-| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. When the client says they'll come on a later day, the options are counted from that day: a box that lasts from today may not last from the last day, and the agent says by which day to pick it up (R-F6). |
+| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. **A named area** ("ana bel Hamra") is set by the agent from DawaLink's own list of areas, and the reply says which area it searches around; the place named last wins. If the name isn't in the list, the agent offers the closest names or asks for a better-known town nearby (BLD-D14). When the client says they'll come on a later day, the options are counted from that day: a box that lasts from today may not last from the last day, and the agent says by which day to pick it up (R-F6). |
 | AF-6 | Option taken at tap time | Offers the next option. |
 | AF-7 | **Pharmacy marks a reservation not available** | **Decision event** → the agent re-plans with the next options. |
 | AF-8 | Nothing fits | Explains what exists outside the constraints, then decides: early release (asks up to 3 **open** pharmacies) and/or a 6-hour watch, **or suggests a sourcing request** if there are several items. |

@@ -10,8 +10,16 @@ from sqlalchemy import Connection, create_engine, text
 
 from dawalink.catalog.moph import CatalogRow, write_catalog
 from dawalink.config import ConfigError
-from dawalink.db.reference import read_districts, seed_districts, seed_pricing_tiers
+from dawalink.db.reference import (
+    read_areas,
+    read_districts,
+    seed_areas,
+    seed_districts,
+    seed_pricing_tiers,
+)
+from dawalink.domain.geo import Point, straight_line_km
 from dawalink.domain.numbers import DISCOUNT_TIERS, NEAR_EXPIRY_MAX_DAYS
+from dawalink.domain.places import key
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
 from dawalink.ops.prepare_db import login_passwords, prepare
 from dawalink.ops.seed_demo import CLIENT_NAMES, seed_demo
@@ -33,9 +41,44 @@ class TestReferenceData:
             assert 33.0 <= float(district["ref_lat"]) <= 34.7, district["name"]  # type: ignore[arg-type]
             assert 35.1 <= float(district["ref_lon"]) <= 36.7, district["name"]  # type: ignore[arg-type]
 
+    def test_every_district_can_be_named_as_a_whole(self) -> None:
+        """BLD-D14: "I'm in Chouf" works, from the same point as picking the district."""
+        districts = {(d["id"], d["name"], d["ref_lat"], d["ref_lon"]) for d in read_districts()}
+        whole = {
+            (a["id"], a["name"], a["ref_lat"], a["ref_lon"])
+            for a in read_areas()
+            if a["whole_district"]
+        }
+
+        assert whole == districts
+        assert all(a["name"] == a["district"] for a in read_areas() if a["whole_district"])
+
+    def test_every_area_is_in_a_known_district_and_near_it(self) -> None:
+        """A typing mistake in a hand-written centre would send clients across the country."""
+        centre = {d["name"]: Point(d["ref_lat"], d["ref_lon"]) for d in read_districts()}  # type: ignore[arg-type]
+        areas = read_areas()
+
+        assert len({a["id"] for a in areas}) == len(areas) > 100
+        for area in areas:
+            here = Point(area["ref_lat"], area["ref_lon"])  # type: ignore[arg-type]
+            limit_km = 6 if area["district"] == "Beirut" else 25
+            assert straight_line_km(here, centre[str(area["district"])]) <= limit_km, area["name"]
+            assert 33.0 <= float(here.lat) <= 34.7, area["name"]
+            assert 35.1 <= float(here.lon) <= 36.7, area["name"]
+
+    def test_a_name_means_one_area(self) -> None:
+        """No two listed areas are written alike, so no name is ambiguous by accident."""
+        seen: dict[str, str] = {}
+        for area in read_areas():
+            for name in (area["name"], *area["other_names"]):  # type: ignore[misc]
+                assert key(name), name
+                assert seen.setdefault(key(name), str(area["name"])) == area["name"], name
+
     def test_writing_it_twice_changes_nothing(self, db: Connection) -> None:
         seed_pricing_tiers(db)
         seed_districts(db)
+        seed_areas(db)
+        assert db.execute(text("SELECT count(*) FROM areas")).scalar() == len(read_areas())
 
         tiers = db.execute(text("SELECT min_days, max_days, discount_pct FROM pricing_tiers")).all()
         assert sorted(tuple(t) for t in tiers) == sorted(DISCOUNT_TIERS)

@@ -1,6 +1,6 @@
 # DawaLink: Build Plan and Progress
 
-**Updated:** 2026-11-13 · **Status:** 🟡 living: updated at the end of every build step.
+**Updated:** 2026-11-14 · **Status:** 🟡 living: updated at the end of every build step.
 
 This is the one place that says **what is built, what comes next, and what was left for later**. A new session reads it to continue exactly where the last one stopped. Decisions stay in the [decision log](00_decision_log.md); this file only tracks the build.
 
@@ -8,8 +8,8 @@ This is the one place that says **what is built, what comes next, and what was l
 
 ## In short
 
-- **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the 17 tools, cards, guards, prompts, the models, worker turns, routing, tracing).
-- **Five questions are waiting for the owner** (§5): Q4 from the database step, and Q9 to Q12 from the agent. Each has a default in place, and none blocks step 6.
+- **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the tools, cards, guards, prompts, the models, worker turns, routing, tracing). **After step 5 (2026-11-14):** the 18th tool, `set_area` ("I'm in Hamra"), and tracing proven on the real Langfuse.
+- **Two questions are waiting for the owner** (§5): Q4 (how strict "same medicine" is) and Q13 (a fuller list of areas from OpenStreetMap). Each has a default in place, and none blocks step 6. Q9 to Q12 were answered on 2026-11-14.
 - **Next:** step 6, the simulator and the evaluation, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
@@ -36,7 +36,7 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | 2 | **Domain core** | The exact rules as plain, tested Python with no database: expiry zones and prices, the expiry fit, pickup days and deadlines, request hours, the state machines, order numbers, first come first served, the multi-medicine planner (`plan_basket`), the app clock | `04` | ✅ 2026-11-10 |
 | 3 | **Database** | Every table, constraint, trigger and index; migrations; the three database roles; the catalog import and the demo seed | `05` | ✅ 2026-11-12 |
 | 4 | **Services** | Search, reserve and group reserve, [Picked up] and [Not available], claims and matching, offers, early release, sourcing requests, the notification outbox, and the worker's clock-check tasks | `04`, `05` §6 | ✅ 2026-11-12 |
-| 5 | **The agent** | The 17 tools and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ✅ 2026-11-13 |
+| 5 | **The agent** | The tools (17, then 18 with `set_area` on 2026-11-14) and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ✅ 2026-11-13 |
 | 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | ⏳ next |
 | 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling, contract tests | `06`, `10` | ⏳ |
 | 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ⏳ |
@@ -227,7 +227,7 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 
 **Decided for this step (Claude):** see the decision log, BLD-D10. In short: our own model interface instead of LangChain chat models; a turn is several short transactions; a turn re-checks under its lease that it is still wanted and remembers the last message it read; one medicine per search; opening hours for each pickup day in every option.
 
-**Decided by the owner (2026-11-13):** development uses Claude Haiku 5.5 instead of the local model, capped at $3 (BLD-D11).
+**Decided by the owner (2026-11-13):** development uses Claude Haiku 5.5 instead of the local model, capped at $3 (BLD-D11; $20 since 2026-11-14, BLD-D13).
 
 **Checks:**
 - 1,146 backend tests pass (unit 534, database 201, services 251, races 18, API 13, security 4, failure 2, agent 123); 94% of the code is covered; `ruff` and `mypy` are clean. The website is unchanged.
@@ -244,6 +244,26 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 
 **Docs changed:** `07` v1.5 (§14 "As built") · `02` v3.4 · `04` v4.7 (R-AS, N-51) · `05` v3.5 · `06` v1.6 · `09` v1.7 (26 rows marked, FA-28 to FA-30 added) · `10` v1.5 (what leaves, as tested; TH-56) · `12` v2.3 · decision log (BLD-D10, BLD-D11) · the requirements checklist · the root README.
 
+### After step 5: the owner's answers, named areas, Langfuse (2026-11-14) ✅
+
+**The owner answered Q9 to Q12** (decision log BLD-D12 to BLD-D14): the token budget, the refusal text and the Arabic and Arabizi wording are approved as built; a client can name their area in chat; the development budget setting goes from $3 to $20.
+
+**Built: "I'm in Hamra"** (`07` §14.6).
+- `backend/data/areas.csv` and the `areas` table (the 35th): the 26 districts and about 90 neighbourhoods and towns, with their other spellings. The fourth migration also adds `conversations.loc_area_id` and the location source `area`.
+- `domain/places.py` (a name must equal a listed one once simplified; the rest are suggestions), `services/areas.py`, and one function that reads a conversation's location (`travel.conversation_location`), now used by the tools and by [Start sourcing].
+- The tool `set_area` (chat only), the line the agent is told each turn, prompt v1.1, `--no-location` on the terminal chat.
+- A request started from a chat with a named area keeps it.
+
+**Langfuse, for real.** With the owner's keys, a turn arrives as one `agent_turn` trace with its steps. Found on that first run and fixed: Anthropic's library also reported every call by itself through OpenTelemetry (token counts, no text), which doubled the cost shown in Langfuse. Only the steps we build are exported now.
+
+**Checks:**
+- 1,180 backend tests pass (unit 551, database 206, services 251, races 18, API 13, security 4, failure 2, agent 135); 94% of the code is covered; `ruff` and `mypy` are clean.
+- The privacy run now goes through 18 tools; nothing private is found.
+- The areas file is checked by tests: every centre lies within 6 km (Beirut) or 25 km of its district's reference point, and no two areas are written alike.
+- **On Claude Haiku 5.5, 4 turns, $0.006:** "ana bel hamra, baddi panadol" set Hamra and searched in one step; "3am rou7 3a el ashrafiyye" set Achrafieh, and the reply said so. Spent so far: $0.050.
+
+**Docs changed:** `02` v3.5 · `03` v4.6 (AF-5) · `04` v4.8 (R-S2, R-RQ4, R-AS, N-47) · `05` v3.6 · `07` v1.6 (§4.4, §14.6) · `09` v1.8 (FA-31, FA-32) · `10` v1.6 (TH-57; what Langfuse receives) · `12` v2.4 · decision log (BLD-D12 to BLD-D14) · `docs/README.md` · `CLAUDE.md`.
+
 ---
 
 ## 4. Left for a later step
@@ -252,9 +272,10 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 |---|---|
 | The answer report (👎), and the admin's side of an escalation and of an abuse flag (reply, resolve, dismiss). The agent's side is built: `escalate`, and the flag for repeated injection attempts. | Step 7, with their endpoints |
 | The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
-| **Langfuse, for real.** The adapter has only run against a stand-in for the Langfuse client. It needs the owner's Langfuse keys to be tried; without them, turns are recorded in our own tables. | When the keys arrive |
 | The agent's quality on Claude, measured: understanding, decisions, safety, cost, and the choice of model (O1). Step 5 only looked at 27 turns. | Step 6 |
 | Comparing a few road times with Google Maps by hand, for the demo pharmacies. The routing service's car times have no traffic in them. | Before the demo |
+| Checking the centres of the areas in `backend/data/areas.csv` on a map (hand-written, to about 1 km), or replacing the file with an OpenStreetMap extract (Q13) | Before the demo |
+| The limit on location updates (N-47, 10 per hour) for the location shared from the phone. Not needed for `set_area`, whose points come from a fixed list. | Step 7, with the location endpoint. That endpoint must also clear `loc_area_id` (a database check refuses the write otherwise). |
 | Admin actions: approving, rejecting and suspending a pharmacy, suspending a client, and what they end (FR-22, FR-23); contesting a no-show (R-N3) | Step 7, with their endpoints |
 | XLSX inventory files (CSV works) | Step 7, with the upload endpoint |
 | The demo clock's admin endpoint (the service that moves the clock exists) | Step 7 |
@@ -323,6 +344,10 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q3 | **Which medicines need no prescription?** | **2026-11-13:** the list stays empty for now, so every product shows the notice. The tests cover both kinds with invented products. A short true list may be added before the demo (O7). |
 | Q5 | **A client cancels a reservation that belongs to an open request, or doesn't come for it.** | **2026-11-13:** that medicine is finished in the request and nothing is searched again; the others carry on (`04` R-RQ11, decision log BLD-D7). This is what was built. |
 | Q7 | **The straight-line travel estimate** (N-50). | **2026-11-13:** kept. It is only the fallback; road times come from OpenRouteService first, and the owner may switch to Google Maps later (decision log BLD-D9). |
+| Q9 | **The daily token budget per client** (R-AS). | **2026-11-14:** 3,000,000 tokens a day, counting cached tokens, as built (decision log BLD-D12). |
+| Q10 | **When the model's own safety system declines to answer.** | **2026-11-14:** the client sees our neutral text, and the circuit breaker doesn't count it, as built (BLD-D12). |
+| Q12 | **The Arabic and Arabizi wording of our own texts.** | **2026-11-14:** approved as written in `backend/src/dawalink/agent/templates.py` (BLD-D12). |
+| Q11 | **A client whose location isn't known says "I'm in Hamra".** | **2026-11-14:** the agent sets that area and searches around it. Built as the `set_area` tool over our own list of areas (BLD-D14). Google Maps isn't needed for it. |
 
 ### Waiting for a decision
 
@@ -331,10 +356,7 @@ None of these blocks step 6. Each has a default in place.
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
 | Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. **The owner will decide later** (2026-11-13), and may also remove alternatives from the agent, leaving them to the pharmacist. Until then they are built as designed: removing them later means dropping one tool and one prompt rule. |
-| Q9 | **The daily token budget per client** (R-AS). It was a placeholder of 200,000 until something was measured. | 3,000,000 tokens a day, counting cached tokens too: about 100 turns, the same as the daily message limit. On Claude Haiku that is about $0.15 a day for one client at most; the global daily cap still applies. | Keep 3,000,000. Look at it again after the evaluation picks the model: on a dearer model the same tokens cost more. |
-| Q10 | **When the model's own safety system declines to answer** (rare; none in 27 turns). `07` said: treat it as a failure, so the client sees "Assistant unavailable". | The client sees "Sorry, I couldn't answer that. Could you say it another way?", and the failure isn't counted towards switching the assistant off for everyone. | Keep it. Otherwise three such messages from one client would put every client in "use Search" mode for two minutes. |
-| Q11 | **A client whose location isn't known says "I'm in Hamra".** The agent has no tool to set an area: it can only ask them to tap "Use my location" or to choose a district in their profile. | The agent asks. | Keep it for now. On the website the location is one tap, and a tool that sets an area from chat text is one more thing to get right. Decide when the website exists (step 8). |
-| Q12 | **The Arabic and Arabizi wording of our own texts** (the refusal, the emergency text, "assistant unavailable"...). I wrote them; you speak the language. | In `backend/src/dawalink/agent/templates.py`, in English, Arabic and Arabizi. | Read the six texts and change what sounds wrong. |
+| Q13 | **Where the list of areas comes from.** A client can now say "I'm in Hamra" (BLD-D14). | Our own file, `backend/data/areas.csv`: the 26 districts and about 90 well-known neighbourhoods and towns, with centres written by hand (to about 1 km). A village that isn't listed isn't found: the agent then asks for a better-known town nearby. | Replace it with an extract of **OpenStreetMap** (every town, village and neighbourhood of Lebanon with its names in English and Arabic, a few thousand places, exact centres). It needs your ok for one download from the Overpass API (a JSON file of about 1 to 2 MB), and a line of credit to OpenStreetMap in the repo. The tool and the table stay as they are. |
 
 ---
 
@@ -343,9 +365,9 @@ None of these blocks step 6. Each has a default in place.
 - **Docker Desktop** may be off after a restart: start it first.
 - **The database has four logins.** `.env` holds their four addresses; `.env.example` shows them. If your `.env` is older than 2026-11-12, copy the new lines from `.env.example`.
 - **The Ministry's files** live in `backend/data/moph/` and are ignored by git. A teammate gets them with the commands in the root README.
-- **The outside keys** are in the owner's `.env` since 2026-11-13: `ORS_API_KEY` (OpenRouteService, now served from `api.heigit.org`) and `ANTHROPIC_API_KEY`. The Langfuse keys are still to come. **`.env` also needs the model's settings** (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_MONTHLY_BUDGET_USD`): copy them from `.env.example`.
-- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.044 (27 development turns on Claude Haiku 5.5).
-- **Talking to the agent:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"`. `--new` starts a new chat, `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step, `--at` sets the time.
+- **The outside keys** are in the owner's `.env` since 2026-11-13: `ORS_API_KEY` (OpenRouteService, now served from `api.heigit.org`) and `ANTHROPIC_API_KEY`. The Langfuse keys are there since 2026-11-14. **`.env` also needs the model's settings** (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_MONTHLY_BUDGET_USD`): copy them from `.env.example`.
+- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.050 (31 development turns on Claude Haiku 5.5). Development turns cost cents and need no estimate; every bigger run does.
+- **Talking to the agent:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"`. `--new` starts a new chat, `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step, `--at` sets the time, `--no-location` starts a chat with no location (to try "ana bel Hamra"). With `--steps`, nothing is sent to Langfuse.
 
 - A Windows PostgreSQL service holds port 5432, so the project's database is at `127.0.0.1:5433`.
 - Use `127.0.0.1` for the database, not `localhost`: `localhost` tries IPv6 first here and waits for seconds.

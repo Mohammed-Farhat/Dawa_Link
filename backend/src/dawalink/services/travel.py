@@ -17,10 +17,11 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as upsert
 
-from dawalink.db.models import District, Pharmacy, TravelTimeCache
+from dawalink.db.models import Area, Conversation, District, Pharmacy, TravelTimeCache
 from dawalink.domain.geo import Point, Travel, cell, estimate, rounded
 from dawalink.domain.numbers import AUTOMATIC_REACH_CAR_MIN, TRAVEL_CACHE_TTL
 from dawalink.domain.planning import CLIENT, Leg
+from dawalink.domain.vocabulary import LocationSource
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -35,8 +36,10 @@ class Location:
     """Where a client is, for one search, chat or request. Rounded; never sent to the LLM."""
 
     point: Point
-    source: Literal["shared", "district"]
+    source: Literal["shared", "district", "area"]
     district_id: int | None = None
+    # The area the client named in chat, when the point is that area's centre.
+    area_id: int | None = None
 
 
 class RoutingService(Protocol):
@@ -77,6 +80,27 @@ def district_location(tx: Tx, district_id: int) -> Location:
     if district is None:
         raise ServiceError(Code.VALIDATION_ERROR, "Unknown district.")
     return Location(Point(district.ref_lat, district.ref_lon), "district", district_id)
+
+
+def area_location(tx: Tx, area_id: int) -> Location:
+    """The centre of an area the client named in chat, rounded like any location (R-S2)."""
+    area = tx.session.get(Area, area_id)
+    if area is None:
+        raise ServiceError(Code.VALIDATION_ERROR, "Unknown area.")
+    return Location(rounded(area.ref_lat, area.ref_lon), "area", area.district_id, area.id)
+
+
+def conversation_location(tx: Tx, conversation: Conversation) -> Location | None:
+    """The location kept on a chat or a request thread, or None when it has none."""
+    if conversation.loc_lat is None or conversation.loc_lon is None:
+        return None
+    point = Point(conversation.loc_lat, conversation.loc_lon)
+    if conversation.loc_area_id is not None:
+        area = tx.session.get_one(Area, conversation.loc_area_id)
+        return Location(point, "area", area.district_id, area.id)
+    if conversation.loc_source == LocationSource.DISTRICT:
+        return Location(point, "district")
+    return Location(point, "shared")
 
 
 def _pins(tx: Tx, pharmacy_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, Point]:

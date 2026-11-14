@@ -1,8 +1,8 @@
-"""The 17 tools, called one by one as a model would call them (docs/07 §4, §11).
+"""The 18 tools, called one by one as a model would call them (docs/07 §4, §11).
 
 Each test sends JSON arguments and reads the JSON result: exactly what crosses the line
 between the model and our code. Rules covered: INV-8, INV-11, INV-21, INV-24; R-AG6 to
-R-AG8; R-F1, R-F3; R-W1; R-E8; N-39; docs/09 FA-13, FA-21, FA-26, FA-27.
+R-AG8; R-F1, R-F3; R-S2; R-W1; R-E8; N-39; docs/09 FA-13, FA-21, FA-26, FA-27, FA-31.
 """
 
 import re
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 
 import dawalink.agent.tools as tools_package
 from dawalink.agent.tools import ALL, REPLY_SPEC, for_mode
@@ -33,17 +34,17 @@ def keys_in(value: Any) -> set[str]:
 
 
 class TestTheToolList:
-    def test_there_are_17_tools_and_reply(self) -> None:
-        """AG-D2: 6 that read, 6 that propose, 5 that act."""
-        assert len(ALL) == 17
-        assert len({tool.name for tool in ALL}) == 17
+    def test_there_are_18_tools_and_reply(self) -> None:
+        """AG-D2, BLD-D14: 6 that read, 6 that propose, 6 that act."""
+        assert len(ALL) == 18
+        assert len({tool.name for tool in ALL}) == 18
         assert REPLY_SPEC.name == "reply"
 
     def test_each_mode_has_its_own_tools(self) -> None:
         """docs/07 §2."""
         assistant, sourcing = set(for_mode(AgentMode.ASSISTANT)), set(for_mode(AgentMode.SOURCING))
 
-        assert assistant - sourcing == {"prepare_request_summary", "create_watch"}
+        assert assistant - sourcing == {"prepare_request_summary", "create_watch", "set_area"}
         assert sourcing - assistant == {
             "open_claim",
             "propose_constraint_change",
@@ -196,6 +197,122 @@ class TestSearching:
         found = scene.tool("find_options", chat, product_ids=[scene.augmentin])
 
         assert found["error_code"] == "LOCATION_NEEDED"
+
+
+class TestNamingAnArea:
+    """ "I'm in Hamra" instead of sharing a location (R-S2, BLD-D14)."""
+
+    @pytest.fixture
+    def nowhere(self, scene: Scene) -> uuid.UUID:
+        """A chat of a client with no shared location and no home district."""
+        return scene.world.make.conversation(  # type: ignore[no-any-return]
+            client_id=scene.world.make.client(district_id=None)
+        )
+
+    def test_the_area_becomes_the_chats_location(self, scene: Scene, nowhere: uuid.UUID) -> None:
+        scene.stock()
+
+        told = scene.tool("set_area", nowhere, place="el hamra")
+        found = scene.tool("find_options", nowhere, product_ids=[scene.augmentin])
+
+        assert told == {
+            "ok": True,
+            "area": "Hamra",
+            "district": "Beirut",
+            "precision": "area",
+            "note": "Travel times are now counted from the centre of this area.",
+        }
+        chat = scene.conversation(nowhere)
+        assert (chat.loc_source, chat.loc_area_id) == ("area", 101)
+        assert (float(chat.loc_lat), float(chat.loc_lon)) == (33.896, 35.482)  # rounded, N-43
+        assert found["options"][0]["pharmacy"]["name"] == "Hamra Pharmacy"
+
+    def test_the_model_gets_names_and_never_a_point(self, scene: Scene, nowhere: uuid.UUID) -> None:
+        """INV-24."""
+        answers = [
+            scene.tool("set_area", nowhere, place="Hamra"),
+            scene.tool("set_area", nowhere, place="Ashrafiyye"),
+            scene.tool("set_area", nowhere, place="Chouf"),
+        ]
+
+        assert not {"lat", "lon", "ref_lat", "ref_lon", "id", "area_id"} & keys_in(answers)
+        assert not re.search(r"3[3-6]\.\d", str(answers))
+
+    def test_another_spelling_is_offered_not_taken(self, scene: Scene, nowhere: uuid.UUID) -> None:
+        """FA-31: a wrong area would send the client to the wrong pharmacy unnoticed."""
+        told = scene.tool("set_area", nowhere, place="Ashrafiyye")
+
+        assert told["error_code"] == "AREA_NOT_FOUND"
+        assert told["details"]["closest"][0] == {"area": "Achrafieh", "district": "Beirut"}
+        assert scene.conversation(nowhere).loc_lat is None
+
+    def test_an_unknown_place_changes_nothing(self, scene: Scene) -> None:
+        told = scene.tool("set_area", place="Timbuktu")
+
+        assert (told["error_code"], told["details"]) == ("AREA_NOT_FOUND", {"closest": []})
+        assert scene.conversation().loc_source == "shared"
+
+    def test_a_name_in_two_districts_is_asked_about(self, scene: Scene, nowhere: uuid.UUID) -> None:
+        with scene.world.as_owner():
+            scene.world.session.execute(
+                text(
+                    "INSERT INTO areas (id, name, district_id, ref_lat, ref_lon) "
+                    "VALUES (9001, 'Aramoun', 9, 34.01, 35.69)"
+                )
+            )
+
+        asked = scene.tool("set_area", nowhere, place="aramoun")
+        told = scene.tool("set_area", nowhere, place="aramoun", district="Keserwan")
+
+        assert asked["error_code"] == "AREA_AMBIGUOUS"
+        assert asked["details"]["choices"] == [
+            {"area": "Aramoun", "district": "Aley"},
+            {"area": "Aramoun", "district": "Keserwan"},
+        ]
+        assert (told["ok"], scene.conversation(nowhere).loc_area_id) == (True, 9001)
+
+    def test_a_whole_district_is_a_rough_start(self, scene: Scene, nowhere: uuid.UUID) -> None:
+        told = scene.tool("set_area", nowhere, place="Shouf")
+
+        assert (told["area"], told["precision"]) == ("Chouf", "district")
+        assert scene.conversation(nowhere).loc_area_id == 14
+
+    def test_the_place_named_last_replaces_a_shared_location(self, scene: Scene) -> None:
+        """The client said where to search: that wins over the phone's earlier location."""
+        scene.tool("set_area", place="Jounieh")
+        scene.tool("set_area", place="Jounieh")
+
+        chat = scene.conversation()
+        assert (chat.loc_source, chat.loc_area_id) == ("area", 190)
+
+    def test_only_a_chat_can_name_an_area(self, scene: Scene) -> None:
+        """A request's location is fixed when it starts (R-RQ1)."""
+        _, thread = scene.start_request()
+
+        assert scene.tool("set_area", thread, place="Hamra")["error_code"] == "UNKNOWN_TOOL"
+
+    def test_a_request_started_from_the_chat_keeps_the_area(
+        self, scene: Scene, nowhere: uuid.UUID
+    ) -> None:
+        from dawalink.services import proposals
+
+        client = scene.conversation(nowhere).client_id
+        scene.tool("set_area", nowhere, place="Hamra")
+        card = scene.tool(
+            "prepare_request_summary",
+            nowhere,
+            items=[{"product_id": scene.augmentin}],
+            alternatives_ok=False,
+        )
+
+        tx = scene.world.tx()
+        proposals.execute(tx, client_id=client, proposal_id=uuid.UUID(card["proposal_id"]))
+        scene.world.settle(tx)
+
+        request = scene.world.one("SELECT * FROM sourcing_requests WHERE client_id = :c", c=client)
+        thread = scene.world.one("SELECT * FROM conversations WHERE request_id = :r", r=request.id)
+        assert (request.loc_source, request.district_id) == ("area", 1)
+        assert (thread.loc_source, thread.loc_area_id) == ("area", 101)
 
 
 class TestPlanning:
