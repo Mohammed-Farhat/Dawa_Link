@@ -33,7 +33,7 @@ class TestAPlainTurn:
         assert agent_message.agent_run_id == result.run_id
         run = scene.run(result)
         assert (run.mode, run.trigger, run.outcome) == ("assistant", "client_message", "ok")
-        assert (run.model, run.prompt_version) == ("scripted", "v1.1")
+        assert (run.model, run.prompt_version) == ("scripted", "v1.2")
         assert (run.llm_calls, run.tool_calls, run.tokens_in, run.tokens_out) == (1, 0, 100, 20)
         assert run.ended_at is not None
         assert run.langfuse_trace_id

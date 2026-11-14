@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.4 · **Date:** 2026-11-10
+**Version:** v1.5 · **Date:** 2026-11-14
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -281,11 +281,13 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 - **Where a map appears:**
   - pharmacy registration (placing the pin, PS-1);
   - listing detail (CS-7);
-  - admin approval (checking the pin, AS-3).
+  - admin approval (checking the pin, AS-3);
+  - **"Pick on the map"** (BLD-D16): the client puts a pin where they are. It is the pharmacy's pin component, opened as a sheet from the location control, and its code and map pictures are loaded only when the client opens it (§10).
 
   Leaflet with OpenStreetMap tiles and the "© OpenStreetMap contributors" credit.
 - **[Directions]** opens OpenStreetMap's directions with **only the pharmacy's pin** as the destination. The client's location is never put in the link. This is a new outside link, added to `10` §4.3 (§13).
 - **"Use my location":** the browser's permission prompt appears **only after the client taps**, and first we say why: *"To show walking and driving times. We round your location and never send it to the AI."* If the client refuses, the profile's district is used (FI-18).
+- **"Pick on the map":** offered next to "Use my location" wherever the location is asked. The sheet shows the same privacy sentence and one button, **[Use this place]**. The map opens on the client's district, or on the last place they used. Nothing is sent until the client presses the button; the point is then rounded like any shared location.
 
 ---
 

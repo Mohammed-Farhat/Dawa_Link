@@ -8,7 +8,8 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 - **Claude decides, without asking first:**
   - how the code is written, structured, named and tested;
   - the database's technical design: tables, constraints, indexes, migrations, locking;
-  - internal architecture, refactoring, and fixing anything that is wrong.
+  - internal architecture, refactoring, and fixing anything that is wrong;
+  - `.gitignore`, and the non-secret settings in the local `.env` (Mohammed, 2026-11-14: "you have full control on the codebase and the gitignore").
 
   Claude then says what changed and why, and records it in [docs/build_plan.md](docs/build_plan.md).
 - **Mohammed decides:**
@@ -44,11 +45,11 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-14:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.5 · `03` v4.6 · `04` v4.8 · `05` v3.6 (the schema as built);
-  - `06` v1.6 · `07` v1.6 (§14: the agent as built) · `08` v1.3;
-  - `09` v1.8 (living: every change updates it) · `10` v1.6 (threat model; living: a change that adds an attack surface updates it);
+  - `01` v5.3 · `02` v3.5 · `03` v4.7 · `04` v4.9 · `05` v3.7 (the schema as built);
+  - `06` v1.6 · `07` v1.7 (§14: the agent as built) · `08` v1.3;
+  - `09` v1.9 (living: every change updates it) · `10` v1.7 (threat model; living: a change that adds an attack surface updates it);
   - `12` v2.4 (infrastructure and deployment);
-  - `11` v1.4 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
+  - `11` v1.5 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
   - [design review #2](docs/reviews/design_review_02.md) (§N, 2026-10-13);
@@ -79,16 +80,18 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
   - the database (2026-11-12): the tables (35 since 2026-11-14) and the first migration, four database logins, the catalog import (5,628 real medicines) and the demo seed. `05` §12 lists what changed while building;
   - the services (2026-11-12; `backend/src/dawalink/services/`): search, reserve and group reserve, the counter, watches and matching, offers, early release, sourcing requests, inventory and CSV uploads, the worker's clock-check tasks, email sending (caught locally by mailpit) and the daily purge. The second migration. Race tests with two real connections in `backend/tests/races/`.
   - the agent (2026-11-13; `backend/src/dawalink/agent/`): the turn graph, the 17 tools and `reply`, cards and what a tap does, the guards, the prompts, the models (scripted for tests, Claude, Ollama as a spare), worker turns, road times from OpenRouteService, tracing. The third migration. `07` §14 says what is where and what changed while building. Talk to it with `python -m dawalink.ops.chat`.
-  - after step 5 (2026-11-14, decision log BLD-D12 to BLD-D14): the owner's answers to Q9 to Q12; **the 18th tool, `set_area`** ("I'm in Hamra": the name is looked up in our own list, `backend/data/areas.csv` → the `areas` table; exact names only; the agent gets names, never a point); the fourth migration; prompts v1.1; **Langfuse proven with real keys** (only our own steps are exported). `07` §14.6.
+  - after step 5 (2026-11-14, decision log BLD-D12 to BLD-D14): the owner's answers to Q9 to Q12; **the 18th tool, `set_area`** ("I'm in Hamra": the name is looked up in our own list, `backend/data/areas.csv` → the `areas` table; exact names only; the agent gets names, never a point); the fourth migration; prompts v1.1; **Langfuse proven with real keys** (only our own steps are exported). `07` §14.6;
+  - the place list from OpenStreetMap (2026-11-14, decision log BLD-D15): `backend/data/areas_osm.csv`, **generated** (never edit it by hand), adds 1,733 towns and villages to the hand-written `areas.csv`: 1,853 places; the hand-written centres are the map's own; prompts v1.2. A name that exists in several districts ("Hamra" in Beirut, "El Hamra" in Nabatieh) is asked about, never chosen (confirmed by the owner, Q14);
+  - decided, not built yet (BLD-D16, 2026-11-14): **a client can pick their place on a map** ("Pick on the map"), for a computer or a client who won't share the device's location. The point is treated like a shared location. It is built with the website screens (step 8).
 
   The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
 - **Next: step 6, the simulator and the evaluation** (the simulated world and client, the three contenders, suites E1–E6, the development datasets, results). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O7: the no-prescription list stays empty for now (the owner's choice), so every product shows the prescription notice. A short true list may be added before the demo;
-  - Q4 and Q13 in [docs/build_plan.md](docs/build_plan.md) §5, each with a default in place: how strict "same medicine" is (the owner may also remove alternatives from the agent); a fuller list of areas from OpenStreetMap (needs the owner's ok for one download). The centres in `areas.csv` are hand-written: to check on a map before the demo;
+  - Q4 in [docs/build_plan.md](docs/build_plan.md) §5, with a default in place: how strict "same medicine" is (the owner may also remove alternatives from the agent);
   - routing: OpenRouteService first; the owner may switch to Google Maps later (BLD-D9: Google's terms restrict storing travel times, to settle before switching);
-  - **the Claude credit:** $100 until 2026-12-09, which is after the demo. One budget for development (the app's budget setting is $20, BLD-D13), the evaluation and the demo. Development turns on Haiku are approved (cents each). **Give a cost estimate and get the user's ok before every bigger paid run.** Spent so far: $0.050;
+  - **the Claude credit:** $100 until 2026-12-09, which is after the demo. One budget for development (the app's budget setting is $20, BLD-D13), the evaluation and the demo. Development turns on Haiku are approved (cents each). **Give a cost estimate and get the user's ok before every bigger paid run.** Spent so far: $0.055;
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
@@ -119,7 +122,8 @@ If the user's first message is general ("let's continue"), summarize where we ar
    - Readable, typed, small changes.
    - Claude runs each change's tests, tries it on the local website, and explains what changed and why, in plain language. It must meet the Definition of Done.
 7. **Git and publishing:**
-   - Never commit, push, publish, or change `.gitignore` without the user's explicit permission.
+   - Never commit, push or publish without the user's explicit permission.
+   - `.gitignore` is Claude's to change since 2026-11-14. Claude says what changed. Before removing a line, Claude checks that it can't put a secret, a personal file or the Ministry's files into the public repo.
    - Since 2026-10-18, `/docs`, `CLAUDE.md`, `DawaLink_Project_Proposal.md` and `Project_Requirements.md` are **tracked** (the user changed `.gitignore` so the team can read them). The user commits and pushes these updates themselves.
    - The repo is public: nothing secret or personal goes in tracked files. Before any doc is committed, check it for emails, keys and tokens.
 8. **Secrets and privacy:**
@@ -141,7 +145,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **The agent proposes; the client's tap executes** through the API. Agent tools never create, accept or cancel orders or requests, and never change priority, prices or stock ([02 §3](docs/02_architecture.md), [04](docs/04_domain_rules.md) R-AG).
 - **Cards come only from tools** (stored proposals); a tap sends the proposal ID, and the API re-validates it. **Text typed by pharmacies never reaches the LLM**, except the admin-approved pharmacy name (04 R-AG7, R-AG8). **Agent replies are shown as plain text** (no links, images or HTML; `10` TM-D5).
 - **Priority is first come, first served, in code.** Nobody can change it: not the LLM, not an admin ([ADR-003](docs/adr/ADR-003-priority-is-a-rule-not-the-llm.md), amended).
-- **The agent decides where the client goes** (ADR-004): code computes the travel times, routes and expiry fit; the agent weighs them with what the client said and recommends one pharmacy with a reason. **Coordinates never reach the LLM** (04 INV-24): location is stored rounded, outside `case_state`. A client may name their area in chat instead of sharing a location: `set_area` looks the name up in **our own list** (exact names only, never a guess), and the agent is told the area's name only (R-S2, BLD-D14).
+- **The agent decides where the client goes** (ADR-004): code computes the travel times, routes and expiry fit; the agent weighs them with what the client said and recommends one pharmacy with a reason. **Coordinates never reach the LLM** (04 INV-24): location is stored rounded, outside `case_state`. A client may name their area in chat instead of sharing a location: `set_area` looks the name up in **our own list** (exact names only, never a guess), and the agent is told the area's name only (R-S2, BLD-D14). The list is our hand-written areas plus the towns and villages of OpenStreetMap (BLD-D15); a name in several districts is asked about.
 - **A box is offered only if it lasts the client's days of use** from the chosen pickup day (04 R-F1, INV-25); unknown days → 1 day + an expiry warning. **One set of pickup days everywhere** (search, the reserve sheet, the agent's tools): a date among today and the pharmacy's next open days, 3 at most. A later day leaves fewer days before expiry, and the agent never works out a date itself (04 R-F3, R-F6, N-49).
 - **Urgent needs:** requests and watches search for 6 hours and can only be started during request hours. Reservations are **instant** (no pharmacy confirmation); the pharmacy marks [Picked up] or [Not available]; the pickup time is set per pharmacy. A prescription is a **notice** only (04 §1, SM-5, R-P1).
 - **Our tables are the source of truth** ([ADR-001](docs/adr/ADR-001-conversation-state-and-agent-turns.md)):
@@ -201,6 +205,7 @@ The details are in the linked docs. If a request or code change would break one 
   - backend, inside `backend/`: `uv run --env-file ../.env pytest` · `uv run ruff check .` · `uv run ruff format .` · `uv run mypy`;
   - the database, inside `backend/`: `uv run --env-file ../.env python -m dawalink.ops.prepare_db` (logins, migrations, privileges, reference data, catalog, demo data);
   - the catalog, inside `backend/`: `uv run python -m dawalink.ops.fetch_moph --date <list date>`, then `uv run python -m dawalink.ops.build_catalog`;
+  - the places from OpenStreetMap, inside `backend/` (only to refresh them): `uv run python -m dawalink.ops.fetch_osm_places`, then `uv run python -m dawalink.ops.build_areas`;
   - the agent, inside `backend/`: `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` writes as a demo client (`--new`, `--no-location`, `--tap 1`, `--work`, `--request`, `--steps`, `--at 2026-11-16T10:00`). It uses the model named by `LLM_PROVIDER` and `LLM_MODEL`, so with `anthropic` it spends credit;
   - after a schema change: `uv run --env-file ../.env alembic revision --autogenerate -m "..."` with `DATABASE_URL` set to the migrator address, then add functions and triggers by hand and run the tests;
   - after an API change: `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json`, then `npm run gen:api` inside `frontend/`;
@@ -217,6 +222,7 @@ The details are in the linked docs. If a request or code change would break one 
 - **Emails** sent by the local stack are caught by mailpit: http://localhost:8025.
 - **Database logins:** `.env` holds four addresses (master, migrator, app, retention). The tests need all four, and prepare their own `dawalink_test` database.
 - **The Ministry's files** are in `backend/data/moph/` (ignored by git). Never commit them, and never paste rows from them into tracked files; tests use invented products.
+- **OpenStreetMap's raw answer** goes to `backend/data/osm/` (ignored by git) when `fetch_osm_places` runs. It is not needed to run anything: only the generated `backend/data/areas_osm.csv` is committed, with the map's credit. Tests use invented places and the hand-written areas only.
 - **Slow downloads:** `npm install` and Docker pulls can take many minutes on this connection; run them in the background.
 - **Console encoding:** the console uses cp1252, so printing emoji from Python fails. Set `PYTHONIOENCODING=utf-8` or avoid printing them.
 - **Helper scripts:** write multi-line Python helpers to a file and run them. Don't inline them in shell heredocs.

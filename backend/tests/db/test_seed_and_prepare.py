@@ -11,6 +11,7 @@ from sqlalchemy import Connection, create_engine, text
 from dawalink.catalog.moph import CatalogRow, write_catalog
 from dawalink.config import ConfigError
 from dawalink.db.reference import (
+    OSM_AREAS_FILE,
     read_areas,
     read_districts,
     seed_areas,
@@ -23,6 +24,7 @@ from dawalink.domain.places import key
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
 from dawalink.ops.prepare_db import login_passwords, prepare
 from dawalink.ops.seed_demo import CLIENT_NAMES, seed_demo
+from dawalink.osm_places import FIRST_ID, script
 from tests.conftest import DatabaseUrls, make_settings, run_as_admin
 from tests.db import factories as make
 from tests.db.factories import NOW, TODAY
@@ -67,18 +69,58 @@ class TestReferenceData:
             assert 35.1 <= float(here.lon) <= 36.7, area["name"]
 
     def test_a_name_means_one_area(self) -> None:
-        """No two listed areas are written alike, so no name is ambiguous by accident."""
+        """No two hand-written areas are written alike, so none is ambiguous by accident."""
         seen: dict[str, str] = {}
         for area in read_areas():
             for name in (area["name"], *area["other_names"]):  # type: ignore[misc]
                 assert key(name), name
                 assert seen.setdefault(key(name), str(area["name"])) == area["name"], name
 
+    def test_the_maps_places_are_in_lebanon_in_a_district_we_know(self) -> None:
+        """BLD-D15: the generated file, as it is committed."""
+        districts = {str(d["name"]) for d in read_districts()}
+        last_hand_id = max(int(str(a["id"])) for a in read_areas())
+        places = read_areas(OSM_AREAS_FILE)
+
+        assert len(places) > 1_500
+        assert len({p["id"] for p in places}) == len(places)
+        for place in places:
+            assert int(str(place["id"])) >= FIRST_ID > last_hand_id, place["name"]
+            assert place["district"] in districts, place["name"]
+            assert not place["whole_district"]
+            assert 33.0 <= float(place["ref_lat"]) <= 34.7, place["name"]  # type: ignore[arg-type]
+            assert 35.1 <= float(place["ref_lon"]) <= 36.7, place["name"]  # type: ignore[arg-type]
+
+    def test_the_maps_names_are_plain_letters(self) -> None:
+        """TH-58: volunteers type these names, and the agent reads them."""
+        for place in read_areas(OSM_AREAS_FILE):
+            for name in (place["name"], *place["other_names"]):  # type: ignore[misc]
+                assert script(name) in ("latin", "arabic"), name
+                assert len(key(name)) >= 2, name
+
+    def test_inside_a_district_a_name_means_one_place(self) -> None:
+        """Across both files: "which one?" never shows the client the same name twice."""
+        seen: dict[tuple[str, str], int] = {}
+        for area in (*read_areas(), *read_areas(OSM_AREAS_FILE)):
+            for name in (area["name"], *area["other_names"]):  # type: ignore[misc]
+                owner = seen.setdefault((str(area["district"]), key(name)), int(area["id"]))  # type: ignore[call-overload]
+                assert owner == area["id"], (name, area["district"])
+
+    def test_the_maps_file_credits_the_map(self) -> None:
+        """The Open Database License asks for the credit wherever the data goes."""
+        header = OSM_AREAS_FILE.read_text(encoding="utf-8").partition("id,area,")[0]
+
+        assert "© OpenStreetMap contributors" in header
+        assert "https://www.openstreetmap.org/copyright" in header
+
     def test_writing_it_twice_changes_nothing(self, db: Connection) -> None:
         seed_pricing_tiers(db)
         seed_districts(db)
         seed_areas(db)
-        assert db.execute(text("SELECT count(*) FROM areas")).scalar() == len(read_areas())
+        seed_areas(db)
+        both = len(read_areas()) + len(read_areas(OSM_AREAS_FILE))
+        assert db.execute(text("SELECT count(*) FROM areas")).scalar() == both
+        assert db.execute(text("SELECT name FROM areas WHERE id = 101")).scalar() == "Hamra"
 
         tiers = db.execute(text("SELECT min_days, max_days, discount_pct FROM pricing_tiers")).all()
         assert sorted(tuple(t) for t in tiers) == sorted(DISCOUNT_TIERS)

@@ -86,6 +86,23 @@ The team's own rules (controlled medicines, the no-prescription list, correction
 `backend/data/catalog_overrides.toml`. Without the catalog file everything still runs, with
 nothing to search for.
 
+## The places a client can name
+
+A client who doesn't share their location can say where they are ("I'm in Zgharta"). The
+names are looked up in two files of `backend/data/`: `areas.csv`, written by hand (the
+districts, the well-known neighbourhoods and the ways people spell them), and
+`areas_osm.csv`, generated from OpenStreetMap (every town and village with its centre).
+Both are in this repository, so nothing needs downloading. To build the second one again,
+inside `backend/`:
+
+| Step | Command |
+|---|---|
+| 1. Download Lebanon's places (under 1 MB, into `data/osm/`) | `uv run python -m dawalink.ops.fetch_osm_places` |
+| 2. Join them with `areas.csv` into `data/areas_osm.csv` | `uv run python -m dawalink.ops.build_areas` |
+
+Place names, centres and road travel times are © [OpenStreetMap](https://www.openstreetmap.org/copyright)
+contributors, available under the Open Database License.
+
 ## What's where
 
 ```

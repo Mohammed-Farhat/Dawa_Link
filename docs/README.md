@@ -38,15 +38,15 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–W validated |
 | 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.3 |
 | 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.5 |
-| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.6 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.8 |
-| 05 | [Database design](05_database.md) | ER diagram, 35 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.6 |
+| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.7 |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v4.9 |
+| 05 | [Database design](05_database.md) | ER diagram, 35 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.7 |
 | 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.6 |
-| 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 18 tools + reply, prompts, memory, guardrails, limits, observability; the agent as built | ✅ v1.6 |
+| 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 18 tools + reply, prompts, memory, guardrails, limits, observability; the agent as built | ✅ v1.7 |
 | 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E6 (understanding, 3-contender simulation, ablations, safety, models, constraints), targets, statistics, regular checks | ✅ v1.3 |
-| 09 | [Failure Matrix](09_failure_matrix.md) | 128 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.8 (living) |
-| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 57 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.6 (living) |
-| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.4 |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 129 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.9 (living) |
+| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 58 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.7 (living) |
+| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.5 |
 | 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.4 |
 
 **Supporting folders:**
@@ -78,7 +78,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | **Pickup day** | The day the client says they'll come: today (if the pharmacy stays open at least 1 h more) or a next open day within the pickup time, 3 open days at most. The same days everywhere: search, the reserve sheet and the agent. A later day leaves fewer days before the box expires. |
 | **Days of use** | How many days the client will take the medicine (asked; 1 if unknown, with an expiry warning) |
 | **Expiry fit** | A box is offered only if it's still valid on the last day of use: `expiry ≥ pickup day + days of use − 1`. Otherwise: "No match: the boxes expire too early for N days." |
-| **Location** | Shared from the phone ("Use my location"), or **an area the client names in chat** ("I'm in Hamra": looked up in DawaLink's own list, its centre is used), or a district; pharmacies have a map pin. Stored rounded; **never sent to the AI**, which only knows the area's name. |
+| **Location** | Shared from the phone ("Use my location"), or **a pin the client puts on a map** (website), or **an area the client names in chat** ("I'm in Hamra": looked up in DawaLink's own list of districts, towns and villages, its centre is used), or a district; pharmacies have a map pin. Stored rounded; **never sent to the AI**, which only knows the area's name. |
 | **Travel time** | Road time by car and on foot, computed by code (OpenRouteService; straight-line "about" if it's down) |
 | **Recommendation** | The agent's choice of pharmacy (or route), with a one-sentence reason, plus up to 2 alternatives |
 | **Claim** | **One need for one medicine**, waiting for stock: a client **watch** ([Notify me]) or a **waiting request item**. Matching and early release both work for the same claim; the first offer the client accepts wins. |

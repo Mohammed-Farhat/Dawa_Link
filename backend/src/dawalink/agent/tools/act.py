@@ -86,13 +86,15 @@ class SetArea(Arguments):
     place: str = Field(
         min_length=2,
         max_length=60,
-        description="The area, neighbourhood or town the client said they are in, in Latin "
-        "letters: 'Hamra', 'Jounieh'. Only a place the client named.",
+        description="The area, neighbourhood, town or village the client said they are in, "
+        "as they wrote it: 'Hamra', 'jounieh', or its Arabic spelling. Only a place the "
+        "client named.",
     )
     district: str | None = Field(
         default=None,
         max_length=40,
-        description="Only after AREA_AMBIGUOUS: the district the client chose.",
+        description="The district, only when the client said it ('Hadath, Baabda') or "
+        "chose it after AREA_AMBIGUOUS. Never your own guess.",
     )
 
 
@@ -130,8 +132,9 @@ def set_area(turn: Turn, tx: Tx, args: SetArea) -> AreaSet:
     if len(found.named) > 1:
         raise Refused(
             ToolError.AREA_AMBIGUOUS,
-            "Several places have this name. Ask the client which one, then call set_area "
-            "again with the district.",
+            "Several places have this name. Ask the client which one, with each choice as "
+            "a quick reply ('Hamra, Beirut'), then call set_area again with the district. "
+            "Do not choose for them, even when one is much better known.",
             choices=_names(found.named),
         )
     place = found.named[0]

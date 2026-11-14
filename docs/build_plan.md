@@ -9,7 +9,7 @@ This is the one place that says **what is built, what comes next, and what was l
 ## In short
 
 - **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the tools, cards, guards, prompts, the models, worker turns, routing, tracing). **After step 5 (2026-11-14):** the 18th tool, `set_area` ("I'm in Hamra"), and tracing proven on the real Langfuse.
-- **Two questions are waiting for the owner** (§5): Q4 (how strict "same medicine" is) and Q13 (a fuller list of areas from OpenStreetMap). Each has a default in place, and none blocks step 6. Q9 to Q12 were answered on 2026-11-14.
+- **One question is waiting for the owner** (§5): Q4 (how strict "same medicine" is). It has a default in place and doesn't block step 6. **Decided, to build with the website:** a client can pick their place on a map (Q15, BLD-D16). Q9 to Q14 were answered on 2026-11-14: the list of areas now comes from OpenStreetMap (1,853 places), and a name that exists in several districts is always asked about.
 - **Next:** step 6, the simulator and the evaluation, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
@@ -260,6 +260,34 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 - 1,180 backend tests pass (unit 551, database 206, services 251, races 18, API 13, security 4, failure 2, agent 135); 94% of the code is covered; `ruff` and `mypy` are clean.
 - The privacy run now goes through 18 tools; nothing private is found.
 - The areas file is checked by tests: every centre lies within 6 km (Beirut) or 25 km of its district's reference point, and no two areas are written alike.
+
+### After step 5: the place list from OpenStreetMap (2026-11-14) ✅
+
+**The owner answered Q13:** use OpenStreetMap (decision log BLD-D15).
+
+**Built:**
+- `ops/fetch_osm_places.py`: one download from OpenStreetMap's query service (0.6 MB: 1,852 places in 26 districts). It sends two fixed questions and nothing about us. The raw answer stays outside git.
+- `osm_places.py` and `ops/build_areas.py`: the join with our hand-written list, written to `backend/data/areas_osm.csv` (1,733 places, with the map's credit). `prepare_db` loads both files: 1,853 places.
+- The hand-written `areas.csv` and `districts.csv` now carry the map's own centres. Before, 24 of 120 were 0.7 km or more off, the worst 3.2 km (Adma).
+- The agent: the district can be written any listed way; the tool and the prompt (v1.2) say to pass the name as the client wrote it, to offer same-name places as quick replies, and never to choose between them.
+
+**Measured on the joined list:**
+- 165 names mean more than one place. 10 of our 94 well-known areas share a name with a village elsewhere: Hamra, Manara, Mar Elias, Mar Mikhael (in Arabic script), Ain el Remmaneh, Hadath, Dora, Jdeideh, Mansourieh (in Arabic script), Aramoun. For these the agent now asks "which one?" first. The owner confirmed it the same day (Q14).
+- A lookup takes about 20 ms, and about 90 ms when it has to suggest close names.
+- Left out by the join: 109 map points our hand-written list already has, and 10 that share a name with another, far place of the same district (6 names: 3 in Akkar, and one each in Batroun, Chouf and Zgharta).
+
+**Found and fixed on the way:**
+- Our hand-written spelling "Deir al Amar" for Deir el Qamar is how the map writes another town (Deir Amar, in Miniyeh-Danniyeh). Removed.
+- The map calls two of our districts "Rashayya" and "Western Beqaa": added as spellings.
+- Names like "Rmeish - Bint Jbeil" are labels, not names: left out.
+
+**`.gitignore`:** `backend/data/osm/` added with the owner's ok, so a later download of the map's raw answer is never committed.
+
+**Not done, on purpose:** the test database holds the hand-written areas only, so no test depends on what the map says today. One place name in the generated file is a cemetery the map lists as a neighbourhood; it does no harm and the file is not edited by hand.
+
+**Docs changed:** `03` v4.7 (AF-5) · `04` v4.9 (R-S2) · `05` v3.7 (§9) · `07` v1.7 (§14.6, prompt v1.2) · `09` v1.9 (FA-32, FA-33) · `10` v1.7 (what the map service receives, TH-58) · decision log (BLD-D15) · the root README (the commands and the map's credit) · `CLAUDE.md`.
+
+**Checks:** 1,230 backend tests pass (unit 596, database 210, services 251, races 18, API 13, security 4, failure 2, agent 136); 94% of the code is covered; `ruff` and `mypy` are clean. Building the list twice gives the same file. The Docker stack was rebuilt and loads 1,853 areas. **On Claude Haiku 5.5, 3 turns, $0.004:** "ana bel hamra, baddi panadol" → the agent asked "Hamra, Beirut walla El Hamra, Nabatieh?" with the two as quick replies; the tap "Hamra, Beirut" set the area and the search went on; a message in Arabic script naming Zgharta set it from the Arabic spelling.
 - **On Claude Haiku 5.5, 4 turns, $0.006:** "ana bel hamra, baddi panadol" set Hamra and searched in one step; "3am rou7 3a el ashrafiyye" set Achrafieh, and the reply said so. Spent so far: $0.050.
 
 **Docs changed:** `02` v3.5 · `03` v4.6 (AF-5) · `04` v4.8 (R-S2, R-RQ4, R-AS, N-47) · `05` v3.6 · `07` v1.6 (§4.4, §14.6) · `09` v1.8 (FA-31, FA-32) · `10` v1.6 (TH-57; what Langfuse receives) · `12` v2.4 · decision log (BLD-D12 to BLD-D14) · `docs/README.md` · `CLAUDE.md`.
@@ -273,9 +301,11 @@ One agent, two modes, one graph. Everything the model can do goes through the se
 | The answer report (👎), and the admin's side of an escalation and of an abuse flag (reply, resolve, dismiss). The agent's side is built: `escalate`, and the flag for repeated injection attempts. | Step 7, with their endpoints |
 | The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
 | The agent's quality on Claude, measured: understanding, decisions, safety, cost, and the choice of model (O1). Step 5 only looked at 27 turns. | Step 6 |
+| A reply to check in the safety evaluation: asked for "Panadol" with several products in the catalog, the agent offered to help choose "by form or age" (2026-11-14, Haiku). Choosing between a syrup and tablets is logistics; choosing a medicine by a person's age is close to advice (no medical advice, `07` §5.2 rule 1). A case for the R-set and for the clinical check. | Step 6 |
 | Comparing a few road times with Google Maps by hand, for the demo pharmacies. The routing service's car times have no traffic in them. | Before the demo |
-| Checking the centres of the areas in `backend/data/areas.csv` on a map (hand-written, to about 1 km), or replacing the file with an OpenStreetMap extract (Q13) | Before the demo |
+| A last look, on a map, at the 10 centres still written by hand in `backend/data/areas.csv` (Beirut as a whole, Bint Jbeil, Clemenceau, Ramlet el Baida, Cola, Downtown, Sassine, Sodeco, Mathaf, Ain el Remmaneh). Every other centre is the map's own since BLD-D15. | Before the demo |
 | The limit on location updates (N-47, 10 per hour) for the location shared from the phone. Not needed for `set_area`, whose points come from a fixed list. | Step 7, with the location endpoint. That endpoint must also clear `loc_area_id` (a database check refuses the write otherwise). |
+| **"Pick on the map" for clients** (BLD-D16): the pin sheet, reusing the pharmacy's map component. The server needs nothing new: the location endpoint already takes a point. | Step 8, with the website screens (the location endpoint is step 7) |
 | Admin actions: approving, rejecting and suspending a pharmacy, suspending a client, and what they end (FR-22, FR-23); contesting a no-show (R-N3) | Step 7, with their endpoints |
 | XLSX inventory files (CSV works) | Step 7, with the upload endpoint |
 | The demo clock's admin endpoint (the service that moves the clock exists) | Step 7 |
@@ -348,6 +378,9 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q10 | **When the model's own safety system declines to answer.** | **2026-11-14:** the client sees our neutral text, and the circuit breaker doesn't count it, as built (BLD-D12). |
 | Q12 | **The Arabic and Arabizi wording of our own texts.** | **2026-11-14:** approved as written in `backend/src/dawalink/agent/templates.py` (BLD-D12). |
 | Q11 | **A client whose location isn't known says "I'm in Hamra".** | **2026-11-14:** the agent sets that area and searches around it. Built as the `set_area` tool over our own list of areas (BLD-D14). Google Maps isn't needed for it. |
+| Q13 | **Where the list of areas comes from.** | **2026-11-14:** OpenStreetMap, after one download approved by the owner. The hand-written list keeps the districts and the well-known neighbourhoods (BLD-D15). |
+| Q14 | **A well-known area that shares its name with a village elsewhere** ("Hamra" in Beirut, "El Hamra" in Nabatieh; 10 of our 94 well-known areas). | **2026-11-14:** the agent keeps asking which one, with the choices as quick replies. Code never chooses (BLD-D15). |
+| Q15 | **A client who wants to mark their place on a map**, on a computer or without sharing the device's location. | **2026-11-14:** yes. "Pick on the map" becomes a third choice wherever the website asks for the location; the point is treated like a shared location (BLD-D16). Built with the website screens. |
 
 ### Waiting for a decision
 
@@ -356,7 +389,6 @@ None of these blocks step 6. Each has a default in place.
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
 | Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. **The owner will decide later** (2026-11-13), and may also remove alternatives from the agent, leaving them to the pharmacist. Until then they are built as designed: removing them later means dropping one tool and one prompt rule. |
-| Q13 | **Where the list of areas comes from.** A client can now say "I'm in Hamra" (BLD-D14). | Our own file, `backend/data/areas.csv`: the 26 districts and about 90 well-known neighbourhoods and towns, with centres written by hand (to about 1 km). A village that isn't listed isn't found: the agent then asks for a better-known town nearby. | Replace it with an extract of **OpenStreetMap** (every town, village and neighbourhood of Lebanon with its names in English and Arabic, a few thousand places, exact centres). It needs your ok for one download from the Overpass API (a JSON file of about 1 to 2 MB), and a line of credit to OpenStreetMap in the repo. The tool and the table stay as they are. |
 
 ---
 
@@ -366,7 +398,7 @@ None of these blocks step 6. Each has a default in place.
 - **The database has four logins.** `.env` holds their four addresses; `.env.example` shows them. If your `.env` is older than 2026-11-12, copy the new lines from `.env.example`.
 - **The Ministry's files** live in `backend/data/moph/` and are ignored by git. A teammate gets them with the commands in the root README.
 - **The outside keys** are in the owner's `.env` since 2026-11-13: `ORS_API_KEY` (OpenRouteService, now served from `api.heigit.org`) and `ANTHROPIC_API_KEY`. The Langfuse keys are there since 2026-11-14. **`.env` also needs the model's settings** (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_MONTHLY_BUDGET_USD`): copy them from `.env.example`.
-- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.050 (31 development turns on Claude Haiku 5.5). Development turns cost cents and need no estimate; every bigger run does.
+- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.055 (34 development turns on Claude Haiku 5.5). Development turns cost cents and need no estimate; every bigger run does.
 - **Talking to the agent:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"`. `--new` starts a new chat, `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step, `--at` sets the time, `--no-location` starts a chat with no location (to try "ana bel Hamra"). With `--steps`, nothing is sent to Langfuse.
 
 - A Windows PostgreSQL service holds port 5432, so the project's database is at `127.0.0.1:5433`.

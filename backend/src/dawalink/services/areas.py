@@ -38,9 +38,18 @@ def listed(tx: Tx) -> list[Place]:
     ]
 
 
+def _district(everything: list[Place], text: str | None) -> str | None:
+    """Our name for a district, however it was written ("Metn" is our "Matn")."""
+    if text is None:
+        return None
+    whole = [place for place in everything if place.whole_district]
+    written_so = [place.district for place in whole if places.key(text) in place.keys]
+    return written_so[0] if len(written_so) == 1 else text
+
+
 def look_up(tx: Tx, text: str, district: str | None = None) -> Lookup:
     everything = listed(tx)
-    named = places.named(everything, text, district)
+    named = places.named(everything, text, _district(everything, district))
     return Lookup(named, [] if named else places.close(everything, text))
 
 

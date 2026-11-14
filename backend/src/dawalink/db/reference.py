@@ -12,7 +12,9 @@ from dawalink.db.models import Area, District, PricingTier
 from dawalink.domain.numbers import DISCOUNT_TIERS
 
 DISTRICTS_FILE = Path("data/districts.csv")
-AREAS_FILE = Path("data/areas.csv")
+AREAS_FILE = Path("data/areas.csv")  # hand-written: districts and well-known neighbourhoods
+OSM_AREAS_FILE = Path("data/areas_osm.csv")  # generated from OpenStreetMap: towns and villages
+ROWS_AT_A_TIME = 1_000
 
 
 def seed_pricing_tiers(connection: Connection) -> None:
@@ -59,7 +61,10 @@ def seed_districts(connection: Connection, path: Path = DISTRICTS_FILE) -> int:
 
 
 def read_areas(path: Path = AREAS_FILE) -> list[dict[str, object]]:
-    """The areas file as it is written: the district by name, other names separated by |."""
+    """An areas file as it is written: the district by name, other names separated by |.
+
+    The generated file has no `whole` column: none of its rows stands for a district.
+    """
     with path.open(encoding="utf-8", newline="") as file:
         lines = (line for line in file if not line.startswith("#"))
         return [
@@ -68,7 +73,7 @@ def read_areas(path: Path = AREAS_FILE) -> list[dict[str, object]]:
                 "name": row["area"],
                 "district": row["district"],
                 "other_names": [name for name in row["other_names"].split("|") if name],
-                "whole_district": row["whole"] == "1",
+                "whole_district": row.get("whole") == "1",
                 "ref_lat": Decimal(row["ref_lat"]),
                 "ref_lon": Decimal(row["ref_lon"]),
             }
@@ -76,7 +81,9 @@ def read_areas(path: Path = AREAS_FILE) -> list[dict[str, object]]:
         ]
 
 
-def seed_areas(connection: Connection, path: Path = AREAS_FILE) -> int:
+def seed_areas(
+    connection: Connection, paths: tuple[Path, ...] = (AREAS_FILE, OSM_AREAS_FILE)
+) -> int:
     """Adds or updates the areas a client can name in chat. Run after `seed_districts`.
 
     An area's id never changes once it is used: a conversation may point at it.
@@ -90,23 +97,25 @@ def seed_areas(connection: Connection, path: Path = AREAS_FILE) -> int:
             **{key: value for key, value in area.items() if key != "district"},
             "district_id": districts[str(area["district"])],
         }
+        for path in paths
         for area in read_areas(path)
     ]
-    statement = upsert(Area).values(areas)
-    connection.execute(
-        statement.on_conflict_do_update(
-            index_elements=[Area.id],
-            set_={
-                column: statement.excluded[column]
-                for column in (
-                    "name",
-                    "district_id",
-                    "other_names",
-                    "whole_district",
-                    "ref_lat",
-                    "ref_lon",
-                )
-            },
+    for start in range(0, len(areas), ROWS_AT_A_TIME):
+        statement = upsert(Area).values(areas[start : start + ROWS_AT_A_TIME])
+        connection.execute(
+            statement.on_conflict_do_update(
+                index_elements=[Area.id],
+                set_={
+                    column: statement.excluded[column]
+                    for column in (
+                        "name",
+                        "district_id",
+                        "other_names",
+                        "whole_district",
+                        "ref_lat",
+                        "ref_lon",
+                    )
+                },
+            )
         )
-    )
     return len(areas)

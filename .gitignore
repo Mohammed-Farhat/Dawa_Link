@@ -24,3 +24,6 @@ dist/
 
 # The Ministry of Public Health price list: downloaded, never committed (decision log O5)
 backend/data/moph/
+
+# OpenStreetMap's raw answer: downloaded by fetch_osm_places, never committed (decision log BLD-D15)
+backend/data/osm/

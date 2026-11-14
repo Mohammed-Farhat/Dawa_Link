@@ -1,6 +1,6 @@
 # DawaLink: Agent Specification
 
-**Version:** v1.6 (validated; v1.6 adds the `set_area` tool and §14.6; v1.5 added §14, the agent as built in build step 5) · **Date:** 2026-11-14
+**Version:** v1.7 (validated; v1.7 fills the list of areas from OpenStreetMap, §14.6, prompt v1.2; v1.6 added the `set_area` tool and §14.6; v1.5 added §14, the agent as built in build step 5) · **Date:** 2026-11-14
 **Builds on:**
 - `01` v5.0 (C6, C8, C9, C15–C18)
 - `02` v2.0 §3
@@ -207,7 +207,7 @@ Each one **runs the same checks as the real action, without locking anything**. 
 | Tool | Input | Output | Bounds |
 |---|---|---|---|
 | `create_watch` (assistant) | `product_id`, `qty: 1–3`, `days_of_use: int = 1`, `include_alternatives: bool`, `max_price: MoneyIn?` | `{watch_id, ends_display}` or an error code (`OUTSIDE_REQUEST_HOURS`, `LIMIT_WATCHES`, `WATCH_EXISTS`, `CLIENT_PAUSED`) | R-W1, R-W2; the client sees a status card ("Watching until 16:00") and can stop it |
-| `set_area` (assistant; added 2026-11-14, BLD-D14) | `place: str` (2–60 characters: the area or town the client named, in Latin letters), `district: str?` (only after `AREA_AMBIGUOUS`) | `{area, district, precision: "area" \| "district", note}`, or `AREA_NOT_FOUND` with `closest: [{area, district}]`, or `AREA_AMBIGUOUS` with `choices` | R-S2: the name is looked up in **our own list** (`areas`); only a name written like a listed one is accepted. The area's centre becomes the chat's location and replaces an earlier one. **Names in, names out: never a coordinate** (INV-24). Not in sourcing mode: a request's location is fixed when it starts. |
+| `set_area` (assistant; added 2026-11-14, BLD-D14) | `place: str` (2–60 characters: the area, town or village the client named, as they wrote it, Arabic script included), `district: str?` (only when the client said it, or chose it after `AREA_AMBIGUOUS`; written any listed way) | `{area, district, precision: "area" \| "district", note}`, or `AREA_NOT_FOUND` with `closest: [{area, district}]`, or `AREA_AMBIGUOUS` with `choices` | R-S2: the name is looked up in **our own list** (`areas`: our hand-written areas and the towns and villages of OpenStreetMap, BLD-D15); only a name written like a listed one is accepted, and a name in several districts is asked about. The area's centre becomes the chat's location and replaces an earlier one. **Names in, names out: never a coordinate** (INV-24). Not in sourcing mode: a request's location is fixed when it starts. |
 | `open_claim` (sourcing) | `request_item_id` | `{claim_id, ends_display}` | One per item (`05` U); idempotent |
 | `request_early_release` | `claim_id` | `{asked: n, answers_by_display}` or `{asked: 0, reason: "no_candidates" \| "none_open_now" \| "anti_spam" \| "limit" \| "asked_recently"}` | R-E1–R-E5: only open pharmacies, ≤ 3, anti-spam. **Returns only how many were asked** (R-E8). |
 | `schedule_followup` (sourcing) | `in_minutes: 15–300` | `{followup_display}` | **One pending follow-up per request** (a new one replaces it); ≤ 4 per request; must fall inside the window. Stored as `conversations.followup_at` (AG-D11). |
@@ -653,22 +653,28 @@ No test can reach a paid service: the keys are removed before the settings are r
 
 | Part | Where | What it does |
 |---|---|---|
-| The list | `backend/data/areas.csv` → the `areas` table (`05` §12) | The 26 districts as a whole and about 90 neighbourhoods and towns, each with its other spellings (Arabizi, French, Arabic script) and a centre |
+| The list | `backend/data/areas.csv` (by hand) and `areas_osm.csv` (generated from OpenStreetMap, BLD-D15) → the `areas` table (`05` §9, §12) | 1,853 places: the 26 districts as a whole, 94 well-known neighbourhoods and towns with their other spellings (Arabizi, French, Arabic script), and 1,733 towns, villages and neighbourhoods from the map, each with a centre |
 | Matching | `domain/places.py` | A name is simplified (case, accents, hyphens, the article "el/al/ال") and must then **equal** a listed one. Anything else comes back as up to 5 close names |
 | The service | `services/areas.py`, `travel.conversation_location` | Puts the area's rounded centre on the conversation (`loc_source = 'area'`, `loc_area_id`). One function now reads a conversation's location for the tools and for [Start sourcing] |
 | The tool | `agent/tools/act.py` | `set_area(place, district?)`, assistant mode only |
 | What the model is told | `agent/context.py` | "Location: the area the client named, Hamra (Beirut). Travel times are counted from its centre." Or "not known yet", so the agent asks before it searches |
-| The prompt | `prompts/v1/` (now **v1.1**) | Call `set_area` when the client names where they are; only a place the client named; never ask for a street address; say "about" for times from an area |
+| The prompt | `prompts/v1/` (now **v1.2**) | Call `set_area` when the client names where they are, with the name as they wrote it; only a place the client named; a district only when the client said it; never choose between two places of one name; never ask for a street address; say "about" for times from an area |
 
 **Why exact names only.** A wrong area would send the client to the wrong pharmacy without anyone noticing, so code never guesses: "Baabda" and "Baabdat" are two towns. On a miss, the model sees the close names and decides whether one is clearly the same place spelled differently, or asks the client. That judgement is the model's; the lookup is code's.
 
-**Why our own list and not a map service.** The name a client types stays inside the system (`10` §4.3), the lookup works in tests and in the simulator with no network, and the answer is the same every time. Google Maps isn't needed for this. The price: a village that isn't listed isn't found, and the agent asks for a better-known town nearby. The list can grow.
+**Why our own list and not a map service.** The name a client types stays inside the system (`10` §4.3), the lookup works in tests and in the simulator with no network, and the answer is the same every time. Google Maps isn't needed for this. The list itself comes from a map: since BLD-D15 the towns and villages are OpenStreetMap's, downloaded once and kept in our own table, so nothing is asked of a map service while the app runs.
 
-**The location-update limit (N-47) is not applied to `set_area`:** every area is one of about 120 fixed points, so naming areas can't burn the routing quota (`10` TH-53).
+**The location-update limit (N-47) is not applied to `set_area`:** every area is one of 1,853 fixed points whose travel times are cached for 24 hours, and a client's messages are limited (N-17), so naming areas can't burn the routing quota (`10` TH-53).
 
-**Prompt v1.1** changes the location lines only. No evaluation exists yet to compare it with v1.0 (AG-D12): the first evaluation runs (step 6) start from v1.1.
+**The same name in several districts** (BLD-D15). With the map's villages, 165 names mean more than one place, and 10 of our well-known areas share a name with a village elsewhere: "Hamra" is in Beirut and "El Hamra" in Nabatieh; "Hadath" is in Baabda and in Baalbek. `set_area` answers `AREA_AMBIGUOUS` with the choices, and the agent asks, offering each as a quick reply; it calls again with the district, which may be written any listed way ("Metn" for Matn). Code never prefers the better-known place (BLD-D14). The owner confirmed it on 2026-11-14 (build plan Q14): the question costs one tap, and some of these twins are real towns. Inside one district a name means one place: the join leaves out two far-apart places that share a name there, because the question would show the client the same name twice.
 
-**Tried on Claude Haiku 5.5** (4 turns, $0.006): "ana bel hamra, baddi panadol" → `set_area("Hamra")` and the search, in one step; "3am rou7 3a el ashrafiyye, dawwerle honik" → `set_area("Ashrafieh")` → Achrafieh, and the reply said so.
+**Names from the map reach the model** (`10` TH-58): as the area's name in tool results and in the location line. Volunteers type them, so the join keeps only names made of plain Latin or Arabic letters, at most 40 characters and 6 words, and the generated file is in git where every name can be read.
+
+**Prompts v1.1 and v1.2** change the location lines only (v1.2: the name as the client wrote it, quick replies for same-name places). No evaluation exists yet to compare them with v1.0 (AG-D12): the first evaluation runs (step 6) start from v1.2.
+
+**Tried on Claude Haiku 5.5** (4 turns, $0.006): "ana bel hamra, baddi panadol" → `set_area("Hamra")` and the search, in one step; "3am rou7 3a el ashrafiyye, dawwerle honik" → `set_area("Ashrafieh")` → Achrafieh, and the reply said so. That was with the hand-written list alone.
+
+**Tried again with the map's villages listed** (BLD-D15; 3 turns, $0.004): the same "ana bel hamra, baddi panadol" now gets a question first, "Enta bi Hamra, Beirut walla El Hamra, Nabatieh?", with the two as quick replies; the tap "Hamra, Beirut" → `set_area("Hamra", "Beirut")` and the search goes on; "أنا بزغرتا، بدي بنادول" → `set_area` with the Arabic spelling → Zgharta.
 
 **Langfuse, for real.** With the owner's keys, a turn arrives as one `agent_turn` trace with its steps (3 model calls, 2 tool calls, the guards, the save). The first run also showed something no stand-in could: Anthropic's library reports each call through OpenTelemetry on its own, and Langfuse's client picked those up as separate entries (token counts, no text), which counted each call's cost twice. The client now exports **only the steps we build** (`should_export_span`). Still true: Langfuse shows a step at the moment the turn was sent; its real duration is in the step's metadata and in `agent_runs`.
 

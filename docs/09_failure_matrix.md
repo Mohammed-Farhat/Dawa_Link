@@ -1,6 +1,6 @@
 # DawaLink: Failure Matrix (living)
 
-**Version:** v1.8 (validated; v1.8 adds FA-31 and FA-32 for areas named in chat; v1.7 marked the rows build step 5 covers, and added FA-28 to FA-30) · **Date:** 2026-11-14
+**Version:** v1.9 (validated; v1.9 adds FA-33 for the place list from OpenStreetMap; v1.8 added FA-31 and FA-32 for areas named in chat; v1.7 marked the rows build step 5 covers, and added FA-28 to FA-30) · **Date:** 2026-11-14
 **Builds on:** `04` v4.1 (rules, invariants) · `05` v3.1 (locks, clock check) · `06` v1.2 (error codes) · `07` v1.2 (agent limits, guards) · `08` v1.1 (evaluation) · `10` (threat model)
 **Status:** ✅ validated 2026-10-20 (decision log §R). It's a **living document**: every change updates it (Definition of Done #6).
 
@@ -116,7 +116,8 @@ The attacker's point of view (assets, threats, mitigations) is in `10` (threat m
 | FA-29 | **The model's own safety system declines** (`stop_reason: "refusal"`) | The provider's stop reason | Our neutral text; outcome `guardrail_blocked`, note `model_refusal`; **not counted by the circuit breaker**, so one client can't switch the assistant off for everyone | "Sorry, I couldn't answer that…" | ✅ `tests/agent/test_cards.py`, `tests/unit/agent/test_models.py` | M |
 | FA-30 | **The reply shows the machinery** (a tool written out as text, a raw ID, JSON) | Output guard: the internals check | One repair attempt, then our text | A normal answer, or our neutral text | ✅ `tests/agent/test_cards.py` | L |
 | FA-31 | **The area a client names isn't in our list, or is spelled another way** ("ashrafiyye") | `set_area`: no listed name equals it once simplified | Nothing changes. The tool answers `AREA_NOT_FOUND` with up to 5 close names; **code never picks one**. The agent uses a close name only when it is clearly the same place, otherwise it asks | "Do you mean Achrafieh?", or "which town is near you?" | ✅ `tests/agent/test_tools.py`, `tests/unit/domain/test_places.py` | M |
-| FA-32 | **A name that is two places** (the same name in two districts) | `set_area`: more than one listed place | Nothing changes. `AREA_AMBIGUOUS` with the choices; the agent asks which district, then calls again with it | "Aramoun in Aley or in Keserwan?" | ✅ `tests/agent/test_tools.py` | L |
+| FA-32 | **A name that is two places** (the same name in two districts). Common since the map's villages are listed (BLD-D15): "Hamra" in Beirut and "El Hamra" in Nabatieh | `set_area`: more than one listed place | Nothing changes. `AREA_AMBIGUOUS` with the choices; the agent asks which one, offering each as a quick reply, then calls again with the district (written any listed way). Code never prefers the better-known place | "Hamra in Beirut, or El Hamra in Nabatieh?" | ✅ `tests/agent/test_tools.py` | L |
+| FA-33 | **The map has two places with one name inside one district**, or a place outside every district we know | The join (`osm_places.merge`, `read`), when the list is built | Two points close together are one place. Two far apart are **both left out**: asking "which one?" would show the same name twice. A place in no known district is left out, never moved to the nearest one. The build prints what it left out | Such a village isn't found by name: the agent asks for a town nearby, or for the phone's location | ✅ `tests/unit/test_osm_places.py`, `tests/db/test_seed_and_prepare.py` | L |
 
 ---
 

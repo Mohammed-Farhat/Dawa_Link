@@ -224,7 +224,7 @@ class TestNamingAnArea:
         }
         chat = scene.conversation(nowhere)
         assert (chat.loc_source, chat.loc_area_id) == ("area", 101)
-        assert (float(chat.loc_lat), float(chat.loc_lon)) == (33.896, 35.482)  # rounded, N-43
+        assert (float(chat.loc_lat), float(chat.loc_lon)) == (33.895, 35.482)  # rounded, N-43
         assert found["options"][0]["pharmacy"]["name"] == "Hamra Pharmacy"
 
     def test_the_model_gets_names_and_never_a_point(self, scene: Scene, nowhere: uuid.UUID) -> None:
@@ -262,6 +262,7 @@ class TestNamingAnArea:
             )
 
         asked = scene.tool("set_area", nowhere, place="aramoun")
+        nothing_yet = scene.conversation(nowhere).loc_area_id
         told = scene.tool("set_area", nowhere, place="aramoun", district="Keserwan")
 
         assert asked["error_code"] == "AREA_AMBIGUOUS"
@@ -269,7 +270,34 @@ class TestNamingAnArea:
             {"area": "Aramoun", "district": "Aley"},
             {"area": "Aramoun", "district": "Keserwan"},
         ]
+        assert nothing_yet is None
         assert (told["ok"], scene.conversation(nowhere).loc_area_id) == (True, 9001)
+
+    def test_the_district_can_be_written_any_listed_way(
+        self, scene: Scene, nowhere: uuid.UUID
+    ) -> None:
+        """BLD-D15: with the map's villages, many names are in several districts."""
+        with scene.world.as_owner():
+            scene.world.session.execute(
+                text(
+                    "INSERT INTO areas (id, name, district_id, other_names, ref_lat, ref_lon) "
+                    "VALUES (9002, 'El Hamra', 23, ARRAY['الحمرا'], 33.31, 35.42)"
+                )
+            )
+
+        asked = scene.tool("set_area", nowhere, place="الحمرا")
+        beirut = scene.tool("set_area", nowhere, place="Hamra", district="Beyrouth")
+        nabatieh = scene.tool("set_area", nowhere, place="hamra", district="nabatiyeh")
+        elsewhere = scene.tool("set_area", nowhere, place="hamra", district="Zahle")
+
+        assert asked["details"]["choices"] == [
+            {"area": "El Hamra", "district": "Nabatieh"},
+            {"area": "Hamra", "district": "Beirut"},
+        ]
+        assert (beirut["area"], beirut["district"]) == ("Hamra", "Beirut")
+        assert (nabatieh["area"], nabatieh["district"]) == ("El Hamra", "Nabatieh")
+        assert elsewhere["error_code"] == "AREA_NOT_FOUND"
+        assert scene.conversation(nowhere).loc_area_id == 9002
 
     def test_a_whole_district_is_a_rough_start(self, scene: Scene, nowhere: uuid.UUID) -> None:
         told = scene.tool("set_area", nowhere, place="Shouf")
