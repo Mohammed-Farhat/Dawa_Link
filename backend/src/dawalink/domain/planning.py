@@ -14,7 +14,9 @@ from typing import Literal
 from dawalink.domain.numbers import PLAN_MAX_CANDIDATE_PHARMACIES, PLAN_MAX_PHARMACIES
 
 Preference = Literal["fewest_trips", "cheapest", "nearest", "walkable"]
-MissingReason = Literal["none_listed", "over_budget", "not_enough", "expires_too_early"]
+MissingReason = Literal[
+    "none_listed", "over_budget", "not_enough", "expires_too_early", "not_on_that_day"
+]
 TravelSource = Literal["road", "straight"]
 
 CLIENT = "client"  # the starting point of every route

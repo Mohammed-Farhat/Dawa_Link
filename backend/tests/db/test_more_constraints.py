@@ -3,6 +3,7 @@
 `test_schema.py` checks that no constraint is left without a test in this folder.
 """
 
+import uuid
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
@@ -306,6 +307,24 @@ class TestConversationsAndOperations:
         }
 
         twice(db, lambda: add(db, ChatMessage, **message), "uq_chat_messages_conversation_id_seq")
+
+    def test_a_message_sent_twice_by_the_website_is_stored_once(self, db: Connection) -> None:
+        """docs/06 §6.6: the same `client_message_id` can't be stored twice in a conversation."""
+        conversation, sent = make.conversation(db), uuid.uuid4()
+        numbers = iter(range(1, 9))
+
+        def send() -> Any:
+            return add(
+                db,
+                ChatMessage,
+                conversation_id=conversation,
+                seq=next(numbers),
+                author="client",
+                kind="text",
+                client_message_id=sent,
+            )
+
+        twice(db, send, "uq_chat_messages_conversation_id_client_message_id")
 
     def test_free_text_from_people_has_a_length_limit(self, db: Connection) -> None:
         client = make.client(db)

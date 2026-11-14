@@ -14,9 +14,10 @@ import uuid
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from dawalink.db.models import ChatMessage, Conversation, RequestItem
+from dawalink.db.models import Conversation, RequestItem
+from dawalink.services import conversations
 from dawalink.services.context import Tx
 
 
@@ -68,29 +69,8 @@ def _append(
 ) -> Conversation:
     # The conversation row is locked last in the global lock order (docs/05 §6), and its
     # lock is what makes the next message number safe.
-    conversation = tx.session.execute(
-        select(Conversation)
-        .where(Conversation.id == conversation_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    ).scalar_one()
-    last = tx.session.execute(
-        select(func.coalesce(func.max(ChatMessage.seq), 0)).where(
-            ChatMessage.conversation_id == conversation_id
-        )
-    ).scalar_one()
-    tx.session.add(
-        ChatMessage(
-            conversation_id=conversation_id,
-            seq=last + 1,
-            author="system",
-            kind=kind,
-            text_redacted=text,
-            cards=cards,
-        )
-    )
-    conversation.last_activity_at = tx.now
-    tx.session.flush()
+    conversation = conversations.locked(tx, conversation_id)
+    conversations.append(tx, conversation, author="system", kind=kind, text=text, cards=cards)
     return conversation
 
 

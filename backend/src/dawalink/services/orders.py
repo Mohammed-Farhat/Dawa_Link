@@ -329,52 +329,19 @@ def _check_request_items(
             raise ServiceError(Code.VALIDATION_ERROR, "That isn't what this request item asks for.")
 
 
-def reserve(
+def _guards(
     tx: Tx,
-    *,
     client_id: uuid.UUID,
     lines: Sequence[ReserveLine],
     pickup_day: date,
-    source: OrderSource,
-    idempotency_key: str,
-) -> list[Order]:
-    """The client taps [Reserve]: the boxes are theirs at once (O1).
+    items: dict[uuid.UUID, InventoryItem],
+) -> tuple[dict[uuid.UUID, Box], dict[uuid.UUID, Product]]:
+    """Everything that can refuse a reservation, in one place (O1's guards).
 
-    Several lines are a group reserve: all of them, or none (R-RQ6). The same tap sent twice
-    returns the same orders.
+    A tap runs it under the items' locks. A proposal tool runs it without any lock, to
+    refuse a card the tap would refuse anyway (docs/07 §4.3). Either way the answer comes
+    from the same code, so a card and its button can't disagree.
     """
-    client = clients.profile(tx, client_id, lock=True)
-    clients.require_reserve(tx, client)
-    if not lines or len({line.item_id for line in lines}) != len(lines) or not idempotency_key:
-        raise ServiceError(Code.VALIDATION_ERROR, "A tap reserves each box once.")
-    keys = (
-        [idempotency_key]
-        if len(lines) == 1
-        else [f"{idempotency_key}:{position}" for position in range(1, len(lines) + 1)]
-    )
-    done = {
-        order.idempotency_key: order
-        for order in tx.session.execute(
-            select(Order).where(Order.client_id == client_id, Order.idempotency_key.in_(keys))
-        ).scalars()
-    }
-    if done:
-        if len(done) != len(keys):
-            raise ServiceError(
-                Code.VALIDATION_ERROR, "This tap was already used for something else."
-            )
-        return [done[key] for key in keys]
-
-    # Every item this tap may touch is locked now, in one sorted pass: the boxes themselves,
-    # and the boxes held by offers that will be withdrawn if a need gets covered.
-    request_items = [line.request_item_id for line in lines if line.request_item_id]
-    claim_ids = list(
-        tx.session.execute(
-            select(Claim.id).where(Claim.request_item_id.in_(request_items))
-        ).scalars()
-    )
-    held_by_offers = [offer.inventory_item_id for offer in open_offers(tx, claim_ids)]
-    items = lock_items(tx, [*(line.item_id for line in lines), *held_by_offers])
     boxes = {
         box.item_id: box for box in visible_boxes(tx, item_ids=[line.item_id for line in lines])
     }
@@ -423,6 +390,78 @@ def reserve(
     )
     if limit is not None:
         raise _limit_error(limit)
+    return boxes, products
+
+
+def check_reservable(
+    tx: Tx, *, client_id: uuid.UUID, lines: Sequence[ReserveLine], pickup_day: date
+) -> dict[uuid.UUID, Box]:
+    """Would a tap on these boxes be accepted right now? Raises what the tap would raise.
+
+    Nothing is locked and nothing is written: this is what a proposal tool asks before it
+    creates a card. The tap asks again, under locks.
+    """
+    clients.require_reserve(tx, clients.profile(tx, client_id))
+    if not lines or len({line.item_id for line in lines}) != len(lines):
+        raise ServiceError(Code.VALIDATION_ERROR, "A tap reserves each box once.")
+    wanted = [line.item_id for line in lines]
+    items = {
+        item.id: item
+        for item in tx.session.execute(
+            select(InventoryItem).where(InventoryItem.id.in_(wanted))
+        ).scalars()
+    }
+    boxes, _ = _guards(tx, client_id, lines, pickup_day, items)
+    return boxes
+
+
+def reserve(
+    tx: Tx,
+    *,
+    client_id: uuid.UUID,
+    lines: Sequence[ReserveLine],
+    pickup_day: date,
+    source: OrderSource,
+    idempotency_key: str,
+) -> list[Order]:
+    """The client taps [Reserve]: the boxes are theirs at once (O1).
+
+    Several lines are a group reserve: all of them, or none (R-RQ6). The same tap sent twice
+    returns the same orders.
+    """
+    client = clients.profile(tx, client_id, lock=True)
+    clients.require_reserve(tx, client)
+    if not lines or len({line.item_id for line in lines}) != len(lines) or not idempotency_key:
+        raise ServiceError(Code.VALIDATION_ERROR, "A tap reserves each box once.")
+    keys = (
+        [idempotency_key]
+        if len(lines) == 1
+        else [f"{idempotency_key}:{position}" for position in range(1, len(lines) + 1)]
+    )
+    done = {
+        order.idempotency_key: order
+        for order in tx.session.execute(
+            select(Order).where(Order.client_id == client_id, Order.idempotency_key.in_(keys))
+        ).scalars()
+    }
+    if done:
+        if len(done) != len(keys):
+            raise ServiceError(
+                Code.VALIDATION_ERROR, "This tap was already used for something else."
+            )
+        return [done[key] for key in keys]
+
+    # Every item this tap may touch is locked now, in one sorted pass: the boxes themselves,
+    # and the boxes held by offers that will be withdrawn if a need gets covered.
+    request_items = [line.request_item_id for line in lines if line.request_item_id]
+    claim_ids = list(
+        tx.session.execute(
+            select(Claim.id).where(Claim.request_item_id.in_(request_items))
+        ).scalars()
+    )
+    held_by_offers = [offer.inventory_item_id for offer in open_offers(tx, claim_ids)]
+    items = lock_items(tx, [*(line.item_id for line in lines), *held_by_offers])
+    boxes, products = _guards(tx, client_id, lines, pickup_day, items)
 
     group_id = uuid.uuid4() if len(lines) > 1 else None
     orders: list[Order] = []

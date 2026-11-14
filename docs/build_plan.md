@@ -8,9 +8,9 @@ This is the one place that says **what is built, what comes next, and what was l
 
 ## In short
 
-- **Done:** steps 1 to 4: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data) and the services (everything the app does with those tables, and the worker's tasks).
-- **One question is waiting for the owner** (§5): Q4, how strict "same medicine" is. The others were answered on 2026-11-13. It has a safe default in place, and doesn't block step 5.
-- **Next:** step 5, the agent, when the owner says so.
+- **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the 17 tools, cards, guards, prompts, the models, worker turns, routing, tracing).
+- **Five questions are waiting for the owner** (§5): Q4 from the database step, and Q9 to Q12 from the agent. Each has a default in place, and none blocks step 6.
+- **Next:** step 6, the simulator and the evaluation, when the owner says so.
 - **Order:** the agent and its evaluation come before the website screens (`02` §9).
 
 ---
@@ -36,8 +36,8 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | 2 | **Domain core** | The exact rules as plain, tested Python with no database: expiry zones and prices, the expiry fit, pickup days and deadlines, request hours, the state machines, order numbers, first come first served, the multi-medicine planner (`plan_basket`), the app clock | `04` | ✅ 2026-11-10 |
 | 3 | **Database** | Every table, constraint, trigger and index; migrations; the three database roles; the catalog import and the demo seed | `05` | ✅ 2026-11-12 |
 | 4 | **Services** | Search, reserve and group reserve, [Picked up] and [Not available], claims and matching, offers, early release, sourcing requests, the notification outbox, and the worker's clock-check tasks | `04`, `05` §6 | ✅ 2026-11-12 |
-| 5 | **The agent** | The 17 tools and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ⏳ next |
-| 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | ⏳ |
+| 5 | **The agent** | The 17 tools and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ✅ 2026-11-13 |
+| 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | ⏳ next |
 | 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling, contract tests | `06`, `10` | ⏳ |
 | 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ⏳ |
 | 9 | **Hardening** | Every Failure Matrix row tested, the security tests, a load test, the accessibility passes | `09`, `10`, `11` §9 | ⏳ |
@@ -198,17 +198,63 @@ The services are the code between the rules (step 2) and the tables (step 3): ea
 
 **Docs changed:** `04` v4.5 (N-50) · `05` v3.4 (§12) · `06` v1.5 (two error codes; CSV only so far) · `09` v1.6 (29 rows marked) · the requirements checklist (T-6, T-8 and T-14 are under way) · `10` v1.4 (what an email holds) · `12` v2.2 (mailpit and the email settings) · decision log (BLD-D5) · the root README.
 
+### Step 5: the agent (2026-11-13) ✅
+
+One agent, two modes, one graph. Everything the model can do goes through the services of step 4, so a tool and a tap can't disagree. There is still no website or endpoint: the API (step 7) will call the same turn function, and until then a terminal command talks to the agent.
+
+| # | Slice | Status |
+|---|---|---|
+| A0 | Foundations: the libraries, the settings, the numbers, the third migration, tests that can't reach a paid service | ✅ |
+| A1 | One turn: the lease, the context, the tool loop and its limits, the save; `agent_runs` and `agent_tool_calls` | ✅ |
+| A2 | Guards: redaction, the injection flag, the clinical check, the reply check with one repair then our own text | ✅ |
+| A3 | Cards: stored proposals, the shared reservation checks, what a tap does for every kind | ✅ |
+| A4 | The 17 tools and `reply`, each with its own input and output model | ✅ |
+| A5 | Limits: budgets, global spend caps, the circuit breaker, retries, the time limits | ✅ |
+| A6 | Worker turns: events, thread messages, the window check, follow-ups, retries, the hand-over to a person | ✅ |
+| A7 | Models: scripted (tests), Claude (Anthropic's SDK), Ollama (spare); road times from OpenRouteService; tracing | ✅ |
+| A8 | Prompts v1.0; the terminal chat command; tried on the local model, then on Claude Haiku 5.5 | ✅ |
+| A9 | The privacy scan over all 17 tools, the agent's race tests, docs | ✅ |
+
+**What exists:** `backend/src/dawalink/agent/` and four new services (`proposals`, `conversations`, `escalations`, `planning`), plus `routing.py` and `ops/chat.py`. The table of what is where is in `07` §14.1.
+
+**Also changed:**
+- the third migration: `agent_runs` gets `llm_calls`, `tokens_cached`, `guardrails`, `redactions`; `chat_messages` gets `client_message_id` and `quick_replies` (`05` §12);
+- `orders.check_reservable`: the reservation's checks, taken out of `reserve` so that a proposal tool and a tap run the same code;
+- `travel.py`: one request to the routing service for every (origin, pharmacy) pair, and the legs between pharmacies for multi-stop plans;
+- `docker-compose.yml` and `.env.example`: the agent's settings. `LLM_PROVIDER` defaults to `none`, so nothing is spent by accident;
+- the worker runs agent turns in their own loop, beside the clock check;
+- the demo clients have invented names a person could have, instead of "Demo Client 01".
+
+**Decided for this step (Claude):** see the decision log, BLD-D10. In short: our own model interface instead of LangChain chat models; a turn is several short transactions; a turn re-checks under its lease that it is still wanted and remembers the last message it read; one medicine per search; opening hours for each pickup day in every option.
+
+**Decided by the owner (2026-11-13):** development uses Claude Haiku 5.5 instead of the local model, capped at $3 (BLD-D11).
+
+**Checks:**
+- 1,146 backend tests pass (unit 534, database 201, services 251, races 18, API 13, security 4, failure 2, agent 123); 94% of the code is covered; `ruff` and `mypy` are clean. The website is unchanged.
+- **No test can reach a paid service.** The keys are removed before the settings are read, and the setup refuses to build a real model, routing service or tracer under `app_env = "test"`.
+- **The privacy scan:** a scripted model uses all 17 tools across a chat and a request. Everything it was sent is searched for the client's name, email and phone, a pharmacy's address, phone and licence, any coordinate and private stock. Nothing is found; every call succeeds.
+- **Races with two real connections:** two turns at once on one conversation (one runs); an event at the moment a turn is saved (it keeps its turn); a double tap on a card (one reservation).
+- **The routing service, live:** one call with public places in Beirut gave plausible distances and times (Hamra to Achrafieh 4.6 km, Hamra to Tripoli 86 km), which confirms the coordinate order. Its car times have no traffic in them, so they are optimistic in Beirut (6 minutes for Hamra to Achrafieh).
+- **In Docker**, from rebuilt images: the worker starts with the assistant off and says so; the prompt files are inside the image.
+
+**What a real model showed** (`07` §14.4):
+- The local model called tools, but couldn't follow the prompt. The guards caught its replies, so the plumbing is proven and nothing more.
+- **Claude Haiku 5.5: 27 turns on demo data for $0.044.** About 8 s and $0.0016 a turn; 64 tool calls, none refused. It handled the worked turns of `07` §12: an ambiguous name, a budget and "no car" in Arabizi, a use no box could cover, a clinical question, an injection attempt, "put me first", a three-medicine plan, a whole sourcing request reported medicine by medicine, a box marked not available, the window check, a cancellation.
+- This is a first look, not the evaluation (step 6).
+
+**Docs changed:** `07` v1.5 (§14 "As built") · `02` v3.4 · `04` v4.7 (R-AS, N-51) · `05` v3.5 · `06` v1.6 · `09` v1.7 (26 rows marked, FA-28 to FA-30 added) · `10` v1.5 (what leaves, as tested; TH-56) · `12` v2.3 · decision log (BLD-D10, BLD-D11) · the requirements checklist · the root README.
+
 ---
 
 ## 4. Left for a later step
 
 | What | Joins in |
 |---|---|
-| **Road travel times from OpenRouteService:** the adapter, its fake and the rest of FX-18. Until then every travel time is the straight-line estimate ("about N min"). **Needs a free OpenRouteService API key from the owner.** | Step 5, with the agent's tools |
-| Running an agent turn for a decision event: the services only store the event and mark the conversation (`pending_turn_at`) | Step 5 |
-| Executing a proposal (the tap on an agent's card), and the retry schedule of agent turns (SM-12) | Step 5 |
-| The escalation, answer-report and abuse-flag actions (SM-9 to SM-11); only the no-show abuse flag is raised so far | Steps 5 and 7, with what uses them |
-| The agent's tools take `pickup_day`; the context lists the upcoming days; hard rule 11 (`07` v1.4) | Step 5 |
+| The answer report (👎), and the admin's side of an escalation and of an abuse flag (reply, resolve, dismiss). The agent's side is built: `escalate`, and the flag for repeated injection attempts. | Step 7, with their endpoints |
+| The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
+| **Langfuse, for real.** The adapter has only run against a stand-in for the Langfuse client. It needs the owner's Langfuse keys to be tried; without them, turns are recorded in our own tables. | When the keys arrive |
+| The agent's quality on Claude, measured: understanding, decisions, safety, cost, and the choice of model (O1). Step 5 only looked at 27 turns. | Step 6 |
+| Comparing a few road times with Google Maps by hand, for the demo pharmacies. The routing service's car times have no traffic in them. | Before the demo |
 | Admin actions: approving, rejecting and suspending a pharmacy, suspending a client, and what they end (FR-22, FR-23); contesting a no-show (R-N3) | Step 7, with their endpoints |
 | XLSX inventory files (CSV works) | Step 7, with the upload endpoint |
 | The demo clock's admin endpoint (the service that moves the clock exists) | Step 7 |
@@ -249,6 +295,21 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | The upload summary used other field names than `06`. | Aligned with `06` (`zeroed`, `reserved_kept`). |
 | `06` and N-15 say uploads are CSV or XLSX. | Only CSV is built; XLSX joins with the endpoint (§4). |
 | Can one need really have two offers at once (R-W3)? | Yes, but only one from matching and one from early release: a second pharmacy that accepts an ask is thanked, and nothing is held. A race test accepts both offers at the same moment: one wins, the other box goes back. |
+| **Step 5.** `07` says that after 6 tool calls the model "may only call `reply`". Newer Claude models reject a forced tool choice. | The model is then given only the `reply` tool. A test checks it. |
+| The reservation's checks were private to `reserve`. A proposal tool would have needed a copy, and a copy can drift. | `orders.check_reservable`: one function for the tap (under locks) and the tool (without). |
+| The pharmacy record the search returns holds its **address**, which the pharmacy typed. | Every tool has its own output model, so only chosen fields reach the model. The privacy scan searches everything the model was sent. |
+| An option gave one closing time. Demo pharmacies close at 13:00 and open again at 16:00, so Claude told a client who finishes work at 17:00 that the pharmacy "closes at 13:00". | Each option lists the pharmacy's hours for every pickup day. Claude then answered "open from 16:00 to 20:00, so you can pick it up after work". |
+| `agent_runs` had nowhere to keep which guards fired, and `chat_messages` nowhere to keep the website's message ID or the chips. | The third migration (`05` §12). |
+| **An event that arrives while a turn is running** was stored before the agent's reply, so the next turn saw nothing new and did nothing. | Each turn remembers the last message it read. A test and a race with two connections cover it. |
+| The worker reads its list of waiting turns, then takes the lease. If another turn answered in between, the same event got a second paid turn and a second reply. | Under the lease, a turn checks again that it is still wanted. |
+| A model's safety refusal was to be treated as a failed call. Three of them would have opened the circuit breaker **for everyone**. | A refusal sends our neutral text and doesn't touch the breaker (Q10). |
+| Redacting the agent's own reply with the client's name turned "Sidon Pharmacy A (demo)" into "([name])" for a client called "Demo Client". | The reply isn't searched for the client's name: the model never had it. The demo clients got ordinary names. |
+| A medicine typed in Arabic script wasn't found: the catalog is in Latin letters. | The prompt says to search the Latin spelling, try a second spelling, and never pick another brand in its place. |
+| The local model copied the prompt's examples, written like calls, into its reply as text. | The examples are now told in words, and a new guard catches a reply that shows tool names, IDs or JSON. |
+| Ollama's context size: the default cuts a long prompt from the front without a word, and 16,000 tokens spilled to the CPU (15 times slower). | Set to 12,288: it fits the laptop's 8 GB card. |
+| OpenRouteService moved to `api.heigit.org`; the old address is being switched off this month. | Built against the new address, and tried live once. |
+| Once real keys were in `.env`, a test could have reached a paid service. | The keys are removed before the settings are read, and the setup refuses real services in tests. |
+| The daily token budget was a placeholder of 200,000. A real turn reads about 33,000 tokens, most of them cached. | 6 turns a day would have been the limit. Now 3,000,000 (Q9). |
 | **Is the controlled list right?** It was built from the international lists, not from a list of the Ministry's own. | Checked on the real catalog (2026-11-13). No visible product holds a substance of the international narcotic or psychotropic lists, and every product has an ATC code and its ingredients, so none escapes the check. About 9 products are hidden although not controlled (atomoxetine, one bupropion with naltrexone): their class is hidden as a whole. Not on those lists and left visible: gabapentin, pseudoephedrine, dextromethorphan, muscle relaxants, trihexyphenidyl. |
 
 ### Decided
@@ -265,11 +326,15 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 
 ### Waiting for a decision
 
-None of these blocks step 5. Each has a safe default in place.
+None of these blocks step 6. Each has a default in place.
 
 | # | Question | What is in place now | Recommendation |
 |---|---|---|---|
 | Q4 | **Is "amlodipine besylate 5 mg" the same medicine as "amlodipine 5 mg"?** | No: an ingredient keeps its salt as the Ministry writes it, so these are not offered as alternatives of each other. 3,405 of 5,628 products still have at least one alternative. | Keep it strict. **The owner will decide later** (2026-11-13), and may also remove alternatives from the agent, leaving them to the pharmacist. Until then they are built as designed: removing them later means dropping one tool and one prompt rule. |
+| Q9 | **The daily token budget per client** (R-AS). It was a placeholder of 200,000 until something was measured. | 3,000,000 tokens a day, counting cached tokens too: about 100 turns, the same as the daily message limit. On Claude Haiku that is about $0.15 a day for one client at most; the global daily cap still applies. | Keep 3,000,000. Look at it again after the evaluation picks the model: on a dearer model the same tokens cost more. |
+| Q10 | **When the model's own safety system declines to answer** (rare; none in 27 turns). `07` said: treat it as a failure, so the client sees "Assistant unavailable". | The client sees "Sorry, I couldn't answer that. Could you say it another way?", and the failure isn't counted towards switching the assistant off for everyone. | Keep it. Otherwise three such messages from one client would put every client in "use Search" mode for two minutes. |
+| Q11 | **A client whose location isn't known says "I'm in Hamra".** The agent has no tool to set an area: it can only ask them to tap "Use my location" or to choose a district in their profile. | The agent asks. | Keep it for now. On the website the location is one tap, and a tool that sets an area from chat text is one more thing to get right. Decide when the website exists (step 8). |
+| Q12 | **The Arabic and Arabizi wording of our own texts** (the refusal, the emergency text, "assistant unavailable"...). I wrote them; you speak the language. | In `backend/src/dawalink/agent/templates.py`, in English, Arabic and Arabizi. | Read the six texts and change what sounds wrong. |
 
 ---
 
@@ -278,6 +343,9 @@ None of these blocks step 5. Each has a safe default in place.
 - **Docker Desktop** may be off after a restart: start it first.
 - **The database has four logins.** `.env` holds their four addresses; `.env.example` shows them. If your `.env` is older than 2026-11-12, copy the new lines from `.env.example`.
 - **The Ministry's files** live in `backend/data/moph/` and are ignored by git. A teammate gets them with the commands in the root README.
+- **The outside keys** are in the owner's `.env` since 2026-11-13: `ORS_API_KEY` (OpenRouteService, now served from `api.heigit.org`) and `ANTHROPIC_API_KEY`. The Langfuse keys are still to come. **`.env` also needs the model's settings** (`LLM_PROVIDER`, `LLM_MODEL`, `LLM_MONTHLY_BUDGET_USD`): copy them from `.env.example`.
+- **One Claude budget until the demo.** The $100 credit renews on 2026-12-09, after the demo (2026-11-30). Development, the whole evaluation and the demo share it, so every paid run gets a cost estimate first, and part of the credit is kept for the demo. Spent so far: $0.044 (27 development turns on Claude Haiku 5.5).
+- **Talking to the agent:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"`. `--new` starts a new chat, `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step, `--at` sets the time.
 
 - A Windows PostgreSQL service holds port 5432, so the project's database is at `127.0.0.1:5433`.
 - Use `127.0.0.1` for the database, not `localhost`: `localhost` tries IPv6 first here and waits for seconds.

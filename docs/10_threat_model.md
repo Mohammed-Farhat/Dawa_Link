@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.4 (v1.4 confirms what an email holds, §4.3) · **Date:** 2026-11-12
+**Version:** v1.5 (v1.5: what the agent sends out, as built and tested in step 5) · **Date:** 2026-11-13
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
@@ -178,9 +178,9 @@ flowchart LR
 
 | Third party | Why | Receives | Never receives |
 |---|---|---|---|
-| **Anthropic, the LLM provider** (evaluation and demo; **nothing leaves** with the local model in development) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text; private inventory; anything that identifies the client |
+| **Anthropic, the LLM provider** (development, evaluation and demo, since BLD-D11; development and tests use **invented demo data only**) | The agent | Redacted messages; case state; tool results: product names, **pharmacy names and areas**, opening hours, minutes by car and on foot, prices, expiry dates | Names, emails, phones; **coordinates**; pharmacy free text (address, phone, licence); private inventory; anything that identifies the client. **Tested:** `tests/agent/test_privacy.py` runs all 17 tools and searches everything the model was sent. |
 | **Langfuse Cloud** | Traces | What the LLM saw, plus metrics. A masking hook runs again before sending. | The same as the LLM |
-| **OpenRouteService** | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key | **Who** the client is: no account, no session, no name |
+| **OpenRouteService** (served from `api.heigit.org` since November 2026) | Travel times | The client's **rounded point** (~100 m) and the pharmacies' pins, with our API key, in one matrix request | **Who** the client is: no account, no session, no name, no conversation or request ID. **Tested:** `tests/unit/agent/test_models.py` checks the request holds points and nothing else; its errors never quote a location. |
 | **AWS SES** (in development: a mail catcher on the laptop, so nothing leaves it) | Emails | The recipient's email address and the template text: order or request number, medicine, packs, price, pharmacy name, pick-up or answer time. Only the client's "Reserved" email also has the pharmacy's address and that day's opening hours. *(confirmed as built, step 4)* | Chat content; the client's name, phone or location; to a pharmacy, anything about who the client is |
 | **The Ministry of Public Health's website** (from the owner's laptop only, when the catalog is rebuilt; the running app never calls it) | The price list and the drug database pages | Plain requests for public pages | Anything about a user |
 | **OpenStreetMap tiles** (fetched by the browser, not our server) | The map | The viewer's IP address and the map area shown | Anything from our server |
@@ -301,6 +301,7 @@ flowchart LR
 | TH-53 | **(D)** **Burning the routing or email quota** (many location changes; repeated verification emails) | M | Travel times cached per rounded point for 24 h; **≤ 10 location updates per hour** per client; the straight-line fallback (FX-18); verification resend ≤ 1/min and ≤ 5/day; the "already registered" email ≤ 1 per address per day (TM-D6, TM-D7) | `security` | L |
 | TH-54 | **(D)** **Flooding** the API or the chat | M | Rate limits (`06` §4); CloudFront with AWS Shield Standard (free); **no WAF** (it costs money) | `security` (FS-3) | **RR-6** |
 | TH-55 | **(D)** An event storm or many claims slowing the worker | L | Coalesced agent turns (FM-D5); per-client limits; at most 50 rows per clock-check query | `agent` (FA-20) | L |
+| TH-56 | **(D)** **Switching the assistant off for everyone** by sending messages the model's safety system refuses, so that the circuit breaker opens | M | A refusal is not a provider failure: the client gets our neutral text and the breaker is not touched (`07` §14.3) | `agent` (FA-29) | L |
 
 ---
 

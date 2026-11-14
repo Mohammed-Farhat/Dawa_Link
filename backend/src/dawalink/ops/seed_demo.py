@@ -44,6 +44,16 @@ PHARMACIES_PER_DISTRICT = (
     ("Keserwan", 1),
 )
 CLIENT_DISTRICTS = ("Beirut", "Beirut", "Matn", "Baabda", "Tripoli", "Sidon")
+# Invented names, one per demo client. Real-looking on purpose: the agent's redaction is
+# tried against names a person could have.
+CLIENT_NAMES = (
+    "Rami Haddad",
+    "Maya Khoury",
+    "Karim Saade",
+    "Lina Mansour",
+    "Ziad Nassar",
+    "Hala Abboud",
+)
 ITEMS_PER_PHARMACY = 60
 ALL_WEEK = range(7)
 MONDAY_TO_SATURDAY = range(6)
@@ -156,7 +166,7 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
                 "email": f"client{index:02d}@demo.dawalink.test",
                 "password_hash": NO_PASSWORD,
                 "role": "client",
-                "full_name": f"Demo Client {index:02d}",
+                "full_name": CLIENT_NAMES[index - 1],
                 "email_verified_at": now,
             }
         )

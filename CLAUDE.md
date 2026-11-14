@@ -41,13 +41,13 @@ You are the owner and long-term maintainer of this codebase, and its design is u
 
 ## 2. Where we are
 
-The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-12:
+The status column in [docs/README.md](docs/README.md) is the source of truth for the plan, and [docs/build_plan.md](docs/build_plan.md) for the build: read it at the start of every session, and update it at the end of every build step. As of 2026-11-13:
 
 - **Planning steps 00–12 are all validated** (decision log sections A–W). **Current versions:**
-  - `01` v5.3 · `02` v3.3 · `03` v4.5 · `04` v4.6 · `05` v3.4 (the schema as built);
-  - `06` v1.5 · `07` v1.4 · `08` v1.3;
-  - `09` v1.6 (living: every change updates it) · `10` v1.4 (threat model; living: a change that adds an attack surface updates it);
-  - `12` v2.2 (infrastructure and deployment);
+  - `01` v5.3 · `02` v3.4 · `03` v4.5 · `04` v4.7 · `05` v3.5 (the schema as built);
+  - `06` v1.6 · `07` v1.5 (§14: the agent as built) · `08` v1.3;
+  - `09` v1.7 (living: every change updates it) · `10` v1.5 (threat model; living: a change that adds an attack surface updates it);
+  - `12` v2.3 (infrastructure and deployment);
   - `11` v1.4 (UI design) + the **v2 design canvas**, the visual reference: https://claude.ai/artifact/1pEPY1g3zNtYZX3Sbzv3mx (the user's private artifact; read it with the Artifact tool). The v1 canvas is kept as history: https://claude.ai/artifact/HYBxFhP96TUvhi1V9cCDLG;
   - ADR-001–004.
 - **History of the big changes:**
@@ -74,18 +74,21 @@ The status column in [docs/README.md](docs/README.md) is the source of truth for
     - the catalog is the Ministry's price list joined with its drug database pages; the Ministry's files stay outside git, in `backend/data/moph/` (BLD-D3, 2026-11-12).
 - **The professor's guidance (2026-10-20) is applied** across 01–09 (decision log §S, [ADR-004](docs/adr/ADR-004-agent-decides-the-pharmacy.md)): the agent decides the pharmacy; real locations and road travel times; the expiry fit (days of use + pickup day); no fixed minimum before expiry.
 - **Planning is finished, and the build started on 2026-11-10.** Order: build → test → evaluate → switch to Cognito → deploy → report and demo.
-- **Built so far:** steps 1 to 4 of 12:
+- **Built so far:** steps 1 to 5 of 12:
   - the code skeleton and the domain core (2026-11-10; `backend/src/dawalink/domain/`: the rules of `04` as plain, tested Python);
   - the database (2026-11-12): the 34 tables and the first migration, four database logins, the catalog import (5,628 real medicines) and the demo seed. `05` §12 lists what changed while building;
   - the services (2026-11-12; `backend/src/dawalink/services/`): search, reserve and group reserve, the counter, watches and matching, offers, early release, sourcing requests, inventory and CSV uploads, the worker's clock-check tasks, email sending (caught locally by mailpit) and the daily purge. The second migration. Race tests with two real connections in `backend/tests/races/`.
+  - the agent (2026-11-13; `backend/src/dawalink/agent/`): the turn graph, the 17 tools and `reply`, cards and what a tap does, the guards, the prompts (v1.0), the models (scripted for tests, Claude, Ollama as a spare), worker turns, road times from OpenRouteService, tracing. The third migration. `07` §14 says what is where and what changed while building. Talk to it with `python -m dawalink.ops.chat`.
 
   The steps, their order and the log are in [docs/build_plan.md](docs/build_plan.md).
-- **Next: step 5, the agent** (the 17 tools and `reply`, proposals, the turn graph, guards, prompts, the models, turns in the worker, tracing). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
+- **Next: step 6, the simulator and the evaluation** (the simulated world and client, the three contenders, suites E1–E6, the development datasets, results). ⚠️ **One build step at a time: don't start the next one until the user says to.** The user checks each step, then commits and pushes it themselves.
 - **Open items:**
   - O1: which Claude model (chosen by measurement; the provider is settled: Anthropic's Claude API);
   - O7: the no-prescription list stays empty for now (the owner's choice), so every product shows the prescription notice. A short true list may be added before the demo;
-  - Q4 in [docs/build_plan.md](docs/build_plan.md) §5 (how strict "same medicine" is). The owner will decide later, and may also remove alternatives from the agent. Until then they are built as designed;
+  - Q4 and Q9 to Q12 in [docs/build_plan.md](docs/build_plan.md) §5, each with a default in place: how strict "same medicine" is (the owner may also remove alternatives from the agent); the daily token budget; what a client sees when the model declines to answer; setting an area from chat text; the Arabic and Arabizi wording of our own texts;
   - routing: OpenRouteService first; the owner may switch to Google Maps later (BLD-D9: Google's terms restrict storing travel times, to settle before switching);
+  - the Langfuse keys: the tracing adapter has only run against a stand-in until they arrive;
+  - **the Claude credit:** $100 until 2026-12-09, which is after the demo. One budget for development (capped at $3), the evaluation and the demo. **Give a cost estimate and get the user's ok before every paid run.** Spent so far: $0.044;
   - TM-D10, end-of-project hygiene (scan evidence before export, push protection, backup retention, delete everything after the demo): **postponed to the end** by the user. Don't raise it before then.
 - **Who does what:**
   - Mohammed and Claude write and label the ~300-request understanding set and the ~120-request safety set;
@@ -190,14 +193,15 @@ The details are in the linked docs. If a request or code change would break one 
 - **Frontend:** React + TypeScript, Mantine.
 - **Hosting:** AWS Ireland, set up by hand: ECS Fargate (regular, public subnets), a public ALB, two CloudFronts (website on S3, API on the ALB), RDS, SES.
 - **LLM by stage:**
-  - a fake scripted LLM in tests;
-  - Ollama `qwen2.5:7b` for development;
+  - a scripted model in tests (no test can reach a paid service);
+  - Claude Haiku 5.5 for development (decision log BLD-D11). Ollama `qwen2.5:7b` is a free spare for when there is no network: it is too small to judge the agent;
   - a Claude model through Anthropic's API, chosen by measurement, for evaluation and the demo, paid by API credits from Mohammed's Max plan ($100 per billing cycle, no rollover).
 - **Commands** (the full list is in the root [README.md](README.md)):
   - everything: `docker compose up --build` (website http://localhost:5173, API http://localhost:8000);
   - backend, inside `backend/`: `uv run --env-file ../.env pytest` · `uv run ruff check .` · `uv run ruff format .` · `uv run mypy`;
   - the database, inside `backend/`: `uv run --env-file ../.env python -m dawalink.ops.prepare_db` (logins, migrations, privileges, reference data, catalog, demo data);
   - the catalog, inside `backend/`: `uv run python -m dawalink.ops.fetch_moph --date <list date>`, then `uv run python -m dawalink.ops.build_catalog`;
+  - the agent, inside `backend/`: `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` writes as a demo client (`--new`, `--tap 1`, `--work`, `--request`, `--steps`, `--at 2026-11-16T10:00`). It uses the model named by `LLM_PROVIDER` and `LLM_MODEL`, so with `anthropic` it spends credit;
   - after a schema change: `uv run --env-file ../.env alembic revision --autogenerate -m "..."` with `DATABASE_URL` set to the migrator address, then add functions and triggers by hand and run the tests;
   - after an API change: `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json`, then `npm run gen:api` inside `frontend/`;
   - website, inside `frontend/`: `npm test` · `npm run lint` · `npm run typecheck` · `npm run build`.
@@ -205,7 +209,9 @@ The details are in the linked docs. If a request or code change would break one 
 ## 7. Environment notes
 
 - **Machine:** Windows 11. PowerShell is the main shell; Git Bash is also available.
-- **Local LLM:** Ollama 0.40.3 on an RTX 3070 Laptop (8 GB VRAM, 16 GB RAM).
+- **Local LLM:** Ollama on an RTX 3070 Laptop (8 GB VRAM, 16 GB RAM). A spare only; its context is set to 12,288 tokens, which still fits the card.
+- **Paid keys:** `.env` holds `ANTHROPIC_API_KEY` and `ORS_API_KEY`. Never print them, and never run a paid model without the user's ok. `LLM_PROVIDER` defaults to `none`.
+- **Shell heredocs damage backslashes** (`\b` becomes a backspace character). Write any script or regular expression with the Write tool, never inside a heredoc.
 - **Local ports:** the project's PostgreSQL container is at `127.0.0.1:5433` (a Windows PostgreSQL service holds 5432). Use `127.0.0.1`, not `localhost`, for the database: `localhost` tries IPv6 first here and waits for seconds.
 - **Docker Desktop** may be off after a restart: start it before `docker compose` or the tests.
 - **Emails** sent by the local stack are caught by mailpit: http://localhost:8025.

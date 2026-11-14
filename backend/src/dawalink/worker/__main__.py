@@ -5,10 +5,13 @@ import threading
 from types import FrameType
 
 import structlog
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
+from dawalink.agent.pending import PendingTurns
+from dawalink.agent.setup import build_agent
 from dawalink.config import Settings, load_settings
 from dawalink.db.session import make_engine
+from dawalink.domain.clock import Clock
 from dawalink.observability.logging import configure_logging
 from dawalink.services.clock import AppClock
 from dawalink.services.clock_check import ClockTasks
@@ -18,11 +21,10 @@ from dawalink.worker.loop import ClockCheck, ClockTask
 log = structlog.get_logger(__name__)
 
 
-def clock_tasks(settings: Settings) -> tuple[ClockTask, ...]:
+def clock_tasks(
+    settings: Settings, sessions: sessionmaker[Session], clock: Clock
+) -> tuple[ClockTask, ...]:
     """Everything the worker does each pass, in order (docs/04 R-T10)."""
-    engine = make_engine(settings.database_url)
-    sessions = sessionmaker(engine, expire_on_commit=False)
-    clock = AppClock(engine, demo_mode=settings.demo_mode)
     retention = None
     if settings.database_retention_url:
         retention = sessionmaker(
@@ -54,9 +56,37 @@ def main() -> None:
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
 
-    tasks = clock_tasks(settings)
-    log.info("worker_started", version=settings.app_version, tasks=len(tasks))
+    engine = make_engine(settings.database_url)
+    sessions = sessionmaker(engine, expire_on_commit=False)
+    clock = AppClock(engine, demo_mode=settings.demo_mode)
+    tasks = clock_tasks(settings, sessions, clock)
+    agent = build_agent(settings, sessions, clock)
+    log.info(
+        "worker_started",
+        version=settings.app_version,
+        tasks=len(tasks),
+        agent_turns=agent is not None,
+    )
+    turns: threading.Thread | None = None
+    if agent is not None:
+        # The agent's turns run in their own loop: a model that takes a minute to
+        # answer must never delay an offer's expiry or a no-show (docs/04 SM-12).
+        pending = PendingTurns(agent)
+
+        def run_agent_turns() -> None:
+            pending.run_pending_turns()
+
+        loop = ClockCheck(
+            (run_agent_turns,),
+            settings.worker_heartbeat_file.with_name(
+                settings.worker_heartbeat_file.name + "-agent"
+            ),
+        )
+        turns = threading.Thread(target=loop.run_until, args=(stop,), name="agent-turns")
+        turns.start()
     ClockCheck(tasks, settings.worker_heartbeat_file).run_until(stop)
+    if turns is not None:
+        turns.join()
     log.info("worker_stopped")
 
 

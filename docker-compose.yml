@@ -12,6 +12,17 @@ x-backend: &backend
     WEBSITE_URL: ${WEBSITE_URL:-http://localhost:5173}
     # The app's own login: the only one the API has (docs/05 §7, docs/12 §8).
     DATABASE_URL: postgresql+psycopg://dawalink_app:${APP_DB_PASSWORD:-app-local-only}@postgres:5432/${POSTGRES_DB}
+    # The assistant. With LLM_PROVIDER unset it is off, and nothing can be spent.
+    LLM_PROVIDER: ${LLM_PROVIDER:-none}
+    LLM_MODEL: ${LLM_MODEL:-}
+    LLM_EFFORT: ${LLM_EFFORT:-medium}
+    LLM_MONTHLY_BUDGET_USD: ${LLM_MONTHLY_BUDGET_USD:-3}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ORS_API_KEY: ${ORS_API_KEY:-}
+    LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+    LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    # Ollama runs on this machine, outside Docker.
+    OLLAMA_URL: http://host.docker.internal:11434
 
 # The worker also deletes what has passed its retention time, with its own login,
 # and sends the queued emails to the local mail catcher.

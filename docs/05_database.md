@@ -1,6 +1,6 @@
 # DawaLink: Database Design
 
-**Version:** v3.4 · **Date:** 2026-11-12
+**Version:** v3.5 · **Date:** 2026-11-13
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
 **Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
@@ -702,3 +702,20 @@ The schema is the first migration, `backend/migrations/versions/20261112_1816_in
 - the daily purge runs with the retention login, and every cutoff comes from the app clock.
 
 **Tested in step 4:** the races of §10 with two real connections (`tests/races/`: the last box, a double tap, two tabs at a limit, two [Picked up] clicks, two offers for one need, two matching runs, two workers and one email; and the clock check against a tap: a no-show against [Picked up], a no-show against a new reservation of the same box, an offer expiring against accept), the clock-check tasks, the reconciliation of INV-2 and INV-18 after **every** service test and every race, cancelling open orders when a product becomes controlled, and the retention task with its real login.
+
+**Added by the agent (build step 5, the third migration):**
+
+| Table | Column | Why |
+|---|---|---|
+| `agent_runs` | `llm_calls` smallint, `tokens_cached` int | How many times the model was asked in the turn, and how many input tokens came from its prompt cache: the cost of a turn depends on both |
+| `agent_runs` | `guardrails` jsonb, `redactions` smallint | What the guards caught in the turn (a list of types: `injection`, `clinical`, `card`, `pii`, `language`, `recommended`, `internals`, `no_reply`, `model_refusal`), and how many personal details were removed from the client's message. §3.6 said these come from "outcome, events"; a turn has one outcome, so they needed columns. |
+| `chat_messages` | `client_message_id` uuid, unique with the conversation | The website chooses it for each message a client sends; the same message sent twice is stored once (`06` §6.6) |
+| `chat_messages` | `quick_replies` jsonb | The chips under an agent reply |
+
+**Stored in existing columns:**
+- `proposals.payload` also holds `card`: the title and lines the card shows, written by code when the tool creates it, plus `recommended` and `prescription_notice`. A card is rendered from this and nothing else (R-AG7).
+- `conversations.case_state` also holds `read_up_to` (the last message the previous turn read) and `followups_used`. Code writes them; the model is not shown them.
+- `agent_runs` gets its row **when a turn starts**, with `outcome` empty, because cards and tool calls point at it. The save completes it.
+- `conversations.turn_owner` is the turn's own run ID: the save is refused unless that turn still holds the lease.
+
+**Tested in step 5:** the new unique rule (`tests/db/test_more_constraints.py`); two turns taking one lease, an event at the moment a turn is saved, and a double tap on a card, each with two real connections (`tests/races/test_agent_races.py`).

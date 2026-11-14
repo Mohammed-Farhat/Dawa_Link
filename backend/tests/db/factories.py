@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import Connection, insert
 
 from dawalink.db.models import (
+    AgentRun,
     CatalogImport,
     Claim,
     ClientProfile,
@@ -59,8 +60,15 @@ def user(connection: Connection, role: str = "client", **values: Any) -> uuid.UU
     return _insert(connection, User, defaults | values)  # type: ignore[no-any-return]
 
 
-def client(connection: Connection, status: str = "ACTIVE", **values: Any) -> uuid.UUID:
-    user_id = user(connection)
+def client(
+    connection: Connection,
+    status: str = "ACTIVE",
+    *,
+    person: dict[str, Any] | None = None,
+    **values: Any,
+) -> uuid.UUID:
+    """A client. `person` sets the login's own details (name, email, phone)."""
+    user_id = user(connection, **(person or {}))
     _insert(
         connection,
         ClientProfile,
@@ -220,6 +228,17 @@ def conversation(connection: Connection, **values: Any) -> uuid.UUID:
         "last_activity_at": NOW,
     }
     return _insert(connection, Conversation, defaults | values)  # type: ignore[no-any-return]
+
+
+def agent_run(connection: Connection, **values: Any) -> uuid.UUID:
+    defaults = {
+        "mode": "assistant",
+        "trigger": "client_message",
+        "model": "scripted",
+        "prompt_version": "test",
+        "started_at": NOW,
+    }
+    return _insert(connection, AgentRun, defaults | values)  # type: ignore[no-any-return]
 
 
 def early_release_request(connection: Connection, **values: Any) -> uuid.UUID:

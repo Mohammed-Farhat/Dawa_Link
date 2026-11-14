@@ -1,7 +1,6 @@
 """Catalog search, listing search and travel times (docs/04 R-S, R-F, R-RT, R-C5, R-C6)."""
 
 import uuid
-from collections.abc import Mapping
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
@@ -14,6 +13,7 @@ from dawalink.services.errors import Code, ServiceError
 from dawalink.services.search import SearchResult, search_listings
 from dawalink.services.travel import Location, district_location, shared_location
 from tests.db.factories import TODAY
+from tests.fakes import FakeRouting
 from tests.services.conftest import World
 
 HAMRA = shared_location(33.896, 35.483)
@@ -102,22 +102,6 @@ class TestCatalogSearch:
         }
 
         assert len(groups) == 2
-
-
-class FakeRouting:
-    """Stands in for the routing service."""
-
-    def __init__(self, minutes: int = 12, *, fail: bool = False) -> None:
-        self.minutes, self.fail, self.calls = minutes, fail, 0
-
-    def road_times(
-        self, origin: Point, destinations: Mapping[uuid.UUID, Point], mode: str
-    ) -> Mapping[uuid.UUID, tuple[int, float]]:
-        self.calls += 1
-        if self.fail:
-            raise TimeoutError("the routing service did not answer")
-        factor = 1 if mode == "car" else 5
-        return dict.fromkeys(destinations, (self.minutes * factor, 4.2))
 
 
 class TestTravelTimes:

@@ -243,7 +243,8 @@ class TestTheWorkerLoop:
         from dawalink.worker.__main__ import clock_tasks
         from tests.conftest import make_settings
 
-        tasks = clock_tasks(make_settings(str(world.connection.engine.url), tmp_path))
+        settings = make_settings(str(world.connection.engine.url), tmp_path)
+        tasks = clock_tasks(settings, world.sessions(), world.clock)
 
         assert [task.__name__ for task in tasks][:2] == ["expire_offers", "expire_reservations"]
 

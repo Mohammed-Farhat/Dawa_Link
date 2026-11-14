@@ -54,6 +54,7 @@ docker compose up -d postgres
 | Type check | `uv run mypy` |
 | Run the API | `uv run --env-file ../.env uvicorn dawalink.api.main:create_app --factory --reload` |
 | Run the worker | `uv run --env-file ../.env python -m dawalink.worker` |
+| Talk to the agent as a demo client (uses the model in `.env`; Claude spends credit) | `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` |
 | Prepare the database (logins, tables, catalog, demo data) | `uv run --env-file ../.env python -m dawalink.ops.prepare_db` |
 | Re-export the API description | `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json` |
 

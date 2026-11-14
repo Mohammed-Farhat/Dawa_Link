@@ -129,6 +129,13 @@ class AgentRun(Base):
     tool_calls: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
     tool_errors: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
     retries: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
+    # How many times the model was asked, and the input tokens it read from its cache.
+    llm_calls: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
+    tokens_cached: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    # What the guards caught: a list of types ("injection", "clinical", "card", ...), and
+    # how many personal details were removed from the client's message (docs/07 §7).
+    guardrails: Mapped[list[Any]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    redactions: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
     outcome: Mapped[str | None] = mapped_column(Text)
     langfuse_trace_id: Mapped[str | None] = mapped_column(Text)
 
@@ -156,6 +163,8 @@ class ChatMessage(Base):
         values_check("author", MessageAuthor),
         values_check("kind", MessageKind),
         UniqueConstraint("conversation_id", "seq"),
+        # The same message sent twice (a retry by the website) is stored once (docs/06 §6.6).
+        UniqueConstraint("conversation_id", "client_message_id"),
     )
 
     id: Mapped[BigKey]
@@ -168,6 +177,10 @@ class ChatMessage(Base):
     text_redacted: Mapped[str | None] = mapped_column(Text)
     # Proposal IDs for the agent's cards; template data for system cards.
     cards: Mapped[list[Any] | None] = mapped_column(JSONB)
+    # The chips under an agent reply: tapping one only sends its text.
+    quick_replies: Mapped[list[Any] | None] = mapped_column(JSONB)
+    # Chosen by the website for each message a client sends.
+    client_message_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     agent_run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, references("agent_runs.id"))
     created_at: Mapped[CreatedAt]
 

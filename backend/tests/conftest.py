@@ -24,6 +24,19 @@ from dawalink.domain.numbers import DB_CONNECT_TIMEOUT_S
 from dawalink.observability.logging import configure_logging
 from dawalink.ops.prepare_db import run_migrations
 
+# The developer's `.env` holds real keys for paid services. No test may ever use them:
+# they are removed before anything reads the settings, and the factories refuse every
+# provider but the fakes when `app_env` is "test" (docs/07 §11).
+for _paid in (
+    "ANTHROPIC_API_KEY",
+    "ORS_API_KEY",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    "LLM_PROVIDER",
+    "LLM_MODEL",
+):
+    os.environ.pop(_paid, None)
+
 WEBSITE = "http://localhost:5173"
 # Nothing listens on port 1, so connecting always fails: this is "the database is down".
 UNREACHABLE_DATABASE = "postgresql+psycopg://nobody:nothing@127.0.0.1:1/nowhere"

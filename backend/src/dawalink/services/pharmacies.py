@@ -69,6 +69,17 @@ def cards(
     }
 
 
+def day_hours(hours: WeeklyHours, day: date) -> str:
+    """The opening hours of one day, as "08:00-13:00, 16:00-21:00", or "closed"."""
+    ranges = hours.on(day)
+    if not ranges:
+        return "closed"
+    return ", ".join(
+        f"{r.opens // 60:02d}:{r.opens % 60:02d}-{r.closes // 60:02d}:{r.closes % 60:02d}"
+        for r in ranges
+    )
+
+
 def hours_text(tx: Tx, pharmacy_id: uuid.UUID, day: date | None) -> str | None:
     """A pharmacy's opening hours on one day, as "08:00-13:00, 16:00-21:00"."""
     if day is None:

@@ -14,7 +14,7 @@ from dawalink.db.reference import read_districts, seed_districts, seed_pricing_t
 from dawalink.domain.numbers import DISCOUNT_TIERS, NEAR_EXPIRY_MAX_DAYS
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
 from dawalink.ops.prepare_db import login_passwords, prepare
-from dawalink.ops.seed_demo import seed_demo
+from dawalink.ops.seed_demo import CLIENT_NAMES, seed_demo
 from tests.conftest import DatabaseUrls, make_settings, run_as_admin
 from tests.db import factories as make
 from tests.db.factories import NOW, TODAY
@@ -143,7 +143,9 @@ class TestDemoSeed:
 
         assert {u.password_hash for u in users} == {"!"}
         assert all(u.email.endswith("@demo.dawalink.test") for u in users)
-        assert all(u.full_name.startswith("Demo ") for u in users)
+        # Invented people: every name is ours, from the seed's own list.
+        invented = set(CLIENT_NAMES)
+        assert all(u.full_name in invented or u.full_name.startswith("Demo ") for u in users)
 
     def test_without_a_catalog_it_still_adds_the_accounts(self, db: Connection) -> None:
         db.execute(text("DELETE FROM product_ingredients"))

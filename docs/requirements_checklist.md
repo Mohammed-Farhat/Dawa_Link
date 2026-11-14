@@ -79,8 +79,8 @@ A change is committed only when **all** of the following hold:
 | T-1 | Agent core: explicit responsibilities and boundaries | One agent, two modes (assistant + sourcing); tools vs automatic code vs humans | `02` §3, `04` §7, `07` | Design | 🟡 |
 | T-2 | Tools with validated interfaces | Typed schemas for every tool (`07` §4 ✅); error codes; tests | `07`, `tests/agent/` | Design + Build | 🟡 |
 | T-3 | Memory: scope, lifetime, retrieval, privacy | Chat and request threads + case state + proposals; 30 days; loaded at each turn; PII-free | `02` §3.3, `04` R-RET, `07` | Design + Build | 🟡 |
-| T-4 | Logs and traces across model/tool interactions | Langfuse + structured logs | §1.2 above | Build | ⏳ |
-| T-5 | Metrics: end-to-end, model and tool latency, tokens, cost, task success, tool failures, retries, agent errors | `agent_runs` + Langfuse + dashboard + evaluation report | `05`, AS-10, `08` | Build + Evaluate | ⏳ |
+| T-4 | Logs and traces across model/tool interactions | Langfuse + structured logs | §1.2 above | Build | 🟡 |
+| T-5 | Metrics: end-to-end, model and tool latency, tokens, cost, task success, tool failures, retries, agent errors | `agent_runs` + Langfuse + dashboard + evaluation report | `05`, AS-10, `08` | Build + Evaluate | 🟡 |
 | T-6 | Retries, timeouts, fallbacks, schema validation, error handling, graceful degradation | Clock-check retries, LLM timeouts, degraded mode, validated tool outputs | `04` R-T10, SM-12, `01` C15, code | Build | 🟡 |
 | T-7 | Authorization, least privilege, secret management, injection defenses | Server-side sessions; role and ownership checks; client-scoped tools; **cards only from tools**; no pharmacy text to the LLM (except approved names); Secrets Manager; **admin TOTP**; threat model (`10` ✅) | `02`, `04` R-AG7/R-AG8/R-AU, `10` | Design + Build + Deploy | 🟡 |
 | T-8 | **Test beyond the happy path:** invalid/ambiguous input, API/tool failures, malformed responses, rate limits, malicious input, unauthorized actions | One test category per item (§6 below) | `tests/` | Build | 🟡 |

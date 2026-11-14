@@ -1,11 +1,12 @@
 """Every setting, read from environment variables in one place (docs/12 §2)."""
 
 import tempfile
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import ValidationError, field_validator
+from pydantic import SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +36,38 @@ class Settings(BaseSettings):
     smtp_host: str | None = None
     smtp_port: int = 1025
     email_from: str = "DawaLink <no-reply@dawalink.invalid>"
+    # Which model the agent thinks with (docs/07 §10). "none" switches the assistant off,
+    # and is the default: nothing is ever spent by accident. Tests use a scripted model
+    # they build themselves.
+    llm_provider: Literal["none", "ollama", "anthropic"] = "none"
+    # Empty: the provider's default (the local model). A Claude model is always named.
+    llm_model: str = ""
+    # How hard a Claude model thinks. Always sent, because its default differs by model.
+    llm_effort: Literal["low", "medium", "high"] = "medium"
+    ollama_url: str = "http://127.0.0.1:11434"
+    # Keys are secrets: they never appear in a log line or an error message.
+    anthropic_api_key: SecretStr | None = None
+    # The month's LLM budget in USD: the global spend caps are counted from it (N-46).
+    llm_monthly_budget_usd: Decimal = Decimal(100)
+    # Road travel times (docs/04 R-RT1). Without a key, every time is the estimate.
+    ors_api_key: SecretStr | None = None
+    ors_url: str = "https://api.heigit.org/openrouteservice"
+    # Agent traces (docs/07 §9). Without keys, turns are recorded in our own tables only.
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
+    langfuse_host: str = "https://cloud.langfuse.com"
+
+    @field_validator(
+        "anthropic_api_key",
+        "ors_api_key",
+        "langfuse_public_key",
+        "langfuse_secret_key",
+        mode="before",
+    )
+    @classmethod
+    def _an_empty_key_is_no_key(cls, value: object) -> object:
+        """`ORS_API_KEY=` in a .env file means "not set", not a key of no characters."""
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("website_url")
     @classmethod

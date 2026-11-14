@@ -70,9 +70,41 @@ CLOCK_CHECK_LATE_AFTER_S = 120  # N-21 (R-AL): the clock check counts as late af
 DB_STATEMENT_TIMEOUT_S = 5  # N-40
 DB_CONNECT_TIMEOUT_S = 2  # N-40
 HTTP_TIMEOUT_S = 10  # N-41: outbound calls that aren't the LLM (email, routing, tracing)
+# Inside an agent turn the routing service gets less: a tool must stay quick, and the
+# straight-line estimate is ready if it doesn't answer (docs/07 §8).
+ROUTING_TIMEOUT_S = 4
 # SM-12: a failed email is tried again after each of these, then given up (DEAD).
 EMAIL_RETRY_AFTER = (timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=30))
 STALE_INVENTORY_AFTER = timedelta(days=7)  # N-16
+
+# --- The agent (N-17, N-27, N-30, N-32 to N-39, N-45, N-46; docs/04 R-AS) ---
+MAX_MESSAGE_CHARS = 1_000  # N-17
+MAX_TOOL_CALLS_PER_TURN = 6  # N-17: after these, the model may only reply
+MAX_TURNS_PER_REQUEST = 20  # N-17, R-RQ10: above this, a person takes over
+# R-AS. Every token a client's turns read or write in a day, cached ones included.
+# Measured on Claude Haiku 5.5 (build step 5): a turn uses about 30,000, most of them
+# the cached prompt. This allows about 100 turns, the same as the daily message limit.
+DAILY_TOKEN_BUDGET_PER_CLIENT = 3_000_000
+TURN_LEASE = timedelta(minutes=2)  # N-27: renewed while a turn runs
+PROPOSAL_VALIDITY = timedelta(hours=2)  # N-30: a card can be tapped for this long, once
+AGENT_HISTORY_MESSAGES = 20  # N-32
+CASE_STATE_MAX_BYTES = 8_192  # N-33
+MAX_LLM_CALLS_PER_TURN = 8  # N-34: tool calls + the reply + one repair
+LLM_TIMEOUT_S = 30  # N-35
+LLM_RETRY_BACKOFF_S = (1, 3)  # N-36: two retries, on timeouts, 429 and 5xx
+TURN_TIME_LIMIT_CHAT_S = 60  # N-37
+TURN_TIME_LIMIT_WORKER_S = 90  # N-37
+# N-38: this many failed turns within the window put everyone in degraded mode for a while.
+BREAKER_FAILURES = 3
+BREAKER_WINDOW = timedelta(minutes=5)
+BREAKER_OPEN_FOR = timedelta(minutes=2)
+# SM-12: a worker turn that failed is tried again after each of these, then a person is told.
+TURN_RETRY_AFTER = (timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=15))
+FOLLOWUP_MIN = timedelta(minutes=15)  # N-39
+FOLLOWUP_MAX = timedelta(minutes=300)  # N-39
+MAX_FOLLOWUPS_PER_REQUEST = 4  # N-39
+MAX_ALTERNATIVES_RECOMMENDED = 2  # N-45: one recommendation, and up to this many others
+DAILY_SPEND_CAP_SHARE = 10  # N-46: a day may use this many % of the month's LLM budget
 
 # --- Retention (N-19, R-RET) ---
 CONVERSATION_RETENTION = timedelta(days=30)

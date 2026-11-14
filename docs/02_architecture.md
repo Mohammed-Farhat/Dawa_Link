@@ -1,6 +1,6 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.3 (v3.3 updates the repository layout in §6 to what is built) · **Date:** 2026-11-12
+**Version:** v3.4 (v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-13
 **Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 **Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
@@ -40,8 +40,8 @@ The team's strongest language is Python, and the team must be able to read, revi
 | Backend | **Python 3.12, FastAPI, Pydantic v2** | Team language; typed schemas are the API contract; OpenAPI generated automatically | NestJS (new to the team), Django (heavier) |
 | Env and packages | **uv** + lockfile | Reproducible installs | pip without a lockfile |
 | Database | **PostgreSQL 16, SQLAlchemy 2.0 (sync, psycopg 3), Alembic** | Row locks for stock; advisory locks for matching; versioned migrations | Async SQLAlchemy, MongoDB |
-| LLM by stage | **Tests:** fake, scripted LLM. **Development:** **Ollama** `qwen2.5:7b` (local). **Evaluation and demo:** Anthropic's Claude API; the model is chosen by measurement. The provider and model are config values. | $0 while building; deterministic tests | Paying for tokens from day one |
-| Agent | **LangGraph, stateless per turn** + `langchain-anthropic` / `langchain-ollama` | An explicit, traceable graph (guards, tool loop, fallback). Conversations live in our tables (ADR-001). **One agent, two modes:** assistant and sourcing (ADR-002). | Strands; LangChain alone; no framework (ADR-001 option C) |
+| LLM by stage | **Tests:** a scripted model ($0). **Development, evaluation and demo:** Anthropic's Claude API; development uses Claude Haiku 5.5, and the model for the evaluation and the demo is chosen by measurement. **Spare:** Ollama `qwen2.5:7b` (local, free), for when there is no network. The provider and model are config values. | Deterministic tests; a model good enough to judge the agent while building it (decision log BLD-D11) | The local model for development: too small to follow the prompt (`07` §14.4) |
+| Agent | **LangGraph, stateless per turn**, with our own small model interface (Anthropic's SDK for Claude; plain HTTP for Ollama) | An explicit, traceable graph (guards, tool loop, fallback). Conversations live in our tables (ADR-001). **One agent, two modes:** assistant and sourcing (ADR-002). | Strands; LangChain chat models (less control of what Claude models need, `07` §14.3); no framework (ADR-001 option C) |
 | Background work | **Worker** running one **clock check** loop (every few seconds) that reads the deadlines stored on the rows | Offer and reservation expiry, search windows, matching, agent turns for decision events, email. **No jobs table:** nothing can get stuck, and the simulation just advances the clock (`04` R-T10). | Jobs table; Celery + Redis |
 | Email | **AWS SES** via an outbox table | Retries; templates | Sending email directly from the app |
 | Frontend | **React + TypeScript (Vite), Mantine, TanStack Query, React Router**, types from OpenAPI | Role portals + a chat that renders cards + request pages | Streamlit, Next.js |
@@ -214,7 +214,8 @@ dawalink/
 │   │   ├── catalog/       # the Ministry's lists: reading, joining, "same medicine" keys, import
 │   │   ├── services/      # use cases (reservations, requests, matching, uploads…)
 │   │   ├── api/           # routers, auth (sessions), SSE, errors
-│   │   ├── agent/         # graph, tools, proposals, guards, prompts/
+│   │   ├── agent/         # the turn graph, tools/, guards/, llm/, prompts/, tracing
+│   │   ├── routing.py     # road travel times from OpenRouteService
 │   │   ├── worker/        # the clock check loop, email outbox
 │   │   ├── ops/           # one-off commands: prepare_db, fetch_moph, build_catalog,
 │   │   │                  #   import_catalog, seed_demo (create_admin comes with logins)

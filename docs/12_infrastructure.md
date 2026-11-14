@@ -1,8 +1,8 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.2 · **Date:** 2026-11-12
+**Version:** v2.3 · **Date:** 2026-11-13
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
-**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
+**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.3** (build step 5): the agent's settings, the development model (Claude, decision log BLD-D11) and the terminal chat command (§2). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
 This is the last planning step. It says **how we work, where DawaLink runs, and how it gets there**. Everything is done by hand. Nothing here has been run yet, so the first deploy is also its first test.
 
@@ -46,8 +46,12 @@ This is the last planning step. It says **how we work, where DawaLink runs, and 
   - The worker sends email to `mailpit` through `SMTP_HOST` and `SMTP_PORT`, set in `docker-compose.yml`. Without them (the tests, a worker run by hand), an email is only written to the log. The sender for SES is written with the deployment (step 11).
   - The local database is reachable at `127.0.0.1:5433`, because a locally installed PostgreSQL often holds port 5432.
 - **Mailpit** catches every email and shows it at `http://localhost:8025`.
-- **LLM:** Ollama `qwen2.5:7b`, or the fake scripted model in tests.
-- **Routing:** OpenRouteService with a personal key. With no key, travel times fall back to straight-line distance (R-RT1).
+- **LLM:** set by `LLM_PROVIDER` in `.env`. `none` (the default) switches the assistant off, so nothing is spent by accident. `anthropic` uses Claude with `LLM_MODEL` and `ANTHROPIC_API_KEY`: **development uses Claude Haiku 5.5** (decision log BLD-D11). `ollama` is a free local spare. The tests always use a scripted model and can't reach a paid service.
+  - `LLM_MONTHLY_BUDGET_USD` is the month's LLM budget; a day may use 10% of it (N-46). Keep it small while developing (the example file says 3).
+  - **Talking to the agent without a website:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` writes as a demo client; `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step of the turn.
+  - The worker runs agent turns in their own loop, beside the clock check.
+- **Traces:** Langfuse Cloud, with `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. Without them, turns are recorded in our own tables only.
+- **Routing:** OpenRouteService with a personal key (`ORS_API_KEY`; the service is at `api.heigit.org` since November 2026). With no key, travel times fall back to straight-line distance (R-RT1).
 - **Settings:** one module, `config.py`, reads environment variables. `.env.example` lists them with placeholders, and the real `.env` is never committed.
 - **Local matches AWS:** the website and the API run on different ports, so they're separate origins here too. The same login and CORS code runs in both places.
 
