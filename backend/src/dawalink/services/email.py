@@ -29,6 +29,8 @@ log = structlog.get_logger(__name__)
 
 # What each notification says. `{name}` is filled from the notification's payload.
 SUBJECTS: dict[str, str] = {
+    "CN-1": "Confirm your email for DawaLink",
+    "CN-18": "You already have a DawaLink account",
     "CN-3": "Reserved: {order_ref}",
     "CN-5": "Not available: {order_ref}",
     "CN-6": "Reminder: pick up {order_ref} today",
@@ -51,6 +53,23 @@ PRESCRIPTION_NOTICE = "Prescription needed: bring it to the pharmacy."
 # An order that has ended has no pickup time left to show.
 ENDED = frozenset({"CN-5", "CN-7", "CN-12", "PN-8"})
 FALLBACK_SUBJECT = "A message from DawaLink"
+# The two account emails say something of their own, and hold the only links we send
+# besides "open DawaLink" (docs/04 R-AU4, R-AU7). `{link}` is added when the email is
+# written: a confirmation link's token is made at that moment and never stored.
+ACCOUNT_EMAILS: dict[str, tuple[str, str]] = {
+    "CN-1": (
+        "Welcome to DawaLink. Open this link to confirm your email address. It also logs "
+        "you in, and it works once, for 24 hours:\n\n{link}\n\n"
+        "If you didn't create a DawaLink account, ignore this email.",
+        "/verify-email?token={token}",
+    ),
+    "CN-18": (
+        "Someone tried to create a DawaLink account with this email address. You already "
+        "have one: just log in.\n\n{link}\n\n"
+        "If that wasn't you, there is nothing to do.",
+        "/login",
+    ),
+}
 
 
 class MailServerDown(Exception):
@@ -170,7 +189,20 @@ def display_rate(tx: Tx) -> Decimal | None:
     ).scalar()
 
 
-def send_one(tx: Tx, sender: EmailSender, outbox_id: int) -> Outcome:
+def _account_email(tx: Tx, email: EmailOutbox, website_url: str) -> tuple[str, str]:
+    """A confirmation or "you already have an account" email, with its link."""
+    # Imported here: the login module queues emails, and this one writes its links.
+    from dawalink.services import auth
+
+    words, path = ACCOUNT_EMAILS[email.template]
+    token = auth.new_verification_token(tx, email.user_id) if "{token}" in path else ""
+    link = website_url.rstrip("/") + path.format(token=token)
+    subject = SUBJECTS[email.template]
+    body = "\n\n".join((subject, words.format(link=link), "This email was sent automatically."))
+    return subject, body
+
+
+def send_one(tx: Tx, sender: EmailSender, outbox_id: int, website_url: str = "") -> Outcome:
     """Sends one queued email and records what happened.
 
     The outbox row stays locked while the email is sent, so two workers never send the
@@ -191,7 +223,10 @@ def send_one(tx: Tx, sender: EmailSender, outbox_id: int) -> Outcome:
         address = tx.session.execute(
             select(User.email).where(User.id == email.user_id)
         ).scalar_one()
-        subject, body = render(email.template, email.params, display_rate(tx))
+        if email.template in ACCOUNT_EMAILS:
+            subject, body = _account_email(tx, email, website_url)
+        else:
+            subject, body = render(email.template, email.params, display_rate(tx))
         sender.send(address, subject, body)
     except Exception as error:
         down = isinstance(error, MailServerDown)

@@ -280,7 +280,9 @@ class TestRender:
         assert subject == "A message from DawaLink"
 
     def test_every_template_has_a_subject(self) -> None:
-        assert {template.value for template in Template} == set(email.SUBJECTS)
+        # Every notification, and the two account emails (docs/04 R-AU4, R-AU7).
+        named = {template.value for template in Template} | set(email.ACCOUNT_EMAILS)
+        assert named == set(email.SUBJECTS)
 
 
 class TestSmtpSender:

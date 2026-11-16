@@ -39,15 +39,15 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.5 |
 | 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.6 |
 | 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.13 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v5.6 |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v5.7 |
 | 05 | [Database design](05_database.md) | ER diagram, 35 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.8 |
-| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components | ✅ v1.10 |
+| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components; the API as built (§12) | ✅ v1.14 |
 | 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 19 tools + reply, prompts, memory, guardrails, limits, observability; the agent as built | ✅ v1.16 |
 | 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E7 (understanding, 3-contender simulation, ablations, safety, models, constraints, conversations with a played client), targets, statistics, regular checks | ✅ v1.9 |
-| 09 | [Failure Matrix](09_failure_matrix.md) | 141 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.15 (living) |
-| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 59 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.8 (living) |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 141 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.19 (living) |
+| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 59 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.9 (living) |
 | 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.7 |
-| 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.4 |
+| 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.5 |
 
 **Supporting folders:**
 - [`adr/`](adr/): decisions with the options compared (ADR-001–003, amended by review #2; ADR-004 from the professor's guidance, amended by the threat model).

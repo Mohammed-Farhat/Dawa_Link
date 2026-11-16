@@ -50,12 +50,15 @@ class ClockTasks:
         clock: Clock,
         *,
         mailer: email.EmailSender | None = None,
+        website_url: str = "",
         retention_sessions: sessionmaker[Session] | None = None,
         batch: int = BATCH,
     ) -> None:
         self._sessions = sessions
         self._clock = clock
         self._mailer = mailer or email.LogSender()
+        # Where the links of the account emails lead.
+        self._website_url = website_url
         # The login that may delete old rows. Without it, the purge is skipped.
         self._retention_sessions = retention_sessions
         self._batch = batch
@@ -219,7 +222,7 @@ class ClockTasks:
         sent = 0
         for outbox_id in due:
             with unit_of_work(self._sessions, self._clock) as tx:
-                outcome = email.send_one(tx, self._mailer, outbox_id)
+                outcome = email.send_one(tx, self._mailer, outbox_id, self._website_url)
             if outcome is email.Outcome.SERVER_DOWN:
                 break
             if outcome is email.Outcome.SENT:

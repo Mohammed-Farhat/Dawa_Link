@@ -4,6 +4,335 @@
  */
 
 export interface paths {
+    "/api/v1/admin/demo-clock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Demo Clock */
+        get: operations["read_demo_clock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/demo-clock/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance Demo Clock
+         * @description Moves the app's time forward, to show time-based behavior live: an offer expiring,
+         *     the one-hour-left check, a no-show. **Demo mode only**, and every move is audited
+         *     (R-DEMO). Logins are counted in real time, so nobody is logged out by it.
+         */
+        post: operations["advance_demo_clock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Me */
+        get: operations["read_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Password */
+        post: operations["change_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Client
+         * @description Always "check your email", whether or not the address already has an account
+         *     (R-AU7): nobody can find out here who uses DawaLink.
+         */
+        post: operations["register_client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email
+         * @description The link of the confirmation email. It also logs the user in (R-AU4).
+         */
+        post: operations["verify_email"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Verification */
+        post: operations["resend_verification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find Products
+         * @description Medicines whose name or ingredient looks like `q`. Spelling mistakes are
+         *     tolerated, and **controlled medicines are never among them** (R-C6).
+         */
+        get: operations["find_products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Product */
+        get: operations["read_product"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Config */
+        get: operations["public_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/active-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active Chat
+         * @description The client's one chat, created the first time they open the assistant (D9).
+         */
+        get: operations["active_chat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/new-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New Chat
+         * @description Starts a fresh chat. The old one is archived, and kept 30 days (R-RET).
+         */
+        post: operations["new_chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Location
+         * @description Where the agent's tools count travel times from in this chat. The point is rounded
+         *     before it is stored, and it is never part of what the AI reads (INV-24).
+         */
+        put: operations["set_location"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Messages
+         * @description The messages after `after_seq`, oldest first. With `after_seq=0`, the newest ones.
+         *
+         *     This is what an open chat or request page asks for every few seconds (API-D7).
+         */
+        get: operations["read_messages"];
+        put?: never;
+        /**
+         * Send Message
+         * @description A client's message.
+         *
+         *     - **In the chat** the answer comes back at once as a stream of events (`200`,
+         *       `text/event-stream`): progress lines, then the complete, checked reply.
+         *     - **In a request's thread** the answer is `202`: the worker runs the agent's turn,
+         *       and the page sees the reply by polling.
+         */
+        post: operations["send_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Districts */
+        get: operations["districts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -27,10 +356,731 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/listings/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Listings
+         * @description The visible boxes of one medicine, **and only of that medicine**: search never
+         *     shows another brand (R-S4).
+         *
+         *     With `days_of_use`, boxes that don't last are left out. With `pickup_day`, only
+         *     pharmacies that accept that day are shown, and the fit is counted from it.
+         */
+        post: operations["search_listings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/listings/{listing_id}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * View Listing
+         * @description One box and its pharmacy, for their own page (CS-7). A box that stopped being
+         *     visible answers `NOT_FOUND`.
+         */
+        post: operations["view_listing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Profile */
+        get: operations["read_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change Profile
+         * @description Only what was sent changes (CS-13). An empty phone removes it.
+         */
+        patch: operations["change_profile"];
+        trace?: never;
+    };
+    "/api/v1/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Offers
+         * @description The offers waiting for the client's answer, the one that ends soonest first.
+         */
+        get: operations["list_offers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offers/{offer_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Offer
+         * @description The offer becomes a reservation; the need's other offers are withdrawn at once
+         *     (O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once.
+         */
+        post: operations["accept_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offers/{offer_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline Offer
+         * @description "No thanks": the box goes to the next client who waits for it (O10).
+         */
+        post: operations["decline_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pharmacy Dashboard */
+        get: operations["pharmacy_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/early-release-asks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Early Release Asks
+         * @description "A client needs this today, and you hold it privately. Release it?" The need is
+         *     described without anything about the client (R-E8).
+         */
+        get: operations["list_early_release_asks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/early-release-asks/{ask_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Early Release Ask
+         * @description The pharmacy releases the box: the client gets an offer for two hours. If the need
+         *     was met in the meantime, nothing is reserved and the pharmacy is thanked (R-E6).
+         */
+        post: operations["accept_early_release_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/early-release-asks/{ask_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline Early Release Ask */
+        post: operations["decline_early_release_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Pharmacy
+         * @description The pharmacy's own details, in any status (a pending one sees it is pending).
+         */
+        get: operations["read_pharmacy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/reservations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Pharmacy Reservations
+         * @description The pharmacy's reservations. With `q`, the one with that order number, however it
+         *     was typed ("r7k3q2f" finds R-7K3Q2F), whatever its state: the counter needs to see
+         *     "already picked up" too.
+         */
+        get: operations["list_pharmacy_reservations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/reservations/{reservation_id}/not-available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Not Available
+         * @description Some or all of the packs aren't there (O3). Never a penalty for the client: they
+         *     are told, and the agent looks elsewhere.
+         */
+        post: operations["mark_not_available"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/reservations/{reservation_id}/picked-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Picked Up
+         * @description The client showed the order number and took the box (O2). There is no late
+         *     pickup: after the deadline the box is back in stock (INV-7).
+         */
+        post: operations["mark_picked_up"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/proposals/{proposal_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Proposal
+         * @description The client tapped an agent card. Everything is checked again as if it were new
+         *     (R-AG7): the card holds no authority, only what to try.
+         *
+         *     A card works once, so a second tap of the same card answers `PROPOSAL_USED`.
+         */
+        post: operations["execute_proposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Requests
+         * @description The client's requests: the open ones (2 at most, R-RQ2), or the closed ones, the
+         *     newest first.
+         */
+        get: operations["list_requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Request */
+        get: operations["read_request"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Request
+         * @description The client stops the search. What is already reserved stays reserved (R-RQ9).
+         */
+        post: operations["cancel_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reservations
+         * @description `active`: what is reserved now, the soonest pickup first. `history`: the rest,
+         *     the newest first.
+         */
+        get: operations["list_reservations"];
+        put?: never;
+        /**
+         * Reserve
+         * @description [Reserve] on the search page: the box is the client's at once (O1).
+         *
+         *     The same `Idempotency-Key` sent twice returns the same reservation: a double tap or a
+         *     network retry never reserves two boxes. `source` is "search", so the agent is never
+         *     told (R-AG5).
+         */
+        post: operations["reserve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations/{reservation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Reservation */
+        get: operations["read_reservation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservations/{reservation_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Reservation
+         * @description The client cancels before the deadline. It is never a penalty (O5, R-N2).
+         */
+        post: operations["cancel_reservation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptAsk */
+        AcceptAsk: {
+            /** Price Lbp */
+            price_lbp: number;
+            /** Qty */
+            qty: number;
+        };
+        /** AcceptOffer */
+        AcceptOffer: {
+            /**
+             * Pickup Day
+             * Format: date
+             */
+            pickup_day: string;
+        };
+        /** AdvanceClock */
+        AdvanceClock: {
+            /** Minutes */
+            minutes: number;
+            /**
+             * Reason
+             * @default demo
+             */
+            reason: string;
+        };
+        /** AskAnswered */
+        AskAnswered: {
+            /** Message */
+            message: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ACCEPTED" | "WITHDRAWN" | "DECLINED";
+        };
+        /**
+         * Card
+         * @description A card under a message. **Its words are written by code and stored**; the model
+         *     only chose to show it (R-AG7).
+         *
+         *     - `origin = "proposal"`: made by one of the agent's tools. Its button calls
+         *       `POST /proposals/{card_id}/execute`.
+         *     - `origin = "system"`: a template card about something that happened (reserved, picked
+         *       up, an offer). `type` names the template and `data` holds its facts.
+         */
+        Card: {
+            /** Action Label */
+            action_label: string | null;
+            /** Call Number */
+            call_number: string | null;
+            /** Card Id */
+            card_id: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Expires At */
+            expires_at: string | null;
+            /** Lines */
+            lines: components["schemas"]["CardLine"][];
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "proposal" | "system";
+            /** Prescription Notice */
+            prescription_notice: boolean;
+            /** Recommended */
+            recommended: boolean;
+            /** Selectable Items */
+            selectable_items: components["schemas"]["SelectableItem"][];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "used" | "expired";
+            /** Title */
+            title: string;
+            /** Type */
+            type: string;
+        };
+        /** CardLine */
+        CardLine: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** ChangePassword */
+        ChangePassword: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** ChatMessage */
+        ChatMessage: {
+            /**
+             * Author
+             * @enum {string}
+             */
+            author: "client" | "agent" | "system" | "admin";
+            /** Cards */
+            cards: components["schemas"]["Card"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "card" | "timeline";
+            /** Quick Replies */
+            quick_replies: string[];
+            /** Reportable */
+            reportable: boolean;
+            /** Seq */
+            seq: number;
+            /** Text */
+            text: string | null;
+        };
+        /** ClientState */
+        ClientState: {
+            /** Alternatives Ok Default */
+            alternatives_ok_default: boolean;
+            district: components["schemas"]["District"] | null;
+            /** Missed Pickups 30D */
+            missed_pickups_30d: number;
+            /** Missed Pickups Before Pause */
+            missed_pickups_before_pause: number;
+            /** Paused Until */
+            paused_until: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED";
+        };
+        /** ConversationRef */
+        ConversationRef: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chat" | "request";
+        };
+        /**
+         * Dashboard
+         * @description Today in numbers (PS-3).
+         */
+        Dashboard: {
+            /** Due Today */
+            due_today: number;
+            /** Last Inventory Update */
+            last_inventory_update: string | null;
+            /** Live Listings */
+            live_listings: number;
+            /** New Reservations */
+            new_reservations: number;
+            /** Open Asks */
+            open_asks: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /** Stale */
+            stale: boolean;
+            /** Units Reserved */
+            units_reserved: number;
+        };
+        /** DayHours */
+        DayHours: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Hours */
+            hours: string;
+        };
+        /** DeclineAsk */
+        DeclineAsk: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "keeping_it" | "no_longer_in_stock" | "price" | "other";
+        };
+        /**
+         * DemoClock
+         * @description The app's own time (R-DEMO). Outside demo mode it is the real time, always.
+         */
+        DemoClock: {
+            /** Demo Mode */
+            demo_mode: boolean;
+            /** Offset Minutes */
+            offset_minutes: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** District */
+        District: {
+            /** Governorate */
+            governorate: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * EarlyReleaseAsk
+         * @description "A client needs 2 packs today. You hold 5 that aren't listed yet. Release them?"
+         *     Nothing here says who the client is (R-E8).
+         */
+        EarlyReleaseAsk: {
+            /** Answered At */
+            answered_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            private_item: components["schemas"]["PrivateItem"];
+            product: components["schemas"]["ProductSummary"];
+            /** Qty Needed */
+            qty_needed: number;
+            /**
+             * Respond By
+             * Format: date-time
+             */
+            respond_by: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ASKED" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "WITHDRAWN";
+            suggested_price: components["schemas"]["Money"];
+        };
+        /** EarlyReleaseAsks */
+        EarlyReleaseAsks: {
+            /** Items */
+            items: components["schemas"]["EarlyReleaseAsk"][];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** ExecuteProposal */
+        ExecuteProposal: {
+            /** Selected Item Keys */
+            selected_item_keys?: string[] | null;
+        };
+        /** ExecuteResult */
+        ExecuteResult: {
+            /** Kind */
+            kind: string;
+            /** Message */
+            message: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Request Id */
+            request_id: string | null;
+            /** Request Ref */
+            request_ref: string | null;
+            /** Reservations */
+            reservations: components["schemas"]["Reservation"][];
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** Health */
         Health: {
             /**
@@ -46,6 +1096,852 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** Ingredient */
+        Ingredient: {
+            /** Name */
+            name: string;
+            /** Strength */
+            strength: string | null;
+        };
+        /**
+         * Listing
+         * @description One visible box a client can reserve (docs/04 SM-3).
+         */
+        Listing: {
+            /** Available */
+            available: number;
+            /** Days Left */
+            days_left: number;
+            /** Discount Pct */
+            discount_pct: number;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /** Expiry Limits Pickup */
+            expiry_limits_pickup: boolean;
+            /** Fits */
+            fits: boolean | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** More Available */
+            more_available: boolean;
+            pharmacy: components["schemas"]["PharmacyCard"];
+            /** Pickup Days Allowed */
+            pickup_days_allowed: string[];
+            price: components["schemas"]["Money"];
+            product: components["schemas"]["ProductSummary"];
+            saving: components["schemas"]["Money"];
+            travel: components["schemas"]["Travel"];
+        };
+        /** ListingDetail */
+        ListingDetail: {
+            listing: components["schemas"]["Listing"];
+            location: components["schemas"]["LocationSummary"];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /** Week */
+            week: components["schemas"]["DayHours"][];
+        };
+        /**
+         * LocationIn
+         * @description Where the client is: a shared or picked point, or a district. Stored rounded, and
+         *     never sent to the AI (R-S2).
+         */
+        LocationIn: {
+            /** District Id */
+            district_id?: number | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+        };
+        /** LocationSummary */
+        LocationSummary: {
+            /** Label */
+            label: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "shared" | "district" | "area" | "profile" | "none";
+        };
+        /**
+         * LoggedIn
+         * @description Who logged in, and the token the website sends from now on (docs/06 §2.1).
+         */
+        LoggedIn: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            me: components["schemas"]["Me"];
+            /** Token */
+            token: string;
+        };
+        /** Login */
+        Login: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            /** Totp Code */
+            totp_code?: string | null;
+        };
+        /** Me */
+        Me: {
+            client: components["schemas"]["ClientState"] | null;
+            /** Email */
+            email: string;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            pharmacy: components["schemas"]["PharmacyState"] | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "client" | "pharmacist" | "admin";
+        };
+        /**
+         * Message
+         * @description A plain sentence, for the answers that say nothing else.
+         */
+        Message: {
+            /** Message */
+            message: string;
+        };
+        /** MessageAccepted */
+        MessageAccepted: {
+            /** Message Seq */
+            message_seq: number;
+        };
+        /**
+         * MessagesPage
+         * @description What the page asks for every few seconds while it is open (API-D7).
+         */
+        MessagesPage: {
+            /** Busy */
+            busy: boolean;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chat" | "request";
+            /** Last Seq */
+            last_seq: number;
+            location: components["schemas"]["LocationSummary"];
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** Request Id */
+            request_id: string | null;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** Money */
+        Money: {
+            /** Lbp */
+            lbp: number;
+            /** Usd Approx */
+            usd_approx: number | null;
+        };
+        /** MoneyIn */
+        MoneyIn: {
+            /** Amount */
+            amount: number | string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "LBP" | "USD";
+        };
+        /**
+         * NoMatch
+         * @description Boxes exist, but none lasts the client's days or can be had on their day (R-F4).
+         */
+        NoMatch: {
+            /**
+             * Latest Expiry
+             * Format: date
+             */
+            latest_expiry: string;
+            /** Latest Pickup Day */
+            latest_pickup_day: string | null;
+        };
+        /** NotAvailable */
+        NotAvailable: {
+            /** Units */
+            units?: number | null;
+        };
+        /**
+         * Offer
+         * @description Stock held for the client for two hours: from new stock that matched their need,
+         *     or released by a pharmacy the agent asked. A tap accepts it (O7, O8).
+         */
+        Offer: {
+            /** Days Of Use */
+            days_of_use: number;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "matching" | "early_release";
+            pharmacy: components["schemas"]["PharmacyCard"];
+            /** Pickup Days Allowed */
+            pickup_days_allowed: string[];
+            price_each: components["schemas"]["Money"];
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Request Id */
+            request_id: string | null;
+            saving: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+        };
+        /** Offers */
+        Offers: {
+            /** Items */
+            items: components["schemas"]["Offer"][];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /**
+         * PharmacyCard
+         * @description What a client sees about a pharmacy.
+         */
+        PharmacyCard: {
+            /** Address */
+            address: string;
+            /** Closes At */
+            closes_at: string | null;
+            /** District */
+            district: string;
+            /** Governorate */
+            governorate: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Open Now */
+            open_now: boolean;
+            /** Phone */
+            phone: string;
+            /** Pickup Days */
+            pickup_days: number;
+            pin: components["schemas"]["Pin"];
+        };
+        /** PharmacyProfile */
+        PharmacyProfile: {
+            /** Address */
+            address: string;
+            /** Closes At */
+            closes_at: string | null;
+            /** District */
+            district: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Info Requested */
+            info_requested: boolean;
+            /** License Number */
+            license_number: string;
+            /** Name */
+            name: string;
+            /** Open Now */
+            open_now: boolean;
+            /** Phone */
+            phone: string;
+            /** Pickup Days */
+            pickup_days: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+            /** Status Reason */
+            status_reason: string | null;
+            /** Week */
+            week: components["schemas"]["DayHours"][];
+        };
+        /** PharmacyReservation */
+        PharmacyReservation: {
+            /** Batch */
+            batch: string;
+            /** Closed At */
+            closed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline */
+            deadline: string | null;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is New */
+            is_new: boolean;
+            /** Pickup Day */
+            pickup_day: string | null;
+            price_each: components["schemas"]["Money"];
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Qty Requested */
+            qty_requested: number;
+            /** Ref */
+            ref: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "RESERVED" | "PICKED_UP" | "NOT_AVAILABLE" | "EXPIRED_NO_SHOW" | "CANCELLED_BY_CLIENT" | "CANCELLED_BY_SYSTEM";
+            /** Status Text */
+            status_text: string;
+            total: components["schemas"]["Money"];
+        };
+        /** PharmacyReservations */
+        PharmacyReservations: {
+            /** Items */
+            items: components["schemas"]["PharmacyReservation"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** PharmacyState */
+        PharmacyState: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Info Requested */
+            info_requested: boolean;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+            /** Status Reason */
+            status_reason: string | null;
+        };
+        /**
+         * Pin
+         * @description Where a pharmacy is: public, like its address. It is what [Directions] opens and
+         *     what the map shows. (A **client's** location is what never leaves the server.)
+         */
+        Pin: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+        };
+        /** PrivateItem */
+        PrivateItem: {
+            /** Batch */
+            batch: string;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /** Qty Available */
+            qty_available: number;
+        };
+        /** ProductDetail */
+        ProductDetail: {
+            /** Atc Code */
+            atc_code: string | null;
+            /** Form */
+            form: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ingredients */
+            ingredients: components["schemas"]["Ingredient"][];
+            /** Manufacturer */
+            manufacturer: string | null;
+            /** Name */
+            name: string;
+            /** Pack */
+            pack: string | null;
+            /** Prescription Required */
+            prescription_required: boolean;
+            public_price: components["schemas"]["Money"];
+            /** Strength */
+            strength: string | null;
+        };
+        /** ProductSummary */
+        ProductSummary: {
+            /** Form */
+            form: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pack */
+            pack: string | null;
+            /** Prescription Required */
+            prescription_required: boolean;
+            public_price: components["schemas"]["Money"];
+            /** Strength */
+            strength: string | null;
+        };
+        /** Products */
+        Products: {
+            /** Did You Mean */
+            did_you_mean: string[];
+            /** Items */
+            items: components["schemas"]["ProductSummary"][];
+        };
+        /** ProfileChange */
+        ProfileChange: {
+            /** Alternatives Ok Default */
+            alternatives_ok_default?: boolean | null;
+            /** District Id */
+            district_id?: number | null;
+            /** Phone */
+            phone?: string | null;
+        };
+        /**
+         * PublicConfig
+         * @description What the website needs before anyone logs in. No secret, no stock.
+         */
+        PublicConfig: {
+            /** Assistant Available */
+            assistant_available: boolean;
+            /** Demo Mode */
+            demo_mode: boolean;
+            /** Lbp Per Usd */
+            lbp_per_usd: number | null;
+            /** Max Message Chars */
+            max_message_chars: number;
+            /** Offer Hours */
+            offer_hours: number;
+            /** Poll Every S */
+            poll_every_s: number;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Request Hours End */
+            request_hours_end: string;
+            /** Request Hours Start */
+            request_hours_start: string;
+            /** Search Window Hours */
+            search_window_hours: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** RegisterClient */
+        RegisterClient: {
+            /**
+             * Accept Terms
+             * @constant
+             */
+            accept_terms: true;
+            /** District Id */
+            district_id: number;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Password */
+            password: string;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** RequestItem */
+        RequestItem: {
+            /** Days Of Use */
+            days_of_use: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            max_price: components["schemas"]["Money"] | null;
+            /** Position */
+            position: number;
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Qty Secured */
+            qty_secured: number;
+            /** Reservations */
+            reservations: components["schemas"]["ReservationRef"][];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "SEARCHING" | "PROPOSED" | "WAITING" | "SECURED" | "UNAVAILABLE" | "CANCELLED";
+            /** Status Text */
+            status_text: string;
+            waiting: components["schemas"]["Waiting"] | null;
+        };
+        /** Reservation */
+        Reservation: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Contestable */
+            contestable: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline */
+            deadline: string | null;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            pharmacy: components["schemas"]["PharmacyCard"];
+            /** Pickup Day */
+            pickup_day: string | null;
+            price_each: components["schemas"]["Money"];
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Qty Requested */
+            qty_requested: number;
+            /** Ref */
+            ref: string;
+            /** Request Id */
+            request_id: string | null;
+            saving: components["schemas"]["Money"];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "search" | "assistant" | "request" | "watch" | "early_release";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "RESERVED" | "PICKED_UP" | "NOT_AVAILABLE" | "EXPIRED_NO_SHOW" | "CANCELLED_BY_CLIENT" | "CANCELLED_BY_SYSTEM";
+            /** Status Text */
+            status_text: string;
+            total: components["schemas"]["Money"];
+        };
+        /** ReservationRef */
+        ReservationRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Pharmacy Name */
+            pharmacy_name: string;
+            /** Qty */
+            qty: number;
+            /** Ref */
+            ref: string;
+        };
+        /** ReservationsPage */
+        ReservationsPage: {
+            /** Items */
+            items: components["schemas"]["Reservation"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** Reserve */
+        Reserve: {
+            /**
+             * Days Of Use
+             * @default 1
+             */
+            days_of_use: number;
+            /** Expected Price Lbp */
+            expected_price_lbp: number;
+            /**
+             * Listing Id
+             * Format: uuid
+             */
+            listing_id: string;
+            /**
+             * Pickup Day
+             * Format: date
+             */
+            pickup_day: string;
+            /** Qty */
+            qty: number;
+        };
+        /**
+         * SearchListings
+         * @description A search. **It is a POST so that the client's location travels in the body**, never
+         *     in an address that a browser's history or a server's log keeps.
+         */
+        SearchListings: {
+            /**
+             * Cursor
+             * @default 0
+             */
+            cursor: number;
+            /** Days Of Use */
+            days_of_use?: number | null;
+            /**
+             * Limit
+             * @default 20
+             */
+            limit: number;
+            location?: components["schemas"]["LocationIn"] | null;
+            max_price?: components["schemas"]["MoneyIn"] | null;
+            /**
+             * On Foot
+             * @default false
+             */
+            on_foot: boolean;
+            /** Pickup Day */
+            pickup_day?: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Sort
+             * @default best
+             * @enum {string}
+             */
+            sort: "best" | "nearest" | "cheapest" | "latest_expiry";
+        };
+        /** SearchResult */
+        SearchResult: {
+            /** Items */
+            items: components["schemas"]["Listing"][];
+            /** Left Out By Pickup Day */
+            left_out_by_pickup_day: number;
+            location: components["schemas"]["LocationSummary"];
+            /** Next Cursor */
+            next_cursor: number | null;
+            no_match: components["schemas"]["NoMatch"] | null;
+            product: components["schemas"]["ProductSummary"];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /** Total Found */
+            total_found: number;
+            /** Upcoming Days */
+            upcoming_days: string[];
+        };
+        /**
+         * SelectableItem
+         * @description One checkbox of a [Reserve these] card (R-RQ6).
+         */
+        SelectableItem: {
+            /** Item Key */
+            item_key: string;
+            /** Label */
+            label: string;
+            price: components["schemas"]["Money"];
+        };
+        /** SendMessage */
+        SendMessage: {
+            /**
+             * Client Message Id
+             * Format: uuid
+             */
+            client_message_id: string;
+            /** Text */
+            text: string;
+        };
+        /** SourcingRequest */
+        SourcingRequest: {
+            /** Alternatives Ok */
+            alternatives_ok: boolean;
+            /** Closed At */
+            closed_at: string | null;
+            /** Conversation Id */
+            conversation_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["RequestItem"][];
+            /** Outcome */
+            outcome: ("FULFILLED" | "PARTIAL" | "UNFULFILLED" | "CANCELLED") | null;
+            /** Ref */
+            ref: string;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "OPEN" | "CLOSED";
+            /** Units Secured */
+            units_secured: number;
+            /** Units Wanted */
+            units_wanted: number;
+        };
+        /** SourcingRequests */
+        SourcingRequests: {
+            /** Items */
+            items: components["schemas"]["SourcingRequest"][];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /**
+         * Travel
+         * @description How far a pharmacy is from the client. Computed by code; never a coordinate.
+         */
+        Travel: {
+            /** Car Min */
+            car_min: number;
+            /** Km */
+            km: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "road" | "straight";
+            /** Walk Min */
+            walk_min: number;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** VerifyEmail */
+        VerifyEmail: {
+            /** Token */
+            token: string;
+        };
+        /** ViewListing */
+        ViewListing: {
+            /** Days Of Use */
+            days_of_use?: number | null;
+            location?: components["schemas"]["LocationIn"] | null;
+        };
+        /**
+         * Waiting
+         * @description What DawaLink is doing for a medicine that isn't secured yet.
+         */
+        Waiting: {
+            /** Answers By */
+            answers_by: string | null;
+            /** Asked Pharmacies */
+            asked_pharmacies: number;
+            /** Open Offer Ids */
+            open_offer_ids: string[];
+            /** Watching New Stock */
+            watching_new_stock: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -55,6 +1951,581 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    read_demo_clock: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoClock"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    advance_demo_clock: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceClock"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoClock"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Login"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoggedIn"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_me: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_client: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterClient"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmail"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoggedIn"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_verification: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    find_products: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Products"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_product: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicConfig"];
+                };
+            };
+        };
+    };
+    active_chat: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationRef"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    new_chat: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationRef"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_location: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_messages: {
+        parameters: {
+            query?: {
+                after_seq?: number;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagesPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessage"];
+            };
+        };
+        responses: {
+            /** @description In a chat: the answer, as a stream of events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    districts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["District"][];
+                };
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -71,6 +2542,791 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    search_listings: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchListings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    view_listing: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewListing"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_profile: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_profile: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_offers: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Offers"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_offer: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptOffer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_offer: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pharmacy_dashboard: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_early_release_asks: {
+        parameters: {
+            query?: {
+                view?: "open" | "history";
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarlyReleaseAsks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_early_release_ask: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskAnswered"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_early_release_ask: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                ask_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclineAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_pharmacy: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pharmacy_reservations: {
+        parameters: {
+            query?: {
+                view?: "active" | "history";
+                q?: string | null;
+                cursor?: number;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyReservations"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_not_available: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotAvailable"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyReservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_picked_up: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyReservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_proposal: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteProposal"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecuteResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests: {
+        parameters: {
+            query?: {
+                state?: "open" | "closed";
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourcingRequests"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_request: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourcingRequest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_request: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourcingRequest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reservations: {
+        parameters: {
+            query?: {
+                view?: "active" | "history";
+                cursor?: number;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reserve: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reserve"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_reservation: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_reservation: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                reservation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -66,13 +66,15 @@ def purge(tx: Tx) -> dict[str, int]:
             "DELETE FROM notifications WHERE created_at < :cutoff",
             {"cutoff": tx.now - NOTIFICATION_RETENTION},
         ),
+        # Logins are counted in real time (R-T11): a session that is still good must
+        # survive a demo clock that was moved a week ahead.
         "sessions": (
             "DELETE FROM sessions WHERE expires_at < :now OR revoked_at IS NOT NULL",
-            {"now": tx.now},
+            {"now": tx.real_now},
         ),
         "verification_tokens": (
             "DELETE FROM email_verification_tokens WHERE expires_at < :now OR used_at IS NOT NULL",
-            {"now": tx.now},
+            {"now": tx.real_now},
         ),
         "travel_times": (
             "DELETE FROM travel_time_cache WHERE computed_at < :cutoff",

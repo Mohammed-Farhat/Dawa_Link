@@ -30,6 +30,10 @@ docker compose up --build
 | http://localhost:8000/api/v1/docs | The API's interactive documentation (local only) |
 | http://localhost:8025 | Every email the app sends, caught locally (nothing leaves this machine) |
 
+**To log in:** create an account on the website and open the confirmation email in the local mailbox above, or use a demo account: `client01@demo.dawalink.test` to `client06@demo.dawalink.test`, or a demo pharmacy, `pharmacy01@demo.dawalink.test` to `pharmacy16@demo.dawalink.test` (it opens the pharmacy's portal), with the password you set as `DEMO_ACCOUNTS_PASSWORD` in `.env` (`.env.example` has one for your own machine). Without that setting the demo accounts can't log in.
+
+**The assistant** answers only when `LLM_PROVIDER` is set in `.env` (`anthropic` spends API credit, a few cents per conversation). With `none`, the chat says the assistant isn't available, and everything else works.
+
 Use `localhost` in the address bar, not `127.0.0.1`: the API only accepts browser calls from
 the website's exact address.
 

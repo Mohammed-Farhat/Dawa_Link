@@ -87,3 +87,39 @@ class UnhandledErrorMiddleware:
                 raise
             response = error_response(ErrorCode.INTERNAL_ERROR, request_id)
             await response(scope, receive, send)
+
+
+UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+class OriginCheckMiddleware:
+    """A request that changes something must come from our own website (docs/06 §2.1).
+
+    The login travels in a header the page adds itself, so another site can't use it; this
+    check is a second lock on the same door. It also refuses a JSON body larger than the
+    limit before anything reads it.
+    """
+
+    def __init__(self, app: ASGIApp, *, website_url: str, max_body_bytes: int) -> None:
+        self.app = app
+        self._website_url = website_url
+        self._max_body_bytes = max_body_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] not in UNSAFE_METHODS:
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope["headers"])
+        request_id = str(scope.get("state", {}).get("request_id", ""))
+        refused: ErrorCode | None = None
+        if headers.get(b"origin", b"").decode("latin-1") != self._website_url:
+            refused = ErrorCode.ORIGIN_REJECTED
+        elif not headers.get(b"content-type", b"").startswith(b"multipart/"):
+            # An upload has its own, larger limit, checked where the file is read.
+            length = headers.get(b"content-length", b"0")
+            if length.isdigit() and int(length) > self._max_body_bytes:
+                refused = ErrorCode.BODY_TOO_LARGE
+        if refused is not None:
+            await error_response(refused, request_id)(scope, receive, send)
+            return
+        await self.app(scope, receive, send)

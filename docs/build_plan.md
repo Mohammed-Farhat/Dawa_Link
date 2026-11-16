@@ -1,6 +1,6 @@
 # DawaLink: Build Plan and Progress
 
-**Updated:** 2026-11-15 · **Status:** 🟡 living: updated at the end of every build step.
+**Updated:** 2026-11-16 · **Status:** 🟡 living: updated at the end of every build step.
 
 This is the one place that says **what is built, what comes next, and what was left for later**. A new session reads it to continue exactly where the last one stopped. Decisions stay in the [decision log](00_decision_log.md); this file only tracks the build.
 
@@ -11,7 +11,9 @@ This is the one place that says **what is built, what comes next, and what was l
 - **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the tools, cards, guards, prompts, the models, worker turns, routing, tracing). **After step 5 (2026-11-14):** the 18th tool, `set_area` ("I'm in Hamra"), and tracing proven on the real Langfuse.
 - **Answered on 2026-11-15** (§5): Q18, a closed request opens again when one of its boxes is lost before its 6 hours are over (built: `04` R-RQ12, BLD-D21); Q19, Q20 and the other-brand split, the simulation's assumptions (BLD-D22); and the owner read the first batch of evaluation cases: "everything looks clear and good", so the rest of the development cases can be written. Q21 to Q23, three details of these: a reopened request may be a third open one; a system cancel reopens too; and "the nearest pharmacies" of a plan are the nearest by road, not in a straight line. **Nothing waits for the owner now.**
 - **In progress:** step 6, the simulator and the evaluation, started on 2026-11-14 (the slices are in §3). **On 2026-11-15:** slices E2, E6, E7 and E8 done, E9 nearly; the first paid runs on Claude Haiku: the agent went from 136 to 168 of 241 units on seed 1 over prompts v1.4 to v1.8 and four new guards, level with plain search and clearly ahead of the policy with no AI; suite E1 (understanding) on 180 cases and suite E4 (safety) on 70 attacks; seeds 2 to 5, never tuned on, are running. **The same afternoon the owner changed what the agent does first** (BLD-D28: it asks, waits for the answer, then searches); prompt v1.10 and the two suites follow, and the runs on it are recorded below as development results: E1 on 180 cases, E4 on 70 attacks, the agent on 5 seeds (749 of 1,198 units, against 795 on the earlier prompt, 824 for search and 592 for the no-AI policy), the three ablations on seed 1, the sweep of the search baseline. **The same evening the owner answered Q27 to Q34** (§5, BLD-D29): the agent asks again for what an answer left out (prompt v1.11); a second model plays the client (suite E7 of `08`, slice E13); and the order from here is agreed (§2): step 6 closes as "tools built, development results", the website comes next, one side at a time, and the final evaluation runs on the finished agent. **Later the same evening he answered the last three** (BLD-D30): no cart on the search page; no request form, a request starts in the chat; a simulated client answers a question within 1 to 3 minutes. **Nothing waits for a decision; the second batch of cases waits for his read.** Moved to the final evaluation (slice 6b of §2): the final runs, the other sweeps (E6), the model comparison (E11), the held-out data in a separate session (E12).
-- **Order:** the agent and its evaluation come before the website screens (`02` §9).
+- **Step 6 was committed on 2026-11-15** as "tools built, development results". **Since 2026-11-16 the owner's rule is to build the rest through to the end** (§1): the slices of §2 follow each other without a "start".
+- **Done on 2026-11-16: slices 7a to 7d** (§3, step 7): logins and the client's chat with the agent in the browser; search and reserve without the agent; the pharmacy's counter; sourcing requests in the browser. **Next: slice 7e,** the rest of the pharmacy's side.
+- **Order:** the agent and its evaluation came before the website screens (`02` §9).
 
 ---
 
@@ -23,6 +25,8 @@ This is the one place that says **what is built, what comes next, and what was l
 4. The next step starts only when the owner says so.
 
 Work happens on `main`, in one commit per step. There are no feature branches (`12` §1).
+
+**Since 2026-11-16, for step 7 and what follows** (the owner: "you can start with part 7 and complete everything we have left in the project"): Claude builds slice after slice without waiting for a "start"; the owner commits and pushes after each slice (Q41; he had first said "I will not commit until we finish everything"), and brings this file up to date at the end of each slice, so that a new session continues from it. What the product does is still asked before it is built. AWS and Cognito stay with the owner. The agent's final evaluation (slice 6b: maybe a new model, new cases, a change of architecture) is done with the owner after the rest.
 
 ---
 
@@ -47,22 +51,22 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 
 ### The order from here (the owner, 2026-11-15, Q31 to Q33)
 
-The owner agreed to move on to the website before the agent's final evaluation, and left the order inside steps 7 and 8 to Claude with a second opinion. Steps 7 and 8 are built **together, one side at a time**, each slice with its endpoints, its screens and its tests, so that something real can be used in a browser after every slice. The slices follow the demo scenarios of `01` §6. **Each slice starts only when the owner says so.**
+The owner agreed to move on to the website before the agent's final evaluation, and left the order inside steps 7 and 8 to Claude with a second opinion. Steps 7 and 8 are built **together, one side at a time**, each slice with its endpoints, its screens and its tests, so that something real can be used in a browser after every slice. The slices follow the demo scenarios of `01` §6. ~~Each slice starts only when the owner says so.~~ **Since 2026-11-16 the slices follow each other without a "start"** (§1).
 
-| # | Slice | What works at the end of it | Demo scenarios |
-|---|---|---|---|
-| 6 | **Close step 6** as "tools built, development results" | The owner has read the second batch of cases and the results, and committed | – |
-| 7a | **Logins, and the client's chat with the agent** | A client registers, confirms the email (mailpit), logs in, shares a location or names an area, chats with the agent, taps [Reserve] on a card and sees the order number on the pickup ticket | 1, 2, 8, 9, 10, 16, 17 |
-| 7b | **Search and reserve without the agent** | The search page, the reserve sheet, My medicines, cancel; the LLM switched off still leaves all of it working | 12, 15 |
-| 7c | **The pharmacy's counter** | A pharmacy logs in, sees Today, presses [Picked up] or [Not available], answers an early-release ask; the agent re-plans in the client's chat | 3 |
-| 7d | **Sourcing requests** (started from the chat's [Start sourcing] card, BLD-D30) | A request for several medicines, its thread and page, plan cards, offers, the window check, the summary; the admin's demo clock | 4, 5, 6, 7, 13 |
-| 7e | **The rest of the pharmacy's side** | Registration with the map pin, the inventory screens, the CSV upload with its row errors, the pickup-time setting | 14 |
-| 7f | **The admin's side** | Two-factor login, approving a pharmacy, escalations and replies, the reports of bad answers, the read-only catalog | 7, 11 |
-| 7g | **The rest of the client's side** | Watches, notifications, the profile, "Pick on the map" (BLD-D16) | – |
-| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, the accessibility passes | – |
-| 6b | **The final evaluation, on the finished agent** | The held-out data (written in the owner's separate session), the final runs of E1 to E7, the model comparison and the choice of model (O1), the failure analysis, the regression cases | – |
-| 10, 11 | **Cognito, then AWS** | "When we finish the project" (the owner, Q33) | – |
-| 12 | **Report and demo** | The final report, the demo script and its rehearsal | all |
+| # | Slice | What works at the end of it | Demo scenarios | Status |
+|---|---|---|---|---|
+| 6 | **Close step 6** as "tools built, development results" | The owner has read the second batch of cases and the results, and committed | – | ✅ 2026-11-15 |
+| 7a | **Logins, and the client's chat with the agent** | A client registers, confirms the email (mailpit), logs in, shares a location or names an area, chats with the agent, taps [Reserve] on a card and sees the order number on the pickup ticket | 1, 2, 8, 9, 10, 16, 17 | ✅ 2026-11-16 |
+| 7b | **Search and reserve without the agent** | The search page, the reserve sheet, My medicines, cancel; the LLM switched off still leaves all of it working | 12, 15 | ✅ 2026-11-16 |
+| 7c | **The pharmacy's counter** | A pharmacy logs in, sees Today, presses [Picked up] or [Not available], answers an early-release ask; the agent re-plans in the client's chat | 3 | ✅ 2026-11-16 |
+| 7d | **Sourcing requests** (started from the chat's [Start sourcing] card, BLD-D30) | A request for several medicines, its thread and page, plan cards, offers, the window check, the summary; the admin's demo clock | 4, 5, 6, 7, 13 | ✅ 2026-11-16 |
+| 7e | **The rest of the pharmacy's side** | Registration with the map pin, the inventory screens, the CSV upload with its row errors, the pickup-time setting | 14 | ⏳ |
+| 7f | **The admin's side** | Two-factor login, approving a pharmacy, escalations and replies, the reports of bad answers, the read-only catalog | 7, 11 | ⏳ |
+| 7g | **The rest of the client's side** | Watches, notifications, the profile, "Pick on the map" (BLD-D16) | – | ⏳ |
+| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, the accessibility passes | – | ⏳ |
+| 6b | **The final evaluation, on the finished agent** | The held-out data (written in the owner's separate session), the final runs of E1 to E7, the model comparison and the choice of model (O1), the failure analysis, the regression cases | – | ⏳ |
+| 10, 11 | **Cognito, then AWS** | "When we finish the project" (the owner, Q33) | – | ⏳ |
+| 12 | **Report and demo** | The final report, the demo script and its rehearsal | all | ⏳ |
 
 **While the website is built, the team talks to the agent in the browser** from slice 7a on: every bad reply they mark becomes a regression case (`08` §5). That is the check no simulated or played client replaces.
 
@@ -676,7 +680,68 @@ The plan is `08`. Everything is first built and run **without a paid model** (th
 
 **Spent in the evening:** about $1.5 (E1 $0.43, E7 $0.48, its pilot $0.05, the re-check $0.12, E4 $0.11, a few real chat turns, and a day of the agent stopped halfway because of the request fix above), plus the agent's day on seed 1 that follows. About $15 of the $100 so far, by the runs' own counts.
 
+### Step 7 and 8: the API and the website, slice by slice (started 2026-11-16) 🔨
+
+#### Slice 7a: logins, and the client's chat with the agent ✅ 2026-11-16
+
+**What works now, in a browser:** a visitor signs up, opens the link of the confirmation email (caught by mailpit), is logged in, opens the chat, writes to the agent (the real model, with its progress line), taps [Reserve] on the card, sees the pickup ticket with the order number, and can cancel. Tried by hand on the local stack with Claude Haiku, on a phone-sized window.
+
+**Built, backend:**
+- `services/auth.py`: the one module that knows how a login works (passwords, sessions, confirmation links, the admins' second factor);
+- `api/`: the error catalog with every service code, `deps.py` (who is calling, the role checks, the idempotency key), `limits.py` (per-minute limits), the origin and body-size check, `schemas/`, `present.py` (rows turned into answers), `chat_stream.py`, and the routes of accounts, conversations, proposals and reservations;
+- the two account emails (CN-1, CN-18), written by `services/email.py` with their link;
+- `seed_demo.set_demo_passwords`: the demo accounts log in with the password of `DEMO_ACCOUNTS_PASSWORD`;
+- settings `APP_SECRET_KEY` and `DEMO_ACCOUNTS_PASSWORD`; `docker-compose.yml` and `.env.example` follow.
+
+**Built, website** (`frontend/src/`): the API client with the login header and error codes, the chat stream reader, the session, every string in `strings/en.ts`, the look of the v2 canvas in `app/global.css`, and the screens Welcome, Sign up, Check your email, the confirmation link, Log in, Home, Ask DawaLink (cards, quick replies, the location sheet, the AI notice), the pickup ticket, My medicines (reservations) and Me (a first version).
+
+**Tests:** 58 new backend tests (`tests/api/`: accounts, chat, the error catalog compared with `06` in both directions); 34 website tests with `axe` on each screen. The whole backend suite, ruff, mypy, the website's tests, type check, lint and build pass. The website's JavaScript is 149 KB compressed (the budget is 250).
+
+**Left inside this slice's screens, for their own slices:** the report of an answer (the thumbs-down, with the admin's side, 7f); "Pick on the map" (7g); the wide-screen layout with the assistant as a side panel (7g); offers' cards with their buttons (7d); the night and paused banners in the chat (7g).
+
+#### Slice 7b: search and reserve without the agent ✅ 2026-11-16
+
+**What works now, in a browser:** from Home, the client types a medicine's name (spelling mistakes are tolerated), chooses it, and sees one row per pharmacy with the walking and driving time, the closing time, the price and **what it saves**. They choose the pickup day, the days of use and where they are; open a pharmacy's offer (its week of opening hours, whether the box lasts, directions, a phone number); and reserve in the sheet (how many packs, which day). The ticket opens. An empty result says why, and [Ask DawaLink to find it] opens the chat with the medicine's name typed (BLD-D30). **Nothing of this involves the assistant:** the tests run with it switched off.
+
+**Built, backend:** `routes/search.py` (the catalog, `POST /listings/search`, `POST /listings/{id}/view`, `POST /reservations`), `search.one_listing`, the road times asked for before a search (the same cache the agent uses), a limit on new shared points per hour.
+
+**Built, website:** `features/client/search/` (the search page, the offer page with the reserve sheet, the choices kept in memory), the search pill on Home, the location sheet shared by the chat and the search.
+
+**Tests:** 24 backend tests (`tests/api/test_search.py`), among them: only the medicine searched, never another brand; a controlled medicine is never found; a search reservation writes no chat message and asks for no agent turn; the same tap twice reserves one box. 9 website tests. `tests/api/test_every_route.py` covers the new endpoints by itself.
+
+**Left for their slices:** [Notify me] on an empty result (watches, 7g); the map on the offer's page and "Pick on the map" (7g); a maximum price on the search page (the API takes it; the page has no field for it yet, 7g).
+
+#### Slice 7c: the pharmacy's counter ✅ 2026-11-16
+
+**What works now, in a browser:** a pharmacist logs in and lands on **Today**: a large box for the order number the client shows (typed any way: "req6rgt" finds R-EQ6RGT), the reservation with the batch to take from the shelf and "check the prescription", **[Picked up]** in one tap, **[Not available]** after choosing which packs. Under it, what is due today, with "NEW · put aside". Beside it, an early-release ask with the time left, the packs and the price to release at, [Accept and offer it] or [Decline] with a reason from a list. A second page lists every reservation, waiting or over. A pending or rejected pharmacy sees its status and nothing else; a suspended one can still hand over what it holds.
+
+**What the client's side gets from it:** [Picked up] and [Not available] post their card in the client's chat, and [Not available] asks the agent for a turn: it re-plans (R-AG4). Tried by hand: a client reserved from the search page, the demo pharmacy found the number and pressed [Picked up].
+
+**Built, backend:** `routes/pharmacy.py` and `schemas/pharmacy.py` over the services of build step 4 (`counter`, `early_release`). **Built, website:** `features/pharmacy/` (the portal, loaded only for a pharmacist: 3.7 KB compressed, apart from the client's code).
+
+**Tests:** 16 backend tests (`tests/api/test_pharmacy.py`): nothing about the client in any answer; another pharmacy's reservation or ask doesn't exist; a reason is a code, never words. `tests/api/test_every_route.py` now also checks that every pharmacy endpoint refuses a client and an admin, and that no two endpoints share a name. 8 website tests.
+
+**Left for their slices:** the pharmacy's registration, inventory, listings and settings pages (7e); Undo on [Picked up] (previewed on the canvas, `11` §14.2: later).
+
+#### Slice 7d: sourcing requests in the browser ✅ 2026-11-16
+
+**What works now, in a browser:** in the chat, the client asks for several medicines and to keep looking; the agent shows the [Start sourcing] card; the tap opens **the request's page**. On it: "1 of 2 reserved", the time left, each medicine with its three steps (searching, found, reserved) and what DawaLink is doing for it ("Asked 2 pharmacies", "Watching for new stock"), a link to each ticket, and [Cancel this request]. Below, **the thread**: the agent's messages and plan cards arrive by themselves, because the worker runs its turns. A message written there is answered by the worker. **An offer** (new stock that matched, or a pharmacy's release) shows as an amber card on the request's page and on Home, with the days the client may come, [Accept and reserve] and [No thanks]. Home lists the open requests.
+
+Tried by hand with Claude Haiku: two medicines, one in stock; the card, the page, the agent's plan in the thread within seconds, [Reserve these], the tracker turning to "Reserved" with its ticket.
+
+**Built, backend:** `routes/requests.py` (requests, offers, the demo clock for an admin) and `schemas/requests.py`. **Built, website:** `features/client/requests/` (the page and the offer card); the chat's conversation component now also serves a request's thread.
+
+**Tests:** 11 backend tests (`tests/api/test_requests.py`): the page's words; cancel once; an offer from new stock is accepted once and needs its key; "no thanks" gives the box back; someone else's request or offer doesn't exist; the demo clock only for an admin and only in demo mode, audited. `test_every_route.py` now also walks the admin's endpoints. 8 website tests.
+
+**Left for their slices:** the demo clock's screen and the escalation replies in a thread (7f); the request's page as two columns on a wide screen (7g); the "why" chips on a card (later, `11` §14.2).
+
+---
+
 ## 4. Left for a later step
+
+**For the agent's final evaluation (slice 6b), seen in the browser on 2026-11-16:** the agent offers quick replies that read like buttons: "Yes, start sourcing" next to the [Start sourcing] card, "Reserve at Pharmacy C" next to a [Reserve] card. A quick reply only sends its words as a message and never acts, so nothing wrong happens; but a client may think they reserved. To add as regression cases and to the prompt's rules then. Also: `03` PS-10 lets a pharmacy change its phone in its settings, while `10` TH-59 says only an admin changes it (the number is shown to clients). Claude follows TH-59, the newer and stricter one, in slice 7e.
+
+**For hardening (slice 9), noted on 2026-11-16:** the login and sign-up endpoints have no limit per network address besides the sign-up count, and every login attempt, also for an unknown email, costs one argon2 hash (64 MB of memory with the library's defaults). To do: a per-address limit on `/auth/*`, a check of the hash's memory against the size of the API's task in AWS (`12` §6), and a row in the threat model.
 
 | What | Joins in |
 |---|---|
@@ -709,6 +774,22 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 
 | What | Result |
 |---|---|
+| **Refusals the client can understand showed "Something went wrong on our side"** (second review, slices 7b to 7d): the website had words for about half of the API's error codes. An offer that had just expired, a closed request or a price above the public one all fell back to the general sentence. | Every code of `06` §3.2 has its own words in `strings/en.ts`, and a website test reads the codes from the document and fails when one has none. |
+| **The website's test data was loose objects,** so a change of the API's shapes would not have failed the type check. | Each one is marked with the API's generated type (`satisfies Schemas[…]`). It found two loose spots at once. |
+| **The pharmacy's bar said "open until" the end of the day's last range,** wrong for a pharmacy that closes at midday and reopens. | The profile carries `closes_at`, the end of the range that is open now. |
+| **A reservation made for tomorrow didn't appear on the pharmacy's Today,** only in a count, although the box must be put aside at once (`03` PS-3). | Today has a second list, "For the next days". |
+| **A routing service that is down made every search wait for its timeout.** | After a failure it isn't asked again for a minute; searches show straight-line estimates meanwhile. |
+| **A closed request still had a message box.** | It is hidden once the request is closed. |
+| **`06` §6.2 put the client's location in the address** (`GET /listings?lat=…&lon=…`). An address is kept by the browser's history and by any proxy's log, CloudFront's included; a location is the most private thing a client sends us. | Search is a `POST` and the location is in its body (`06` §12). The website keeps the place in memory only, and a test checks no address ever holds it. |
+| **The daily purge deleted logins by the app clock** (found by a second review of slice 7a). Sessions and confirmation links are counted in real time since BLD-D31, but the purge still compared them with the app clock: after a demo-clock jump, the next daily task would have deleted every live session. | The purge compares them with real time. The test that moves the clock 30 days now also runs the daily tasks. |
+| **A test that walked every endpoint walked nothing.** This FastAPI version nests included routers, so a loop over `app.routes` found no endpoint and the test passed on an empty list. | The test reads the endpoints from the API's own description (`openapi.json`'s list) and refuses to run on fewer than 15. It now proves: every endpoint outside a short public list answers `401` with no login, and every client endpoint answers `403` to a pharmacist and to an admin. |
+| **The ticket counted "today" from the device's clock,** while Home used the server's: after a demo-clock jump the same deadline would read "Today" on one and "Tomorrow" on the other. | Every reservation answer carries `server_now` (`06` §1), and the ticket uses it. |
+| **`export_openapi` read `LLM_PROVIDER` from the developer's `.env`** when run with it, and then refused to build a model in a test setting. | The export names its own settings; it never builds a model. |
+| **`06` was written before the services and the agent existed** (slice 7a). Its `Card` had a list of actions and no `other_brand`; `PharmacyCard` had no pin; login answered "`Me` + `token`". | The API was built from what the services really produce, and `06` §12 lists each difference with its reason. A test now compares `06`'s error catalog with the code in both directions: it found 5 codes the doc had and the code lacked, and one the code had and the doc lacked. |
+| **`main.py` allowed `GET, POST, PATCH, DELETE` for the website, but `06` §6.6 sets the chat's location with `PUT`.** Backend tests can't see a refused browser preflight. | `PUT` is allowed and origin-checked; the location was set from a real browser. |
+| **R-T11 puts every time limit on the app clock.** For logins that breaks the demo: moving the demo clock a day ends the admin's 12-hour session. | Logins are counted in real time (BLD-D31, `04` R-T11). A test moves the app clock 30 days and the session still works. |
+| **A deadline at midnight read "Tomorrow 00:00"** on the ticket of a pharmacy open until 24:00 (seen in the browser). | It reads "Today 24:00", as the opening hours are written, on the website and in `status_text`. |
+| **The checkbox, the reminder and the list on the ticket:** `axe` found a reminder inside a `<dl>` where only terms and their values may stand. | Moved out of the list. |
 | The planner assumes an extra stop never shortens a trip. Real road times can be irregular. | Measured on 1,331 random baskets. With regular distances it always finds the best plan. With times bent by up to 30%, 1.7% of baskets get a trip about 2 minutes longer. It never covers fewer units. A test now guards this. |
 | The price formula in `05` §5 uses decimals and has no cap at the public price. | The code uses whole numbers and caps the price. The database function must do the same in step 3. |
 | **The Ministry's price list has no ingredients, ATC code or brand/generic** (the decision log's O3 said it had). | They are on the Ministry's drug database web pages. The import joins the two sources by name and price, then strength and form: 5,628 of 5,725 priced products match. A product that can't be matched safely is left out. |
@@ -798,11 +879,19 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q36 | **A cart on the search page?** | **2026-11-15: no cart** ("no cart as you recommend"). Search reserves one medicine at a time; several together are the agent's plan card. |
 | Q37 | **Does the "Find medicines for me" form stay?** | **2026-11-15: "drop the form".** A sourcing request starts only in the chat, from the agent's [Start sourcing] card (`03` CS-15 removed, `04` R-RQ1, `06` without `POST /requests`, `11` Home with one tile; BLD-D30). The owner also agreed that the search page's empty result opens the chat with the medicine's name typed ("very good idea"). Nothing built had to change: the form's screen and endpoint didn't exist yet, and the card's tap already creates the request. |
 | Q38 | **The same medicine name from another maker.** 127 names of the Ministry's list are carried by several makers (generics named after their ingredient). Is such a box what the client asked for, or another brand? | **2026-11-15: "same name same medicine".** The owner's reason: if it is the same exact medicine, a different company doesn't make it an alternative; the client named no company. Claude had built the cautious reading (another brand, "ask the pharmacist first") and recommended it, then agreed: the box carries exactly the name the client wrote. Built: `services/catalog.py` `same_brand`. Another brand is a box with another name (`04` R-C10). |
+| Q39 | **The short privacy note on the sign-up form.** No text existed; Claude wrote: *"DawaLink shows where a medicine is available and reserves it for you. It gives no medical advice: your pharmacist or doctor does. We keep your name, email and phone to run your account, and never share them with a pharmacy."* | **2026-11-16: kept** ("if you recommend keeping it deal no problem"). |
+| Q41 | **Commits while the rest is built.** On 2026-11-16 the owner first said he would commit once at the end; four slices then existed only as uncommitted changes. | **2026-11-16: one commit after each slice** ("deal give me the commit and push commands"). He commits and pushes himself, as before; Claude runs every check and the scan for secrets first and gives him the commands. Slices 7a to 7d go in one commit (their files were already mixed). The copies outside the repository (`Documents/Dawa_Link_backups/`) are no longer made. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
 
-Nothing waits for a decision (2026-11-15, late evening). The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070), and says when the next step starts.
+**One question waits** (2026-11-16): the owner asked for it to be explained again. It decides only how the pharmacy's upload screen is built in slice 7e; the rest of 7e doesn't wait for it:
+
+| # | Question | Claude's recommendation |
+|---|---|---|
+| Q40 | **Stock files: CSV only, or Excel (.xlsx) too?** `03` PS-6 and `04` N-15 say "CSV/XLSX"; the upload built in step 4 reads CSV only. Reading .xlsx safely needs two more libraries and guards against crafted files (`10` TH-34: zip bombs, macros, formulas). | **CSV only.** The template is a CSV, and Excel saves a sheet as CSV in two clicks; the upload screen says how. It removes an attack surface and work that doesn't serve the agent. If the team's own inventory files are .xlsx, say so and Claude builds it. |
+
+Otherwise nothing waits for a decision. The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070), and says when the next step starts.
 
 ---
 

@@ -182,6 +182,7 @@ def make_settings(database_url: str, tmp_path: Path, **overrides: object) -> Set
         "app_version": "test-version",
         "database_url": database_url,
         "website_url": WEBSITE,
+        "app_secret_key": "a-test-only-secret-key",
         "demo_mode": False,
         "log_level": "INFO",
         "worker_heartbeat_file": tmp_path / "heartbeat",
@@ -202,7 +203,8 @@ def app(settings: Settings) -> FastAPI:
 
 @pytest.fixture
 def client(app: FastAPI) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
+    # Every call says it comes from our website, as a browser on it would (docs/06 §2.1).
+    with TestClient(app, headers={"Origin": WEBSITE}) as test_client:
         yield test_client
 
 

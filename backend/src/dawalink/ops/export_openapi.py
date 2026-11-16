@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from pydantic import SecretStr
+
 from dawalink.api.main import create_app
 from dawalink.config import Settings
 
@@ -17,6 +19,9 @@ _EXPORT_SETTINGS = Settings(
     app_env="test",
     database_url="postgresql+psycopg://export@localhost/export",
     website_url="http://localhost",
+    app_secret_key=SecretStr("export-only"),
+    # Said here, not read from the environment: the export never builds a model.
+    llm_provider="none",
 )
 
 

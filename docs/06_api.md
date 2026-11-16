@@ -1,6 +1,6 @@
 # DawaLink: API Contracts
 
-**Version:** v1.10 (validated; v1.10: `POST /requests` is removed, a request is created only by executing the agent's `request_summary` proposal, BLD-D30; v1.9: a closed request can be OPEN again, and the system card `request_reopened`, BLD-D21; v1.8: the decision event `constraints_changed`, BLD-D20; v1.7: other brands are shown, never reserved, BLD-D17; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-15
+**Version:** v1.14 (validated; v1.14: requests, offers and the demo clock as built, §12; v1.13: the pharmacy's counter and early-release asks as built, §12; v1.12: search as built, §12: it is a `POST` so that the client's location travels in the body and never in an address; v1.11: the API as built for logins and the client's chat, §12: what the generated `openapi.json` holds that §2 to §6 wrote differently, and `BODY_TOO_LARGE`; v1.10: `POST /requests` is removed, a request is created only by executing the agent's `request_summary` proposal, BLD-D30; v1.9: a closed request can be OPEN again, and the system card `request_reopened`, BLD-D21; v1.8: the decision event `constraints_changed`, BLD-D20; v1.7: other brands are shown, never reserved, BLD-D17; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-15
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
 **Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI. **v1.4 applies the pickup-day decision** (decision log §W): search takes a `pickup_day` date instead of "today / tomorrow", and a listing says when its expiry limits the pickup days.
 
@@ -61,7 +61,7 @@ That is what the course asks for: *"interfaces between major components, includi
 
   The server stores only the token's hash. **Why not a cookie:** the website and the API are two separate sites (`12` §4.3), and Safari blocks third-party cookies. An XSS bug could read this token, so the CSP matters (`10` RR-13).
 - **Logout, a password change or a suspension** revokes the session at once. The next request gets `401 UNAUTHENTICATED`.
-- **CSRF protection:** the login is a header the page adds itself, never a cookie, so another site can't make the browser send it. In addition, every state-changing request (`POST`, `PATCH`, `DELETE`) must carry an `Origin` header equal to the website's address; otherwise it gets `403 ORIGIN_REJECTED`.
+- **CSRF protection:** the login is a header the page adds itself, never a cookie, so another site can't make the browser send it. In addition, every state-changing request (`POST`, `PUT`, `PATCH`, `DELETE`) must carry an `Origin` header equal to the website's address; otherwise it gets `403 ORIGIN_REJECTED`.
 - **CORS:** the API allows only the website's address, with the headers `Authorization`, `Content-Type` and `Idempotency-Key`, and exposes `X-Request-ID`. Preflight answers are cached for 2 hours.
 
 ### 2.2 The three checks on every endpoint
@@ -124,6 +124,7 @@ That is what the course asks for: *"interfaces between major components, includi
 | `METHOD_NOT_ALLOWED` | 405 | A real path called with a method it doesn't support | |
 | `RATE_LIMITED` | 429 | Too many requests; `Retry-After` header set | §4 |
 | `IDEMPOTENCY_KEY_REQUIRED` | 400 | A creating call without the header | §1 |
+| `BODY_TOO_LARGE` | 413 | A JSON body above 64 KB, refused before it is read (an upload has its own limit, `FILE_TOO_LARGE`) | §1 |
 | `INTERNAL_ERROR` | 500 | Unexpected error (logged with `request_id`) | |
 | `SERVICE_UNAVAILABLE` | 503 | Database unreachable | |
 | **Accounts** | | | |
@@ -453,10 +454,10 @@ All paths are relative to `/api/v1`.
 | `GET /districts` | anyone | → `list[District]` | | R-S2 |
 | `POST /auth/register/client` | anyone | `{email, password, full_name, phone?, district_id, accept_terms: true}` → **202** `{"message": "Check your email"}`, **the same answer whether or not the email already has an account** (`04` R-AU7). A new email becomes an UNVERIFIED account and gets the link (CN-1); an existing one gets CN-18. | `WEAK_PASSWORD`, `SIGNUP_LIMIT`, `VALIDATION_ERROR` | SM-2, R-AU1, R-AU5, R-AU7 |
 | `POST /auth/register/pharmacy` | anyone | `{email, password, pharmacy: {name, license_number, phone, address, district_id, location: {lat, lon} (the map pin), pickup_days, hours: [{weekday, open, close}]}, accept_terms: true}` → **202** `{"message": "Check your email"}`, the same answer whether or not the email already has an account (R-AU7). The pharmacy enters the approval queue (PENDING) once its email link is confirmed. | `LICENSE_TAKEN`, `PHONE_TAKEN`, `WEAK_PASSWORD` | SM-1, R-AU7 |
-| `POST /auth/login` | anyone | `{email, password, totp_code?}` → `Me` + `token`. **Admins must send `totp_code`** (R-AU6). | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3, R-AU6 |
+| `POST /auth/login` | anyone | `{email, password, totp_code?}` → `{me: Me, token, expires_at}`. **Admins must send `totp_code`** (R-AU6). | `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_SUSPENDED` | R-AU2, R-AU3, R-AU6 |
 | `POST /auth/logout` | any | → **204**; session revoked | | R-AU3 |
 | `GET /auth/me` | any | → `Me` | `UNAUTHENTICATED` | |
-| `POST /auth/verify-email` | anyone | `{token}` → `Me` + a session `token` (a client becomes ACTIVE; a pharmacy enters the approval queue as PENDING) | `TOKEN_INVALID` | R-AU4, R-AU7 |
+| `POST /auth/verify-email` | anyone | `{token}` → `{me: Me, token, expires_at}` (a client becomes ACTIVE; a pharmacy enters the approval queue as PENDING) | `TOKEN_INVALID` | R-AU4, R-AU7 |
 | `POST /auth/verify-email/resend` | logged in, email not verified | → **202** (≤ 1 per minute, ≤ 5 per day, N-47) | `RATE_LIMITED` | R-AU4 |
 | `POST /auth/password` | any | `{current_password, new_password}` → **204**; other sessions revoked | `INVALID_CREDENTIALS`, `WEAK_PASSWORD` | R-AU1 |
 | `GET /me/profile` · `PATCH /me/profile` | client | `{phone?, district_id?, alternatives_ok_default?}` → `Me` | `VALIDATION_ERROR` | CS-13 |
@@ -524,7 +525,7 @@ The agent's summary card ([Start sourcing], via `/proposals/{id}/execute`) is th
 #### 6.6.1 The chat stream (SSE)
 `Content-Type: text/event-stream`. Events, in order:
 ```
-event: turn_started      data: {"turn_id": "…", "client_message_seq": 41}
+event: turn_started      data: {"client_message_seq": 41}
 event: progress          data: {"label": "Searching…"}             (0 or more)
 event: progress          data: {"label": "Planning…"}
 event: message           data: Message                              (the complete, checked reply)
@@ -765,3 +766,48 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 - the API-D14 numbers are in `04` §5 (N-28–N-31);
 - `02` §5 and `05` §3.4 / §3.6 are aligned;
 - API-D1–API-D14 are recorded in the decision log (§O).
+
+---
+
+## 12. As built (slice 7a, 2026-11-16)
+
+**The exact contract is the generated [`openapi.json`](openapi.json).** A test fails when it and the code differ, and the website's types are generated from it. This section lists what was built differently from §2 to §6, and why.
+
+**Built so far:** §6.1 (without the pharmacy's registration), §6.2 (search), the reservations of §6.3 (reserve, read, cancel), §6.6 (without the report of an answer), §6.7, §6.5 (requests) and the offers of §6.3, of §6.9 the pharmacy's profile, dashboard, reservations and early-release asks, and of §6.10 the demo clock. The rest of §6 comes with its slice ([build plan](build_plan.md) §2).
+
+| What §2 to §6 said | As built | Why |
+|---|---|---|
+| Login and the confirmation link answer `Me` + `token` | `{me, token, expires_at}` | One shape for both; the website knows when the session ends |
+| `turn_started` carries a `turn_id` | Only `client_message_seq` | A turn's ID exists only once the turn has loaded its context, and nothing on the website needs it |
+| `Card` has `actions: list[CardAction]` | `Card` has one `action_label`, `selectable_items`, `call_number`, and `data` for system cards. `card_id` is the proposal's ID, or `<seq>:<position>` for a system card. `type` is the proposal's kind (`reserve`, `reserve_group`, `request_summary`, `constraint_change`, `remove_item`, `cancel`, `other_brand`) or the system template (`reserved`, `picked_up`, `not_available`, `cancelled`, `cancelled_by_system`, `expired`, `offer`, `offer_ended`, `request_reopened`, `request_closed`) | A card has one button (`11` §4), and the endpoint it calls follows from `origin`. A system card is drawn by the website from its template and its facts, as the services store it |
+| `PharmacyCard` has `district: District` and `area` | `district` and `governorate` as names, and **`pin: {lat, lon}`** | A pharmacy's own place is public, like its address: [Directions] and the map need it (`11` §11). **A client's location is still in no answer** |
+| `Reservation` | + `saving`, `pickup_day`, `expiry_date`, `contestable` | The ticket shows them (`11` §1, "Savings first") |
+| `ClientState.district` is always there | `null` when the profile has none; + `missed_pickups_before_pause` | The column allows none; "0 of 2" needs the 2 |
+| `MessagesPage` | + `location: {source, label}`, in words | The chat says where travel times are counted from ("Beirut (your home district)") and never receives a point (INV-24) |
+| `/config/public` | No `discount_tiers` yet; + `poll_every_s`, `max_message_chars`, `assistant_available` | The website reads its timers from the server; the tiers come with the search page |
+| A repeated `Idempotency-Key` on `/proposals/{id}/execute` returns the original result | A second tap of a used card answers `PROPOSAL_USED`. What the first tap made is in the chat (the "reserved" card) and in `GET /reservations` | A card works once (INV-21) and creates with a key of its own (`proposal:<id>`), so nothing is created twice. The header is still required |
+| The 64 KB limit of §1 had no code | `413 BODY_TOO_LARGE`, refused before the body is read | A limit needs an answer |
+| `GET /listings?product_id=…&lat=…&lon=…` | **`POST /listings/search`**, with the same choices in the body: `{product_id, location?, days_of_use?, pickup_day?, max_price?, sort, on_foot, cursor, limit}` | **The client's location must not be in an address:** a browser's history, a proxy and CloudFront's logs keep addresses. The body is kept by none of them. (Slice 7b) |
+| Search by `product_id` or by `q` | By `product_id` only; `GET /catalog/products?q=` finds the product first | One meaning per call: the search page shows the medicine once, then its pharmacies (`11` §5) |
+| `GET /listings/{id}` → `Listing` + `pharmacy_hours`, `other_offers_count` | **`POST /listings/{id}/view`** `{location?, days_of_use?}` → `{listing, week, location, server_now}`; `week` is the pharmacy's opening hours for the next 7 days. A box that doesn't last the days is still shown here, with `fits: false` and no pickup day. No `other_offers_count` | The location again; and "other offers" are other brands, which search never shows (R-S4) |
+| `Listing.area` (`same_district` …) | Left out; + `saving` | The travel time says how far; the saving is on every price (`11` §1) |
+| `SearchResult` | + `product`, `total_found`, `left_out_by_pickup_day`, `location` in words, `upcoming_days` (the days a client may say they'll come, N-49) | The page draws its choices from the server's answer, and never works out a date itself |
+| `GET /pharmacy/me` → `{…PharmacyState, license_number, phone, address, district, pickup_days, hours}` | The same, with `week` (its opening hours for the next 7 days, today first), `open_now` and `server_now` in place of `hours` | The portal's bar says "open until 21:00"; the editable weekly schedule comes with the settings screen (slice 7e) |
+| `GET /pharmacy/reservations?q=` | With `q`, the one reservation with that number, **whatever its state** | At the counter the pharmacist must also see "already picked up" or "cancelled by the client" (`03` §2.6) |
+| A pharmacy's reservation has the client's `status_text` | Its own words: "Hand over by today 21:00", "Cancelled by the client: put the box back" | The same state reads differently on each side of the counter |
+| `POST …/not-available` `{units}` | `units` may be left out: every pack | The common case is one tap |
+| Decline reasons `not_available`, `keeping_for_customers`, `other` | `keeping_it`, `no_longer_in_stock`, `price`, `other` | As the service has had them since build step 4. Still a code from a list, never free text (R-AG8) |
+| `POST …/accept` answers `{state}` or `{state: "WITHDRAWN", message}` | Always `{state, message}` | One shape; the portal shows the message |
+| An early-release ask has `public_price` | It is in `product.public_price` | Once is enough |
+| `SourcingRequest` has `district` | Left out; + `units_wanted`, `units_secured`; each item has `days_of_use`, and its `reservations` carry the pharmacy's name and the packs | The page's headline is "2 of 3 reserved"; the place a request searches from is fixed at its start and is never sent back (INV-24) |
+| `Offer` has `claim_id` | Left out; + `total`, `saving`, `days_of_use`, `pickup_days_allowed` | The card shows what is saved and lets the client choose a day the pharmacy allows and on which the box still lasts; the server checks the day again at the tap |
+| `GET /offers?state=open` | `GET /offers`: the open ones only | Nothing shows a closed offer |
+| A repeated `Idempotency-Key` on `/offers/{id}/accept` returns the original result | A second tap answers `OFFER_NOT_OPEN`; the reservation is in `GET /reservations` | An offer is accepted once (INV-20) |
+| The demo clock (`06` §6.10) | `GET /admin/demo-clock` → `{server_now, offset_minutes, demo_mode}`; `POST /admin/demo-clock/advance` `{minutes, reason?}`; `404 DEMO_MODE_OFF` outside demo mode | Admin only, audited (R-DEMO). Its screen comes with the admin's side (slice 7f) |
+
+**How a chat message is answered.**
+- The turn runs on its own thread, started before the first byte of the stream is sent. A dropped connection loses nothing (`09` FX-16): the reply is saved, and the next poll has it.
+- What can be known before the message is stored is a plain HTTP error, and nothing is kept: `ASSISTANT_UNAVAILABLE`, `TOKEN_BUDGET_EXCEEDED`, `CONVERSATION_BUSY`, `RATE_LIMITED`. The website puts the text back in the box.
+- A model that fails during the turn is an `error` event inside the stream, and the message is kept.
+
+**Time.** What protects a login is counted in real time, never on the demo clock: sessions, lockouts, confirmation links, the sign-up and resend limits (`04` R-T11).

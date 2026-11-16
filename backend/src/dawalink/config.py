@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # The website's origin: the only site the API accepts browser calls from (docs/06 §2.1).
     website_url: str
     demo_mode: bool = False
+    # The app's own secret: admins' two-factor secrets are encrypted with it, and the
+    # network address of a sign-up is hashed with it (docs/04 R-AU5, R-AU6). The API and
+    # the commands that create accounts refuse to start without it.
+    app_secret_key: SecretStr | None = None
+    # The password of the demo accounts (`seed_demo`). Without it they can't log in.
+    demo_accounts_password: SecretStr | None = None
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     worker_heartbeat_file: Path = Path(tempfile.gettempdir()) / "dawalink-worker-heartbeat"
     # Where the worker sends email: the local mail catcher in development. Without a
@@ -62,6 +68,8 @@ class Settings(BaseSettings):
     )
 
     @field_validator(
+        "app_secret_key",
+        "demo_accounts_password",
         "anthropic_api_key",
         "ors_api_key",
         "langfuse_public_key",

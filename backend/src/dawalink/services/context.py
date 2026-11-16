@@ -7,7 +7,7 @@ the commit (matching, which takes its own locks) is deferred and run right after
 from collections.abc import Callable, Hashable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 import structlog
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,6 +22,10 @@ class Tx:
     session: Session
     # The app clock's time when this transaction started. Every deadline is computed from it.
     now: datetime
+    # The real time. Only what protects a login is counted from it (sessions, lockouts,
+    # verification links, sign-up limits): moving the demo clock must not log anyone out,
+    # and those limits are compared with `created_at` columns, which are real time too.
+    real_now: datetime = field(default_factory=lambda: datetime.now(UTC))
     _deferred: dict[Hashable, Callable[["Tx"], None]] = field(default_factory=dict)
 
     @property

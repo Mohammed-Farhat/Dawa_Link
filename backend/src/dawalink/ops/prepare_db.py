@@ -35,7 +35,12 @@ from dawalink.ops.import_catalog import (
     import_from_folder,
     log_result,
 )
-from dawalink.ops.seed_demo import DEFAULT_SEED, has_pharmacies, seed_demo
+from dawalink.ops.seed_demo import (
+    DEFAULT_SEED,
+    has_pharmacies,
+    seed_demo,
+    set_demo_passwords,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -140,6 +145,12 @@ def prepare(
                         clients=result.clients,
                         inventory_items=result.inventory_items,
                     )
+                if settings.demo_accounts_password is not None:
+                    # One password for every demo account, from the settings: never in git.
+                    accounts = set_demo_passwords(
+                        connection, settings.demo_accounts_password.get_secret_value()
+                    )
+                    log.info("demo_passwords_set", accounts=accounts)
     finally:
         engine.dispose()
 

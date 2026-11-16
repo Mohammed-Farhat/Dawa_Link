@@ -1,7 +1,7 @@
 """The once-a-day tasks: retention and the stale-inventory reminder (docs/04 R-RET, N-16)."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -230,14 +230,18 @@ class TestOtherRows:
         ]
 
     def test_sessions_go_once_expired_or_revoked(self, world: World) -> None:
+        """Logins are counted in real time (R-T11), whatever the app clock says."""
         client = world.make.client()
+        real = datetime.now(UTC)
         rows = {
-            b"expired": {"expires_at": NOW - DAY},
-            b"revoked": {"expires_at": NOW + DAY, "revoked_at": NOW - DAY},
-            b"live": {"expires_at": NOW + DAY},
+            b"expired": {"expires_at": real - DAY},
+            b"revoked": {"expires_at": real + DAY, "revoked_at": real - DAY},
+            b"live": {"expires_at": real + DAY},
         }
         for token, values in rows.items():
             insert(world, "sessions", id=uuid.uuid4(), user_id=client, token_hash=token, **values)
+        # The demo clock jumps far ahead: a session that is still good must survive it.
+        world.later(days=60)
 
         run(world)
 
@@ -246,10 +250,11 @@ class TestOtherRows:
 
     def test_verification_links_go_once_used_or_expired(self, world: World) -> None:
         client = world.make.client()
+        real = datetime.now(UTC)
         rows = {
-            b"expired": {"expires_at": NOW - DAY},
-            b"used": {"expires_at": NOW + DAY, "used_at": NOW - DAY},
-            b"waiting": {"expires_at": NOW + DAY},
+            b"expired": {"expires_at": real - DAY},
+            b"used": {"expires_at": real + DAY, "used_at": real - DAY},
+            b"waiting": {"expires_at": real + DAY},
         }
         for token, values in rows.items():
             insert(

@@ -10,6 +10,11 @@ x-backend: &backend
     LOG_LEVEL: ${LOG_LEVEL:-INFO}
     DEMO_MODE: ${DEMO_MODE:-true}
     WEBSITE_URL: ${WEBSITE_URL:-http://localhost:5173}
+    # The app's own secret (two-factor secrets, sign-up counting). This default only
+    # works on this machine; AWS gets a real one from Secrets Manager (docs/12 section 8).
+    APP_SECRET_KEY: ${APP_SECRET_KEY:-local-only-secret-key}
+    # The one password of the demo accounts. Empty: they can't log in.
+    DEMO_ACCOUNTS_PASSWORD: ${DEMO_ACCOUNTS_PASSWORD:-}
     # The app's own login: the only one the API has (docs/05 §7, docs/12 §8).
     DATABASE_URL: postgresql+psycopg://dawalink_app:${APP_DB_PASSWORD:-app-local-only}@postgres:5432/${POSTGRES_DB}
     # The assistant. With LLM_PROVIDER unset it is off, and nothing can be spent.

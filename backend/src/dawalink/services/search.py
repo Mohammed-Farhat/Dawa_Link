@@ -123,6 +123,43 @@ def visible_boxes(
     ]
 
 
+def one_listing(
+    tx: Tx,
+    *,
+    client_id: uuid.UUID,
+    item_id: uuid.UUID,
+    location: Location,
+    days_of_use: int | None = None,
+) -> Listing:
+    """One visible box, for its own page (CS-7). A box that stopped being visible is
+    "not found": the page never shows what can't be reserved (docs/06 §6.2)."""
+    clients.require_search(clients.profile(tx, client_id))
+    boxes = visible_boxes(tx, item_ids=[item_id])
+    if not boxes:
+        raise ServiceError(Code.NOT_FOUND, "This offer is no longer available.")
+    box = boxes[0]
+    product = catalog.allowed_product(tx, box.product_id)
+    choice = box.choice(days_of_use or DEFAULT_DAYS_OF_USE)
+    hours = pharmacies.weekly_hours(tx, [box.pharmacy_id])
+    shown, more = availability_shown(box.qty_available)
+    return Listing(
+        id=box.item_id,
+        product=catalog.ref(product),
+        pharmacy=pharmacies.cards(tx, [box.pharmacy_id], hours)[box.pharmacy_id],
+        price_lbp=box.price_lbp,
+        discount_pct=discount_shown_pct(product.public_price_lbp, box.price_lbp),
+        expiry_date=box.expiry_date,
+        days_left=box.days_left,
+        available=shown,
+        more_available=more,
+        travel=travel.travel_to(tx, location, [box.pharmacy_id])[box.pharmacy_id],
+        # Here the box is shown even when it doesn't last: the page then says so.
+        fits=None if days_of_use is None else bool(choice.days),
+        pickup_days_allowed=choice.days,
+        expiry_limits_pickup=choice.expiry_limits_pickup,
+    )
+
+
 def search_listings(
     tx: Tx,
     *,

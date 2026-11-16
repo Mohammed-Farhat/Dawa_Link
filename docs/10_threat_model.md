@@ -1,6 +1,6 @@
 # DawaLink: Threat Model
 
-**Version:** v1.8 (v1.8: the pharmacy's phone on the "another brand" card, TH-59; v1.7: place names from OpenStreetMap, TH-58; v1.6: the `set_area` tool, and what Langfuse really received; v1.5: what the agent sends out, as built and tested in step 5) · **Date:** 2026-11-14
+**Version:** v1.9 (v1.9: the login as built: the app's own secret key, a confirmation link whose token is made when its email is written and never stored, one password for the demo accounts, RR-17; v1.8: the pharmacy's phone on the "another brand" card, TH-59; v1.7: place names from OpenStreetMap, TH-58; v1.6: the `set_area` tool, and what Langfuse really received; v1.5: what the agent sends out, as built and tested in step 5) · **Date:** 2026-11-14
 **Builds on:** `02` v3.1 (components, deployment) · `04` v4.1 (rules, invariants) · `05` v3.1 (tables, roles) · `06` v1.2 (auth, errors, limits) · `07` v1.2 (tools, guards) · `08` v1.1 (E4, E6) · `09` v1.2 (FS rows) · `12` (deployment) · ADR-001–ADR-004
 **Status:** ✅ validated by the team (2026-10-22, decision log §T). TM-D1–TM-D9 are applied across `01`–`09`; TM-D10 is postponed to the end of the project. **v1.2 applies step 12** (`12`, decision log §V): two CloudFronts and a public ALB, the login token in a header, no pipelines, and five new accepted risks. **Living:** every change that adds an attack surface updates it (Definition of Done #6).
 
@@ -365,6 +365,7 @@ These risks remain after the mitigations. We accept them **knowingly**, and the 
 | RR-14 | **Someone's own CloudFront can reach the public ALB** and dodge the IP-based sign-up limit | One security group rule stops direct calls, and the owner chose not to add a secret header. Low risk for a demo; per-client limits still apply. | Sign-up counts |
 | RR-15 | **Visitors can connect to CloudFront with old TLS versions** | This is fixed on `*.cloudfront.net` addresses, and there's no domain. Modern browsers don't use them. | none needed |
 | RR-16 | **No automated code, dependency or image scans,** only GitHub's secret scanning, which is on by default | The owner chose not to use pipelines (`12` INF-D14). The lockfile and the pinned base image remain. | Manual review |
+| RR-17 | **The demo accounts share one password,** set from the `DEMO_ACCOUNTS_PASSWORD` setting | They hold invented clients and pharmacies only, and exist in demo mode. The password is a setting, never in git: without it no demo account can log in, and in AWS it is a secret (`12` §8). A confirmation link's token is never stored either: it is made when its email is written, and leaves the address bar as soon as it is read. | The login lockout (R-AU2) applies to these accounts too |
 
 ---
 

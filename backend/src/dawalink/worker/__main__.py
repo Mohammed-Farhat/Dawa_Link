@@ -31,7 +31,11 @@ def clock_tasks(
             make_engine(settings.database_retention_url), expire_on_commit=False
         )
     return ClockTasks(
-        sessions, clock, mailer=mailer(settings), retention_sessions=retention
+        sessions,
+        clock,
+        mailer=mailer(settings),
+        retention_sessions=retention,
+        website_url=settings.website_url,
     ).tasks()
 
 

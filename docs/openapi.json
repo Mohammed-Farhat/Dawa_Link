@@ -1,6 +1,718 @@
 {
   "components": {
     "schemas": {
+      "AcceptAsk": {
+        "additionalProperties": false,
+        "properties": {
+          "price_lbp": {
+            "minimum": 0.0,
+            "title": "Price Lbp",
+            "type": "integer"
+          },
+          "qty": {
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Qty",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "qty",
+          "price_lbp"
+        ],
+        "title": "AcceptAsk",
+        "type": "object"
+      },
+      "AcceptOffer": {
+        "additionalProperties": false,
+        "properties": {
+          "pickup_day": {
+            "format": "date",
+            "title": "Pickup Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pickup_day"
+        ],
+        "title": "AcceptOffer",
+        "type": "object"
+      },
+      "AdvanceClock": {
+        "additionalProperties": false,
+        "properties": {
+          "minutes": {
+            "maximum": 10080.0,
+            "minimum": 1.0,
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "reason": {
+            "default": "demo",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "minutes"
+        ],
+        "title": "AdvanceClock",
+        "type": "object"
+      },
+      "AskAnswered": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ACCEPTED",
+              "WITHDRAWN",
+              "DECLINED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "message"
+        ],
+        "title": "AskAnswered",
+        "type": "object"
+      },
+      "Card": {
+        "description": "A card under a message. **Its words are written by code and stored**; the model\nonly chose to show it (R-AG7).\n\n- `origin = \"proposal\"`: made by one of the agent's tools. Its button calls\n  `POST /proposals/{card_id}/execute`.\n- `origin = \"system\"`: a template card about something that happened (reserved, picked\n  up, an offer). `type` names the template and `data` holds its facts.",
+        "properties": {
+          "action_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Label"
+          },
+          "call_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Number"
+          },
+          "card_id": {
+            "title": "Card Id",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/CardLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "origin": {
+            "enum": [
+              "proposal",
+              "system"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "prescription_notice": {
+            "title": "Prescription Notice",
+            "type": "boolean"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "selectable_items": {
+            "items": {
+              "$ref": "#/components/schemas/SelectableItem"
+            },
+            "title": "Selectable Items",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "used",
+              "expired"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "card_id",
+          "origin",
+          "type",
+          "title",
+          "lines",
+          "prescription_notice",
+          "recommended",
+          "state",
+          "expires_at",
+          "action_label",
+          "selectable_items",
+          "call_number",
+          "data"
+        ],
+        "title": "Card",
+        "type": "object"
+      },
+      "CardLine": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "CardLine",
+        "type": "object"
+      },
+      "ChangePassword": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePassword",
+        "type": "object"
+      },
+      "ChatMessage": {
+        "properties": {
+          "author": {
+            "enum": [
+              "client",
+              "agent",
+              "system",
+              "admin"
+            ],
+            "title": "Author",
+            "type": "string"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/Card"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "card",
+              "timeline"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "quick_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quick Replies",
+            "type": "array"
+          },
+          "reportable": {
+            "title": "Reportable",
+            "type": "boolean"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "seq",
+          "author",
+          "kind",
+          "text",
+          "cards",
+          "quick_replies",
+          "reportable",
+          "created_at"
+        ],
+        "title": "ChatMessage",
+        "type": "object"
+      },
+      "ClientState": {
+        "properties": {
+          "alternatives_ok_default": {
+            "title": "Alternatives Ok Default",
+            "type": "boolean"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/District"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missed_pickups_30d": {
+            "title": "Missed Pickups 30D",
+            "type": "integer"
+          },
+          "missed_pickups_before_pause": {
+            "title": "Missed Pickups Before Pause",
+            "type": "integer"
+          },
+          "paused_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused Until"
+          },
+          "status": {
+            "enum": [
+              "UNVERIFIED",
+              "ACTIVE",
+              "PAUSED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "paused_until",
+          "district",
+          "alternatives_ok_default",
+          "missed_pickups_30d",
+          "missed_pickups_before_pause"
+        ],
+        "title": "ClientState",
+        "type": "object"
+      },
+      "ConversationRef": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "chat",
+              "request"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "kind"
+        ],
+        "title": "ConversationRef",
+        "type": "object"
+      },
+      "Dashboard": {
+        "description": "Today in numbers (PS-3).",
+        "properties": {
+          "due_today": {
+            "title": "Due Today",
+            "type": "integer"
+          },
+          "last_inventory_update": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Inventory Update"
+          },
+          "live_listings": {
+            "title": "Live Listings",
+            "type": "integer"
+          },
+          "new_reservations": {
+            "title": "New Reservations",
+            "type": "integer"
+          },
+          "open_asks": {
+            "title": "Open Asks",
+            "type": "integer"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "units_reserved": {
+            "title": "Units Reserved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "new_reservations",
+          "due_today",
+          "open_asks",
+          "live_listings",
+          "units_reserved",
+          "last_inventory_update",
+          "stale",
+          "server_now"
+        ],
+        "title": "Dashboard",
+        "type": "object"
+      },
+      "DayHours": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "hours": {
+            "title": "Hours",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "hours"
+        ],
+        "title": "DayHours",
+        "type": "object"
+      },
+      "DeclineAsk": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "enum": [
+              "keeping_it",
+              "no_longer_in_stock",
+              "price",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeclineAsk",
+        "type": "object"
+      },
+      "DemoClock": {
+        "description": "The app's own time (R-DEMO). Outside demo mode it is the real time, always.",
+        "properties": {
+          "demo_mode": {
+            "title": "Demo Mode",
+            "type": "boolean"
+          },
+          "offset_minutes": {
+            "title": "Offset Minutes",
+            "type": "integer"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_now",
+          "offset_minutes",
+          "demo_mode"
+        ],
+        "title": "DemoClock",
+        "type": "object"
+      },
+      "District": {
+        "properties": {
+          "governorate": {
+            "title": "Governorate",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "governorate"
+        ],
+        "title": "District",
+        "type": "object"
+      },
+      "EarlyReleaseAsk": {
+        "description": "\"A client needs 2 packs today. You hold 5 that aren't listed yet. Release them?\"\nNothing here says who the client is (R-E8).",
+        "properties": {
+          "answered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "private_item": {
+            "$ref": "#/components/schemas/PrivateItem"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty_needed": {
+            "title": "Qty Needed",
+            "type": "integer"
+          },
+          "respond_by": {
+            "format": "date-time",
+            "title": "Respond By",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ASKED",
+              "ACCEPTED",
+              "DECLINED",
+              "EXPIRED",
+              "WITHDRAWN"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "suggested_price": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "product",
+          "qty_needed",
+          "private_item",
+          "suggested_price",
+          "respond_by",
+          "answered_at"
+        ],
+        "title": "EarlyReleaseAsk",
+        "type": "object"
+      },
+      "EarlyReleaseAsks": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EarlyReleaseAsk"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "server_now"
+        ],
+        "title": "EarlyReleaseAsks",
+        "type": "object"
+      },
+      "ExecuteProposal": {
+        "additionalProperties": false,
+        "properties": {
+          "selected_item_keys": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Item Keys"
+          }
+        },
+        "title": "ExecuteProposal",
+        "type": "object"
+      },
+      "ExecuteResult": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "proposal_id": {
+            "format": "uuid",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "request_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Ref"
+          },
+          "reservations": {
+            "items": {
+              "$ref": "#/components/schemas/Reservation"
+            },
+            "title": "Reservations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "kind",
+          "reservations",
+          "request_id",
+          "request_ref",
+          "message"
+        ],
+        "title": "ExecuteResult",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "Health": {
         "properties": {
           "db": {
@@ -31,6 +743,2269 @@
         ],
         "title": "Health",
         "type": "object"
+      },
+      "Ingredient": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "name",
+          "strength"
+        ],
+        "title": "Ingredient",
+        "type": "object"
+      },
+      "Listing": {
+        "description": "One visible box a client can reserve (docs/04 SM-3).",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "integer"
+          },
+          "days_left": {
+            "title": "Days Left",
+            "type": "integer"
+          },
+          "discount_pct": {
+            "title": "Discount Pct",
+            "type": "integer"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "expiry_limits_pickup": {
+            "title": "Expiry Limits Pickup",
+            "type": "boolean"
+          },
+          "fits": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fits"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "more_available": {
+            "title": "More Available",
+            "type": "boolean"
+          },
+          "pharmacy": {
+            "$ref": "#/components/schemas/PharmacyCard"
+          },
+          "pickup_days_allowed": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Pickup Days Allowed",
+            "type": "array"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "saving": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "travel": {
+            "$ref": "#/components/schemas/Travel"
+          }
+        },
+        "required": [
+          "id",
+          "product",
+          "pharmacy",
+          "price",
+          "saving",
+          "discount_pct",
+          "expiry_date",
+          "days_left",
+          "available",
+          "more_available",
+          "travel",
+          "fits",
+          "pickup_days_allowed",
+          "expiry_limits_pickup"
+        ],
+        "title": "Listing",
+        "type": "object"
+      },
+      "ListingDetail": {
+        "properties": {
+          "listing": {
+            "$ref": "#/components/schemas/Listing"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationSummary"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "week": {
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "title": "Week",
+            "type": "array"
+          }
+        },
+        "required": [
+          "listing",
+          "week",
+          "location",
+          "server_now"
+        ],
+        "title": "ListingDetail",
+        "type": "object"
+      },
+      "LocationIn": {
+        "additionalProperties": false,
+        "description": "Where the client is: a shared or picked point, or a district. Stored rounded, and\nnever sent to the AI (R-S2).",
+        "properties": {
+          "district_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          }
+        },
+        "title": "LocationIn",
+        "type": "object"
+      },
+      "LocationSummary": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source": {
+            "enum": [
+              "shared",
+              "district",
+              "area",
+              "profile",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "label"
+        ],
+        "title": "LocationSummary",
+        "type": "object"
+      },
+      "LoggedIn": {
+        "description": "Who logged in, and the token the website sends from now on (docs/06 §2.1).",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "me": {
+            "$ref": "#/components/schemas/Me"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "me",
+          "token",
+          "expires_at"
+        ],
+        "title": "LoggedIn",
+        "type": "object"
+      },
+      "Login": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "totp_code": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totp Code"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Login",
+        "type": "object"
+      },
+      "Me": {
+        "properties": {
+          "client": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pharmacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PharmacyState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "enum": [
+              "client",
+              "pharmacist",
+              "admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "email",
+          "full_name",
+          "email_verified",
+          "client",
+          "pharmacy"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
+      "Message": {
+        "description": "A plain sentence, for the answers that say nothing else.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "Message",
+        "type": "object"
+      },
+      "MessageAccepted": {
+        "properties": {
+          "message_seq": {
+            "title": "Message Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message_seq"
+        ],
+        "title": "MessageAccepted",
+        "type": "object"
+      },
+      "MessagesPage": {
+        "description": "What the page asks for every few seconds while it is open (API-D7).",
+        "properties": {
+          "busy": {
+            "title": "Busy",
+            "type": "boolean"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "chat",
+              "request"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_seq": {
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationSummary"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "kind",
+          "request_id",
+          "messages",
+          "last_seq",
+          "busy",
+          "location",
+          "server_now"
+        ],
+        "title": "MessagesPage",
+        "type": "object"
+      },
+      "Money": {
+        "properties": {
+          "lbp": {
+            "title": "Lbp",
+            "type": "integer"
+          },
+          "usd_approx": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usd Approx"
+          }
+        },
+        "required": [
+          "lbp",
+          "usd_approx"
+        ],
+        "title": "Money",
+        "type": "object"
+      },
+      "MoneyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "enum": [
+              "LBP",
+              "USD"
+            ],
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "title": "MoneyIn",
+        "type": "object"
+      },
+      "NoMatch": {
+        "description": "Boxes exist, but none lasts the client's days or can be had on their day (R-F4).",
+        "properties": {
+          "latest_expiry": {
+            "format": "date",
+            "title": "Latest Expiry",
+            "type": "string"
+          },
+          "latest_pickup_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Pickup Day"
+          }
+        },
+        "required": [
+          "latest_expiry",
+          "latest_pickup_day"
+        ],
+        "title": "NoMatch",
+        "type": "object"
+      },
+      "NotAvailable": {
+        "additionalProperties": false,
+        "properties": {
+          "units": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          }
+        },
+        "title": "NotAvailable",
+        "type": "object"
+      },
+      "Offer": {
+        "description": "Stock held for the client for two hours: from new stock that matched their need,\nor released by a pharmacy the agent asked. A tap accepts it (O7, O8).",
+        "properties": {
+          "days_of_use": {
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "matching",
+              "early_release"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "pharmacy": {
+            "$ref": "#/components/schemas/PharmacyCard"
+          },
+          "pickup_days_allowed": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Pickup Days Allowed",
+            "type": "array"
+          },
+          "price_each": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "saving": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "product",
+          "pharmacy",
+          "qty",
+          "price_each",
+          "total",
+          "saving",
+          "expiry_date",
+          "days_of_use",
+          "expires_at",
+          "pickup_days_allowed",
+          "request_id"
+        ],
+        "title": "Offer",
+        "type": "object"
+      },
+      "Offers": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Offer"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "server_now"
+        ],
+        "title": "Offers",
+        "type": "object"
+      },
+      "PharmacyCard": {
+        "description": "What a client sees about a pharmacy.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closes At"
+          },
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "governorate": {
+            "title": "Governorate",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_now": {
+            "title": "Open Now",
+            "type": "boolean"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "pickup_days": {
+            "title": "Pickup Days",
+            "type": "integer"
+          },
+          "pin": {
+            "$ref": "#/components/schemas/Pin"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "district",
+          "governorate",
+          "address",
+          "phone",
+          "open_now",
+          "closes_at",
+          "pickup_days",
+          "pin"
+        ],
+        "title": "PharmacyCard",
+        "type": "object"
+      },
+      "PharmacyProfile": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closes At"
+          },
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "info_requested": {
+            "title": "Info Requested",
+            "type": "boolean"
+          },
+          "license_number": {
+            "title": "License Number",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_now": {
+            "title": "Open Now",
+            "type": "boolean"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "pickup_days": {
+            "title": "Pickup Days",
+            "type": "integer"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "week": {
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "title": "Week",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "status_reason",
+          "info_requested",
+          "address",
+          "district",
+          "phone",
+          "license_number",
+          "pickup_days",
+          "week",
+          "open_now",
+          "closes_at",
+          "server_now"
+        ],
+        "title": "PharmacyProfile",
+        "type": "object"
+      },
+      "PharmacyReservation": {
+        "properties": {
+          "batch": {
+            "title": "Batch",
+            "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_new": {
+            "title": "Is New",
+            "type": "boolean"
+          },
+          "pickup_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Day"
+          },
+          "price_each": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "qty_requested": {
+            "title": "Qty Requested",
+            "type": "integer"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RESERVED",
+              "PICKED_UP",
+              "NOT_AVAILABLE",
+              "EXPIRED_NO_SHOW",
+              "CANCELLED_BY_CLIENT",
+              "CANCELLED_BY_SYSTEM"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status_text": {
+            "title": "Status Text",
+            "type": "string"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "state",
+          "status_text",
+          "product",
+          "batch",
+          "expiry_date",
+          "qty",
+          "qty_requested",
+          "price_each",
+          "total",
+          "pickup_day",
+          "deadline",
+          "is_new",
+          "created_at",
+          "closed_at"
+        ],
+        "title": "PharmacyReservation",
+        "type": "object"
+      },
+      "PharmacyReservations": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PharmacyReservation"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "server_now"
+        ],
+        "title": "PharmacyReservations",
+        "type": "object"
+      },
+      "PharmacyState": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "info_requested": {
+            "title": "Info Requested",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "status_reason",
+          "info_requested"
+        ],
+        "title": "PharmacyState",
+        "type": "object"
+      },
+      "Pin": {
+        "description": "Where a pharmacy is: public, like its address. It is what [Directions] opens and\nwhat the map shows. (A **client's** location is what never leaves the server.)",
+        "properties": {
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "Pin",
+        "type": "object"
+      },
+      "PrivateItem": {
+        "properties": {
+          "batch": {
+            "title": "Batch",
+            "type": "string"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "qty_available": {
+            "title": "Qty Available",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batch",
+          "expiry_date",
+          "qty_available"
+        ],
+        "title": "PrivateItem",
+        "type": "object"
+      },
+      "ProductDetail": {
+        "properties": {
+          "atc_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atc Code"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/Ingredient"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "prescription_required": {
+            "title": "Prescription Required",
+            "type": "boolean"
+          },
+          "public_price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "strength",
+          "form",
+          "pack",
+          "prescription_required",
+          "public_price",
+          "ingredients",
+          "atc_code",
+          "manufacturer"
+        ],
+        "title": "ProductDetail",
+        "type": "object"
+      },
+      "ProductSummary": {
+        "properties": {
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "prescription_required": {
+            "title": "Prescription Required",
+            "type": "boolean"
+          },
+          "public_price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "strength",
+          "form",
+          "pack",
+          "prescription_required",
+          "public_price"
+        ],
+        "title": "ProductSummary",
+        "type": "object"
+      },
+      "Products": {
+        "properties": {
+          "did_you_mean": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Did You Mean",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "did_you_mean"
+        ],
+        "title": "Products",
+        "type": "object"
+      },
+      "ProfileChange": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives_ok_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternatives Ok Default"
+          },
+          "district_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "title": "ProfileChange",
+        "type": "object"
+      },
+      "PublicConfig": {
+        "description": "What the website needs before anyone logs in. No secret, no stock.",
+        "properties": {
+          "assistant_available": {
+            "title": "Assistant Available",
+            "type": "boolean"
+          },
+          "demo_mode": {
+            "title": "Demo Mode",
+            "type": "boolean"
+          },
+          "lbp_per_usd": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lbp Per Usd"
+          },
+          "max_message_chars": {
+            "title": "Max Message Chars",
+            "type": "integer"
+          },
+          "offer_hours": {
+            "title": "Offer Hours",
+            "type": "integer"
+          },
+          "poll_every_s": {
+            "title": "Poll Every S",
+            "type": "integer"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "request_hours_end": {
+            "title": "Request Hours End",
+            "type": "string"
+          },
+          "request_hours_start": {
+            "title": "Request Hours Start",
+            "type": "string"
+          },
+          "search_window_hours": {
+            "title": "Search Window Hours",
+            "type": "integer"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_hours_start",
+          "request_hours_end",
+          "search_window_hours",
+          "offer_hours",
+          "lbp_per_usd",
+          "rate_date",
+          "poll_every_s",
+          "max_message_chars",
+          "server_now",
+          "demo_mode",
+          "assistant_available"
+        ],
+        "title": "PublicConfig",
+        "type": "object"
+      },
+      "RegisterClient": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_terms": {
+            "const": true,
+            "title": "Accept Terms",
+            "type": "boolean"
+          },
+          "district_id": {
+            "title": "District Id",
+            "type": "integer"
+          },
+          "email": {
+            "maxLength": 320,
+            "pattern": "^[^@ ]+@[^@ ]+[.][^@ ]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "full_name",
+          "district_id",
+          "accept_terms"
+        ],
+        "title": "RegisterClient",
+        "type": "object"
+      },
+      "RequestItem": {
+        "properties": {
+          "days_of_use": {
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "qty_secured": {
+            "title": "Qty Secured",
+            "type": "integer"
+          },
+          "reservations": {
+            "items": {
+              "$ref": "#/components/schemas/ReservationRef"
+            },
+            "title": "Reservations",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "SEARCHING",
+              "PROPOSED",
+              "WAITING",
+              "SECURED",
+              "UNAVAILABLE",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status_text": {
+            "title": "Status Text",
+            "type": "string"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Waiting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "product",
+          "qty",
+          "qty_secured",
+          "days_of_use",
+          "max_price",
+          "state",
+          "status_text",
+          "reservations",
+          "waiting"
+        ],
+        "title": "RequestItem",
+        "type": "object"
+      },
+      "Reservation": {
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "contestable": {
+            "title": "Contestable",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pharmacy": {
+            "$ref": "#/components/schemas/PharmacyCard"
+          },
+          "pickup_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Day"
+          },
+          "price_each": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "qty_requested": {
+            "title": "Qty Requested",
+            "type": "integer"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "saving": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "search",
+              "assistant",
+              "request",
+              "watch",
+              "early_release"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "RESERVED",
+              "PICKED_UP",
+              "NOT_AVAILABLE",
+              "EXPIRED_NO_SHOW",
+              "CANCELLED_BY_CLIENT",
+              "CANCELLED_BY_SYSTEM"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status_text": {
+            "title": "Status Text",
+            "type": "string"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "state",
+          "status_text",
+          "product",
+          "pharmacy",
+          "qty",
+          "qty_requested",
+          "price_each",
+          "total",
+          "saving",
+          "pickup_day",
+          "deadline",
+          "expiry_date",
+          "source",
+          "request_id",
+          "created_at",
+          "closed_at",
+          "contestable",
+          "server_now"
+        ],
+        "title": "Reservation",
+        "type": "object"
+      },
+      "ReservationRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pharmacy_name": {
+            "title": "Pharmacy Name",
+            "type": "string"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "pharmacy_name",
+          "qty"
+        ],
+        "title": "ReservationRef",
+        "type": "object"
+      },
+      "ReservationsPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Reservation"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "server_now"
+        ],
+        "title": "ReservationsPage",
+        "type": "object"
+      },
+      "Reserve": {
+        "additionalProperties": false,
+        "properties": {
+          "days_of_use": {
+            "default": 1,
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "expected_price_lbp": {
+            "minimum": 0.0,
+            "title": "Expected Price Lbp",
+            "type": "integer"
+          },
+          "listing_id": {
+            "format": "uuid",
+            "title": "Listing Id",
+            "type": "string"
+          },
+          "pickup_day": {
+            "format": "date",
+            "title": "Pickup Day",
+            "type": "string"
+          },
+          "qty": {
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Qty",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "listing_id",
+          "qty",
+          "expected_price_lbp",
+          "pickup_day"
+        ],
+        "title": "Reserve",
+        "type": "object"
+      },
+      "SearchListings": {
+        "additionalProperties": false,
+        "description": "A search. **It is a POST so that the client's location travels in the body**, never\nin an address that a browser's history or a server's log keeps.",
+        "properties": {
+          "cursor": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "days_of_use": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Of Use"
+          },
+          "limit": {
+            "default": 20,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_foot": {
+            "default": false,
+            "title": "On Foot",
+            "type": "boolean"
+          },
+          "pickup_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Day"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "sort": {
+            "default": "best",
+            "enum": [
+              "best",
+              "nearest",
+              "cheapest",
+              "latest_expiry"
+            ],
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "SearchListings",
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Listing"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "left_out_by_pickup_day": {
+            "title": "Left Out By Pickup Day",
+            "type": "integer"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationSummary"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "no_match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoMatch"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "total_found": {
+            "title": "Total Found",
+            "type": "integer"
+          },
+          "upcoming_days": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Upcoming Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product",
+          "items",
+          "total_found",
+          "left_out_by_pickup_day",
+          "no_match",
+          "next_cursor",
+          "location",
+          "upcoming_days",
+          "server_now"
+        ],
+        "title": "SearchResult",
+        "type": "object"
+      },
+      "SelectableItem": {
+        "description": "One checkbox of a [Reserve these] card (R-RQ6).",
+        "properties": {
+          "item_key": {
+            "title": "Item Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "item_key",
+          "label",
+          "price"
+        ],
+        "title": "SelectableItem",
+        "type": "object"
+      },
+      "SendMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "client_message_id": {
+            "format": "uuid",
+            "title": "Client Message Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "client_message_id"
+        ],
+        "title": "SendMessage",
+        "type": "object"
+      },
+      "SourcingRequest": {
+        "properties": {
+          "alternatives_ok": {
+            "title": "Alternatives Ok",
+            "type": "boolean"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RequestItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FULFILLED",
+                  "PARTIAL",
+                  "UNFULFILLED",
+                  "CANCELLED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "units_secured": {
+            "title": "Units Secured",
+            "type": "integer"
+          },
+          "units_wanted": {
+            "title": "Units Wanted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "state",
+          "outcome",
+          "alternatives_ok",
+          "ends_at",
+          "items",
+          "units_wanted",
+          "units_secured",
+          "conversation_id",
+          "created_at",
+          "closed_at",
+          "server_now"
+        ],
+        "title": "SourcingRequest",
+        "type": "object"
+      },
+      "SourcingRequests": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SourcingRequest"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "server_now"
+        ],
+        "title": "SourcingRequests",
+        "type": "object"
+      },
+      "Travel": {
+        "description": "How far a pharmacy is from the client. Computed by code; never a coordinate.",
+        "properties": {
+          "car_min": {
+            "title": "Car Min",
+            "type": "integer"
+          },
+          "km": {
+            "title": "Km",
+            "type": "number"
+          },
+          "source": {
+            "enum": [
+              "road",
+              "straight"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "walk_min": {
+            "title": "Walk Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "car_min",
+          "walk_min",
+          "km",
+          "source"
+        ],
+        "title": "Travel",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VerifyEmail": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "VerifyEmail",
+        "type": "object"
+      },
+      "ViewListing": {
+        "additionalProperties": false,
+        "properties": {
+          "days_of_use": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Of Use"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ViewListing",
+        "type": "object"
+      },
+      "Waiting": {
+        "description": "What DawaLink is doing for a medicine that isn't secured yet.",
+        "properties": {
+          "answers_by": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answers By"
+          },
+          "asked_pharmacies": {
+            "title": "Asked Pharmacies",
+            "type": "integer"
+          },
+          "open_offer_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Open Offer Ids",
+            "type": "array"
+          },
+          "watching_new_stock": {
+            "title": "Watching New Stock",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "watching_new_stock",
+          "asked_pharmacies",
+          "answers_by",
+          "open_offer_ids"
+        ],
+        "title": "Waiting",
+        "type": "object"
       }
     }
   },
@@ -40,6 +3015,930 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/demo-clock": {
+      "get": {
+        "operationId": "read_demo_clock",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoClock"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Demo Clock",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/admin/demo-clock/advance": {
+      "post": {
+        "description": "Moves the app's time forward, to show time-based behavior live: an offer expiring,\nthe one-hour-left check, a no-show. **Demo mode only**, and every move is audited\n(R-DEMO). Logins are counted in real time, so nobody is logged out by it.",
+        "operationId": "advance_demo_clock",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceClock"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoClock"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Advance Demo Clock",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoggedIn"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "read_me",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Me",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "change_password",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Password",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/register/client": {
+      "post": {
+        "description": "Always \"check your email\", whether or not the address already has an account\n(R-AU7): nobody can find out here who uses DawaLink.",
+        "operationId": "register_client",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterClient"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Client",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "description": "The link of the confirmation email. It also logs the user in (R-AU4).",
+        "operationId": "verify_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmail"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoggedIn"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Email",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/verify-email/resend": {
+      "post": {
+        "operationId": "resend_verification",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Verification",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/catalog/products": {
+      "get": {
+        "description": "Medicines whose name or ingredient looks like `q`. Spelling mistakes are\ntolerated, and **controlled medicines are never among them** (R-C6).",
+        "operationId": "find_products",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Products"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find Products",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{product_id}": {
+      "get": {
+        "operationId": "read_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Product",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/config/public": {
+      "get": {
+        "operationId": "public_config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public Config",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/conversations/active-chat": {
+      "get": {
+        "description": "The client's one chat, created the first time they open the assistant (D9).",
+        "operationId": "active_chat",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Active Chat",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/conversations/new-chat": {
+      "post": {
+        "description": "Starts a fresh chat. The old one is archived, and kept 30 days (R-RET).",
+        "operationId": "new_chat",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "New Chat",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/location": {
+      "put": {
+        "description": "Where the agent's tools count travel times from in this chat. The point is rounded\nbefore it is stored, and it is never part of what the AI reads (INV-24).",
+        "operationId": "set_location",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Location",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/conversations/{conversation_id}/messages": {
+      "get": {
+        "description": "The messages after `after_seq`, oldest first. With `after_seq=0`, the newest ones.\n\nThis is what an open chat or request page asks for every few seconds (API-D7).",
+        "operationId": "read_messages",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_seq",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagesPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Messages",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "description": "A client's message.\n\n- **In the chat** the answer comes back at once as a stream of events (`200`,\n  `text/event-stream`): progress lines, then the complete, checked reply.\n- **In a request's thread** the answer is `202`: the worker runs the agent's turn,\n  and the page sees the reply by polling.",
+        "operationId": "send_message",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "In a chat: the answer, as a stream of events."
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Message",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/districts": {
+      "get": {
+        "operationId": "districts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/District"
+                  },
+                  "title": "Response Districts",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Districts",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Always 200 while the process runs.\n\nThe load balancer only needs to know the process is alive. If this answered 503 when the\ndatabase is down, healthy API tasks would be killed instead of answering \"try again\" (FX-10).",
@@ -59,6 +3958,1513 @@
         "summary": "Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/listings/search": {
+      "post": {
+        "description": "The visible boxes of one medicine, **and only of that medicine**: search never\nshows another brand (R-S4).\n\nWith `days_of_use`, boxes that don't last are left out. With `pickup_day`, only\npharmacies that accept that day are shown, and the fit is counted from it.",
+        "operationId": "search_listings",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchListings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Listings",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/listings/{listing_id}/view": {
+      "post": {
+        "description": "One box and its pharmacy, for their own page (CS-7). A box that stopped being\nvisible answers `NOT_FOUND`.",
+        "operationId": "view_listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Listing Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewListing"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View Listing",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/me/profile": {
+      "get": {
+        "operationId": "read_profile",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Profile",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "patch": {
+        "description": "Only what was sent changes (CS-13). An empty phone removes it.",
+        "operationId": "change_profile",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Profile",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/offers": {
+      "get": {
+        "description": "The offers waiting for the client's answer, the one that ends soonest first.",
+        "operationId": "list_offers",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Offers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Offers",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/offers/{offer_id}/accept": {
+      "post": {
+        "description": "The offer becomes a reservation; the need's other offers are withdrawn at once\n(O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once.",
+        "operationId": "accept_offer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Offer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptOffer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Offer",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/offers/{offer_id}/decline": {
+      "post": {
+        "description": "\"No thanks\": the box goes to the next client who waits for it (O10).",
+        "operationId": "decline_offer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Offer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline Offer",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/dashboard": {
+      "get": {
+        "operationId": "pharmacy_dashboard",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pharmacy Dashboard",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/early-release-asks": {
+      "get": {
+        "description": "\"A client needs this today, and you hold it privately. Release it?\" The need is\ndescribed without anything about the client (R-E8).",
+        "operationId": "list_early_release_asks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "history"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarlyReleaseAsks"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Early Release Asks",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/early-release-asks/{ask_id}/accept": {
+      "post": {
+        "description": "The pharmacy releases the box: the client gets an offer for two hours. If the need\nwas met in the meantime, nothing is reserved and the pharmacy is thanked (R-E6).",
+        "operationId": "accept_early_release_ask",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ask_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ask Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskAnswered"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Early Release Ask",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/early-release-asks/{ask_id}/decline": {
+      "post": {
+        "operationId": "decline_early_release_ask",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ask_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ask Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclineAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline Early Release Ask",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/me": {
+      "get": {
+        "description": "The pharmacy's own details, in any status (a pending one sees it is pending).",
+        "operationId": "read_pharmacy",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Pharmacy",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/reservations": {
+      "get": {
+        "description": "The pharmacy's reservations. With `q`, the one with that order number, however it\nwas typed (\"r7k3q2f\" finds R-7K3Q2F), whatever its state: the counter needs to see\n\"already picked up\" too.",
+        "operationId": "list_pharmacy_reservations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "active",
+              "enum": [
+                "active",
+                "history"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyReservations"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pharmacy Reservations",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/reservations/{reservation_id}/not-available": {
+      "post": {
+        "description": "Some or all of the packs aren't there (O3). Never a penalty for the client: they\nare told, and the agent looks elsewhere.",
+        "operationId": "mark_not_available",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotAvailable"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyReservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Not Available",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/reservations/{reservation_id}/picked-up": {
+      "post": {
+        "description": "The client showed the order number and took the box (O2). There is no late\npickup: after the deadline the box is back in stock (INV-7).",
+        "operationId": "mark_picked_up",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyReservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Picked Up",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/proposals/{proposal_id}/execute": {
+      "post": {
+        "description": "The client tapped an agent card. Everything is checked again as if it were new\n(R-AG7): the card holds no authority, only what to try.\n\nA card works once, so a second tap of the same card answers `PROPOSAL_USED`.",
+        "operationId": "execute_proposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteProposal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecuteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Execute Proposal",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/api/v1/requests": {
+      "get": {
+        "description": "The client's requests: the open ones (2 at most, R-RQ2), or the closed ones, the\nnewest first.",
+        "operationId": "list_requests",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "closed"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcingRequests"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Requests",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/requests/{request_id}": {
+      "get": {
+        "operationId": "read_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcingRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Request",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/requests/{request_id}/cancel": {
+      "post": {
+        "description": "The client stops the search. What is already reserved stays reserved (R-RQ9).",
+        "operationId": "cancel_request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcingRequest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Request",
+        "tags": [
+          "requests"
+        ]
+      }
+    },
+    "/api/v1/reservations": {
+      "get": {
+        "description": "`active`: what is reserved now, the soonest pickup first. `history`: the rest,\nthe newest first.",
+        "operationId": "list_reservations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "active",
+              "enum": [
+                "active",
+                "history"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Reservations",
+        "tags": [
+          "reservations"
+        ]
+      },
+      "post": {
+        "description": "[Reserve] on the search page: the box is the client's at once (O1).\n\nThe same `Idempotency-Key` sent twice returns the same reservation: a double tap or a\nnetwork retry never reserves two boxes. `source` is \"search\", so the agent is never\ntold (R-AG5).",
+        "operationId": "reserve",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reserve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reserve",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/reservations/{reservation_id}": {
+      "get": {
+        "operationId": "read_reservation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Reservation",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/{reservation_id}/cancel": {
+      "post": {
+        "description": "The client cancels before the deadline. It is never a penalty (O5, R-N2).",
+        "operationId": "cancel_reservation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Reservation",
+        "tags": [
+          "reservations"
         ]
       }
     }

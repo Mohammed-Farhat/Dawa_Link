@@ -1,24 +1,197 @@
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { strings } from '../strings/en'
-import { accessibilityProblems, apiAnswers, renderApp } from '../test/render'
+import {
+  accessibilityProblems,
+  answer,
+  CLIENT,
+  CONFIG,
+  DISTRICTS,
+  loggedIn,
+  pretendApi,
+  refusal,
+  renderApp,
+  RESERVATION,
+} from '../test/render'
 import { AppRoutes } from './App'
 
-describe('AppRoutes', () => {
-  it('shows the status page at the home address', async () => {
-    apiAnswers({ status: 'ok', db: 'ok', version: 'dev' })
+const none = { items: [], next_cursor: null, server_now: CONFIG.server_now }
+
+describe('Who sees what', () => {
+  it('shows the welcome page to a visitor, with no stock on it', async () => {
+    const api = pretendApi({})
+
+    const { container } = renderApp(<AppRoutes />, { path: '/' })
+
+    expect(await screen.findByRole('heading', { name: strings.welcome.title })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: strings.welcome.signUp })).toHaveAttribute('href', '/signup')
+    // Nobody is logged in, so the website asks the API for nothing.
+    expect(api.calls).toEqual([])
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('shows Home to a logged-in client, with the pickup first', async () => {
+    loggedIn()
+    pretendApi({
+      'GET /api/v1/auth/me': CLIENT,
+      'GET /api/v1/reservations': { ...none, items: [RESERVATION] },
+    })
+
+    const { container } = renderApp(<AppRoutes />, { path: '/' })
+
+    expect(await screen.findByRole('heading', { name: strings.home.title })).toBeInTheDocument()
+    expect(await screen.findByText('R-7K3Q2F')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: strings.home.showAtCounter })).toHaveAttribute(
+      'href',
+      `/reservations/${RESERVATION.id}`,
+    )
+    expect(screen.getByRole('navigation', { name: strings.nav.label })).toBeInTheDocument()
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('sends the login token with every call', async () => {
+    loggedIn()
+    const api = pretendApi({ 'GET /api/v1/auth/me': CLIENT, 'GET /api/v1/reservations': none })
+
+    renderApp(<AppRoutes />, { path: '/' })
+    await screen.findByText(strings.home.nothingReserved)
+
+    expect(api.calls.length).toBeGreaterThanOrEqual(2)
+    expect(api.calls.every((call) => call.headers.get('Authorization') === 'Bearer a-test-token')).toBe(true)
+  })
+
+  it('goes back to the welcome page when the session has ended', async () => {
+    loggedIn()
+    pretendApi({ 'GET /api/v1/auth/me': refusal(401, 'UNAUTHENTICATED') })
 
     renderApp(<AppRoutes />, { path: '/' })
 
-    expect(await screen.findByRole('heading', { name: strings.status.title })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: strings.welcome.title })).toBeInTheDocument()
+    expect(window.localStorage.length).toBe(0)
+  })
+
+  it('asks an unverified client to confirm their email, and sends the link again', async () => {
+    loggedIn()
+    const api = pretendApi({
+      'GET /api/v1/auth/me': { ...CLIENT, email_verified: false },
+      'GET /api/v1/reservations': none,
+      'POST /api/v1/auth/verify-email/resend': answer(202, { message: 'ok' }),
+    })
+    renderApp(<AppRoutes />, { path: '/assistant' })
+
+    await userEvent.click(await screen.findByRole('button', { name: strings.banner.resend }))
+
+    expect(await screen.findByText(strings.banner.resent)).toBeInTheDocument()
+    // The assistant itself was never asked for: it needs a confirmed email.
+    expect(api.sent('GET', '/api/v1/conversations')).toEqual([])
   })
 
   it('shows a clear page for an address that does not exist', async () => {
+    pretendApi({})
     const { container } = renderApp(<AppRoutes />, { path: '/no-such-page' })
 
     expect(screen.getByRole('heading', { name: strings.notFound.title })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: strings.notFound.back })).toHaveAttribute('href', '/')
     expect(await accessibilityProblems(container)).toEqual([])
+  })
+})
+
+describe('Signing up and logging in', () => {
+  it('creates an account and says to check the email', async () => {
+    const api = pretendApi({
+      'GET /api/v1/districts': DISTRICTS,
+      'POST /api/v1/auth/register/client': answer(202, { message: 'ok' }),
+    })
+    const s = strings.signUp
+    renderApp(<AppRoutes />, { path: '/signup' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.fullName), 'Nour Khoury')
+    await user.type(screen.getByLabelText(s.email), 'nour@example.com')
+    await user.type(screen.getByLabelText(s.password), 'a long enough passphrase')
+    await screen.findByRole('option', { name: 'Matn' })
+    await user.selectOptions(screen.getByLabelText(s.district), 'Matn')
+    await user.click(screen.getByLabelText(s.terms))
+    await user.click(screen.getByRole('button', { name: s.submit }))
+
+    expect(await screen.findByRole('heading', { name: strings.checkEmail.title })).toBeInTheDocument()
+    expect(screen.getByText(strings.checkEmail.body('nour@example.com'))).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/auth/register/client')[0].body).toEqual({
+      email: 'nour@example.com',
+      password: 'a long enough passphrase',
+      full_name: 'Nour Khoury',
+      phone: null,
+      district_id: 2,
+      accept_terms: true,
+    })
+  })
+
+  it('says what is missing next to each field, and sends nothing', async () => {
+    const api = pretendApi({ 'GET /api/v1/districts': DISTRICTS })
+    const s = strings.signUp
+    const { container } = renderApp(<AppRoutes />, { path: '/signup' })
+
+    await userEvent.click(await screen.findByRole('button', { name: s.submit }))
+
+    for (const problem of [s.nameProblem, s.emailProblem, s.districtProblem, s.termsProblem]) {
+      expect(screen.getByText(problem)).toBeInTheDocument()
+    }
+    expect(api.sent('POST', '/api/v1/auth/register/client')).toEqual([])
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('logs in and opens Home', async () => {
+    pretendApi({
+      'POST /api/v1/auth/login': { me: CLIENT, token: 'fresh-token', expires_at: '2026-11-23T08:00:00Z' },
+      'GET /api/v1/reservations': none,
+    })
+    const s = strings.login
+    renderApp(<AppRoutes />, { path: '/login' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.email), 'nour@example.com')
+    await user.type(screen.getByLabelText(s.password), 'a long enough passphrase')
+    await user.click(screen.getByRole('button', { name: s.submit }))
+
+    expect(await screen.findByRole('heading', { name: strings.home.title })).toBeInTheDocument()
+    expect(window.localStorage.getItem('dawalink.token')).toBe('fresh-token')
+  })
+
+  it('says one sentence for a wrong email or password', async () => {
+    pretendApi({ 'POST /api/v1/auth/login': refusal(401, 'INVALID_CREDENTIALS') })
+    const s = strings.login
+    renderApp(<AppRoutes />, { path: '/login' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.email), 'nour@example.com')
+    await user.type(screen.getByLabelText(s.password), 'not the password')
+    await user.click(screen.getByRole('button', { name: s.submit }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.errors.INVALID_CREDENTIALS)
+    expect(window.localStorage.length).toBe(0)
+  })
+
+  it('confirms the email from the link and logs the client in', async () => {
+    const api = pretendApi({
+      'POST /api/v1/auth/verify-email': { me: CLIENT, token: 'from-the-link', expires_at: '2026-11-23T08:00:00Z' },
+    })
+
+    renderApp(<AppRoutes />, { path: '/verify-email?token=the-token-of-the-email' })
+
+    expect(await screen.findByText(strings.verify.done)).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/auth/verify-email')[0].body).toEqual({
+      token: 'the-token-of-the-email',
+    })
+    expect(window.localStorage.getItem('dawalink.token')).toBe('from-the-link')
+  })
+
+  it('says so when the link is no longer valid', async () => {
+    pretendApi({ 'POST /api/v1/auth/verify-email': refusal(400, 'TOKEN_INVALID') })
+
+    renderApp(<AppRoutes />, { path: '/verify-email?token=an-old-token-of-an-email' })
+
+    expect(await screen.findByText(new RegExp(strings.verify.failed))).toBeInTheDocument()
   })
 })

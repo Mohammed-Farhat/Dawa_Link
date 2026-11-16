@@ -106,6 +106,26 @@ MAX_FOLLOWUPS_PER_REQUEST = 4  # N-39
 MAX_ALTERNATIVES_RECOMMENDED = 2  # N-45: one recommendation, and up to this many others
 DAILY_SPEND_CAP_SHARE = 10  # N-46: a day may use this many % of the month's LLM budget
 
+# --- Accounts and the API (R-AU, N-28, N-29, N-47; docs/06 §4) ---
+# These limits protect logins, so they are counted in real time, never on the demo clock.
+PASSWORD_MIN_CHARS = 10  # R-AU1
+COMMON_PASSWORDS = 10_000  # R-AU1: a password among the most common ones is refused
+FAILED_LOGINS_BEFORE_LOCK = 5  # R-AU2
+LOGIN_LOCK = timedelta(minutes=15)  # R-AU2: both the counting window and the lock
+SESSION_LIFETIME = timedelta(days=7)  # R-AU3
+ADMIN_SESSION_LIFETIME = timedelta(hours=12)  # R-AU3
+VERIFICATION_LINK_VALID = timedelta(hours=24)  # R-AU4
+SIGNUPS_PER_ADDRESS_PER_HOUR = 5  # R-AU5
+RESEND_VERIFICATION_EVERY = timedelta(minutes=1)  # N-47
+RESEND_VERIFICATION_PER_DAY = 5  # N-47
+API_CALLS_PER_MINUTE = 120  # N-29: per session
+CHAT_MESSAGES_PER_MINUTE = 20  # N-17
+CHAT_MESSAGES_PER_DAY = 100  # N-17
+LOCATION_UPDATES_PER_HOUR = 10  # N-47
+POLL_EVERY_S = 3  # N-28: how often an open chat or request page asks for new messages
+MAX_JSON_BODY_BYTES = 64 * 1024  # docs/06 §1
+SSE_HEARTBEAT_S = 15  # docs/06 §6.6.1
+
 # --- Retention (N-19, R-RET) ---
 CONVERSATION_RETENTION = timedelta(days=30)
 NOTIFICATION_RETENTION = timedelta(days=90)

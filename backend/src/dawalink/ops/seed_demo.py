@@ -1,7 +1,8 @@
 """Synthetic pharmacies, stock and clients for the demo: python -m dawalink.ops.seed_demo
 
 Everything is invented, and the same seed always gives the same data (docs/05 §9).
-The accounts can't log in yet: their passwords are set when logins are built (build step 7).
+The accounts can log in only when `DEMO_ACCOUNTS_PASSWORD` is set: they all get that one
+password (`set_demo_passwords`). Without it no password matches them.
 """
 
 import argparse
@@ -13,7 +14,7 @@ from decimal import Decimal
 from typing import Any
 
 import structlog
-from sqlalchemy import Connection, create_engine, func, insert, select
+from sqlalchemy import Connection, create_engine, func, insert, select, update
 
 from dawalink.config import load_settings, required
 from dawalink.db.models import (
@@ -200,6 +201,23 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
     return SeedResult(len(pharmacies), len(profiles), len(items))
 
 
+DEMO_EMAILS = "%@demo.dawalink.test"
+
+
+def set_demo_passwords(connection: Connection, password: str) -> int:
+    """Gives every demo account this password. Safe to run again. Returns how many."""
+    # Imported here: the seed itself needs no login code.
+    from dawalink.services import auth
+
+    auth.check_strength(password)
+    changed = connection.execute(
+        update(User)
+        .where(User.email.like(DEMO_EMAILS))
+        .values(password_hash=auth.hash_password(password))
+    )
+    return int(changed.rowcount)
+
+
 def has_pharmacies(connection: Connection) -> bool:
     return bool(connection.execute(select(func.count()).select_from(Pharmacy)).scalar_one())
 
@@ -216,14 +234,19 @@ def main() -> None:
         with engine.begin() as connection:
             if has_pharmacies(connection):
                 log.info("demo_seed_skipped", reason="pharmacies already exist")
-                return
-            result = seed_demo(connection, seed=arguments.seed, now=SystemClock().now())
-        log.info(
-            "demo_seeded",
-            pharmacies=result.pharmacies,
-            clients=result.clients,
-            inventory_items=result.inventory_items,
-        )
+            else:
+                result = seed_demo(connection, seed=arguments.seed, now=SystemClock().now())
+                log.info(
+                    "demo_seeded",
+                    pharmacies=result.pharmacies,
+                    clients=result.clients,
+                    inventory_items=result.inventory_items,
+                )
+            if settings.demo_accounts_password is not None:
+                accounts = set_demo_passwords(
+                    connection, settings.demo_accounts_password.get_secret_value()
+                )
+                log.info("demo_passwords_set", accounts=accounts)
     finally:
         engine.dispose()
 

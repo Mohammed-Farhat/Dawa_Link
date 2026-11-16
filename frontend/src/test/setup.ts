@@ -3,7 +3,11 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  // No test starts logged in because of the one before it.
+  window.localStorage.clear()
+})
 
 // jsdom lacks these browser features, which Mantine reads.
 Object.defineProperty(window, 'matchMedia', {

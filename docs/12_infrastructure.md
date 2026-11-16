@@ -1,6 +1,6 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.4 · **Date:** 2026-11-14
+**Version:** v2.5 · **Date:** 2026-11-16
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
 **Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.4:** the development budget setting is 20 (decision log BLD-D13), and Langfuse is proven with real keys (§2). **v2.3** (build step 5): the agent's settings, the development model (Claude, decision log BLD-D11) and the terminal chat command (§2). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
@@ -217,7 +217,7 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
 
 | Secret | Holds | Used by |
 |---|---|---|
-| `dawalink/keys` | LLM, Langfuse and OpenRouteService keys; the TOTP encryption key; demo account details | `api`, `worker`, `ops` |
+| `dawalink/keys` | LLM, Langfuse and OpenRouteService keys; the app's secret key (`APP_SECRET_KEY`: it encrypts the admins' two-factor secrets and hashes the network address of a sign-up; the API refuses to start without it); the demo accounts' password (`DEMO_ACCOUNTS_PASSWORD`) | `api`, `worker`, `ops` |
 | `dawalink/db/master` | RDS master login | `ops` |
 | `dawalink/db/migrator` | Migrations login | `ops` |
 | `dawalink/db/app` | App login | `api`, `worker`, `ops` |

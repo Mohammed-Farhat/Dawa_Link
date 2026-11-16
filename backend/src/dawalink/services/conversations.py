@@ -8,7 +8,7 @@ row, not a lock: a turn that crashes simply lets it run out.
 
 import uuid
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, or_, select, update
 
@@ -16,6 +16,9 @@ from dawalink.db.models import ChatMessage, Conversation
 from dawalink.domain.numbers import AGENT_HISTORY_MESSAGES, TURN_LEASE
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+
+if TYPE_CHECKING:
+    from dawalink.services.travel import Location
 
 
 def locked(tx: Tx, conversation_id: uuid.UUID) -> Conversation:
@@ -177,3 +180,30 @@ def release_lease(conversation: Conversation, owner: str) -> None:
 def is_busy(tx: Tx, conversation: Conversation) -> bool:
     """An agent turn is running: the website shows "one moment" (docs/06 `MessagesPage.busy`)."""
     return conversation.turn_lease_until is not None and conversation.turn_lease_until > tx.now
+
+
+# --- A chat's own settings --------------------------------------------------------------
+
+
+def archive_chats(tx: Tx, client_id: uuid.UUID) -> None:
+    """[New chat]: the active chat is put away. It is kept 30 days, then purged (R-RET)."""
+    tx.session.execute(
+        update(Conversation)
+        .where(
+            Conversation.client_id == client_id,
+            Conversation.kind == "chat",
+            Conversation.status == "ACTIVE",
+        )
+        .values(status="ARCHIVED")
+    )
+    tx.session.flush()
+
+
+def set_location(tx: Tx, conversation: Conversation, location: "Location") -> None:
+    """Where this chat's travel times are counted from. It replaces any earlier location,
+    and it is kept beside the agent's working memory, never inside it (INV-24)."""
+    conversation.loc_lat, conversation.loc_lon = location.point.lat, location.point.lon
+    conversation.loc_source = location.source
+    conversation.loc_area_id = location.area_id
+    conversation.loc_set_at = tx.now
+    tx.session.flush()
