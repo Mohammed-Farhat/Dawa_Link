@@ -23,6 +23,7 @@ from dawalink.api.routes import (
     accounts,
     conversations,
     pharmacy,
+    pharmacy_stock,
     requests,
     reservations,
     search,
@@ -38,6 +39,7 @@ from dawalink.domain.numbers import (
 )
 from dawalink.observability.logging import configure_logging
 from dawalink.services.clock import AppClock
+from dawalink.services.inventory import MAX_FILE_BYTES
 
 API_PREFIX = "/api/v1"
 CORS_PREFLIGHT_MAX_AGE_S = 2 * 60 * 60  # docs/06 §2.1
@@ -111,6 +113,9 @@ def create_app(
         OriginCheckMiddleware,
         website_url=settings.website_url,
         max_body_bytes=MAX_JSON_BODY_BYTES,
+        # A stock file, and the few hundred bytes the browser wraps around it.
+        upload_paths=frozenset({f"{API_PREFIX}/pharmacy/inventory/uploads"}),
+        max_upload_bytes=MAX_FILE_BYTES + MAX_JSON_BODY_BYTES,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -124,6 +129,14 @@ def create_app(
     register_error_handlers(app)
 
     app.include_router(health_router, prefix=API_PREFIX)
-    for routes in (accounts, conversations, pharmacy, requests, reservations, search):
+    for routes in (
+        accounts,
+        conversations,
+        pharmacy,
+        pharmacy_stock,
+        requests,
+        reservations,
+        search,
+    ):
         app.include_router(routes.router, prefix=API_PREFIX)
     return app

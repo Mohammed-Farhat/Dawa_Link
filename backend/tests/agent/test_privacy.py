@@ -46,10 +46,13 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         )
     other_brand = world.make.product(moph_name="CLAVOX 1G", equivalence_key="amox-clav|1g|tab")
     glucophage = world.make.product(moph_name="GLUCOPHAGE 850MG", search_name="glucophage 850mg")
-    box = scene.stock(scene.augmentin, price_override_lbp=700_000)
-    scene.stock(scene.concor)
-    scene.stock(other_brand)
-    private = scene.stock(glucophage, days_left=200)  # early-release zone: not visible
+    # A batch is typed by the pharmacy (a form, or a stock file): it never reaches the
+    # model either (R-AG8).
+    box = scene.stock(scene.augmentin, price_override_lbp=700_000, batch="TYPEDBATCH-1")
+    scene.stock(scene.concor, batch="TYPEDBATCH-2")
+    scene.stock(other_brand, batch="TYPEDBATCH-3")
+    # In the early-release zone: not visible.
+    private = scene.stock(glucophage, days_left=200, batch="TYPEDBATCH-4")
     seen: dict[str, Any] = {}
 
     # --- Turn 1, in the chat: search, options, a plan, two kinds of card ----------------
@@ -205,6 +208,7 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         "the client's email": r"rami\.haddad|@example\.test",
         "the client's phone": r"70[\s.-]?123[\s.-]?456|\+961",
         "the pharmacy's address": r"Secret Lane",
+        "a batch the pharmacy typed": r"TYPEDBATCH",
         "the pharmacy's phone": re.escape(pharmacist.phone),
         "the pharmacy's licence": re.escape(pharmacist.license_number),
         "the pharmacist": re.escape(pharmacist.full_name) + "|" + re.escape(pharmacist.email),

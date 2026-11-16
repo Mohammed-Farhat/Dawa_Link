@@ -13,7 +13,7 @@ import { OfferCard } from './requests/OfferCard'
 const s = strings.home
 
 /** "Confirm your email", with [Send the link again] (docs/11 §4, Banner). */
-export function UnverifiedBanner() {
+export function UnverifiedBanner({ text }: { text?: string }) {
   const b = strings.banner
   const [state, setState] = useState<'idle' | 'sent' | string>('idle')
 
@@ -36,7 +36,7 @@ export function UnverifiedBanner() {
         </button>
       }
     >
-      {state === 'idle' ? b.unverified : errorMessage(state)}
+      {state === 'idle' ? (text ?? b.unverified) : errorMessage(state)}
     </Banner>
   )
 }

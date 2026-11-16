@@ -68,6 +68,9 @@ export function WelcomePage() {
         <Link to="/login" className="pill-button pill-button--wide pill-button--grey">
           {s.logIn}
         </Link>
+        <Link to="/pharmacy/signup" className="text-button" style={{ alignSelf: 'center' }}>
+          {s.pharmacy}
+        </Link>
       </div>
     </main>
   )

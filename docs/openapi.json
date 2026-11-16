@@ -38,6 +38,41 @@
         "title": "AcceptOffer",
         "type": "object"
       },
+      "AddStockItem": {
+        "additionalProperties": false,
+        "properties": {
+          "batch": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Batch",
+            "type": "string"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "qty": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Qty",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "batch",
+          "expiry_date",
+          "qty"
+        ],
+        "title": "AddStockItem",
+        "type": "object"
+      },
       "AdvanceClock": {
         "additionalProperties": false,
         "properties": {
@@ -82,6 +117,20 @@
           "message"
         ],
         "title": "AskAnswered",
+        "type": "object"
+      },
+      "Body_upload_stock_file": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_stock_file",
         "type": "object"
       },
       "Card": {
@@ -513,6 +562,29 @@
         "title": "DemoClock",
         "type": "object"
       },
+      "DiscountTier": {
+        "properties": {
+          "discount_pct": {
+            "title": "Discount Pct",
+            "type": "integer"
+          },
+          "max_days": {
+            "title": "Max Days",
+            "type": "integer"
+          },
+          "min_days": {
+            "title": "Min Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "min_days",
+          "max_days",
+          "discount_pct"
+        ],
+        "title": "DiscountTier",
+        "type": "object"
+      },
       "District": {
         "properties": {
           "governorate": {
@@ -523,6 +595,14 @@
             "title": "Id",
             "type": "integer"
           },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -531,7 +611,9 @@
         "required": [
           "id",
           "name",
-          "governorate"
+          "governorate",
+          "lat",
+          "lon"
         ],
         "title": "District",
         "type": "object"
@@ -1389,6 +1471,35 @@
         "title": "Offers",
         "type": "object"
       },
+      "OpeningRange": {
+        "additionalProperties": false,
+        "description": "One opening range of a weekday, Monday = 0: `{weekday: 0, open: \"08:00\",\nclose: \"13:00\"}`. A day has up to two; a day with none is closed. `close` may be\n\"24:00\".",
+        "properties": {
+          "close": {
+            "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+            "title": "Close",
+            "type": "string"
+          },
+          "open": {
+            "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+            "title": "Open",
+            "type": "string"
+          },
+          "weekday": {
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Weekday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weekday",
+          "open",
+          "close"
+        ],
+        "title": "OpeningRange",
+        "type": "object"
+      },
       "PharmacyCard": {
         "description": "What a client sees about a pharmacy.",
         "properties": {
@@ -1456,6 +1567,69 @@
         "title": "PharmacyCard",
         "type": "object"
       },
+      "PharmacyDetails": {
+        "additionalProperties": false,
+        "description": "What a pharmacy says about itself (PS-1). The exact shape of each field is checked\nby the rules, which answer with the field's name and a sentence.",
+        "properties": {
+          "address": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Address",
+            "type": "string"
+          },
+          "district_id": {
+            "title": "District Id",
+            "type": "integer"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningRange"
+            },
+            "maxItems": 14,
+            "title": "Hours",
+            "type": "array"
+          },
+          "license_number": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "License Number",
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/PinIn"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Phone",
+            "type": "string"
+          },
+          "pickup_days": {
+            "default": 1,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Pickup Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "license_number",
+          "phone",
+          "address",
+          "district_id",
+          "location",
+          "hours"
+        ],
+        "title": "PharmacyDetails",
+        "type": "object"
+      },
       "PharmacyProfile": {
         "properties": {
           "address": {
@@ -1478,6 +1652,21 @@
             "title": "District",
             "type": "string"
           },
+          "district_id": {
+            "title": "District Id",
+            "type": "integer"
+          },
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningRange"
+            },
+            "title": "Hours",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1490,6 +1679,9 @@
           "license_number": {
             "title": "License Number",
             "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Pin"
           },
           "name": {
             "title": "Name",
@@ -1547,11 +1739,15 @@
           "status",
           "status_reason",
           "info_requested",
+          "email_verified",
           "address",
           "district",
+          "district_id",
           "phone",
           "license_number",
+          "location",
           "pickup_days",
+          "hours",
           "week",
           "open_now",
           "closes_at",
@@ -1778,6 +1974,29 @@
           "lon"
         ],
         "title": "Pin",
+        "type": "object"
+      },
+      "PinIn": {
+        "additionalProperties": false,
+        "properties": {
+          "lat": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "PinIn",
         "type": "object"
       },
       "PrivateItem": {
@@ -2040,6 +2259,13 @@
             "title": "Demo Mode",
             "type": "boolean"
           },
+          "discount_tiers": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountTier"
+            },
+            "title": "Discount Tiers",
+            "type": "array"
+          },
           "lbp_per_usd": {
             "anyOf": [
               {
@@ -2101,6 +2327,7 @@
           "rate_date",
           "poll_every_s",
           "max_message_chars",
+          "discount_tiers",
           "server_now",
           "demo_mode",
           "assistant_available"
@@ -2159,6 +2386,148 @@
           "accept_terms"
         ],
         "title": "RegisterClient",
+        "type": "object"
+      },
+      "RegisterPharmacy": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_terms": {
+            "const": true,
+            "title": "Accept Terms",
+            "type": "boolean"
+          },
+          "email": {
+            "maxLength": 320,
+            "pattern": "^[^@ ]+@[^@ ]+[.][^@ ]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "pharmacy": {
+            "$ref": "#/components/schemas/PharmacyDetails"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "pharmacy",
+          "accept_terms"
+        ],
+        "title": "RegisterPharmacy",
+        "type": "object"
+      },
+      "RegistrationChange": {
+        "additionalProperties": false,
+        "description": "A pharmacy that waits for approval, or was rejected, corrects what it typed\n(PS-2). Only what is sent changes.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "district_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
+          },
+          "hours": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OpeningRange"
+                },
+                "maxItems": 14,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          },
+          "license_number": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Number"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PinIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "pickup_days": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Days"
+          }
+        },
+        "title": "RegistrationChange",
         "type": "object"
       },
       "RequestItem": {
@@ -2712,6 +3081,42 @@
         "title": "SendMessage",
         "type": "object"
       },
+      "SettingsChange": {
+        "additionalProperties": false,
+        "description": "What an approved pharmacy changes by itself (PS-10): its hours and its pickup\ntime. Its name, licence, address, pin and phone are changed by DawaLink's team.",
+        "properties": {
+          "hours": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OpeningRange"
+                },
+                "maxItems": 14,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours"
+          },
+          "pickup_days": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Days"
+          }
+        },
+        "title": "SettingsChange",
+        "type": "object"
+      },
       "SourcingRequest": {
         "properties": {
           "alternatives_ok": {
@@ -2847,6 +3252,305 @@
         "title": "SourcingRequests",
         "type": "object"
       },
+      "Stock": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "server_now"
+        ],
+        "title": "Stock",
+        "type": "object"
+      },
+      "StockItem": {
+        "properties": {
+          "batch": {
+            "title": "Batch",
+            "type": "string"
+          },
+          "days_left": {
+            "title": "Days Left",
+            "type": "integer"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_edited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Edited At"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "price": {
+            "$ref": "#/components/schemas/StockPrice"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty_available": {
+            "title": "Qty Available",
+            "type": "integer"
+          },
+          "qty_on_hand": {
+            "title": "Qty On Hand",
+            "type": "integer"
+          },
+          "qty_reserved": {
+            "title": "Qty Reserved",
+            "type": "integer"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          },
+          "zone": {
+            "enum": [
+              "NEAR_EXPIRY",
+              "EARLY_RELEASE",
+              "PRIVATE",
+              "EXPIRED",
+              "NOT_ELIGIBLE"
+            ],
+            "title": "Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product",
+          "batch",
+          "expiry_date",
+          "days_left",
+          "zone",
+          "qty_on_hand",
+          "qty_reserved",
+          "qty_available",
+          "paused",
+          "visible",
+          "price",
+          "last_edited_at"
+        ],
+        "title": "StockItem",
+        "type": "object"
+      },
+      "StockItemChange": {
+        "additionalProperties": false,
+        "description": "Only what is sent changes. `price_override_lbp: null` goes back to the system's\nprice.",
+        "properties": {
+          "paused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused"
+          },
+          "price_override_lbp": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Override Lbp"
+          },
+          "qty_on_hand": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty On Hand"
+          }
+        },
+        "title": "StockItemChange",
+        "type": "object"
+      },
+      "StockItemChanged": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/StockItem"
+          },
+          "reserved_kept": {
+            "title": "Reserved Kept",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "item",
+          "reserved_kept"
+        ],
+        "title": "StockItemChanged",
+        "type": "object"
+      },
+      "StockPrice": {
+        "properties": {
+          "discount_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Pct"
+          },
+          "effective": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "system": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "effective",
+          "system",
+          "override",
+          "discount_pct"
+        ],
+        "title": "StockPrice",
+        "type": "object"
+      },
+      "StockUpload": {
+        "description": "A stock file that was read. Nothing changes until it is applied (SM-4).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/UploadRowError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rows_error": {
+            "title": "Rows Error",
+            "type": "integer"
+          },
+          "rows_ok": {
+            "title": "Rows Ok",
+            "type": "integer"
+          },
+          "rows_total": {
+            "title": "Rows Total",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "VALIDATED",
+              "APPLIED",
+              "DISCARDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/UploadSummary"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "file_name",
+          "rows_total",
+          "rows_ok",
+          "rows_error",
+          "summary",
+          "errors",
+          "created_at"
+        ],
+        "title": "StockUpload",
+        "type": "object"
+      },
       "Travel": {
         "description": "How far a pharmacy is from the client. Computed by code; never a coordinate.",
         "properties": {
@@ -2878,6 +3582,65 @@
           "source"
         ],
         "title": "Travel",
+        "type": "object"
+      },
+      "UploadRowError": {
+        "properties": {
+          "did_you_mean": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Did You Mean",
+            "type": "array"
+          },
+          "problem": {
+            "title": "Problem",
+            "type": "string"
+          },
+          "product": {
+            "title": "Product",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "product",
+          "problem",
+          "did_you_mean"
+        ],
+        "title": "UploadRowError",
+        "type": "object"
+      },
+      "UploadSummary": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          },
+          "new": {
+            "title": "New",
+            "type": "integer"
+          },
+          "reserved_kept": {
+            "title": "Reserved Kept",
+            "type": "integer"
+          },
+          "zeroed": {
+            "title": "Zeroed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "new",
+          "changed",
+          "zeroed",
+          "reserved_kept"
+        ],
+        "title": "UploadSummary",
         "type": "object"
       },
       "ValidationError": {
@@ -3005,6 +3768,25 @@
           "open_offer_ids"
         ],
         "title": "Waiting",
+        "type": "object"
+      },
+      "WaitingUpload": {
+        "properties": {
+          "upload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockUpload"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "upload"
+        ],
+        "title": "WaitingUpload",
         "type": "object"
       }
     }
@@ -3345,6 +4127,48 @@
           }
         },
         "summary": "Register Client",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/register/pharmacy": {
+      "post": {
+        "description": "A pharmacy registers itself and its one account (PS-1). Like a client's sign-up\nit always answers \"check your email\" (R-AU7); the registration reaches DawaLink's\nteam once the email is confirmed. A licence or a phone number that another pharmacy\nhas is refused.",
+        "operationId": "register_pharmacy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPharmacy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Pharmacy",
         "tags": [
           "accounts"
         ]
@@ -4633,6 +5457,569 @@
         ]
       }
     },
+    "/api/v1/pharmacy/inventory": {
+      "get": {
+        "description": "The pharmacy's boxes, soonest expiry first. `zone=NEAR_EXPIRY` is its listings.",
+        "operationId": "list_stock",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "zone",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "NEAR_EXPIRY",
+                    "EARLY_RELEASE",
+                    "PRIVATE",
+                    "EXPIRED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zone"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stock"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Stock",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/items": {
+      "post": {
+        "description": "One box typed by hand. The same medicine, batch and expiry twice is refused\n(`ITEM_EXISTS`): the pharmacy corrects the quantity of the one it has.",
+        "operationId": "add_stock_item",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStockItem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Stock Item",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/items/{item_id}": {
+      "patch": {
+        "description": "A quantity corrected after a sale in the shop, the pharmacy's own price, or a\npause. Reserved packs are never taken away here (R-U3).",
+        "operationId": "change_stock_item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockItemChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockItemChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Stock Item",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/template": {
+      "get": {
+        "description": "The file to fill in: five columns, two example rows.",
+        "operationId": "stock_file_template",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stock File Template",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/uploads": {
+      "post": {
+        "description": "Reads a stock file and says what applying it would change. **Nothing changes\nyet**, and the file itself is never kept (SM-4). A new file replaces the one that was\nwaiting.",
+        "operationId": "upload_stock_file",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_stock_file"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockUpload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Stock File",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/uploads/waiting": {
+      "get": {
+        "description": "The file that waits for [Apply] or [Discard]: the screen finds it again after a\nreload.",
+        "operationId": "waiting_stock_file",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitingUpload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Waiting Stock File",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/apply": {
+      "post": {
+        "description": "[Apply]: the file becomes the pharmacy's stock, all rows or none (R-U1 to R-U4).",
+        "operationId": "apply_stock_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockUpload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Stock File",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/discard": {
+      "post": {
+        "operationId": "discard_stock_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard Stock File",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/errors.csv": {
+      "get": {
+        "operationId": "stock_file_errors",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stock File Errors",
+        "tags": [
+          "pharmacy stock"
+        ]
+      }
+    },
     "/api/v1/pharmacy/me": {
       "get": {
         "description": "The pharmacy's own details, in any status (a pending one sees it is pending).",
@@ -4678,6 +6065,174 @@
           }
         },
         "summary": "Read Pharmacy",
+        "tags": [
+          "pharmacy"
+        ]
+      },
+      "patch": {
+        "description": "An approved pharmacy changes its opening hours or its pickup time (PS-10).\nReservations already made keep the deadline they were given (R-T5).",
+        "operationId": "change_settings",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Settings",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/me/registration": {
+      "patch": {
+        "description": "While it waits, or after a rejection, the pharmacy corrects what it typed (PS-2).\nOnly what is sent changes; everything is checked again as at registration.",
+        "operationId": "change_registration",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Registration",
+        "tags": [
+          "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/pharmacy/me/resubmit": {
+      "post": {
+        "description": "After a rejection: back in the queue of DawaLink's team (SM-1).",
+        "operationId": "resubmit_registration",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PharmacyProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resubmit Registration",
         "tags": [
           "pharmacy"
         ]

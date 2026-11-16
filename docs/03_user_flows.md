@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.11 · **Date:** 2026-11-15
+**Version:** v4.14 · **Date:** 2026-11-16
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -429,7 +429,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 
 #### PS-1 Register pharmacy
 - **Account:** email, password.
-- **Pharmacy:** name, **license number** (format, unique), phone, address, district, and a **pin on the map** (required; checked by the admin).
+- **Pharmacy:** name, **license number** (letters and digits, unique), phone (a Lebanese number, unique), address, district, and a **pin on the map** (required, inside Lebanon; checked by the admin). A tap on the map puts the pin, a drag moves it; with a keyboard, a button puts it at the map's centre.
 - **Weekly opening hours:** 0–2 ranges per day.
 - **Pickup time:** how long reservations are held: **1, 2 or 3 days** (default 1).
 - **Terms:** sealed, in-date packs only; price ≤ public price; keep quantities up to date; check reservations daily.
@@ -464,7 +464,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 
 #### PS-6 Inventory
 1. **[Download template]**: `product, strength (optional), batch, expiry (YYYY-MM or YYYY-MM-DD), quantity`.
-2. **Upload CSV/XLSX** (≤ 5 MB, ≤ 10,000 rows; values only, formulas ignored).
+2. **Upload a CSV file** (≤ 5 MB, ≤ 10,000 rows). **CSV only** (the owner, 2026-11-16): a spreadsheet saves one with File, Save As, CSV, and the screen says so. The reader takes what a spreadsheet really writes: commas, semicolons or tabs; UTF-8 or the Windows code page; an expiry as `2027-03`, `2027-03-31`, `03/2027` or `Mar-27`. **A day and a month written as two numbers (`03/04/2027`) are read only when the file itself shows which comes first: one date such as `31/03/2027` or `3/31/2027` settles it for the whole file. Otherwise that row is refused, never guessed.** The template and the screen show months only, because a spreadsheet rewrites a full date in the computer's own style. A file with a formula is refused whole. **A box of a medicine that no file can name** (the Ministry lists its name and strength several times, for other packs or makers) is added by hand, and a file never sets it to 0.
 3. **Summary before applying:**
    ```
    Rows: 1,204 · OK: 1,191 · Errors: 13 [Download errors]
@@ -474,10 +474,10 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
    - Row errors include **"did you mean…"** suggestions for unmatched product names.
    - Controlled products are rejected with a reason.
 4. **Inventory table** (private): product, batch, expiry, quantity, reserved, zone (*listed · early-release window · private · expired*).
-5. **Quick edit** of a quantity (e.g. after a sale in the shop), and a manual add form with catalog autocomplete. Reserved units can't be removed here; use [Not available] on the reservation.
+5. **Quick edit** of a quantity in the table (e.g. after a sale in the shop), and a manual add form where the medicine is chosen from the catalog. Reserved units can't be removed here; use [Not available] on the reservation.
 
 #### PS-7 Listings
-- Live items: product, batch, days left, available and reserved, price (system tier or override), discount.
+- Live items (the boxes of the inventory that are within 6 months of their expiry): product, batch, days left, available and reserved, price (system tier or override), discount, and whether clients see it now (listed, paused, none left).
 - **[Override price]** (≤ public price, ≥ 0; 0 = donation) · [Back to system price] · **[Pause] / [Resume]**.
 - The system tiers are shown read-only: 25% / 40% / 60%.
 
@@ -496,7 +496,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 - **Decline:** a reason from a list, no penalty. **No answer within 2 h** → expired.
 
 #### PS-10 Settings
-Weekly opening hours, **pickup time (1–3 days)**, phone, change password. Name, license, address and map pin are changed only by an admin.
+Weekly opening hours, **pickup time (1–3 days)**, change password. Name, license, **phone**, address and map pin are shown, and changed only by an admin: clients dial the number, so it is checked like the name (`10` TH-59, decision log BLD-D32).
 
 #### PS-11 Notifications
 In-app list (§2.4).

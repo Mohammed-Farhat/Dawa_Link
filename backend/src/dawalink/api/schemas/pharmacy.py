@@ -7,7 +7,8 @@ from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import In, Money, Out, ProductSummary
+from dawalink.api.schemas.accounts import OpeningRange, PinIn
+from dawalink.api.schemas.common import In, Money, Out, Pin, ProductSummary
 from dawalink.api.schemas.search import DayHours
 
 
@@ -17,11 +18,18 @@ class PharmacyProfile(Out):
     status: Literal["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]
     status_reason: str | None
     info_requested: bool
+    # False until the link of the confirmation email was followed: the registration
+    # is not in the admin's queue yet (R-AU7).
+    email_verified: bool
     address: str
     district: str
+    district_id: int
     phone: str
     license_number: str
+    location: Pin
     pickup_days: int
+    # Its weekly schedule as it was entered, for the forms.
+    hours: list[OpeningRange]
     # Its opening hours for the next 7 days, today first.
     week: list[DayHours]
     open_now: bool
@@ -29,6 +37,28 @@ class PharmacyProfile(Out):
     # open again in the afternoon.
     closes_at: datetime | None
     server_now: datetime
+
+
+class RegistrationChange(In):
+    """A pharmacy that waits for approval, or was rejected, corrects what it typed
+    (PS-2). Only what is sent changes."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    license_number: str | None = Field(default=None, min_length=1, max_length=40)
+    phone: str | None = Field(default=None, min_length=1, max_length=30)
+    address: str | None = Field(default=None, min_length=1, max_length=300)
+    district_id: int | None = None
+    location: PinIn | None = None
+    pickup_days: int | None = Field(default=None, ge=1, le=3)
+    hours: list[OpeningRange] | None = Field(default=None, max_length=14)
+
+
+class SettingsChange(In):
+    """What an approved pharmacy changes by itself (PS-10): its hours and its pickup
+    time. Its name, licence, address, pin and phone are changed by DawaLink's team."""
+
+    pickup_days: int | None = Field(default=None, ge=1, le=3)
+    hours: list[OpeningRange] | None = Field(default=None, max_length=14)
 
 
 class Dashboard(Out):

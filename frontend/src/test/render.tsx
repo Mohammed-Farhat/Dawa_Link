@@ -82,10 +82,12 @@ export function pretendApi(routes: Record<string, Answer>) {
     const request = input instanceof Request ? input : new Request(String(input), init)
     const url = new URL(request.url)
     const text = request.method === 'GET' ? '' : await request.clone().text()
+    // A file is sent as a form, not as JSON: its text is kept as it is.
+    const isJson = (request.headers.get('Content-Type') ?? '').includes('json')
     const call: Call = {
       method: request.method,
       path: url.pathname + url.search,
-      body: text ? JSON.parse(text) : null,
+      body: text ? (isJson ? JSON.parse(text) : text) : null,
       headers: request.headers,
     }
     calls.push(call)
@@ -132,7 +134,7 @@ export const CLIENT = {
   client: {
     status: 'ACTIVE',
     paused_until: null,
-    district: { id: 1, name: 'Beirut', governorate: 'Beirut' },
+    district: { id: 1, name: 'Beirut', governorate: 'Beirut', lat: 33.8938, lon: 35.5018 },
     alternatives_ok_default: false,
     missed_pickups_30d: 0,
     missed_pickups_before_pause: 2,
@@ -149,14 +151,19 @@ export const CONFIG = {
   rate_date: '2026-11-01',
   poll_every_s: 3,
   max_message_chars: 1000,
+  discount_tiers: [
+    { min_days: 0, max_days: 30, discount_pct: 60 },
+    { min_days: 31, max_days: 90, discount_pct: 40 },
+    { min_days: 91, max_days: 180, discount_pct: 25 },
+  ],
   server_now: '2026-11-16T08:00:00Z',
   demo_mode: true,
   assistant_available: true,
 } satisfies Schemas['PublicConfig']
 
 export const DISTRICTS = [
-  { id: 1, name: 'Beirut', governorate: 'Beirut' },
-  { id: 2, name: 'Matn', governorate: 'Mount Lebanon' },
+  { id: 1, name: 'Beirut', governorate: 'Beirut', lat: 33.8938, lon: 35.5018 },
+  { id: 2, name: 'Matn', governorate: 'Mount Lebanon', lat: 33.89, lon: 35.63 },
 ] satisfies Schemas['District'][]
 
 const money = (lbp: number) => ({ lbp, usd_approx: Math.round((lbp / 89500) * 100) / 100 })

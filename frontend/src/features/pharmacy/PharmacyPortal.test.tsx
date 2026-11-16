@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Schemas } from '../../api/client'
 import { AppRoutes } from '../../app/App'
 import { strings } from '../../strings/en'
+import { PHARMACIST, PROFILE } from '../../test/pharmacy'
 import {
   accessibilityProblems,
   answer,
@@ -19,23 +20,6 @@ import {
 const s = strings.pharmacy
 const NOW = CONFIG.server_now
 
-const PHARMACIST = { ...CLIENT, role: 'pharmacist', client: null, full_name: 'A Pharmacist' }
-const PROFILE = {
-  id: RESERVATION.pharmacy.id,
-  name: 'Hamra Pharmacy',
-  status: 'APPROVED',
-  status_reason: null,
-  info_requested: false,
-  address: '12 Hamra Street',
-  district: 'Beirut',
-  phone: '+961 1 000 000',
-  license_number: 'TEST-1',
-  pickup_days: 1,
-  week: [{ day: '2026-11-16', hours: '08:00-21:00' }],
-  open_now: true,
-  closes_at: '2026-11-16T19:00:00Z',
-  server_now: NOW,
-} satisfies Schemas['PharmacyProfile']
 const HELD = {
   id: RESERVATION.id,
   ref: 'R-7K3Q2F',

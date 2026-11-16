@@ -15,6 +15,7 @@ PUBLIC = {
     ("GET", "/api/v1/config/public"),  # timers and the exchange rate, before login
     ("GET", "/api/v1/districts"),  # the sign-up form's list
     ("POST", "/api/v1/auth/register/client"),
+    ("POST", "/api/v1/auth/register/pharmacy"),
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/verify-email"),  # the link of the confirmation email
 }

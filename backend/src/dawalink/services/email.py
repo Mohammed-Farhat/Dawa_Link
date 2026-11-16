@@ -43,6 +43,7 @@ SUBJECTS: dict[str, str] = {
     "CN-15": "Your request {request_ref}: a plan is ready",
     "CN-16": "Your request {request_ref}: one hour left",
     "CN-17": "Your request {request_ref} is closed",
+    "PN-1": "We received your pharmacy's registration",
     "PN-4": "New reservation {order_ref}: put the box aside",
     "PN-7": "Can you release {product}?",
     "PN-8": "Reservation {order_ref} was cancelled: put the box back",

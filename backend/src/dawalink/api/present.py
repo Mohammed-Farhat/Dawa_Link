@@ -56,7 +56,13 @@ def money(amount_lbp: int, lbp_per_usd: Decimal | None) -> common.Money:
 
 
 def district(row: District) -> common.District:
-    return common.District(id=row.id, name=row.name, governorate=row.governorate)
+    return common.District(
+        id=row.id,
+        name=row.name,
+        governorate=row.governorate,
+        lat=float(row.ref_lat),
+        lon=float(row.ref_lon),
+    )
 
 
 def product_summary(product: Product, lbp_per_usd: Decimal | None) -> common.ProductSummary:

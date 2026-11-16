@@ -19,17 +19,19 @@ from dawalink.api.deps import (
 from dawalink.api.errors import ApiError, ErrorCode
 from dawalink.api.schemas.accounts import (
     ChangePassword,
+    DiscountTier,
     LoggedIn,
     Login,
     Me,
     ProfileChange,
     PublicConfig,
     RegisterClient,
+    RegisterPharmacy,
     VerifyEmail,
 )
 from dawalink.api.schemas.common import District as DistrictOut
 from dawalink.api.schemas.common import Message
-from dawalink.db.models import CatalogImport, ClientProfile, District, User
+from dawalink.db.models import CatalogImport, ClientProfile, District, PricingTier, User
 from dawalink.domain.numbers import (
     MAX_MESSAGE_CHARS,
     OFFER_VALIDITY,
@@ -38,7 +40,7 @@ from dawalink.domain.numbers import (
     REQUEST_HOURS_START,
     SEARCH_WINDOW,
 )
-from dawalink.services import auth
+from dawalink.services import auth, pharmacy_profile
 from dawalink.services.errors import Code, ServiceError
 
 router = APIRouter(tags=["accounts"])
@@ -65,6 +67,14 @@ def public_config(
             rate_date=newest[1].isoformat() if newest else None,
             poll_every_s=POLL_EVERY_S,
             max_message_chars=MAX_MESSAGE_CHARS,
+            discount_tiers=[
+                DiscountTier(
+                    min_days=tier.min_days, max_days=tier.max_days, discount_pct=tier.discount_pct
+                )
+                for tier in tx.session.execute(
+                    select(PricingTier).order_by(PricingTier.min_days)
+                ).scalars()
+            ],
             server_now=tx.now,
             demo_mode=settings.demo_mode,
             assistant_available=agent is not None,
@@ -93,6 +103,38 @@ def register_client(
             full_name=body.full_name,
             phone=body.phone,
             district_id=body.district_id,
+            signup_address=address,
+        )
+    return CHECK_YOUR_EMAIL
+
+
+@router.post("/auth/register/pharmacy", status_code=202)
+def register_pharmacy(
+    body: RegisterPharmacy, request: Request, work: DoWork, settings: TheSettings
+) -> Message:
+    """A pharmacy registers itself and its one account (PS-1). Like a client's sign-up
+    it always answers "check your email" (R-AU7); the registration reaches DawaLink's
+    team once the email is confirmed. A licence or a phone number that another pharmacy
+    has is refused."""
+    address = auth.address_hash(secret_key(settings), caller_address(request, settings))
+    details = body.pharmacy
+    with work.tx() as tx:
+        auth.register_pharmacy(
+            tx,
+            email=body.email,
+            password=body.password,
+            details=pharmacy_profile.checked(
+                tx,
+                name=details.name,
+                license_number=details.license_number,
+                phone=details.phone,
+                address=details.address,
+                district_id=details.district_id,
+                lat=details.location.lat,
+                lon=details.location.lon,
+                pickup_days=details.pickup_days,
+                hours=[(row.weekday, row.open, row.close) for row in details.hours],
+            ),
             signup_address=address,
         )
     return CHECK_YOUR_EMAIL

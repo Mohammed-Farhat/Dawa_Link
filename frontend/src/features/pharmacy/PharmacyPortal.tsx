@@ -6,6 +6,7 @@ import { useSession } from '../../api/session'
 import { Banner } from '../../components/layout'
 import { clock, dayAndClock } from '../../format'
 import { strings } from '../../strings/en'
+import { UnverifiedBanner } from '../client/HomePage'
 import { AskCard } from './AskCard'
 import {
   useAsks,
@@ -14,6 +15,9 @@ import {
   usePharmacyReservations,
   useReservationByNumber,
 } from './data'
+import { InventoryPage } from './InventoryPage'
+import { ListingsPage } from './ListingsPage'
+import { RegistrationPanel, SettingsPage } from './ProfilePages'
 import { ReservationCard } from './ReservationCard'
 
 const s = strings.pharmacy
@@ -36,28 +40,49 @@ export default function PharmacyPortal() {
   }
   const pharmacy = profile.data
   // Approved: everything. Suspended: only the reservations it still holds (docs/06 §2.2).
-  const works = pharmacy.status === 'APPROVED' || pharmacy.status === 'SUSPENDED'
+  const approved = pharmacy.status === 'APPROVED'
+  const works = approved || pharmacy.status === 'SUSPENDED'
   return (
     <div className="portal">
-      <Bar pharmacy={pharmacy} works={works} />
+      <Bar pharmacy={pharmacy} works={works} approved={approved} />
       <div className="portal__body">
-        {pharmacy.status === 'PENDING' && <Banner tone="grey">{s.pending}</Banner>}
+        {/* Until the email is confirmed, the registration hasn't reached our team (R-AU7). */}
+        {!pharmacy.email_verified && <UnverifiedBanner text={s.confirmEmail} />}
+        {pharmacy.status === 'PENDING' && pharmacy.email_verified && (
+          <Banner tone={pharmacy.info_requested ? 'amber' : 'grey'}>
+            {pharmacy.info_requested ? s.infoRequested : s.pending}
+          </Banner>
+        )}
         {pharmacy.status === 'REJECTED' && (
           <Banner tone="red">{s.rejected(pharmacy.status_reason)}</Banner>
         )}
         {pharmacy.status === 'SUSPENDED' && <Banner tone="amber">{s.suspended}</Banner>}
-        {works && (
+        {works ? (
           <Routes>
             <Route index element={<TodayPage pharmacy={pharmacy} />} />
             <Route path="reservations" element={<ReservationsPage />} />
+            {approved && <Route path="inventory" element={<InventoryPage />} />}
+            {approved && <Route path="listings" element={<ListingsPage />} />}
+            <Route path="settings" element={<SettingsPage pharmacy={pharmacy} />} />
           </Routes>
+        ) : (
+          // Waiting, or rejected: the pharmacy corrects what it typed (PS-2).
+          <RegistrationPanel pharmacy={pharmacy} />
         )}
       </div>
     </div>
   )
 }
 
-function Bar({ pharmacy, works }: { pharmacy: Profile; works: boolean }) {
+function Bar({
+  pharmacy,
+  works,
+  approved,
+}: {
+  pharmacy: Profile
+  works: boolean
+  approved: boolean
+}) {
   const { logout } = useSession()
   // The end of the range that is open now: a pharmacy may close at midday and reopen.
   const closes = pharmacy.closes_at ? deadlineClock(pharmacy.closes_at) : ''
@@ -70,7 +95,7 @@ function Bar({ pharmacy, works }: { pharmacy: Profile; works: boolean }) {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{pharmacy.name}</span>
           <span style={{ fontSize: 13, color: pharmacy.status === 'APPROVED' ? 'var(--green)' : 'var(--amber)' }}>
-            {s.status[pharmacy.status]}
+            {pharmacy.email_verified ? s.status[pharmacy.status] : s.notConfirmed}
             {pharmacy.status === 'APPROVED' && ` · ${pharmacy.open_now ? s.open(closes) : s.closed}`}
           </span>
         </div>
@@ -83,6 +108,19 @@ function Bar({ pharmacy, works }: { pharmacy: Profile; works: boolean }) {
             </NavLink>
             <NavLink to="/pharmacy/reservations" className="bar__tab">
               {s.reservations}
+            </NavLink>
+            {approved && (
+              <>
+                <NavLink to="/pharmacy/inventory" className="bar__tab">
+                  {s.inventory}
+                </NavLink>
+                <NavLink to="/pharmacy/listings" className="bar__tab">
+                  {s.listings}
+                </NavLink>
+              </>
+            )}
+            <NavLink to="/pharmacy/settings" className="bar__tab">
+              {s.settings}
             </NavLink>
           </>
         )}

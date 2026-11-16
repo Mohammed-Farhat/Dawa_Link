@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.5 · **Date:** 2026-11-15
-**Status:** ✅ validated by the team (2026-10-20). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.6 · **Date:** 2026-11-16
+**Status:** ✅ validated by the team (2026-10-20). **v5.6:** stock files are CSV only (the owner, decision log BLD-D32). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -194,7 +194,7 @@ If the LLM is down or over budget:
 - Admins get a read-only view.
 
 #### C3: Inventory
-- A **fixed CSV/XLSX template**: product, strength (optional), batch, expiry, quantity.
+- A **fixed CSV template** (a spreadsheet saves one): product, strength (optional), batch, expiry, quantity.
 - Row-level errors with "did you mean…" suggestions.
 - A **change summary → [Apply]**; reserved stock is never reduced by an upload or edit.
 - **Quick quantity edits** (e.g. after a sale in the shop), plus a manual add form.

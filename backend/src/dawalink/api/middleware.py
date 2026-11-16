@@ -5,9 +5,10 @@ from uuid import uuid4
 
 import structlog
 from starlette.datastructures import MutableHeaders
+from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from dawalink.api.errors import ErrorCode, error_response
+from dawalink.api.errors import ErrorCode, error_body, error_response
 
 log = structlog.get_logger(__name__)
 
@@ -96,14 +97,28 @@ class OriginCheckMiddleware:
     """A request that changes something must come from our own website (docs/06 §2.1).
 
     The login travels in a header the page adds itself, so another site can't use it; this
-    check is a second lock on the same door. It also refuses a JSON body larger than the
-    limit before anything reads it.
+    check is a second lock on the same door.
+
+    It also refuses a body that is too large **before anything reads it**: a few
+    kilobytes everywhere, and a file's size on the paths that take a file. A body sent
+    without its length (in chunks) is refused: its size couldn't be known before it is
+    read, and no browser sends our requests that way.
     """
 
-    def __init__(self, app: ASGIApp, *, website_url: str, max_body_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        website_url: str,
+        max_body_bytes: int,
+        upload_paths: frozenset[str] = frozenset(),
+        max_upload_bytes: int = 0,
+    ) -> None:
         self.app = app
         self._website_url = website_url
         self._max_body_bytes = max_body_bytes
+        self._upload_paths = upload_paths
+        self._max_upload_bytes = max_upload_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope["method"] not in UNSAFE_METHODS:
@@ -112,13 +127,23 @@ class OriginCheckMiddleware:
         headers = dict(scope["headers"])
         request_id = str(scope.get("state", {}).get("request_id", ""))
         refused: ErrorCode | None = None
+        is_upload = scope["path"] in self._upload_paths
+        limit = self._max_upload_bytes if is_upload else self._max_body_bytes
+        length = headers.get(b"content-length", b"0")
         if headers.get(b"origin", b"").decode("latin-1") != self._website_url:
             refused = ErrorCode.ORIGIN_REJECTED
-        elif not headers.get(b"content-type", b"").startswith(b"multipart/"):
-            # An upload has its own, larger limit, checked where the file is read.
-            length = headers.get(b"content-length", b"0")
-            if length.isdigit() and int(length) > self._max_body_bytes:
-                refused = ErrorCode.BODY_TOO_LARGE
+        elif b"transfer-encoding" in headers or not length.isdigit() or int(length) > limit:
+            if is_upload:
+                # The catalog's own code for a file (docs/06 §3.2).
+                response = JSONResponse(
+                    status_code=413,
+                    content=error_body(
+                        "FILE_TOO_LARGE", "The file is larger than 5 MB.", request_id
+                    ),
+                )
+                await response(scope, receive, send)
+                return
+            refused = ErrorCode.BODY_TOO_LARGE
         if refused is not None:
             await error_response(refused, request_id)(scope, receive, send)
             return

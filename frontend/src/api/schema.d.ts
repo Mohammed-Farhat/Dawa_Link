@@ -132,6 +132,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/register/pharmacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Pharmacy
+         * @description A pharmacy registers itself and its one account (PS-1). Like a client's sign-up
+         *     it always answers "check your email" (R-AU7); the registration reaches DawaLink's
+         *     team once the email is confirmed. A licence or a phone number that another pharmacy
+         *     has is refused.
+         */
+        post: operations["register_pharmacy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/verify-email": {
         parameters: {
             query?: never;
@@ -559,6 +582,185 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pharmacy/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Stock
+         * @description The pharmacy's boxes, soonest expiry first. `zone=NEAR_EXPIRY` is its listings.
+         */
+        get: operations["list_stock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Stock Item
+         * @description One box typed by hand. The same medicine, batch and expiry twice is refused
+         *     (`ITEM_EXISTS`): the pharmacy corrects the quantity of the one it has.
+         */
+        post: operations["add_stock_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change Stock Item
+         * @description A quantity corrected after a sale in the shop, the pharmacy's own price, or a
+         *     pause. Reserved packs are never taken away here (R-U3).
+         */
+        patch: operations["change_stock_item"];
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock File Template
+         * @description The file to fill in: five columns, two example rows.
+         */
+        get: operations["stock_file_template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Stock File
+         * @description Reads a stock file and says what applying it would change. **Nothing changes
+         *     yet**, and the file itself is never kept (SM-4). A new file replaces the one that was
+         *     waiting.
+         */
+        post: operations["upload_stock_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/uploads/waiting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Waiting Stock File
+         * @description The file that waits for [Apply] or [Discard]: the screen finds it again after a
+         *     reload.
+         */
+        get: operations["waiting_stock_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Stock File
+         * @description [Apply]: the file becomes the pharmacy's stock, all rows or none (R-U1 to R-U4).
+         */
+        post: operations["apply_stock_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Stock File */
+        post: operations["discard_stock_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pharmacy/inventory/uploads/{upload_id}/errors.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock File Errors */
+        get: operations["stock_file_errors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pharmacy/me": {
         parameters: {
             query?: never;
@@ -573,6 +775,52 @@ export interface paths {
         get: operations["read_pharmacy"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change Settings
+         * @description An approved pharmacy changes its opening hours or its pickup time (PS-10).
+         *     Reservations already made keep the deadline they were given (R-T5).
+         */
+        patch: operations["change_settings"];
+        trace?: never;
+    };
+    "/api/v1/pharmacy/me/registration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change Registration
+         * @description While it waits, or after a rejection, the pharmacy corrects what it typed (PS-2).
+         *     Only what is sent changes; everything is checked again as at registration.
+         */
+        patch: operations["change_registration"];
+        trace?: never;
+    };
+    "/api/v1/pharmacy/me/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit Registration
+         * @description After a rejection: back in the queue of DawaLink's team (SM-1).
+         */
+        post: operations["resubmit_registration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -809,6 +1057,23 @@ export interface components {
              */
             pickup_day: string;
         };
+        /** AddStockItem */
+        AddStockItem: {
+            /** Batch */
+            batch: string;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Qty */
+            qty: number;
+        };
         /** AdvanceClock */
         AdvanceClock: {
             /** Minutes */
@@ -828,6 +1093,11 @@ export interface components {
              * @enum {string}
              */
             state: "ACCEPTED" | "WITHDRAWN" | "DECLINED";
+        };
+        /** Body_upload_stock_file */
+        Body_upload_stock_file: {
+            /** File */
+            file: string;
         };
         /**
          * Card
@@ -1005,12 +1275,25 @@ export interface components {
              */
             server_now: string;
         };
+        /** DiscountTier */
+        DiscountTier: {
+            /** Discount Pct */
+            discount_pct: number;
+            /** Max Days */
+            max_days: number;
+            /** Min Days */
+            min_days: number;
+        };
         /** District */
         District: {
             /** Governorate */
             governorate: string;
             /** Id */
             id: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
             /** Name */
             name: string;
         };
@@ -1346,6 +1629,20 @@ export interface components {
             server_now: string;
         };
         /**
+         * OpeningRange
+         * @description One opening range of a weekday, Monday = 0: `{weekday: 0, open: "08:00",
+         *     close: "13:00"}`. A day has up to two; a day with none is closed. `close` may be
+         *     "24:00".
+         */
+        OpeningRange: {
+            /** Close */
+            close: string;
+            /** Open */
+            open: string;
+            /** Weekday */
+            weekday: number;
+        };
+        /**
          * PharmacyCard
          * @description What a client sees about a pharmacy.
          */
@@ -1373,6 +1670,31 @@ export interface components {
             pickup_days: number;
             pin: components["schemas"]["Pin"];
         };
+        /**
+         * PharmacyDetails
+         * @description What a pharmacy says about itself (PS-1). The exact shape of each field is checked
+         *     by the rules, which answer with the field's name and a sentence.
+         */
+        PharmacyDetails: {
+            /** Address */
+            address: string;
+            /** District Id */
+            district_id: number;
+            /** Hours */
+            hours: components["schemas"]["OpeningRange"][];
+            /** License Number */
+            license_number: string;
+            location: components["schemas"]["PinIn"];
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string;
+            /**
+             * Pickup Days
+             * @default 1
+             */
+            pickup_days: number;
+        };
         /** PharmacyProfile */
         PharmacyProfile: {
             /** Address */
@@ -1381,6 +1703,12 @@ export interface components {
             closes_at: string | null;
             /** District */
             district: string;
+            /** District Id */
+            district_id: number;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Hours */
+            hours: components["schemas"]["OpeningRange"][];
             /**
              * Id
              * Format: uuid
@@ -1390,6 +1718,7 @@ export interface components {
             info_requested: boolean;
             /** License Number */
             license_number: string;
+            location: components["schemas"]["Pin"];
             /** Name */
             name: string;
             /** Open Now */
@@ -1499,6 +1828,13 @@ export interface components {
             /** Lon */
             lon: number;
         };
+        /** PinIn */
+        PinIn: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+        };
         /** PrivateItem */
         PrivateItem: {
             /** Batch */
@@ -1580,6 +1916,8 @@ export interface components {
             assistant_available: boolean;
             /** Demo Mode */
             demo_mode: boolean;
+            /** Discount Tiers */
+            discount_tiers: components["schemas"]["DiscountTier"][];
             /** Lbp Per Usd */
             lbp_per_usd: number | null;
             /** Max Message Chars */
@@ -1619,6 +1957,41 @@ export interface components {
             password: string;
             /** Phone */
             phone?: string | null;
+        };
+        /** RegisterPharmacy */
+        RegisterPharmacy: {
+            /**
+             * Accept Terms
+             * @constant
+             */
+            accept_terms: true;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            pharmacy: components["schemas"]["PharmacyDetails"];
+        };
+        /**
+         * RegistrationChange
+         * @description A pharmacy that waits for approval, or was rejected, corrects what it typed
+         *     (PS-2). Only what is sent changes.
+         */
+        RegistrationChange: {
+            /** Address */
+            address?: string | null;
+            /** District Id */
+            district_id?: number | null;
+            /** Hours */
+            hours?: components["schemas"]["OpeningRange"][] | null;
+            /** License Number */
+            license_number?: string | null;
+            location?: components["schemas"]["PinIn"] | null;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Pickup Days */
+            pickup_days?: number | null;
         };
         /** RequestItem */
         RequestItem: {
@@ -1833,6 +2206,17 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * SettingsChange
+         * @description What an approved pharmacy changes by itself (PS-10): its hours and its pickup
+         *     time. Its name, licence, address, pin and phone are changed by DawaLink's team.
+         */
+        SettingsChange: {
+            /** Hours */
+            hours?: components["schemas"]["OpeningRange"][] | null;
+            /** Pickup Days */
+            pickup_days?: number | null;
+        };
         /** SourcingRequest */
         SourcingRequest: {
             /** Alternatives Ok */
@@ -1887,6 +2271,113 @@ export interface components {
              */
             server_now: string;
         };
+        /** Stock */
+        Stock: {
+            /** Items */
+            items: components["schemas"]["StockItem"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /** StockItem */
+        StockItem: {
+            /** Batch */
+            batch: string;
+            /** Days Left */
+            days_left: number;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Edited At */
+            last_edited_at: string | null;
+            /** Paused */
+            paused: boolean;
+            price: components["schemas"]["StockPrice"];
+            product: components["schemas"]["ProductSummary"];
+            /** Qty Available */
+            qty_available: number;
+            /** Qty On Hand */
+            qty_on_hand: number;
+            /** Qty Reserved */
+            qty_reserved: number;
+            /** Visible */
+            visible: boolean;
+            /**
+             * Zone
+             * @enum {string}
+             */
+            zone: "NEAR_EXPIRY" | "EARLY_RELEASE" | "PRIVATE" | "EXPIRED" | "NOT_ELIGIBLE";
+        };
+        /**
+         * StockItemChange
+         * @description Only what is sent changes. `price_override_lbp: null` goes back to the system's
+         *     price.
+         */
+        StockItemChange: {
+            /** Paused */
+            paused?: boolean | null;
+            /** Price Override Lbp */
+            price_override_lbp?: number | null;
+            /** Qty On Hand */
+            qty_on_hand?: number | null;
+        };
+        /** StockItemChanged */
+        StockItemChanged: {
+            item: components["schemas"]["StockItem"];
+            /** Reserved Kept */
+            reserved_kept: boolean;
+        };
+        /** StockPrice */
+        StockPrice: {
+            /** Discount Pct */
+            discount_pct: number | null;
+            effective: components["schemas"]["Money"] | null;
+            override: components["schemas"]["Money"] | null;
+            system: components["schemas"]["Money"] | null;
+        };
+        /**
+         * StockUpload
+         * @description A stock file that was read. Nothing changes until it is applied (SM-4).
+         */
+        StockUpload: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Errors */
+            errors: components["schemas"]["UploadRowError"][];
+            /** File Name */
+            file_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rows Error */
+            rows_error: number;
+            /** Rows Ok */
+            rows_ok: number;
+            /** Rows Total */
+            rows_total: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "VALIDATED" | "APPLIED" | "DISCARDED";
+            summary: components["schemas"]["UploadSummary"];
+        };
         /**
          * Travel
          * @description How far a pharmacy is from the client. Computed by code; never a coordinate.
@@ -1903,6 +2394,28 @@ export interface components {
             source: "road" | "straight";
             /** Walk Min */
             walk_min: number;
+        };
+        /** UploadRowError */
+        UploadRowError: {
+            /** Did You Mean */
+            did_you_mean: string[];
+            /** Problem */
+            problem: string;
+            /** Product */
+            product: string;
+            /** Row */
+            row: number;
+        };
+        /** UploadSummary */
+        UploadSummary: {
+            /** Changed */
+            changed: number;
+            /** New */
+            new: number;
+            /** Reserved Kept */
+            reserved_kept: number;
+            /** Zeroed */
+            zeroed: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1941,6 +2454,10 @@ export interface components {
             open_offer_ids: string[];
             /** Watching New Stock */
             watching_new_stock: boolean;
+        };
+        /** WaitingUpload */
+        WaitingUpload: {
+            upload: components["schemas"]["StockUpload"] | null;
         };
     };
     responses: never;
@@ -2153,6 +2670,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RegisterClient"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_pharmacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterPharmacy"];
             };
         };
         responses: {
@@ -2920,7 +3470,410 @@ export interface operations {
             };
         };
     };
+    list_stock: {
+        parameters: {
+            query?: {
+                q?: string;
+                zone?: ("NEAR_EXPIRY" | "EARLY_RELEASE" | "PRIVATE" | "EXPIRED") | null;
+                cursor?: number;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stock"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_stock_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddStockItem"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_stock_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockItemChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockItemChanged"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stock_file_template: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_stock_file: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_stock_file"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    waiting_stock_file: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitingUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_stock_file: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockUpload"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_stock_file: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stock_file_errors: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_pharmacy: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_settings: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_registration: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resubmit_registration: {
         parameters: {
             query?: never;
             header?: {

@@ -31,6 +31,7 @@ class Template(StrEnum):
     WINDOW_ENDING = "CN-16"
     REQUEST_CLOSED = "CN-17"
     # To pharmacies
+    REGISTRATION_RECEIVED = "PN-1"
     NEW_RESERVATION = "PN-4"
     EARLY_RELEASE_ASK = "PN-7"
     CLIENT_CANCELLED = "PN-8"

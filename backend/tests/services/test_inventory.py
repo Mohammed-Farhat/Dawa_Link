@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from dawalink.domain.expiry import Zone
 from dawalink.domain.inventory import ListingControl
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ClaimSource
@@ -232,7 +233,7 @@ class TestUploads:
             "Panadoll,,B2,2026-12,1\n"
             "Tramal,,B3,2026-12,1\n"
             "Concor,,B4,2026-12,1\n"
-            "Panadol,,B5,12/2026,1\n"
+            "Panadol,,B5,soon,1\n"
             "Panadol,,B6,2026-09,1\n"
             "Panadol,,B7,2026-12,-3\n"
             "Panadol,,,2026-12,3\n"
@@ -421,3 +422,273 @@ def test_a_request_item_for_a_controlled_medicine_becomes_unavailable(world: Wor
     assert world.one("SELECT state FROM request_items WHERE id = :i", i=item).state == "UNAVAILABLE"
     closed = world.one("SELECT state, outcome FROM sourcing_requests WHERE id = :r", r=request)
     assert (closed.state, closed.outcome) == ("CLOSED", "UNFULFILLED")
+
+
+class TestFilesAsExcelSavesThem:
+    """The owner chose CSV only (2026-11-16, build plan Q40) because a spreadsheet saves
+    one in two clicks. So the reader takes what a spreadsheet really writes."""
+
+    def test_semicolons_empty_columns_and_a_windows_code_page(self, store: Store) -> None:
+        """A computer whose decimal sign is a comma writes semicolons; Excel's plain
+        "CSV" isn't UTF-8; a stray click leaves an empty column at the end."""
+        tx = store.world.tx()
+        content = (
+            "Product;Strength;Batch;Expiry;Quantity;;\r\n"
+            "Panadol;;B1;2026-12;10;;\r\n"
+            "Concor;5mg;caf\u00e9-1;2027-01;2;;\r\n"
+        ).encode("cp1252")
+
+        upload = inventory.validate_upload(tx, store.pharmacy, store.owner, "s.csv", content)
+
+        # The accent in the batch is the one row refused: a batch is plain letters.
+        assert (upload.rows_ok, upload.rows_error) == (1, 1)
+        assert upload.errors[0]["row"] == 3
+        assert "batch" in upload.errors[0]["problem"]
+
+    def test_tabs_work_too(self, store: Store) -> None:
+        upload = store.upload("product\tbatch\texpiry\tquantity\nPanadol\tB1\t2026-12\t3\n")
+
+        assert (upload.rows_ok, upload.rows_error) == (1, 0)
+
+    @pytest.mark.parametrize("written", ["12/2026", "Dec-26", "Dec 2026", "2026/12", "2026/12/31"])
+    def test_a_month_the_way_a_spreadsheet_rewrites_it(self, store: Store, written: str) -> None:
+        """Typed "2026-12", a spreadsheet shows and saves "Dec-26"."""
+        upload = store.upload(f"product,batch,expiry,quantity\nPanadol,B1,{written},3\n")
+        store.apply(upload.id)
+
+        assert str(store.items()[("PANADOL", "B1")].expiry_date) == "2026-12-31"
+
+    @pytest.mark.parametrize("written", ["03/04/2027", "3-4-27"])
+    def test_a_day_and_a_month_as_two_numbers_are_never_guessed(
+        self, store: Store, written: str
+    ) -> None:
+        """3 April or 4 March? Reading it wrong would show a box as valid a month longer
+        than it is. With no other date in the file to show which comes first, the row
+        is refused with what to write instead."""
+        upload = store.upload(f"product,batch,expiry,quantity\nPanadol,B1,{written},3\n")
+
+        assert (upload.rows_ok, upload.rows_error) == (0, 1)
+        assert "two ways" in upload.errors[0]["problem"]
+
+    def test_an_excel_workbook_is_refused_with_what_to_do(self, store: Store, world: World) -> None:
+        workbook = b"PK\x03\x04" + b"\x00" * 200
+
+        error = refusal(
+            lambda: inventory.validate_upload(
+                world.tx(), store.pharmacy, store.owner, "stock.xlsx", workbook
+            )
+        )
+
+        assert error.code is Code.UPLOAD_FAILED
+        assert "Save As" in error.details["reason"]
+
+    def test_more_problems_than_are_kept_are_still_counted(self, store: Store) -> None:
+        rows = "".join(f"Nothing like this {n},B{n},2026-12,1\n" for n in range(520))
+
+        upload = store.upload("product,batch,expiry,quantity\nPanadol,B0,2026-12,1\n" + rows)
+
+        assert (upload.rows_total, upload.rows_ok, upload.rows_error) == (521, 1, 520)
+        assert len(upload.errors) == 500
+
+
+class TestTheFileThatWaits:
+    def test_discarding_changes_nothing(self, store: Store, world: World) -> None:
+        store.apply(store.upload("product,batch,expiry,quantity\nPanadol,B1,2026-12,10\n").id)
+        waiting = store.upload("product,batch,expiry,quantity\nPanadol,B1,2026-12,1\n")
+        found = inventory.waiting_upload(world.tx(), store.pharmacy)
+        assert found is not None
+        assert found.id == waiting.id
+
+        tx = world.tx()
+        inventory.discard_upload(tx, store.pharmacy, waiting.id)
+        world.settle(tx)
+
+        assert store.items()[("PANADOL", "B1")].qty_on_hand == 10
+        assert inventory.waiting_upload(world.tx(), store.pharmacy) is None
+        again = refusal(lambda: inventory.discard_upload(world.tx(), store.pharmacy, waiting.id))
+        assert again.code is Code.UPLOAD_NOT_VALIDATED
+        applied = refusal(lambda: inventory.apply_upload(world.tx(), store.pharmacy, waiting.id))
+        assert applied.code is Code.UPLOAD_NOT_VALIDATED
+
+    def test_the_errors_file_cannot_run_a_formula(self, store: Store, world: World) -> None:
+        """FS-10: what a pharmacy typed in its file comes back in this one. A name that
+        starts like a formula is refused whole, so the risk is in the middle of a file:
+        a cell a spreadsheet would run must come back as text."""
+        upload = store.upload("product,batch,expiry,quantity\n-2+3,B1,2026-12,1\n")
+        row = inventory.own_upload(world.tx(), store.pharmacy, upload.id)
+
+        lines = inventory.errors_csv(row).splitlines()
+
+        assert lines[0] == "row,product,problem,did you mean"
+        assert lines[1].startswith("2,'-2+3,no product with this name")
+
+    def test_another_pharmacys_file_does_not_exist(self, store: Store, world: World) -> None:
+        upload = store.upload("product,batch,expiry,quantity\nPanadol,B1,2026-12,10\n")
+        other = world.make.pharmacy()
+
+        assert refusal(lambda: inventory.own_upload(world.tx(), other, upload.id)).code is (
+            Code.NOT_FOUND
+        )
+        assert refusal(lambda: inventory.discard_upload(world.tx(), other, upload.id)).code is (
+            Code.NOT_FOUND
+        )
+
+
+class TestReadingTheStock:
+    def test_each_box_with_its_zone_and_its_price_of_today(
+        self, store: Store, world: World
+    ) -> None:
+        """R-T9: the zone and the price are computed when they are read, never stored."""
+        make = world.make
+        soon = make.item(
+            pharmacy_id=store.pharmacy, product_id=store.panadol, batch="SOON", days_left=20
+        )
+        later = make.item(
+            pharmacy_id=store.pharmacy, product_id=store.panadol, batch="LATER", days_left=200
+        )
+        far = make.item(
+            pharmacy_id=store.pharmacy, product_id=store.concor, batch="FAR", days_left=400
+        )
+        make.item(product_id=store.panadol, batch="NOT-MINE", days_left=20)
+
+        lines = inventory.stock_lines(world.tx(), store.pharmacy)
+
+        assert [line.item.id for line in lines] == [soon, later, far]
+        assert [line.zone.value for line in lines] == ["NEAR_EXPIRY", "EARLY_RELEASE", "PRIVATE"]
+        # 60% off a public price of 1,000,000 in the last 30 days (N-4).
+        assert lines[0].price_lbp == 400_000
+        # A private box has no price for a client.
+        assert lines[1].price_lbp is None
+        assert lines[2].price_lbp is None
+
+    def test_finding_by_name_batch_or_zone(self, store: Store, world: World) -> None:
+        make = world.make
+        make.item(pharmacy_id=store.pharmacy, product_id=store.panadol, batch="A1", days_left=20)
+        make.item(pharmacy_id=store.pharmacy, product_id=store.concor, batch="ZX-9", days_left=200)
+
+        def read(query: str = "", zone: Zone | None = None) -> list[str]:
+            lines = inventory.stock_lines(world.tx(), store.pharmacy, query=query, zone=zone)
+            return [line.item.batch for line in lines]
+
+        assert read(query="pana") == ["A1"]
+        assert read(query="zx-9") == ["ZX-9"]
+        assert read(zone=Zone.EARLY_RELEASE) == ["ZX-9"]
+        assert read(query="nothing") == []
+
+
+def test_a_name_and_strength_that_several_catalog_rows_share_is_never_guessed(
+    store: Store, world: World
+) -> None:
+    """The Ministry lists some medicines several times, with one name and one strength:
+    other pack sizes, other makers, each with its own price. A file can't say which one;
+    the row says so and sends the pharmacist to the form, where the box is chosen."""
+    for pack in ("B/12", "B/24"):
+        world.make.product(
+            moph_name="TWINOL",
+            search_name="twinol",
+            dosage_text="500mg",
+            form_text="Tablet",
+            presentation_text=pack,
+        )
+
+    upload = store.upload("product,strength,batch,expiry,quantity\nTwinol,500mg,B1,2026-12,3\n")
+
+    (error,) = upload.errors
+    assert (upload.rows_ok, upload.rows_error) == (0, 1)
+    assert "add this box by hand" in error["problem"]
+    assert error["did_you_mean"] == ["Tablet B/12", "Tablet B/24"]
+
+
+class TestWhatExcelReallySaved:
+    """Typed into the template in Excel on a computer set to US dates, then File, Save
+    As, CSV (2026-11-16). The full dates came out month first, the months came out as
+    names, a batch lost its leading zeros."""
+
+    SAVED = (
+        "product,strength,batch,expiry,quantity\n"
+        "Panadol,,A1,3/31/2027,6\n"
+        "Panadol,,123,Mar-27,4\n"
+        "Panadol,,A3,2027-03,2\n"
+        "Panadol,,A5,3/4/2027,1\n"
+    )
+
+    def test_its_dates_are_read_because_one_of_them_shows_the_order(self, store: Store) -> None:
+        upload = store.upload(self.SAVED)
+        store.apply(upload.id)
+
+        assert (upload.rows_ok, upload.rows_error) == (4, 0)
+        expiries = {batch: str(row.expiry_date) for (_, batch), row in store.items().items()}
+        # 3/31 can only be 31 March, so 3/4 is 4 March: the US way, not the Lebanese one.
+        assert expiries == {
+            "A1": "2027-03-31",
+            "123": "2027-03-31",
+            "A3": "2027-03-31",
+            "A5": "2027-03-04",
+        }
+
+    def test_the_same_dates_written_the_lebanese_way(self, store: Store) -> None:
+        upload = store.upload(
+            "product,batch,expiry,quantity\nPanadol,A1,31/03/2027,6\nPanadol,A5,3/4/2027,1\n"
+        )
+        store.apply(upload.id)
+
+        assert str(store.items()[("PANADOL", "A5")].expiry_date) == "2027-04-03"
+
+    def test_a_file_whose_dates_disagree_is_not_guessed(self, store: Store) -> None:
+        upload = store.upload(
+            "product,batch,expiry,quantity\n"
+            "Panadol,A1,31/03/2027,6\nPanadol,A2,3/31/2027,6\nPanadol,A3,03/2027,1\n"
+        )
+
+        assert (upload.rows_ok, upload.rows_error) == (1, 2)
+
+    def test_the_template_survives_a_trip_through_a_spreadsheet(self, store: Store) -> None:
+        """Its examples are months only: a full date would come back rewritten."""
+        expiries = [line.split(",")[3] for line in inventory.TEMPLATE_CSV.splitlines()[1:]]
+
+        assert expiries == ["2027-03", "2027-06"]
+
+
+class TestABoxNoFileCanName:
+    def test_it_is_refused_in_a_file_and_never_set_to_zero_by_one(
+        self, store: Store, world: World
+    ) -> None:
+        """R-U2 sets to 0 what a file doesn't name. But a medicine the Ministry lists
+        twice under one name and strength can't be named by any file: its box is added
+        by hand, and the next file must leave it alone."""
+        packs = [
+            world.make.product(
+                moph_name="TWINOL",
+                search_name="twinol",
+                dosage_text="500mg",
+                presentation_text=pack,
+            )
+            for pack in ("B/12", "B/24")
+        ]
+        tx = world.tx()
+        by_hand = inventory.add_item(
+            tx,
+            store.pharmacy,
+            product_id=packs[1],
+            batch="T1",
+            expiry_date=TODAY + 60 * DAY,
+            quantity=7,
+        )
+        world.settle(tx)
+        store.apply(store.upload("product,batch,expiry,quantity\nPanadol,P1,2026-12,5\n").id)
+
+        upload = store.upload(
+            "product,strength,batch,expiry,quantity\n"
+            "Twinol,500mg,T1,2026-12,9\n"
+            "Concor,5mg,C1,2026-12,2\n"
+        )
+        applied = store.apply(upload.id)
+
+        items = store.items()
+        # The file's Twinol row was refused; the box added by hand is as it was.
+        assert (upload.rows_ok, upload.rows_error) == (1, 1)
+        assert items[("TWINOL", "T1")].qty_on_hand == 7
+        assert items[("TWINOL", "T1")].id == by_hand.id
+        # Panadol can be named, and wasn't: set to 0, as R-U2 says.
+        assert items[("PANADOL", "P1")].qty_on_hand == 0
+        assert (upload.summary["zeroed"], applied.summary["new"]) == (1, 1)

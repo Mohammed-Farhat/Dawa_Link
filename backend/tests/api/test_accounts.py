@@ -395,5 +395,7 @@ class TestPublicConfiguration:
 
         assert (config["request_hours_start"], config["request_hours_end"]) == ("08:00", "20:00")
         assert config["assistant_available"] is False
-        assert {"id", "name", "governorate"} == set(districts[0])
+        # A district's centre is public, like any map: where the pharmacy's map opens.
+        assert {"id", "name", "governorate", "lat", "lon"} == set(districts[0])
+        assert [tier["discount_pct"] for tier in config["discount_tiers"]] == [60, 40, 25]
         assert len(districts) == 26

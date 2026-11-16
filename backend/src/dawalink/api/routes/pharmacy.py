@@ -13,6 +13,8 @@ from sqlalchemy import func, select, text
 
 from dawalink.api import present
 from dawalink.api.deps import AsPharmacist, DoWork, Work, get_work
+from dawalink.api.schemas.accounts import OpeningRange
+from dawalink.api.schemas.common import Pin
 from dawalink.api.schemas.pharmacy import (
     AcceptAsk,
     AskAnswered,
@@ -25,6 +27,8 @@ from dawalink.api.schemas.pharmacy import (
     PharmacyReservation,
     PharmacyReservations,
     PrivateItem,
+    RegistrationChange,
+    SettingsChange,
 )
 from dawalink.api.schemas.search import DayHours
 from dawalink.db.models import (
@@ -34,6 +38,7 @@ from dawalink.db.models import (
     Order,
     Pharmacy,
     Product,
+    User,
 )
 from dawalink.db.models import EarlyReleaseAsk as AskRow
 from dawalink.domain.accounts import (
@@ -46,7 +51,7 @@ from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, STALE_INVE
 from dawalink.domain.opening_hours import closes_at, is_open
 from dawalink.domain.orders import OrderState
 from dawalink.domain.pricing import early_release_suggested_price_lbp
-from dawalink.services import auth, counter, early_release, pharmacies
+from dawalink.services import auth, counter, early_release, pharmacies, pharmacy_profile
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -86,31 +91,112 @@ def _require(tx: Tx, pharmacy_id: uuid.UUID, *, inventory: bool = False) -> Phar
     return pharmacy
 
 
+def _profile(tx: Tx, pharmacy_id: uuid.UUID) -> PharmacyProfile:
+    tx.session.flush()
+    pharmacy = tx.session.get_one(Pharmacy, pharmacy_id)
+    weekly = pharmacies.weekly_hours(tx, [pharmacy_id])[pharmacy_id]
+    owner = tx.session.get_one(User, pharmacy.owner_user_id)
+    return PharmacyProfile(
+        id=pharmacy.id,
+        name=pharmacy.name,
+        status=pharmacy.status,
+        status_reason=pharmacy.status_reason,
+        info_requested=pharmacy.info_requested,
+        email_verified=owner.email_verified_at is not None,
+        address=pharmacy.address,
+        district=tx.session.get_one(District, pharmacy.district_id).name,
+        district_id=pharmacy.district_id,
+        phone=pharmacy.phone,
+        license_number=pharmacy.license_number,
+        location=Pin(lat=float(pharmacy.lat), lon=float(pharmacy.lon)),
+        pickup_days=pharmacy.pickup_days,
+        hours=[
+            OpeningRange(weekday=weekday, open=opens, close=closes)
+            for weekday, opens, closes in pharmacy_profile.hours_rows(weekly)
+        ],
+        week=[
+            DayHours(day=day, hours=pharmacies.day_hours(weekly, day))
+            for day in (tx.today + timedelta(days=ahead) for ahead in range(7))
+        ],
+        open_now=is_open(weekly, tx.now),
+        closes_at=closes_at(weekly, tx.now),
+        server_now=tx.now,
+    )
+
+
 @router.get("/me")
 def read_pharmacy(pharmacy_id: OwnPharmacy, work: DoWork) -> PharmacyProfile:
     """The pharmacy's own details, in any status (a pending one sees it is pending)."""
     with work.tx() as tx:
+        return _profile(tx, pharmacy_id)
+
+
+@router.patch("/me/registration")
+def change_registration(
+    body: RegistrationChange, pharmacy_id: OwnPharmacy, work: DoWork
+) -> PharmacyProfile:
+    """While it waits, or after a rejection, the pharmacy corrects what it typed (PS-2).
+    Only what is sent changes; everything is checked again as at registration."""
+    sent = body.model_fields_set
+    with work.tx() as tx:
         pharmacy = tx.session.get_one(Pharmacy, pharmacy_id)
         weekly = pharmacies.weekly_hours(tx, [pharmacy_id])[pharmacy_id]
-        return PharmacyProfile(
-            id=pharmacy.id,
-            name=pharmacy.name,
-            status=pharmacy.status,
-            status_reason=pharmacy.status_reason,
-            info_requested=pharmacy.info_requested,
-            address=pharmacy.address,
-            district=tx.session.get_one(District, pharmacy.district_id).name,
-            phone=pharmacy.phone,
-            license_number=pharmacy.license_number,
-            pickup_days=pharmacy.pickup_days,
-            week=[
-                DayHours(day=day, hours=pharmacies.day_hours(weekly, day))
-                for day in (tx.today + timedelta(days=ahead) for ahead in range(7))
-            ],
-            open_now=is_open(weekly, tx.now),
-            closes_at=closes_at(weekly, tx.now),
-            server_now=tx.now,
+        now = pharmacy_profile.current(tx, pharmacy, weekly)
+
+        def value(name: str, stored: Any) -> Any:
+            given = getattr(body, name)
+            return given if name in sent and given is not None else stored
+
+        location = body.location if "location" in sent else None
+        details = pharmacy_profile.checked(
+            tx,
+            name=value("name", now.name),
+            license_number=value("license_number", now.license_number),
+            phone=value("phone", now.phone),
+            address=value("address", now.address),
+            district_id=value("district_id", now.district_id),
+            lat=location.lat if location else float(now.lat),
+            lon=location.lon if location else float(now.lon),
+            pickup_days=value("pickup_days", now.pickup_days),
+            hours=(
+                [(row.weekday, row.open, row.close) for row in body.hours]
+                if "hours" in sent and body.hours is not None
+                else pharmacy_profile.hours_rows(weekly)
+            ),
         )
+        pharmacy_profile.change_registration(tx, pharmacy_id, details)
+        return _profile(tx, pharmacy_id)
+
+
+@router.post("/me/resubmit")
+def resubmit_registration(pharmacy_id: OwnPharmacy, work: DoWork) -> PharmacyProfile:
+    """After a rejection: back in the queue of DawaLink's team (SM-1)."""
+    with work.tx() as tx:
+        pharmacy_profile.resubmit(tx, pharmacy_id)
+        return _profile(tx, pharmacy_id)
+
+
+@router.patch("/me")
+def change_settings(
+    body: SettingsChange, pharmacy_id: OwnPharmacy, work: DoWork
+) -> PharmacyProfile:
+    """An approved pharmacy changes its opening hours or its pickup time (PS-10).
+    Reservations already made keep the deadline they were given (R-T5)."""
+    sent = body.model_fields_set
+    with work.tx() as tx:
+        weekly = pharmacies.weekly_hours(tx, [pharmacy_id])[pharmacy_id]
+        pharmacy_profile.change_settings(
+            tx,
+            pharmacy_id,
+            weekly,
+            hours=(
+                [(row.weekday, row.open, row.close) for row in body.hours]
+                if "hours" in sent and body.hours is not None
+                else None
+            ),
+            pickup_days=body.pickup_days if "pickup_days" in sent else None,
+        )
+        return _profile(tx, pharmacy_id)
 
 
 @router.get("/dashboard")

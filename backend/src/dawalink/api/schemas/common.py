@@ -41,6 +41,10 @@ class District(Out):
     id: int
     name: str
     governorate: str
+    # The district's centre, public like any map: where a map opens before a pharmacy
+    # puts its pin. (A client's own location never leaves the server.)
+    lat: float
+    lon: float
 
 
 class ProductSummary(Out):

@@ -50,7 +50,7 @@ from dawalink.domain.numbers import (
 )
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import UserRole
-from dawalink.services import audit
+from dawalink.services import audit, pharmacy_profile
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -241,6 +241,43 @@ def register_client(
     _queue(tx, user.id, VERIFY_EMAIL, uuid.uuid4().hex)
 
 
+def register_pharmacy(
+    tx: Tx,
+    *,
+    email: str,
+    password: str,
+    details: pharmacy_profile.Details,
+    signup_address: bytes,
+) -> None:
+    """A new pharmacy and its one account (P-D5), not yet confirmed. Like a client's
+    sign-up, **it answers the same way whether or not the email has an account** (R-AU7).
+
+    The licence and the phone are checked first, whoever asks: a taken one is refused the
+    same way for a new email and for a known one, so that refusal says nothing about the
+    email. The pharmacy enters the admin's queue once its email is confirmed.
+    """
+    check_strength(password)
+    _check_signup_limit(tx, signup_address)
+    password_hash = hash_password(password)
+    pharmacy_profile.check_free(tx, details)
+    existing = _user_by_email(tx, email)
+    if existing is not None:
+        _queue(tx, existing.id, ALREADY_REGISTERED, tx.real_now.date().isoformat())
+        return
+    user = User(
+        id=uuid.uuid4(),
+        email=email.strip(),
+        password_hash=password_hash,
+        role=UserRole.PHARMACIST.value,
+        full_name=details.name,
+        signup_ip_hash=signup_address,
+    )
+    tx.session.add(user)
+    tx.session.flush()
+    pharmacy_profile.create(tx, user.id, details)
+    _queue(tx, user.id, VERIFY_EMAIL, uuid.uuid4().hex)
+
+
 def resend_verification(tx: Tx, user_id: uuid.UUID) -> None:
     """Another confirmation email, at most once a minute and 5 times a day (N-47)."""
     user = tx.session.get_one(User, user_id)
@@ -313,6 +350,9 @@ def verify_email(tx: Tx, token: str) -> LoggedIn:
                 before={"status": ClientStatus.UNVERIFIED.value},
                 after={"status": ClientStatus.ACTIVE.value},
             )
+        own = pharmacy_of(tx, user.id)
+        if own is not None:
+            pharmacy_profile.email_confirmed(tx, own)
     _refuse_suspended(tx, user)
     return start_session(tx, user)
 

@@ -23,6 +23,7 @@ import { NotFoundPage } from './NotFoundPage'
 // Loaded only for a pharmacist: a client's phone never downloads the pharmacy's portal
 // (docs/11 §10).
 const PharmacyPortal = lazy(() => import('../features/pharmacy/PharmacyPortal'))
+const RegisterPharmacyPage = lazy(() => import('../features/pharmacy/RegisterPharmacyPage'))
 
 /** The pharmacy's portal: it needs a logged-in pharmacist. */
 function ForPharmacists() {
@@ -90,6 +91,14 @@ export function AppRoutes() {
       <Route path="/medicines" element={clients(<MedicinesPage />)} />
       <Route path="/reservations/:id" element={clients(<TicketPage />)} />
       <Route path="/me" element={clients(<MePage />)} />
+      <Route
+        path="/pharmacy/signup"
+        element={visitors(
+          <Suspense fallback={null}>
+            <RegisterPharmacyPage />
+          </Suspense>,
+        )}
+      />
       <Route path="/pharmacy/*" element={<ForPharmacists />} />
       <Route path="/status" element={<StatusPage />} />
       <Route path="*" element={<NotFoundPage />} />

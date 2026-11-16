@@ -58,6 +58,43 @@ class RegisterClient(In):
     accept_terms: Literal[True]
 
 
+class OpeningRange(In):
+    """One opening range of a weekday, Monday = 0: `{weekday: 0, open: "08:00",
+    close: "13:00"}`. A day has up to two; a day with none is closed. `close` may be
+    "24:00"."""
+
+    weekday: int = Field(ge=0, le=6)
+    open: str = Field(pattern="^[0-2][0-9]:[0-5][0-9]$")
+    close: str = Field(pattern="^[0-2][0-9]:[0-5][0-9]$")
+
+
+class PinIn(In):
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+
+
+class PharmacyDetails(In):
+    """What a pharmacy says about itself (PS-1). The exact shape of each field is checked
+    by the rules, which answer with the field's name and a sentence."""
+
+    name: str = Field(min_length=1, max_length=120)
+    license_number: str = Field(min_length=1, max_length=40)
+    phone: str = Field(min_length=1, max_length=30)
+    address: str = Field(min_length=1, max_length=300)
+    district_id: int
+    # The pin the pharmacy put on the map. An admin checks it against the address.
+    location: PinIn
+    pickup_days: int = Field(default=1, ge=1, le=3)
+    hours: list[OpeningRange] = Field(max_length=14)
+
+
+class RegisterPharmacy(In):
+    email: str = Field(max_length=320, pattern=EMAIL_SHAPE)
+    password: str = Field(min_length=1, max_length=200)
+    pharmacy: PharmacyDetails
+    accept_terms: Literal[True]
+
+
 class Login(In):
     email: str = Field(min_length=1, max_length=320)
     password: str = Field(min_length=1, max_length=200)
@@ -80,6 +117,12 @@ class ProfileChange(In):
     alternatives_ok_default: bool | None = None
 
 
+class DiscountTier(Out):
+    min_days: int
+    max_days: int
+    discount_pct: int
+
+
 class PublicConfig(Out):
     """What the website needs before anyone logs in. No secret, no stock."""
 
@@ -91,6 +134,8 @@ class PublicConfig(Out):
     rate_date: str | None
     poll_every_s: int
     max_message_chars: int
+    # The system's discounts by days left before expiry (docs/04 N-4), read-only.
+    discount_tiers: list[DiscountTier]
     server_now: datetime
     demo_mode: bool
     assistant_available: bool
