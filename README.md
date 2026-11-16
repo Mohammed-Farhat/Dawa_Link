@@ -103,12 +103,32 @@ inside `backend/`:
 Place names, centres and road travel times are © [OpenStreetMap](https://www.openstreetmap.org/copyright)
 contributors, available under the Open Database License.
 
+## The evaluation
+
+The plan is in [docs/08_evaluation.md](docs/08_evaluation.md); the data sheets are in
+[eval/datasets/README.md](eval/datasets/README.md). Everything below is free: no command
+here calls a paid model. Inside `backend/`:
+
+| To | Command |
+|---|---|
+| Check the written cases (messages and attacks) | `uv run --env-file ../.env python -m dawalink.evals.validate` |
+| Check the planner on the 50 baskets with known best plans | `uv run python -m dawalink.evals.plan_set` |
+| Play simulated days with the search baseline, the policy with no AI, or the same policy asking first, `--contender rules_asking` (each run gets a database of its own, `dawalink_sim_...`) | `uv run --env-file ../.env python -m dawalink.sim.run --contender search --seeds 1-5` (or `--contender rules`) |
+| Play a simulated day with the agent on Claude (**paid**: it refuses to start without a model and a spending limit; the evidence goes to `eval/results/`) | `uv run --env-file ../.env python -m dawalink.sim.run --contender agent --model claude-haiku-5-5 --max-usd 0.50 --requests 10` (add `--without planning`, `early_release` or `replanning` for an ablation) |
+| Score the agent's understanding on the written cases (**paid**: one to three turns per case; when the agent asks before it searches, the case's client answers, and one client in four leaves one thing out first) | `uv run --env-file ../.env python -m dawalink.evals.run_understanding --model claude-haiku-5-5 --max-usd 1.00` |
+| Try the written attacks on the agent and score them (**paid**: one or two turns per attack) | `uv run --env-file ../.env python -m dawalink.evals.run_safety --model claude-haiku-5-5 --max-usd 1.00` |
+| Let a second model play the client and score the conversations (**paid** twice: the agent's turns and the playing model's messages) | `uv run --env-file ../.env python -m dawalink.evals.run_conversations --model claude-haiku-5-5 --max-usd 1.50` |
+| Print the evaluation's tables from the saved runs, with their 95% intervals | `uv run python -m dawalink.evals.report` (add `--write` for `eval/results/REPORT.md`) |
+| Play a day again with each assumption at its low and high value (free contenders) | `uv run --env-file ../.env python -m dawalink.sim.sweep --contender rules --seeds 1` |
+| The free checks before committing a change (about 3 minutes) | `uv run --env-file ../.env python -m dawalink.evals.before_commit` |
+
 ## What's where
 
 ```
 backend/    the API, the agent and the worker (Python, FastAPI)
 frontend/   the website (React, TypeScript, Mantine)
 docs/       the plan: scope, rules, database, API, agent, evaluation, failures, threats, UI, deployment
+eval/       the evaluation's data: the written cases, the simulated world, the results
 ```
 
 ## How this project uses AI

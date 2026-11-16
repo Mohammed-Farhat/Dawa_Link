@@ -6,11 +6,12 @@ request item itself. Orders change; this module makes the need follow:
 - units lost at the pharmacy → the need opens again while its window is open;
 - the client cancels or misses a reservation → the need ends.
 
-Once a request is closed, nothing here changes it: later events are recorded on the orders
-only (R-RQ9).
+Once a request is closed, later events are recorded on the orders only (R-RQ9), with one
+exception: a box lost at the pharmacy before the request's six hours are over opens the
+request again (R-RQ12).
 """
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 
 from dawalink.db.models import (
     Claim,
@@ -27,9 +28,18 @@ from dawalink.domain.claims import (
     missing_after_losing,
     missing_after_reserving,
 )
-from dawalink.domain.requests import FINAL_ITEM_STATES, ITEM_MACHINE, ItemState, RequestState
+from dawalink.domain.orders import OrderState
+from dawalink.domain.requests import (
+    FINAL_ITEM_STATES,
+    ITEM_MACHINE,
+    REQUEST_MACHINE,
+    ItemState,
+    RequestOutcome,
+    RequestState,
+    may_reopen,
+)
 from dawalink.domain.state_machine import Actor
-from dawalink.services import audit
+from dawalink.services import audit, events
 from dawalink.services.context import Tx
 
 
@@ -47,6 +57,95 @@ def _locked_item(tx: Tx, order: Order) -> RequestItem | None:
         select(SourcingRequest.state).where(SourcingRequest.id == item.request_id)
     ).scalar_one()
     return item if state == RequestState.OPEN else None
+
+
+def _units_held(tx: Tx, request_id: object) -> dict[object, int]:
+    """The units each item of a request really holds: reserved or picked up (INV-18)."""
+    rows = tx.session.execute(
+        select(
+            Order.request_item_id,
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Order.state == OrderState.RESERVED.value, Order.qty_locked),
+                        else_=Order.qty_picked_up,
+                    )
+                ),
+                0,
+            ),
+        )
+        .join(RequestItem, RequestItem.id == Order.request_item_id)
+        .where(
+            RequestItem.request_id == request_id,
+            Order.state.in_([OrderState.RESERVED.value, OrderState.PICKED_UP.value]),
+        )
+        .group_by(Order.request_item_id)
+    )
+    return {item_id: int(units) for item_id, units in rows}
+
+
+def _reopen_request(tx: Tx, order: Order, units: int, actor: Actor) -> SourcingRequest | None:
+    """A box of a request that already closed is lost before its window ends: the request
+    opens again, so the medicine is searched for like in any open request (R-RQ12).
+
+    The request is locked before its items, as when a request closes. It keeps its window:
+    it ends when it would have ended. It may be the client's third open request for a
+    while; the limit is on starting requests.
+
+    While it was closed, the client's own cancels and no-shows were recorded on the orders
+    only (R-RQ9). They are caught up here: a medicine the client gave up on stays given up
+    (R-RQ11), and never reopens the request.
+
+    Returns the request if it opened again. The caller says so in its thread, once every
+    request row is locked: the conversation comes last in the lock order (docs/05 §6).
+    """
+    if order.request_item_id is None:
+        return None
+    request = tx.session.execute(
+        select(SourcingRequest)
+        .join(RequestItem, RequestItem.request_id == SourcingRequest.id)
+        .where(RequestItem.id == order.request_item_id)
+        .with_for_update(of=SourcingRequest)
+        .execution_options(populate_existing=True)
+    ).scalar_one()
+    if request.state != RequestState.CLOSED or request.outcome is None:
+        return None
+    items = list(
+        tx.session.execute(
+            select(RequestItem)
+            .where(RequestItem.request_id == request.id)
+            .order_by(RequestItem.position)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars()
+    )
+    held = _units_held(tx, request.id)
+    # The lost units have already left the order, and not yet the item.
+    held[order.request_item_id] = held.get(order.request_item_id, 0) + units
+    lost = next(item for item in items if item.id == order.request_item_id)
+    outcome = RequestOutcome(request.outcome)
+    if held[lost.id] < lost.qty or not may_reopen(
+        outcome, ItemState(lost.state), now=tx.now, ends_at=request.ends_at
+    ):
+        return None
+    REQUEST_MACHINE.check(RequestState.CLOSED, RequestState.OPEN, actor)
+    request.state = RequestState.OPEN.value
+    request.outcome = None
+    request.closed_at = None
+    audit.record(
+        tx,
+        actor,
+        "request.reopen",
+        "sourcing_request",
+        request.id,
+        before={"state": "CLOSED", "outcome": outcome.value},
+        after={"state": "OPEN", "order_id": str(order.id)},
+    )
+    for item in items:
+        if ItemState(item.state) is ItemState.SECURED and held.get(item.id, 0) < item.qty:
+            item.qty_secured = held.get(item.id, 0)
+            move_item(tx, item, ItemState.CANCELLED, Actor.SYSTEM)
+    return request
 
 
 def _locked_claim(tx: Tx, order: Order) -> Claim | None:
@@ -142,6 +241,7 @@ def units_lost(tx: Tx, order: Order, units: int, actor: Actor) -> bool:
 
     Returns True when the need is open again, which calls for a decision event.
     """
+    opened_again = _reopen_request(tx, order, units, actor)
     item = _locked_item(tx, order)
     claim = _locked_claim(tx, order)
     reopened = False
@@ -163,6 +263,14 @@ def units_lost(tx: Tx, order: Order, units: int, actor: Actor) -> bool:
             waiting = claim is not None and ClaimState(claim.state) in LIVE_STATES
             move_item(tx, item, ItemState.WAITING if waiting else ItemState.SEARCHING, actor)
         reopened = True
+    if opened_again is not None:
+        events.post_card(
+            tx,
+            events.thread_of_request(tx, opened_again.id),
+            "request_reopened",
+            request_ref=opened_again.ref,
+            order_ref=order.ref,
+        )
     return reopened
 
 

@@ -10,10 +10,19 @@ taps and the system's rules, and they are the functions of this module that take
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import func, select
 
-from dawalink.db.models import Claim, Conversation, Order, Product, RequestItem, SourcingRequest
+from dawalink.db.models import (
+    AuditEvent,
+    Claim,
+    Conversation,
+    Order,
+    Product,
+    RequestItem,
+    SourcingRequest,
+)
 from dawalink.domain.claims import LIVE_STATES, ClaimState
 from dawalink.domain.numbers import (
     DEFAULT_DAYS_OF_USE,
@@ -107,8 +116,13 @@ def create_request(
     location: Location,
     alternatives_ok: bool,
     idempotency_key: str,
+    known: Mapping[str, Any] | None = None,
 ) -> SourcingRequest:
     """[Start sourcing]: the request, its items and its thread (R-RQ1).
+
+    `known` is what the client already told the agent in the chat the request was
+    started from (the agent's own notes): the thread starts with it, so the agent
+    doesn't ask for it a second time.
 
     The agent's first turn is asked for at once, so what is listed is reported within
     seconds; the window is how long DawaLink keeps trying for the rest (R-T8).
@@ -174,6 +188,7 @@ def create_request(
         client_id=client_id,
         kind="request",
         request_id=request.id,
+        case_state=dict(known or {}),
         # The location lives beside the case state, never in it (INV-24).
         loc_lat=location.point.lat,
         loc_lon=location.point.lon,
@@ -258,17 +273,23 @@ def change_constraints(
     alternatives_ok: bool | None = None,
     max_prices: Mapping[uuid.UUID, int | None] | None = None,
 ) -> SourcingRequest:
-    """The client changes the budget or allows other brands. Waiting claims follow."""
+    """The client changes the budget or allows other brands. Waiting claims follow, and
+    the agent is told: a client who just said "yes, tell me about other brands" expects to
+    hear about them now, not at the next event."""
     clients.profile(tx, client_id, lock=True)
     request = _own_open_request(tx, client_id, request_id)
     before = {"alternatives_ok": request.alternatives_ok}
+    now_hears_other_brands = alternatives_ok is True and not request.alternatives_ok
     if alternatives_ok is not None:
         request.alternatives_ok = alternatives_ok
+    new_budgets = []
     for item in items_of(tx, request.id, lock=True):
         if max_prices is not None and item.id in max_prices:
             price = max_prices[item.id]
             if price is not None and price < 0:
                 raise ServiceError(Code.VALIDATION_ERROR, "A budget can't be negative.")
+            if price != item.max_price_lbp:
+                new_budgets.append(str(item.id))
             item.max_price_lbp = price
         claim = tx.session.execute(
             select(Claim)
@@ -288,6 +309,15 @@ def change_constraints(
         before=before,
         after={"alternatives_ok": request.alternatives_ok},
     )
+    if now_hears_other_brands or new_budgets:
+        events.post_decision(
+            tx,
+            _thread(tx, request.id),
+            Decision.CONSTRAINTS_CHANGED,
+            request_id=request.id,
+            other_brands=now_hears_other_brands,
+            items=new_budgets,
+        )
     return request
 
 
@@ -511,7 +541,14 @@ def _close(
             for i in items
         ],
     }
-    notify(tx, request.client_id, Template.REQUEST_CLOSED, summary, event=f"request:{request.id}")
+    # A request that opened again (R-RQ12) closes again, and says so again.
+    reopened = tx.session.execute(
+        select(func.count())
+        .select_from(AuditEvent)
+        .where(AuditEvent.entity_id == request.id, AuditEvent.action == "request.reopen")
+    ).scalar_one()
+    event = f"request:{request.id}" + (f":closed-again:{reopened}" if reopened else "")
+    notify(tx, request.client_id, Template.REQUEST_CLOSED, summary, event=event)
     events.post_card(tx, _thread(tx, request.id), "request_closed", **summary)
 
 
@@ -519,7 +556,8 @@ def close_if_done(tx: Tx, request_id: uuid.UUID) -> bool:
     """Closes the request when every item is final, or its window ended (R-RQ9).
 
     An offer made before the end stays valid for its two hours, so it keeps the request
-    open. After closing, the outcome never changes.
+    open. After closing, the outcome changes only if a box is lost before the window
+    ends, which opens the request again (R-RQ12, `needs.units_lost`).
     """
     _lock_offer_items(tx, request_id)
     request = tx.session.execute(

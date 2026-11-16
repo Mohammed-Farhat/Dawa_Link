@@ -163,15 +163,16 @@ def legs(tx: Tx, origin: Location, pharmacy_ids: Sequence[uuid.UUID]) -> dict[tu
     The keys are what the planner expects: `CLIENT` and the pharmacies' IDs as text (R-RT2).
     """
     pins = _pins(tx, pharmacy_ids)
-    cells = {cell(origin.point): CLIENT} | {cell(pin): str(pid) for pid, pin in pins.items()}
-    points = {CLIENT: origin.point} | {str(pid): pin for pid, pin in pins.items()}
-    cached = _cached(tx, list(cells), list(pins))
+    # Every start keeps its own legs. Two starts can share a map square (a client next to
+    # a pharmacy, two pharmacies side by side): they share the cached road time, not the leg.
+    starts = [(CLIENT, origin.point)] + [(str(pid), pin) for pid, pin in pins.items()]
+    cached = _cached(tx, sorted({cell(point) for _, point in starts}), list(pins))
     result: dict[tuple[str, str], Leg] = {}
-    for origin_cell, start in cells.items():
+    for start, point in starts:
         for pharmacy_id, pin in pins.items():
             if start == str(pharmacy_id):
                 continue
-            way = _between(points[start], pin, cached.get((origin_cell, pharmacy_id)))
+            way = _between(point, pin, cached.get((cell(point), pharmacy_id)))
             result[(start, str(pharmacy_id))] = Leg(way.car_min, way.walk_min, way.source)
     return result
 

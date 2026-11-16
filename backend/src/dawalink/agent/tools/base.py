@@ -74,10 +74,11 @@ def note_asked(turn: "Turn", tx: Tx, product_id: uuid.UUID) -> None:
 
 
 def is_another_brand_in_chat(turn: "Turn", tx: Tx, product_id: uuid.UUID) -> bool:
-    """Is this product another brand of a medicine the client asked for in this chat?"""
+    """Is this product another brand of a medicine the client asked for in this chat?
+    Another catalog row of the brand they asked for (another box size) is not."""
     medicine = _medicine(tx, product_id)
     return any(
-        earlier != product_id and _medicine(tx, earlier) == medicine
+        _medicine(tx, earlier) == medicine and product_id not in catalog.same_brand(tx, earlier)
         for earlier in turn.state.asked_product_ids
     )
 
@@ -293,7 +294,10 @@ def road_times_first(
             origin = location_of(tx, turn)
         except Refused:
             return  # the tool itself will say that the location is needed
-        wanted = travel.missing(tx, origin, pharmacies_of(tx), between=between)
+        pharmacies = pharmacies_of(tx)
+        if not pharmacies:
+            return
+        wanted = travel.missing(tx, origin, pharmacies, between=between)
     rows = travel.fetch(turn.routing, wanted)
     if rows:
         with unit_of_work(turn.sessions, turn.clock) as tx:

@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.4 · **Date:** 2026-11-14
-**Status:** ✅ validated by the team (2026-10-20). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.5 · **Date:** 2026-11-15
+**Status:** ✅ validated by the team (2026-10-20). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -209,7 +209,7 @@ If the LLM is down or over budget:
 #### C5: Search page (non-chat UI, baseline and fallback)
 - Search by name from your location (shared, or a district); filter by price, **days of use** and pickup day. Search shows the medicine that was searched, never another brand (BLD-D17).
 - Each result shows the pharmacy, its area and its **travel time** (car and on foot), price (LBP + USD), discount, expiry, the prescription notice, availability (exact up to 5) and [Reserve].
-- **Empty results:** [Notify me] (a 6-hour watch) or [Ask DawaLink to find it] (pre-filled sourcing request).
+- **Empty results:** [Notify me] (a 6-hour watch) or [Ask DawaLink to find it] (opens the chat with the medicine named; there is no request form, decision log BLD-D30).
 
 #### C7: Reservations and pickup
 - A tap **reserves immediately** and **locks the stock**. There is no confirmation step.
@@ -299,7 +299,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 
 The **demo clock** (admin, demo mode only) fast-forwards time to show the time-based behavior live.
 
-1. **Chat, happy path (Arabizi):** "baddi augmentin 1g, ma fiye edfa3 aktar men 10$" → cards → [Reserve] → **reserved at once** → order number + "pick up by tomorrow 21:00".
+1. **Chat, happy path (Arabizi):** "baddi augmentin 1g, ma fiye edfa3 aktar men 10$" → the agent asks car or on foot, the day and the days of use → the client answers → cards → [Reserve] → **reserved at once** → order number + "pick up by tomorrow 21:00".
 2. **Ambiguous** "augmentin" → chips for strength.
 3. **Option taken, or the pharmacy marks it not available** → the agent re-plans.
 4. **Sourcing request, 3 medicines:**

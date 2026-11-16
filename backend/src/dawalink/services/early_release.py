@@ -257,6 +257,9 @@ def request_early_release(
             inventory_item_id=item.id,
             product_id=item.product_id,
             respond_by=early_release_respond_by(tx.now),
+            # The app's clock, not the database's: the daily cap of R-E3 counts the asks
+            # of the app's day, also on the demo clock and in the simulation (R-T11).
+            created_at=tx.now,
         )
         tx.session.add(ask)
         tx.session.flush()

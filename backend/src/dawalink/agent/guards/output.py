@@ -16,7 +16,7 @@ from dawalink.domain.vocabulary import ProposalKind
 from dawalink.services import proposals
 from dawalink.services.context import Tx
 
-CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS = (
+CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS, NO_CARD = (
     "card",
     "pii",
     "clinical",
@@ -24,6 +24,7 @@ CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS = (
     "recommended",
     "schema",
     "internals",
+    "no_card",
 )
 
 _MARKDOWN_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
@@ -39,6 +40,14 @@ _INTERNALS = re.compile(
     re.IGNORECASE,
 )
 _LATIN = re.compile(r"[A-Za-z]")
+# "The card is below", "here is the card": the reply points at a card of this message.
+# A general sentence about cards ("only your tap on a card reserves") doesn't.
+POINTS_AT_A_CARD = re.compile(
+    r"\bcards?\b[^.!?\n]{0,40}\b(?:below|underneath|ta7e?t|taht)\b|"
+    r"\b(?:below|here(?: is|'s| are))\b[^.!?\n]{0,30}\bcards?\b|"
+    r"(?:البطاقة|البطاقات|الكرت)[^.!?؟\n]{0,40}(?:أدناه|تحت|بالأسفل)",
+    re.IGNORECASE,
+)
 # A quick reply that would say "the pharmacist agreed" or reserve a brand, in one tap.
 _CLAIMS_THE_CALL = re.compile(
     # The pharmacist, not the pharmacy ("saydaliyye", "صيدلية"): [Call the pharmacy] is fine.
@@ -77,6 +86,25 @@ def plain(text: str) -> str:
     return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
+# Words French can't do without, and that English and Arabizi don't use.
+_FRENCH = re.compile(
+    r"\b(?:vous|nous|est|sont|les|des|une|pour|avec|dans|chez|votre|vos|pas|je|peux|"
+    r"quel(?:le)?s?|jours?|ordonnance|pharmacien(?:ne)?|médecin|disponible)\b",
+    re.IGNORECASE,
+)
+
+
+def looks_french(text: str) -> bool:
+    """Is this written in French? Several French words, and a fair share of all words.
+
+    A rule of thumb for one case: a client who writes Arabizi or English, answered in
+    French (seen in the evaluation). A French word here and there is how people write.
+    """
+    words = re.findall(r"[A-Za-zÀ-ÿ']+", text)
+    french = len(_FRENCH.findall(text))
+    return french >= 4 and french * 8 >= len(words)
+
+
 def script_of(text: str) -> str | None:
     """ "arabic" or "latin": the script most of the letters are in. None: no letters."""
     arabic, latin = len(_ARABIC.findall(text)), len(_LATIN.findall(text))
@@ -93,6 +121,7 @@ def check(
     client_id: uuid.UUID,
     run_id: uuid.UUID,
     client_text: str | None,
+    found_something: bool = False,
 ) -> Checked:
     """The reply with links removed, and everything that is wrong with it."""
     cleaned = reply.model_copy(
@@ -123,18 +152,44 @@ def check(
             )
         )
 
-    elif (
-        usable
-        and not any(known[proposal_id].agent_run_id == run_id for proposal_id in usable)
-        and proposals.made_in_run(tx, run_id)
-    ):
-        # Seen on a real run: "here is the reservation card", next to an older card.
+    elif not any(
+        known[proposal_id].agent_run_id == run_id for proposal_id in usable
+    ) and proposals.made_in_run(tx, run_id):
+        # Seen on real runs: "here is the reservation card" next to an older card; and, on
+        # a simulated day, a plan told in words with its cards made and none shown, which
+        # left the client with nothing to tap.
         violations.append(
             Violation(
                 CARD,
-                "You made a card in this turn, but proposal_ids shows only older cards. Show "
-                "the card you just made (its proposal_id from this turn's tool result); "
-                "older cards may stay next to it.",
+                "You made a card in this turn, but proposal_ids doesn't show it. Put the "
+                "proposal_id(s) from this turn's tool results in proposal_ids; older cards "
+                "may stay next to them.",
+            )
+        )
+
+    if found_something and not cleaned.proposal_ids and not proposals.made_in_run(tx, run_id):
+        # Seen on simulated days: a plan told in words, pharmacies and prices and all,
+        # and no card. The request then ran out with nothing the client could tap.
+        violations.append(
+            Violation(
+                NO_CARD,
+                "You found where the medicine is in this turn, but your reply shows no "
+                "card, so the client can't reserve anything. Make the cards now "
+                "(propose_plan for a plan, propose_reservation for an option) and show "
+                "them. If nothing you found fits what the client told you, say that "
+                "plainly instead of listing pharmacies.",
+            )
+        )
+
+    if not cleaned.proposal_ids and POINTS_AT_A_CARD.search(cleaned.text):
+        # Seen in the safety evaluation: a tool refused to make a cancel card, and the
+        # reply still said "the card is below".
+        violations.append(
+            Violation(
+                CARD,
+                "Your reply points at a card, but it shows none. If a tool gave you a "
+                "proposal_id in this turn, put it in proposal_ids. If the tool refused, "
+                "say what you couldn't do, and don't mention a card.",
             )
         )
 
@@ -189,7 +244,16 @@ def check(
             )
         )
     wanted, written = script_of(client_text or ""), script_of(cleaned.text)
-    if wanted and written and wanted != written:
+    if wanted == "latin" and looks_french(cleaned.text) and not looks_french(client_text or ""):
+        violations.append(
+            Violation(
+                LANGUAGE,
+                "The client didn't write in French. Answer in their own language: English "
+                "if they wrote English, Lebanese Arabic in Latin letters if they wrote "
+                "Arabizi.",
+            )
+        )
+    elif wanted and written and wanted != written:
         violations.append(
             Violation(
                 LANGUAGE,

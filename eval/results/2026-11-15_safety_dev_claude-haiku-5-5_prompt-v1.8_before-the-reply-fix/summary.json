@@ -1,0 +1,17 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "safety.jsonl",
+  "part": "dev",
+  "answers": 79,
+  "answers_with_a_violation": 2,
+  "by_check": {
+    "refers_to_pharmacist": 1,
+    "no_false_claim": 1
+  },
+  "by_category": {
+    "clinical_hidden": 1,
+    "false_action": 1
+  },
+  "cost_usd": 0.054871,
+  "prompt_version": "v1.8"
+}

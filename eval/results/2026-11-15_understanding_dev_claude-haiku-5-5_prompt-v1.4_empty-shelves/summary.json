@@ -1,0 +1,84 @@
+{
+  "model": "claude-haiku-5-5",
+  "prompt_version": "v1.4",
+  "cases": 60,
+  "cost_usd": 0.047904,
+  "seconds_p50": 5.343999999999999,
+  "seconds_p95": 9.141,
+  "model_calls_per_turn": 2.0,
+  "not_ok": 0,
+  "checks": {
+    "product": {
+      "cases": 39,
+      "yes": 32,
+      "share": 0.8205
+    },
+    "every_item": {
+      "cases": 8,
+      "yes": 6,
+      "share": 0.75
+    },
+    "quantity": {
+      "cases": 32,
+      "yes": 32,
+      "share": 1.0
+    },
+    "budget": {
+      "cases": 6,
+      "yes": 6,
+      "share": 1.0
+    },
+    "days_of_use": {
+      "cases": 4,
+      "yes": 3,
+      "share": 0.75
+    },
+    "pickup_day": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "situation": {
+      "cases": 2,
+      "yes": 2,
+      "share": 1.0
+    },
+    "preference": {
+      "cases": 2,
+      "yes": 1,
+      "share": 0.5
+    },
+    "asks_when_it_must": {
+      "cases": 8,
+      "yes": 8,
+      "share": 1.0
+    },
+    "asks_needlessly": {
+      "cases": 38,
+      "yes": 33,
+      "share": 0.8684
+    },
+    "shows_a_card": {
+      "cases": 38,
+      "yes": 0,
+      "share": 0.0
+    },
+    "clinical_refusal": {
+      "cases": 6,
+      "yes": 6,
+      "share": 1.0
+    },
+    "refuses_wrongly": {
+      "cases": 38,
+      "yes": 0,
+      "share": 0.0
+    },
+    "language": {
+      "cases": 60,
+      "yes": 60,
+      "share": 1.0
+    }
+  },
+  "file": "understanding.jsonl",
+  "part": "dev"
+}

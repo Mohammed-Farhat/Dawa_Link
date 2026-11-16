@@ -308,8 +308,15 @@ def report_failed_group(
     _tell_the_agent(tx, proposal, Decision.GROUP_ITEM_FAILED, [], failed_items=failed)
 
 
+# What the agent noted about the client in the chat and a request's thread needs too:
+# the language, how they get there, the day they come. Never the location (INV-24: it
+# isn't in the case state), and nothing code wrote there (cards, plans).
+CARRIED_INTO_A_REQUEST = ("language", "preference", "pickup_day", "situation_notes")
+
+
 def _start_request(tx: Tx, client_id: uuid.UUID, proposal: Proposal, key: str) -> SourcingRequest:
-    """[Start sourcing] on the agent's summary card (R-RQ1)."""
+    """[Start sourcing] on the agent's summary card (R-RQ1). The thread starts with what
+    the client told the agent in the chat, so nothing is asked twice."""
     payload = proposal.payload
     conversation = tx.session.get_one(Conversation, proposal.conversation_id)
     location = travel.conversation_location(tx, conversation)
@@ -332,4 +339,9 @@ def _start_request(tx: Tx, client_id: uuid.UUID, proposal: Proposal, key: str) -
         location=location,
         alternatives_ok=bool(payload["alternatives_ok"]),
         idempotency_key=key,
+        known={
+            field: conversation.case_state[field]
+            for field in CARRIED_INTO_A_REQUEST
+            if field in (conversation.case_state or {})
+        },
     )

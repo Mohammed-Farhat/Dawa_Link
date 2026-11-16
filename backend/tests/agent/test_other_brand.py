@@ -37,6 +37,25 @@ def clavox(scene: Scene) -> uuid.UUID:
     return scene.world.make.product(moph_name="CLAVOX 1G", equivalence_key=KEY)  # type: ignore[no-any-return]
 
 
+def same_name_as_augmentin(scene: Scene, maker: str = "GSK") -> uuid.UUID:
+    """Another catalog row with Augmentin's name and medicine: a bigger box. Augmentin
+    itself is GSK's here; `maker` says who makes the other row."""
+    with scene.world.as_owner():
+        scene.world.session.execute(
+            text("UPDATE products SET manufacturer = 'GSK' WHERE id = :p"), {"p": scene.augmentin}
+        )
+    name = scene.world.one(
+        "SELECT search_name FROM products WHERE id = :p", p=scene.augmentin
+    ).search_name
+    return scene.world.make.product(  # type: ignore[no-any-return]
+        moph_name="AUGMENTIN 1G",
+        search_name=name,
+        equivalence_key=KEY,
+        units_per_pack=20,
+        manufacturer=maker,
+    )
+
+
 def agreed(scene: Scene, conversation: uuid.UUID | None = None) -> None:
     """The client said yes to hearing about other brands, and the agent noted it."""
     scene.tool_turn(conversation).state.alternatives_ok = True
@@ -253,6 +272,58 @@ class TestNoReservationOfAnotherBrand:
 
         assert card["preview"]["title"] == "CLAVOX 1G at Hamra Pharmacy"
         assert not any(line.startswith("Brand:") for line in card["preview"]["lines"])
+
+    def test_another_box_size_of_the_brand_asked_for_is_not_another_brand(
+        self, scene: Scene, clavox: uuid.UUID
+    ) -> None:
+        """The Ministry lists a brand once per box size or importer. Found on a real run:
+        the client asked for Nexium 40, and the second Nexium 40 row was refused."""
+        bigger_box = same_name_as_augmentin(scene)
+        box = scene.stock(bigger_box)
+        scene.stock(clavox)
+
+        # Searching the brand finds its other row by itself: the agent needn't name it.
+        alone = scene.tool("find_options", product_ids=[scene.augmentin])["options"]
+        assert [(o["product_id"], o["is_alternative"]) for o in alone] == [(str(bigger_box), False)]
+
+        options = scene.tool("find_options", product_ids=[scene.augmentin, bigger_box, clavox])[
+            "options"
+        ]
+
+        by_product = {option["product_id"]: option["is_alternative"] for option in options}
+        assert by_product == {str(bigger_box): False, str(clavox): True}
+        card = reserve_card(scene, box)
+        assert "error_code" not in card
+        assert not any(line.startswith("Brand:") for line in card["preview"]["lines"])
+
+    def test_the_same_name_from_another_maker_is_the_medicine_asked_for(
+        self, scene: Scene, clavox: uuid.UUID
+    ) -> None:
+        """The owner, 2026-11-15 (build plan Q38): "same name same medicine". 127 names of
+        the real catalog are carried by several makers; the client named no company."""
+        other_maker = same_name_as_augmentin(scene, maker="Someone Else Pharma")
+        box = scene.stock(other_maker)
+        scene.stock(clavox)
+
+        options = scene.tool("find_options", product_ids=[scene.augmentin, clavox])["options"]
+
+        by_product = {option["product_id"]: option["is_alternative"] for option in options}
+        # Found without being named, and not an alternative; another name still is one.
+        assert by_product == {str(other_maker): False, str(clavox): True}
+        assert "error_code" not in reserve_card(scene, box)
+
+    def test_in_a_request_the_item_names_one_catalog_row(
+        self, scene: Scene, clavox: uuid.UUID
+    ) -> None:
+        """A request's plans, claims and count are for the row its item names: the
+        brand's other row isn't searched there, so nothing is offered and then refused."""
+        bigger_box = same_name_as_augmentin(scene)
+        scene.stock(bigger_box)
+        _, thread = scene.start_request(RequestLine(scene.augmentin))
+
+        found = scene.tool("find_options", thread, product_ids=[scene.augmentin])
+
+        assert found["options"] == []
 
     def test_searching_the_brand_by_itself_later_does_not_make_it_the_clients_medicine(
         self, scene: Scene, clavox: uuid.UUID

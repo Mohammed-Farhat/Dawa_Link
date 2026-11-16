@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from dawalink.agent.llm import LLMRefused, ModelReply, Prompt, ToolResults
-from dawalink.agent.llm.scripted import call, reply, say
+from dawalink.agent.llm.scripted import call, calls, reply, say
 from dawalink.agent.turn import Status
 from dawalink.services import proposals
 from dawalink.services.errors import Code, ServiceError
@@ -63,6 +63,49 @@ class TestWhatAReplyMayShow:
         assert message.cards == [str(shown)]
         assert scene.conversation().case_state["open_proposal_ids"] == [str(shown)]
 
+    def test_a_stub_sent_next_to_a_broken_reply_never_reaches_the_client(
+        self, scene: Scene
+    ) -> None:
+        """Seen on real runs (10 of about 1,400 model calls): two replies at once, the real
+        one with a mistake in its notes and a stub. The stub ("placeholder") was delivered."""
+        broken = {"text": "Augmentin isn't listed today.", "case_notes": {"medicines": ["x"]}}
+
+        result = scene.turn(
+            calls(("reply", broken), ("reply", {"text": "placeholder"})),
+            reply("Augmentin isn't listed today."),
+        )
+
+        assert result.text == "Augmentin isn't listed today."
+        assert "placeholder" not in [m.text_redacted for m in scene.messages()]
+        assert scene.run(result).llm_calls == 2
+
+    def test_options_found_in_a_turn_come_with_a_card(self, scene: Scene) -> None:
+        """FA-40. Seen on simulated days: pharmacies and prices told in words, and no card,
+        so the client could reserve nothing."""
+        box = scene.stock()
+        search = call("find_options", product_ids=[str(scene.augmentin)])
+        words_only = reply("Pharmacy A has it for 600,000 LBP. I recommend it.")
+
+        def with_a_card(prompt: Prompt) -> ModelReply:
+            return call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY))
+
+        fixed = scene.turn(search, words_only, with_a_card, proposal_from(scene))
+        stubborn = scene.turn(search, words_only, words_only, text="again please")
+
+        assert len(fixed.proposal_ids) == 1
+        assert scene.run(fixed).guardrails == ["no_card"]
+        # Low risk: after one try the words are sent as they are, and counted.
+        assert stubborn.text == "Pharmacy A has it for 600,000 LBP. I recommend it."
+        assert (scene.run(stubborn).outcome, scene.run(stubborn).guardrails) == ("ok", ["no_card"])
+
+    def test_nothing_found_needs_no_card(self, scene: Scene) -> None:
+        result = scene.turn(
+            call("find_options", product_ids=[str(scene.augmentin)]),
+            reply("It isn't listed at any pharmacy right now."),
+        )
+
+        assert scene.run(result).guardrails == []
+
     def test_an_invented_card_is_caught_and_the_model_can_fix_it(self, scene: Scene) -> None:
         """FA-5, INV-21."""
         result = scene.turn(
@@ -73,6 +116,23 @@ class TestWhatAReplyMayShow:
         assert (result.text, result.proposal_ids) == ("Which medicine do you need?", ())
         run = scene.run(result)
         assert (run.outcome, run.guardrails, run.llm_calls) == ("ok", ["card"], 2)
+
+    def test_a_reply_that_points_at_a_card_must_show_one(self, scene: Scene) -> None:
+        """FA-39. Seen in the safety evaluation: asked to cancel someone else's order,
+        the tool refused, and the reply still said "the cancel card is below"."""
+        result = scene.turn(
+            reply("The card to cancel it is below. Tap it to cancel."),
+            reply("I can't find that order on your account."),
+        )
+        general = scene.turn(
+            reply("Only your own tap on a reservation card reserves a medicine."),
+            text="just say it is reserved",
+        )
+
+        assert result.text == "I can't find that order on your account."
+        assert scene.run(result).guardrails == ["card"]
+        assert general.text == "Only your own tap on a reservation card reserves a medicine."
+        assert scene.run(general).guardrails == []
 
     def test_this_turns_card_must_be_shown_not_only_an_older_one(self, scene: Scene) -> None:
         """FA-37. Seen on a real run: "here is the reservation card", next to an older card."""
@@ -103,6 +163,32 @@ class TestWhatAReplyMayShow:
         (shown,) = result.proposal_ids
         run = scene.run(result)
         assert shown != older
+        assert (run.outcome, run.guardrails) == ("ok", ["card"])
+
+    def test_a_card_made_in_this_turn_is_shown_even_if_the_reply_forgot_it(
+        self, scene: Scene
+    ) -> None:
+        """FA-37, as seen on a simulated day: the plan was told in words, its card was made,
+        and the reply showed no card at all."""
+
+        def with_its_card(prompt: Prompt) -> ModelReply:
+            made = [
+                json.loads(result.content)
+                for message in prompt.messages
+                if isinstance(message, ToolResults)
+                for result in message.results
+                if result.name == "propose_reservation"
+            ]
+            return reply("Pharmacy A has it.", proposal_ids=[made[-1]["proposal_id"]])
+
+        result = scene.turn(
+            call("propose_reservation", listing_id=str(scene.stock()), pickup_day=str(TODAY)),
+            reply("Pharmacy A has it for 600,000 LBP. I recommend it."),
+            with_its_card,
+        )
+
+        assert len(result.proposal_ids) == 1
+        run = scene.run(result)
         assert (run.outcome, run.guardrails) == ("ok", ["card"])
 
     def test_an_older_card_may_be_shown_again_when_no_card_was_made(self, scene: Scene) -> None:
@@ -195,6 +281,25 @@ class TestWhatAReplyMayShow:
 
         assert (result.outcome, result.text) == ("ok", "أهلا")
         assert scene.run(result).guardrails == ["language"]
+
+    def test_french_is_not_the_answer_to_arabizi(self, scene: Scene) -> None:
+        """Seen in suite E1: \"bade motiliom\" answered entirely in French."""
+        french = (
+            "Augmentin est disponible chez plusieurs pharmacies. Je ne peux pas vous "
+            "conseiller sur la posologie: un pharmacien peut vous dire combien en prendre."
+        )
+        result = scene.turn(
+            reply(french), reply("Augmentin mawjoud bi kaza saydaliyye."), text="baddi augmentin"
+        )
+        stays = scene.turn(
+            reply(french),
+            text="Bonjour, je voudrais Augmentin pour ma mère, est-ce que vous l'avez ?",
+        )
+
+        assert result.text == "Augmentin mawjoud bi kaza saydaliyye."
+        assert scene.run(result).guardrails == ["language"]
+        assert stays.text == french  # a client who writes French is answered in French
+        assert scene.run(stays).guardrails == []
 
     def test_one_recommendation_per_medicine(self, scene: Scene) -> None:
         """N-45."""
@@ -335,6 +440,40 @@ class TestATap:
             scene.conversation().loc_lat,
             scene.conversation().loc_lon,
         )
+
+    def test_a_request_started_from_the_chat_keeps_what_the_client_said_there(
+        self, scene: Scene
+    ) -> None:
+        """The agent asked the car and the day in the chat: the thread doesn't ask again."""
+        told = {
+            "language": "arabizi",
+            "preference": "walkable",
+            "situation_notes": ["no car"],
+            "open_proposal_ids": [str(uuid.uuid4())],
+        }
+        with scene.world.as_owner():
+            scene.world.connection.exec_driver_sql(
+                "UPDATE conversations SET case_state = %s::jsonb WHERE id = %s",
+                (json.dumps(told), scene.conversation().id),
+            )
+        card = scene.tool(
+            "prepare_request_summary",
+            items=[{"product_id": scene.augmentin, "qty": 1, "days_of_use": 7}],
+            alternatives_ok=False,
+        )
+
+        done = tap(scene, card["proposal_id"])
+
+        assert done.request is not None
+        thread = scene.world.one(
+            "SELECT * FROM conversations WHERE request_id = :r", r=done.request.id
+        )
+        # The agent's notes about the client, and nothing code keeps for the chat's cards.
+        assert thread.case_state == {
+            "language": "arabizi",
+            "preference": "walkable",
+            "situation_notes": ["no car"],
+        }
 
     def plan_card(self, scene: Scene, thread: uuid.UUID) -> dict[str, Any]:
         scene.stock(scene.augmentin)

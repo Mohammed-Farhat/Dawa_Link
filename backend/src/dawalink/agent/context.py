@@ -66,6 +66,7 @@ _CARD_FACTS = {
     "offer": ("order_ref", "product", "pharmacy", "units", "price_lbp"),
     "offer_ended": ("state",),
     "request_closed": ("request_ref", "outcome"),
+    "request_reopened": ("request_ref", "order_ref"),
 }
 
 
@@ -139,6 +140,16 @@ def _event_line(tx: Tx, body: dict[str, Any]) -> str:
         return "items_unticked: the client left these items unticked: " + ", ".join(
             str(item) for item in body.get("items", [])
         )
+    if kind == Decision.CONSTRAINTS_CHANGED:
+        changes = []
+        if body.get("other_brands"):
+            changes.append("the client now wants to hear about other brands")
+        if body.get("items"):
+            changes.append(
+                "the client raised the budget of these items: "
+                + ", ".join(str(item) for item in body["items"])
+            )
+        return "constraints_changed: " + "; ".join(changes or ["the client accepted a change"])
     if kind == Decision.WINDOW_CHECK:
         return "window_check: one hour is left, and these items aren't secured: " + ", ".join(
             str(item) for item in body.get("items", [])
@@ -249,8 +260,9 @@ def _trigger(
 _WHAT_NOW = {
     TurnTrigger.CLIENT_MESSAGE: "The client wrote the last message. Answer it.",
     TurnTrigger.REQUEST_SUBMITTED: (
-        "The client just started this request. Plan what is listed, start waiting for what "
-        "isn't, ask pharmacies where it helps, and report medicine by medicine."
+        "The client just started this request. If you don't know yet how they get there or "
+        "which day they will come, ask and wait. Otherwise plan what is listed, start waiting "
+        "for what isn't, ask pharmacies where it helps, and report medicine by medicine."
     ),
     TurnTrigger.DECISION_EVENT: (
         "Something changed (see the newest events). Re-plan only what changed and tell the client."

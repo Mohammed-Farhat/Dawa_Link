@@ -103,6 +103,10 @@ def plan_basket(
     travel time, then the number of pharmacies, then the total price (R-RQ5). A preference
     moves one of these to the front. One medicine's quantity may be split across pharmacies.
 
+    Every stop of a plan earns its place: without any one of its pharmacies, the plan would
+    get fewer units or cost more. Two pharmacies often ask the same price, and a plan that
+    visits both where one is enough is a detour, not an alternative.
+
     Each item takes its cheapest boxes among the pharmacies visited. That gives the best plan
     as long as an extra stop never shortens a trip, which holds on real roads.
     """
@@ -111,17 +115,26 @@ def plan_basket(
     by_item = {
         item.key: sorted(
             (box for box in boxes if box.item_key == item.key and box.available > 0),
-            key=lambda box: (box.price_lbp, box.listing_id),
+            # At the same price: by pharmacy, then by box, so the same shelves always
+            # give the same plan.
+            key=lambda box: (box.price_lbp, box.pharmacy_id, box.listing_id),
         )
         for item in items
     }
     pharmacies = _candidate_pharmacies(by_item, legs, on_foot)
     plans: list[Plan] = []
+    # What each set of pharmacies gives: (units, price). Smaller sets come first.
+    worth: dict[frozenset[str], tuple[int, int]] = {frozenset(): (0, 0)}
     for size in range(1, min(PLAN_MAX_PHARMACIES, len(pharmacies)) + 1):
         for chosen in combinations(pharmacies, size):
-            picks = _cheapest_picks(items, by_item, frozenset(chosen))
-            if {pick_pharmacy for pick_pharmacy, _ in picks} != set(chosen):
-                continue  # a pharmacy with nothing to take: a smaller plan says the same
+            here = frozenset(chosen)
+            picks = _cheapest_picks(items, by_item, here)
+            worth[here] = (
+                sum(pick.qty for _, pick in picks),
+                sum(pick.qty * pick.price_lbp for _, pick in picks),
+            )
+            if any(worth[here - {pharmacy}] == worth[here] for pharmacy in chosen):
+                continue  # a stop that buys nothing: the smaller plan says the same
             plans.append(_build_plan(items, by_item, picks, legs, on_foot))
     if not plans:
         return []

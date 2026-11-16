@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.8 · **Date:** 2026-11-14
+**Version:** v4.11 · **Date:** 2026-11-15
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -65,10 +65,9 @@ flowchart TD
     L --> LI[CS-3 Log in] --> H
     H --> S[CS-6 Search results] --> D[CS-7 Listing detail] --> RM[CS-8 Reserve sheet]
     S --> RM
-    S -- empty --> NR
+    S -- "empty: ask the assistant" --> A
     H --> A[CS-9 Assistant] --> RM
-    A -- "find these for me" --> NR
-    H --> NR[CS-15 New request] --> RQ[CS-16 Request page] --> RM
+    A -- "Start sourcing card" --> RQ[CS-16 Request page] --> RM
     H --> RQ
     H --> RL[CS-10 Reservations]
     H --> W[CS-11 Watches]
@@ -118,8 +117,7 @@ flowchart TD
 │ DawaLink                  🔔2  👤 │
 ├──────────────────────────────────┤
 │ 🔍 Search a medicine…            │
-│ 📝 Find several medicines for me → (new request)
-│ 💬 Ask the Assistant →           │
+│ 💬 Ask the Assistant →  (one medicine or several)
 │ My requests                      │
 │ ┌──────────────────────────────┐ │
 │ │ Q-6BN2RA · 3 medicines · until 15:30 │
@@ -151,7 +149,7 @@ flowchart TD
 - **Only what was searched:** search never shows another brand of the medicine (R-S4, BLD-D17). The assistant can show one, with "ask the pharmacist first".
 - **Empty results:** "No discounted stock for *Augmentin 1g* right now."
   - **[Notify me]** → a mini-form (max price) → a **watch for the next 6 hours**;
-  - **[Ask DawaLink to find it]** → **CS-15 pre-filled**. The agent then sources it, including asking open pharmacies for unlisted stock.
+  - **[Ask DawaLink to find it]** → **the chat opens with the medicine's name already typed** (BLD-D30). The agent asks its questions and offers the [Start sourcing] card; it then sources it, including asking open pharmacies for unlisted stock.
   - Outside 08:00–20:00, both buttons say "Available from 08:00".
 - **Boxes exist but none fit:** "No match: the available boxes expire too early for 12 days of use (the latest expires 28 Oct)." + the same two buttons.
 
@@ -249,26 +247,15 @@ In-app list (see §1.7).
 - "Missed pickups: 0 of 2".
 - *(Account deletion postponed.)*
 
-#### CS-15 New sourcing request
-```
-┌──────────────────────────────────┐
-│ Find medicines for me            │
-│ 1 [Concor 5mg · 30 tabs  ▾] ×[2] │
-│ 2 [Glucophage 850 · 30   ▾] ×[1] │
-│ 3 [Aspirin Cardio 100    ▾] ×[1] │
-│ [ + Add medicine ]   (max 5)     │
-│ From: [📍 My location] or [Saida ▾]│
-│ Max price per medicine (optional)│
-│ [✓] Tell me about other brands       │
-│ DawaLink searches for up to 6 hours │
-│ and asks open pharmacies for you. │
-│ [ Start sourcing ]               │
-└──────────────────────────────────┘
-```
-- **Validation:** 1–5 medicines from the catalog (controlled substances can't be chosen); quantity 1–3; ≤ 2 open requests; **only 08:00–20:00** (otherwise: "DawaLink searches during the day. Please come back tomorrow from 08:00.").
-- Items that need a prescription show the notice.
-- Each medicine has an optional **days of use** (if empty: 1 day, with the expiry warning).
-- [Start sourcing] → CS-16. The agent starts immediately.
+#### CS-15 New sourcing request (removed)
+**There is no request form any more** (the owner, 2026-11-15, decision log BLD-D30: "drop the form"; the chat is "an interactive chatting, not a form filling"). A sourcing request starts in the chat (CS-9):
+- the client tells the agent which medicines they need; the agent asks what it doesn't know (AF-5) and proposes what is listed;
+- for what isn't found, or when the client wants DawaLink to keep looking, the agent shows the **request summary card** with **[Start sourcing]**;
+- the tap creates the request and opens CS-16. The agent goes on in the request's thread with what the client already said in the chat.
+
+**What the card checks at the tap** (unchanged rules, `04` R-RQ1, R-RQ2): 1–5 medicines from the catalog (controlled substances can't be chosen); quantity 1–3; ≤ 2 open requests; a location; **only 08:00–20:00** (otherwise: "DawaLink searches during the day. Please come back tomorrow from 08:00."). Each medicine has its **days of use**, as the client told the agent.
+
+**No cart either** (the owner, same day): the search page reserves one medicine at a time. Several medicines together are the agent's plan card ([Reserve these]).
 
 #### CS-16 Request page
 ```
@@ -308,18 +295,18 @@ In-app list (see §1.7).
 | ID | Flow |
 |---|---|
 | CF-1 | Search → [Reserve] → CS-8 → **reserved at once** (in-app + email with the order number) → the client shows the number at the counter, brings the prescription if needed, and pays. |
-| CF-2 | Empty results → [Notify me] (a 6-hour watch) **or** [Ask DawaLink to find it] (CS-15 pre-filled). |
+| CF-2 | Empty results → [Notify me] (a 6-hour watch) **or** [Ask DawaLink to find it] (the chat opens with the medicine named, BLD-D30). |
 | CF-3 | The pharmacy marks the reservation **not available** → notification → [See other options] re-runs the search, excluding that pharmacy. **No agent turn** for search reservations (this keeps the baseline agent-free). |
 | CF-4 | No-show: reminder 4 h before the deadline → deadline passes → expired ("1 of 2") → a second miss in 30 days → 7-day pause. |
 
 ### 1.5 Assistant flows (AF)
 | ID | Situation | What happens |
 |---|---|---|
-| AF-1 | Clear request | Catalog search → options that fit, with travel times → the agent **recommends one** pharmacy with a short reason ("closest, open until 23:00, lasts your 12 days") + up to 2 alternatives → [Reserve] → CS-8. |
+| AF-1 | Clear request | **The agent first asks what the message doesn't say** (AF-5: car or on foot, the pickup day, the days of use), in one message, and waits. When the client has answered, or when the message already said it all: catalog search → options that fit, with travel times → the agent **recommends one** pharmacy with a short reason ("closest, open until 23:00, lasts your 12 days") + up to 2 alternatives → [Reserve] → CS-8. |
 | AF-2 | Ambiguous ("augmentin") | Chips [1g] [625mg] [457mg syrup]. It never guesses. |
 | AF-3 | Unknown name | Asks for the spelling or the ingredient on the box; after 2 tries, suggests the Search page. |
 | AF-4 | **Several medicines** ("baddi concor 5 w glucophage 850") | Calls `plan_basket` → **plan cards per pharmacy**, with the route ("Pharmacy C has both: 1 trip, 9 min by car, total …") → [Reserve these]. If the client prefers cheapest over fewest trips, it re-plans and explains. |
-| AF-5 | Missing info | Asks only what's needed: **days of use** and **pickup day** when they matter, and the location ("Share your location, or tell me your area"); otherwise the profile's district is used. **A named area** ("ana bel Hamra") is set by the agent from DawaLink's own list of areas, and the reply says which area it searches around; the place named last wins. If the name isn't in the list, the agent offers the closest names or asks for a better-known town nearby (BLD-D14). If the name exists in several districts ("Hamra" in Beirut, "El Hamra" in Nabatieh), the agent asks which one, with each as a quick reply (BLD-D15). When the client says they'll come on a later day, the options are counted from that day: a box that lasts from today may not last from the last day, and the agent says by which day to pick it up (R-F6). |
+| AF-5 | Missing info | **Asks before it searches** (the owner, BLD-D28) for what it doesn't know yet: **whether the client has a car or goes on foot**, the **pickup day** and the **days of use**. Everything missing goes in **one message**, with no options yet; the agent searches when the client has answered. **An answer that leaves something out gets one short line that asks only for the rest, and still no options** (the owner, BLD-D29): the agent searches when it knows all three, and never fills a gap with a guess. An answer that leaves the choice to the agent is an answer: "any day" is any day the pharmacy allows, "I don't know for how long" is 1 day of use with the expiry date pointed out (R-F2), "either" is by car. What the client already wrote is never asked again. It also asks for the location when none is known at all ("Share your location, or tell me your area"); otherwise the profile's district is used. **A named area** ("ana bel Hamra") is set by the agent from DawaLink's own list of areas, and the reply says which area it searches around; the place named last wins. If the name isn't in the list, the agent offers the closest names or asks for a better-known town nearby (BLD-D14). If the name exists in several districts ("Hamra" in Beirut, "El Hamra" in Nabatieh), the agent asks which one, with each as a quick reply (BLD-D15). When the client says they'll come on a later day, the options are counted from that day: a box that lasts from today may not last from the last day, and the agent says by which day to pick it up (R-F6). **When only the profile's district is known** (no shared location, no area named), the agent searches around it and doesn't ask where the client is: a client who wants another area says so (the owner, BLD-D28). |
 | AF-6 | Option taken at tap time | Offers the next option. |
 | AF-7 | **Pharmacy marks a reservation not available** | **Decision event** → the agent re-plans with the next options. |
 | AF-8 | Nothing fits | Explains what exists outside the constraints, then decides: early release (asks up to 3 **open** pharmacies) and/or a 6-hour watch, **or suggests a sourcing request** if there are several items. |
@@ -347,9 +334,9 @@ In-app list (see §1.7).
 ### 1.6 Request flows (RF): the agent working on its own
 | ID | Situation | What the client experiences |
 |---|---|---|
-| RF-1 | **Submitted** | Within seconds, the agent reports **item by item**: "Found Concor ×2 at Pharmacy A. Glucophage and Aspirin aren't listed: I'm asking 2 pharmacies and watching for new stock." A **plan card for what was found** (even if it's just Concor), plus "asking pharmacies" or "watching" for the rest. |
+| RF-1 | **Submitted** | **The agent first asks, in one short message, whether the client has a car or goes on foot and which day they will come** (the request already holds the days of use and the location), and waits for the answer (BLD-D28). An answer that gives only one of the two gets one line that asks for the other (BLD-D29). **A request started from the chat keeps what the client told the agent there** (the car, the day), so the thread doesn't ask it again. A client who wrote it when they started isn't asked. After the answer, the agent reports **item by item**: "Found Concor ×2 at Pharmacy A. Glucophage and Aspirin aren't listed: I'm asking 2 pharmacies and watching for new stock." A **plan card for what was found** (even if it's just Concor), plus "asking pharmacies" or "watching" for the rest. |
 | RF-2 | **Missing item → early release** | Timeline: "Asked 2 open pharmacies (answers by 11:40)." Later, an **offer card** + email → [Accept] → reserved. If watching finds stock first, the first offer the client accepts wins and the other is cancelled at once. |
-| RF-3 | **A reservation marked not available** | The agent re-plans automatically: a new plan card, or "asking pharmacies". |
+| RF-3 | **A reservation marked not available** | The agent re-plans automatically: a new plan card, or "asking pharmacies". **If the request had already closed** because everything was reserved, and its 6 hours aren't over, it **opens again**: the thread shows "This request is open again: Pharmacy A didn't have the box (R-7K3Q2F)", the status goes back to searching, and the agent re-plans in the same way. It still ends at the time it would have ended (`04` R-RQ12). |
 | RF-4 | **Only part of a quantity found** (Concor ×2, Pharmacy A has 1) | The agent proposes 1 at A and **keeps looking for the 2nd box** at other pharmacies (or plans 1 at A + 1 at B from the start). |
 | RF-5 | **Lost a contested box** | "Someone who asked earlier was offered it first. I'm still watching." Never says who. |
 | RF-6 | **1 hour left, still missing** | The agent proposes options: also show other brands, raise the budget (each a tap), consider pharmacies in other areas, or escalate (`window_ending`). Otherwise it prepares the client for the summary. |

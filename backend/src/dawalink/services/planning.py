@@ -131,36 +131,18 @@ def _usable(
     return lasting, "none_listed"
 
 
-def pharmacies_in_play(tx: Tx, lines: Sequence[BasketLine]) -> list[uuid.UUID]:
-    """The pharmacies a plan for this basket could visit: whose road times are worth asking."""
-    _checked(tx, lines)
+@dataclass(frozen=True)
+class _Basket:
+    """A basket as the planner takes it: the day, and the boxes that can serve it that day."""
+
+    day: date | None
+    items: list[BasketItem]
+    usable: list[planning.Box]
+    by_listing: dict[str, Box]
+
+
+def _basket(tx: Tx, lines: Sequence[BasketLine], pickup_day: date | None) -> _Basket:
     by_line = _boxes_by_line(tx, lines)
-    return sorted({box.pharmacy_id for boxes in by_line.values() for box in boxes})
-
-
-def nearest(tx: Tx, location: Location, pharmacy_ids: Sequence[uuid.UUID]) -> list[uuid.UUID]:
-    """The pharmacies the planner can weigh (N-48), nearest first."""
-    times = travel.travel_to(tx, location, pharmacy_ids)
-    ordered = sorted(times, key=lambda pharmacy_id: (times[pharmacy_id].car_min, str(pharmacy_id)))
-    return ordered[:PLAN_MAX_CANDIDATE_PHARMACIES]
-
-
-def plan(
-    tx: Tx,
-    *,
-    client_id: uuid.UUID,
-    lines: Sequence[BasketLine],
-    location: Location,
-    pickup_day: date | None = None,
-    preference: Preference | None = None,
-    max_plans: int = 3,
-) -> Planned:
-    clients.require_search(clients.profile(tx, client_id))
-    if pickup_day is not None and pickup_day < tx.today:
-        raise ServiceError(Code.PICKUP_DAY_INVALID, "The pickup day can't be in the past.")
-    _checked(tx, lines)
-    by_line = _boxes_by_line(tx, lines)
-
     every_box = [box for boxes in by_line.values() for box in boxes]
     first_days = [box.pharmacy_days[0] for box in every_box if box.pharmacy_days]
     # Without a day from the client: the earliest day a pharmacy with a wanted box accepts.
@@ -183,6 +165,78 @@ def plan(
                     available=box.qty_available,
                 )
             )
+    return _Basket(day, items, usable, by_listing)
+
+
+def _weighed(tx: Tx, location: Location, usable: Sequence[planning.Box]) -> list[uuid.UUID]:
+    """The pharmacies the planner weighs (N-48): the nearest ones, plus the cheapest one for
+    each medicine, so a medicine that only a far pharmacy has is still planned.
+
+    "Nearest" is by road, by car. When there are more pharmacies than the planner weighs,
+    the road times from the client to all of them are asked for first (`pharmacies_stocking`),
+    so the choice is made on real trips. Where the routing service gave nothing, the
+    straight-line estimate stands in, as everywhere else (R-RT1).
+    """
+    stocking = sorted({uuid.UUID(box.pharmacy_id) for box in usable})
+    if len(stocking) <= PLAN_MAX_CANDIDATE_PHARMACIES:
+        return stocking
+    away = travel.travel_to(tx, location, stocking)
+    nearest = sorted(
+        stocking,
+        key=lambda pharmacy_id: (away[pharmacy_id].car_min, away[pharmacy_id].km, str(pharmacy_id)),
+    )
+    keep = set(nearest[:PLAN_MAX_CANDIDATE_PHARMACIES])
+    # Of the pharmacies with a medicine's lowest price, the nearest.
+    place = {pharmacy_id: position for position, pharmacy_id in enumerate(nearest)}
+    cheapest: dict[str, tuple[int, int]] = {}
+    for box in usable:
+        offer = (box.price_lbp, place[uuid.UUID(box.pharmacy_id)])
+        if box.item_key not in cheapest or offer < cheapest[box.item_key]:
+            cheapest[box.item_key] = offer
+    keep |= {nearest[position] for _, position in cheapest.values()}
+    return sorted(keep)
+
+
+def pharmacies_stocking(
+    tx: Tx, *, lines: Sequence[BasketLine], pickup_day: date | None = None
+) -> list[uuid.UUID]:
+    """Every pharmacy with a box that can serve this basket, when there are more of them
+    than the planner weighs; otherwise none.
+
+    These are the pharmacies whose trip from the client must be known before the nearest
+    ones can be chosen. With few pharmacies there is no choice to make, and nothing to ask.
+    """
+    _checked(tx, lines)
+    usable = _basket(tx, lines, pickup_day).usable
+    stocking = sorted({uuid.UUID(box.pharmacy_id) for box in usable})
+    return stocking if len(stocking) > PLAN_MAX_CANDIDATE_PHARMACIES else []
+
+
+def pharmacies_to_weigh(
+    tx: Tx, *, lines: Sequence[BasketLine], location: Location, pickup_day: date | None = None
+) -> list[uuid.UUID]:
+    """The pharmacies `plan` will weigh for this basket: the trips between them, and from
+    the client to them, are the road times a plan needs."""
+    _checked(tx, lines)
+    return _weighed(tx, location, _basket(tx, lines, pickup_day).usable)
+
+
+def plan(
+    tx: Tx,
+    *,
+    client_id: uuid.UUID,
+    lines: Sequence[BasketLine],
+    location: Location,
+    pickup_day: date | None = None,
+    preference: Preference | None = None,
+    max_plans: int = 3,
+) -> Planned:
+    clients.require_search(clients.profile(tx, client_id))
+    if pickup_day is not None and pickup_day < tx.today:
+        raise ServiceError(Code.PICKUP_DAY_INVALID, "The pickup day can't be in the past.")
+    _checked(tx, lines)
+    basket = _basket(tx, lines, pickup_day)
+    day, items, usable, by_listing = basket.day, basket.items, basket.usable, basket.by_listing
 
     unplannable = [
         StillMissing(uuid.UUID(item.key), item.qty, item.reason_if_none)
@@ -192,7 +246,7 @@ def plan(
     if day is None or not usable:
         return Planned(day, [], unplannable)
 
-    in_play = nearest(tx, location, sorted({uuid.UUID(box.pharmacy_id) for box in usable}))
+    in_play = _weighed(tx, location, usable)
     legs = travel.legs(tx, location, in_play)
     weighed = [box for box in usable if uuid.UUID(box.pharmacy_id) in in_play]
     found = planning.plan_basket(

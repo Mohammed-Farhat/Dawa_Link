@@ -572,6 +572,21 @@ class TestInARequest:
 
         assert scene.tool("get_request_status", request_id=other)["error_code"] == "NOT_FOUND"
 
+    def test_with_many_pharmacies_the_nearest_are_chosen_by_road(self, scene: Scene) -> None:
+        """N-48: the trips from the client to every pharmacy that has a box are asked for
+        first; then the trips between the ones that are weighed."""
+        row = [scene.world.make.pharmacy(lat=33.897 + 0.003 * n, lon=35.4832) for n in range(18)]
+        for pharmacy in row:
+            scene.stock(scene.augmentin, pharmacy_id=pharmacy)
+
+        plan = scene.tool("plan_basket", items=[{"product_id": scene.augmentin}])
+
+        first, second = scene.routing.asked[:2], scene.routing.asked[2:]
+        assert [(len(origins), len(to)) for origins, to, _ in first] == [(1, 18), (1, 18)]
+        assert second
+        assert all(len(origins) > 1 and len(to) <= 17 for origins, to, _ in second)
+        assert plan["plans"][0]["route"]["source"] == "road"
+
     def test_a_plan_card_in_a_request_is_tied_to_its_items(self, scene: Scene) -> None:
         request, thread = scene.start_request()
         scene.stock(scene.augmentin)

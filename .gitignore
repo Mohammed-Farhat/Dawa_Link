@@ -27,3 +27,16 @@ backend/data/moph/
 
 # OpenStreetMap's raw answer: downloaded by fetch_osm_places, never committed (decision log BLD-D15)
 backend/data/osm/
+
+# Tool caches and leftovers of long runs
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+nohup.out
+
+# Claude Code's own working files (worktrees, local settings)
+.claude/
+
+# Evaluation: a targeted re-check of a few cases stays on the laptop. Full runs are
+# committed with their scores and traces (decision log BLD-D19).
+eval/results/*_part/

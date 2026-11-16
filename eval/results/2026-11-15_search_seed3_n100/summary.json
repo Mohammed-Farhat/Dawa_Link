@@ -1,0 +1,25 @@
+{
+  "needs": 100,
+  "units_wanted": 225,
+  "units_secured": 161,
+  "fulfillment": 0.7156,
+  "needs_fulfilled": 0.56,
+  "median_minutes_to_secure": 0,
+  "taps_per_need": 2.81,
+  "messages_per_need": 0.0,
+  "reservations": 149,
+  "cant_work": 0,
+  "extra_minutes_per_reservation": 0.1,
+  "travel_minutes_per_unit": 18.6,
+  "other_brand_units": 0,
+  "no_shows": 0,
+  "boxes_that_dont_last": 0,
+  "unusable_cards": 0,
+  "unusable_after_told": 0,
+  "refused": {},
+  "turns": {},
+  "room": {
+    "units_missing": 64,
+    "early_release_could_serve": 26
+  }
+}

@@ -459,13 +459,18 @@ def _tools(graph_state: _State) -> _State:
     tools = for_mode(work.loaded.mode)
     work.pending_results = []
     work.candidate = None
+    replied = False
     for call in last.reply.tool_calls:
         if call.name == REPLY:
-            if work.candidate is not None:
+            # Only the first reply of a model call counts, valid or not. Seen on real runs:
+            # two replies at once, the real one and a stub ("placeholder"); when the real
+            # one had a mistake, the stub was what the client received.
+            if replied:
                 work.pending_results.append(
                     _error(call.id, REPLY, ToolError.INVALID_ARGUMENTS, "Reply once per turn.")
                 )
                 continue
+            replied = True
             try:
                 work.candidate = Reply.model_validate(call.arguments)
                 work.candidate_call_id = call.id
@@ -533,6 +538,15 @@ def _renew_lease(work: _Work) -> bool:
 # --- 5. guard_output -------------------------------------------------------------------
 
 
+def _found_something(work: _Work) -> bool:
+    """Did a tool of this turn find a plan, or a pharmacy that has the medicine?"""
+    for outcome in work.outcomes:
+        content = outcome.content
+        if outcome.ok and (content.get("plans") or content.get("options")):
+            return True
+    return False
+
+
 def _guard_output(graph_state: _State) -> _State:
     """Checks the reply. One chance to fix it, then our own words (docs/07 §7.2, AG-D9)."""
     work = graph_state["work"]
@@ -548,17 +562,20 @@ def _guard_output(graph_state: _State) -> _State:
                 client_id=work.loaded.client_id,
                 run_id=work.run_id,
                 client_text=work.loaded.client_text,
+                found_something=_found_something(work),
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)
     for kind in kinds:
         if kind not in work.guardrails:
             work.guardrails.append(kind)
-    # A reply in the wrong language is sent after one try to fix it: low risk (FA-8).
+    # A reply in the wrong language, or one without the cards of what it found, is sent
+    # after one try to fix it: low risk, and our fixed text would say less (FA-8, FA-40).
+    mild = (output_guard.LANGUAGE, output_guard.NO_CARD)
     blocking = [
         violation
         for violation in checked.violations
-        if not (work.repaired and violation.type == output_guard.LANGUAGE)
+        if not (work.repaired and violation.type in mild)
     ]
     if not blocking:
         work.final = checked.reply

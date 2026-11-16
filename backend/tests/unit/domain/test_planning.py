@@ -193,6 +193,35 @@ def test_every_plan_covers_as_much_as_the_best_one() -> None:
     assert [stop.pharmacy_id for stop in plans[0].stops] == ["A", "C"]
 
 
+def test_a_stop_that_buys_nothing_is_not_an_alternative() -> None:
+    """Found by the P-set. B has both medicines; A has the aspirin at the same price. The
+    planner used to offer "A, then B" as a second plan: the same units and the same
+    price for one more stop, in the place of a real alternative.
+    """
+    boxes = [
+        Box("b-concor", "concor", "B", 600_000, 5),
+        Box("b-aspirin", "aspirin", "B", 100_000, 5),
+        Box("a-aspirin", "aspirin", "A", 100_000, 5),  # at the same price, taken first
+    ]
+
+    plans = plan_basket([CONCOR, ASPIRIN], boxes, LEGS)
+
+    assert [summary(plan) for plan in plans] == [[("B", [("concor", 2), ("aspirin", 1)])]]
+
+
+def test_a_second_stop_that_saves_money_is_an_alternative() -> None:
+    boxes = [
+        Box("a-concor", "concor", "A", 600_000, 5),
+        Box("a-aspirin", "aspirin", "A", 100_000, 5),
+        Box("b-aspirin", "aspirin", "B", 90_000, 5),
+    ]
+
+    plans = plan_basket([CONCOR, ASPIRIN], boxes, LEGS)
+
+    assert [plan.pharmacies_count for plan in plans] == [1, 2]
+    assert plans[1].total_lbp == plans[0].total_lbp - 10_000
+
+
 def test_at_most_max_plans_are_returned_and_the_result_is_repeatable() -> None:
     boxes = [Box(f"{p}-concor", "concor", p, 500_000, 5) for p in ("A", "B", "C")]
 

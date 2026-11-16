@@ -138,6 +138,28 @@ def medicine_group(product: Product) -> str:
     return product.equivalence_key or f"product:{product.id}"
 
 
+def same_brand(tx: Tx, product_id: uuid.UUID) -> set[uuid.UUID]:
+    """The catalog rows that are "what the client asked for" when they name this product:
+    itself, and every row of the same medicine with the same name.
+
+    The Ministry lists one name several times: another box size, another registration,
+    and for generics named after their ingredient, another maker. The owner's rule
+    (2026-11-15, build plan Q38): "same name same medicine". A client who writes the name
+    asked for no company, so every box that carries that name is theirs to reserve. A
+    different name is another brand (R-C10).
+    """
+    product = tx.session.get_one(Product, product_id)
+    if product.equivalence_key is None:
+        return {product.id}
+    rows = tx.session.execute(
+        select(Product.id).where(
+            Product.equivalence_key == product.equivalence_key,
+            Product.search_name == product.search_name,
+        )
+    ).scalars()
+    return {product.id, *rows}
+
+
 def products_in_group(tx: Tx, product: Product, *, with_equivalents: bool) -> Sequence[uuid.UUID]:
     """The product itself, plus its equivalents when the client allowed alternatives."""
     if not with_equivalents:

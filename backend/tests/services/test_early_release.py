@@ -222,6 +222,16 @@ class TestAsking:
 
         assert town.ask() == Asked(None, 0)
 
+    def test_an_ask_is_dated_by_the_apps_clock(self, town: Town) -> None:
+        """R-E3, R-T11. Found in build step 6: the daily cap compared the app's day with the
+        database's own time, so on the demo clock or in a simulation it counted nothing,
+        or counted every day together."""
+        pharmacy = town.pharmacy_holding()
+
+        town.ask()
+
+        assert town.asks()[pharmacy].created_at == NOW
+
     def test_asking_again_in_the_same_turn_returns_the_same_request(self, town: Town) -> None:
         """R-AG6: a retried turn finds its own work."""
         town.pharmacy_holding()

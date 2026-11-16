@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.6 · **Date:** 2026-11-14
+**Version:** v1.7 · **Date:** 2026-11-15
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.7** (decision log BLD-D30): no request form and no cart; Home has the search and one tile, Ask DawaLink; a request starts from the agent's card in the chat. The CS-15 board of the canvas is history. **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -43,7 +43,7 @@
 
 | Principle | In practice |
 |---|---|
-| **Search first, agent one tap away** | Home: today's pickup → search box → "Find medicines for me" and "Ask the assistant", side by side in importance. Chat is never the only way to do something. |
+| **Search first, agent one tap away** | Home: today's pickup → search box → "Ask DawaLink". Searching, reserving, picking up and cancelling never need the chat. *One thing does since BLD-D30 (the owner): a 6-hour sourcing request starts in the chat, because the agent is the one who works on it.* |
 | **Urgent by design** | What's due today sits at the top of Home. The order number is one tap away ("Show at the counter"). |
 | **Facts before words** | The same fact row, in the same order, on search results, agent cards, offers and plans |
 | **Savings first** | Every price shows what you save (public price − DawaLink price, computed live), in yellow |
@@ -96,7 +96,7 @@
 
 ### 3.1 Client portal (phone first)
 - **A floating pill menu** with four tabs: **Home · Medicines · Ask · Me**. The selected tab is a blue pill with its name.
-  - **Home:** today's pickup ticket, the search pill, and two tiles (Find several medicines · Ask DawaLink).
+  - **Home:** today's pickup ticket, the search pill, and one tile, Ask DawaLink (BLD-D30); an open request shows as a line under it ("1 searching").
   - **Medicines** ("My medicines"): **one tracker per medicine**, from searching to ready to pick up, whether it came from a search, a request or a watch. It replaces separate lists of requests, reservations and watches.
   - **Ask:** the assistant, full screen (no menu, so the message box has room).
   - **Me:** account and settings.
@@ -153,13 +153,13 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Board | `03` | What's on it, top to bottom |
 |---|---|---|
 | Welcome | CS-1 | Three example cards (a price with its saving, a ticket, a walking time) → "Your medicine, for less. Today." → 3 steps → "Sealed and in date. The pharmacist checks every box." → [Create a free account] [Log in] |
-| Home | CS-5 | Greeting → **dark "Pick up today" ticket** with [Show at the counter] → search pill with the location → two tiles: Find several medicines (with "1 searching") · Ask DawaLink → *(later: the savings tile)* |
+| Home | CS-5 | Greeting → **dark "Pick up today" ticket** with [Show at the counter] → search pill with the location → one tile, Ask DawaLink, and the open request's line ("1 searching") (BLD-D30) → *(later: the savings tile)* |
 | Search results | CS-6 | Search field → **the medicine once** (name, ingredient, pack, prescription) with Pick up · For · Near choices → "4 pharmacies · all last 12 days" → **compact pharmacy rows**: walk or car time, closing time, price, **saving**, expiry, stock. *(Later: the List/Map switch.)* |
 | Pharmacy and offer | CS-7 | Map with the pin and your walking route → name, address, Open until, walk and car times → the offer: price, saving, fit, prescription, stock → opening hours, pickup time → [Reserve] pinned at the bottom |
 | Reserve | CS-8 | How many boxes → **the pickup day** (one big card per allowed day: "Today", "Tomorrow", "Thu 12 Nov"; 4 at most, `04` R-F3; with "Pick up by…" when a later day would be too late for the box) → **days of use as chips** (7 · 12 · 30 · Other · Not sure) → the fit result → prescription and "sealed and in date" lines → total + saving + [Reserve 2 boxes] pinned |
 | Pickup ticket | CS-10 | A dark screen: "Reserved" → **the order number, huge** → product → pick up by, amount, pharmacy → prescription reminder → [Directions] → cancel. *(Later: the reminder button.)* |
 | Ask DawaLink | CS-9 | A whole conversation **in Arabic** (right to left) → the recommended plan card (items, fit, total, saving, [Reserve both]) → "See 2 other options" → Arabic quick replies → message box. *(Later: the "why" chips on the card.)* |
-| Find medicines for me | CS-15 | How it works (Now · 6 hours · You) → your list (up to 5, quantity, days of use) → [Add a medicine] → location, tell me about other brands → [Start searching] pinned |
+| ~~Find medicines for me~~ | CS-15 | **Removed (BLD-D30):** a request starts from the agent's request summary card in the chat ([Start sourcing]). The board on the canvas is history. |
 | Request tracker | CS-16 | A ring "2 of 3 reserved" + time left → each medicine with a 3-step bar → the offer (amber) with [Accept and reserve] → what DawaLink did. [Cancel request] lives in the ⋯ menu. |
 | My medicines | CS-10, CS-11, CS-16 | Active / History → one card per medicine: Ready (Show ticket) · Offer waiting (See the offer) · Watching (Stop) |
 | Me | CS-13 | Account → home area, tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
@@ -195,7 +195,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | State | Rule |
 |---|---|
 | **Loading** | Lists show grey placeholder blocks shaped like the cards. Chat shows the progress line. Never a blank screen. |
-| **Empty** | Always a next step. Empty search → [Ask DawaLink to find it] + [Notify me if it appears]. No box lasts → the latest expiry + "Ask DawaLink to find a box that lasts". |
+| **Empty** | Always a next step. Empty search → [Ask DawaLink to find it] (opens the chat with the medicine named, BLD-D30) + [Notify me if it appears]. No box lasts → the latest expiry + "Ask DawaLink to find a box that lasts". |
 | **Error after a tap** | A red toast in plain words + the next step (`09` P7). The message comes from the error **code** (`06` §3.2), never from raw server text. |
 | **Validation** | The error text sits next to the field ("must be between 1 and 3"). |
 | **Slow or no network** | "Can't reach DawaLink. Retrying…" An unsent message stays in the box. A tap that failed is retried with the **same idempotency key**, so nothing is created twice. |

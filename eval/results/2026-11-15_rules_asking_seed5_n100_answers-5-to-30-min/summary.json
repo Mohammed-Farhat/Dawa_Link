@@ -1,0 +1,40 @@
+{
+  "needs": 100,
+  "units_wanted": 242,
+  "units_secured": 123,
+  "fulfillment": 0.5083,
+  "needs_fulfilled": 0.38,
+  "median_minutes_to_secure": 43,
+  "taps_per_need": 2.12,
+  "messages_per_need": 1.51,
+  "reservations": 104,
+  "cant_work": 0,
+  "extra_minutes_per_reservation": 5.01,
+  "travel_minutes_per_unit": 19.32,
+  "other_brand_units": 1,
+  "no_shows": 0,
+  "boxes_that_dont_last": 0,
+  "unusable_cards": 97,
+  "unusable_after_told": 80,
+  "refused": {
+    "REQUEST_CLOSED": 5,
+    "VALIDATION_ERROR": 1,
+    "GROUP_ITEM_FAILED": 2,
+    "PICKUP_DAY_INVALID": 1
+  },
+  "turns": {
+    "turns": 329,
+    "turns_not_ok": 0,
+    "turns_with_a_guard": 36,
+    "tool_calls": 504,
+    "tool_errors": 5,
+    "model_calls": 869,
+    "cost_usd": 0.0,
+    "requests_at_the_turn_cap": 0,
+    "trips_not_from_the_road_table": 1
+  },
+  "room": {
+    "units_missing": 119,
+    "early_release_could_serve": 43
+  }
+}

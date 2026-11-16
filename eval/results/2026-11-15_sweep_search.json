@@ -1,0 +1,172 @@
+[
+  {
+    "seed": 1,
+    "assumption": "base",
+    "value": "base",
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 171.2
+  },
+  {
+    "seed": 1,
+    "assumption": "not_available",
+    "value": 0.0,
+    "units_wanted": 241,
+    "units_secured": 178,
+    "needs_fulfilled": 0.63,
+    "no_shows": 0,
+    "seconds": 156.0
+  },
+  {
+    "seed": 1,
+    "assumption": "not_available",
+    "value": 0.3,
+    "units_wanted": 241,
+    "units_secured": 175,
+    "needs_fulfilled": 0.61,
+    "no_shows": 0,
+    "seconds": 174.5
+  },
+  {
+    "seed": 1,
+    "assumption": "answers_ask",
+    "value": 0.2,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 150.7
+  },
+  {
+    "seed": 1,
+    "assumption": "answers_ask",
+    "value": 0.8,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 175.5
+  },
+  {
+    "seed": 1,
+    "assumption": "accepts_ask",
+    "value": 0.25,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 198.0
+  },
+  {
+    "seed": 1,
+    "assumption": "accepts_ask",
+    "value": 0.75,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 174.8
+  },
+  {
+    "seed": 1,
+    "assumption": "new_listings_per_pharmacy",
+    "value": 3.0,
+    "units_wanted": 241,
+    "units_secured": 176,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 151.2
+  },
+  {
+    "seed": 1,
+    "assumption": "new_listings_per_pharmacy",
+    "value": 12.0,
+    "units_wanted": 241,
+    "units_secured": 179,
+    "needs_fulfilled": 0.63,
+    "no_shows": 0,
+    "seconds": 174.4
+  },
+  {
+    "seed": 1,
+    "assumption": "early_release_share",
+    "value": 0.125,
+    "units_wanted": 241,
+    "units_secured": 184,
+    "needs_fulfilled": 0.68,
+    "no_shows": 0,
+    "seconds": 159.2
+  },
+  {
+    "seed": 1,
+    "assumption": "early_release_share",
+    "value": 0.5,
+    "units_wanted": 241,
+    "units_secured": 165,
+    "needs_fulfilled": 0.53,
+    "no_shows": 0,
+    "seconds": 144.1
+  },
+  {
+    "seed": 1,
+    "assumption": "taps_card",
+    "value": 0.7,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 141.0
+  },
+  {
+    "seed": 1,
+    "assumption": "taps_card",
+    "value": 1.0,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 147.4
+  },
+  {
+    "seed": 1,
+    "assumption": "accepts_offer",
+    "value": 0.6,
+    "units_wanted": 241,
+    "units_secured": 176,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 152.2
+  },
+  {
+    "seed": 1,
+    "assumption": "accepts_offer",
+    "value": 1.0,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 142.1
+  },
+  {
+    "seed": 1,
+    "assumption": "other_brand_reserve",
+    "value": 0.2,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 142.9
+  },
+  {
+    "seed": 1,
+    "assumption": "other_brand_reserve",
+    "value": 0.6,
+    "units_wanted": 241,
+    "units_secured": 177,
+    "needs_fulfilled": 0.62,
+    "no_shows": 0,
+    "seconds": 142.6
+  }
+]

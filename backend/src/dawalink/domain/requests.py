@@ -39,6 +39,9 @@ REQUEST_MACHINE = StateMachine(
     {
         # The window ended or every item is final (system), or the client cancelled.
         (RequestState.OPEN, RequestState.CLOSED): by(Actor.SYSTEM, Actor.CLIENT),
+        # A reserved box was marked not available, or cancelled by the system, before
+        # the window ended: the search for it starts again (R-RQ12).
+        (RequestState.CLOSED, RequestState.OPEN): by(Actor.PHARMACY, Actor.SYSTEM),
     },
 )
 
@@ -55,6 +58,9 @@ ITEM_MACHINE = StateMachine(
         # Only the client's tap secures an item: a plan card, or an accepted offer.
         (ItemState.PROPOSED, ItemState.SECURED): by(Actor.CLIENT),
         (ItemState.WAITING, ItemState.SECURED): by(Actor.CLIENT),
+        # A quantity split across two pharmacies is two cards of one plan: the first tap
+        # leaves the item searching for the rest, and the second tap completes it.
+        (ItemState.SEARCHING, ItemState.SECURED): by(Actor.CLIENT),
         # Unticked on the card, reserved only in part, or the card failed or expired (R-RQ6).
         (ItemState.PROPOSED, ItemState.SEARCHING): by(Actor.CLIENT, Actor.SYSTEM),
         # A reservation was marked not available, or cancelled by the system: the item waits
@@ -93,8 +99,24 @@ def should_close(
     return now >= ends_at and offers_pending == 0
 
 
+def may_reopen(
+    outcome: RequestOutcome, item_state: ItemState, *, now: datetime, ends_at: datetime
+) -> bool:
+    """Does a closed request open again when a reserved box of this item is lost? (R-RQ12)
+
+    Yes while its six hours are still running, for an item that was secured. Never for a
+    request the client cancelled, nor for a medicine the client gave up on.
+    """
+    return (
+        outcome is not RequestOutcome.CANCELLED
+        and item_state is ItemState.SECURED
+        and now < ends_at
+    )
+
+
 def closing_outcome(items: Sequence[ItemProgress]) -> RequestOutcome:
-    """The outcome when a window ends. After closing it never changes (R-RQ9)."""
+    """The outcome when a request closes. It changes only if the request opens again
+    (R-RQ9, R-RQ12)."""
     if all(item.is_secured for item in items):
         return RequestOutcome.FULFILLED
     if any(item.qty_secured > 0 for item in items):

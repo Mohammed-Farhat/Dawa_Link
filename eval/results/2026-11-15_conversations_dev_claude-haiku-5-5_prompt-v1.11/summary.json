@@ -1,0 +1,78 @@
+{
+  "model": "claude-haiku-5-5",
+  "client_model": "claude-haiku-5-5",
+  "part": "dev",
+  "prompt_version": "v1.11",
+  "conversations": 114,
+  "ended": {
+    "cards": 110,
+    "too_long": 4
+  },
+  "by_style": {
+    "all_at_once": {
+      "conversations": 29,
+      "ended_with_cards": 28,
+      "client_messages_to_cards": 1.04
+    },
+    "half": {
+      "conversations": 29,
+      "ended_with_cards": 29,
+      "client_messages_to_cards": 2.1
+    },
+    "bare": {
+      "conversations": 28,
+      "ended_with_cards": 27,
+      "client_messages_to_cards": 2.15
+    },
+    "one_at_a_time": {
+      "conversations": 28,
+      "ended_with_cards": 26,
+      "client_messages_to_cards": 4.04
+    }
+  },
+  "turns_that_only_answer": {
+    "turns": 167,
+    "seconds_p50": 3.891,
+    "seconds_p95": 9.063
+  },
+  "turns_with_cards": {
+    "turns": 110,
+    "seconds_p50": 10.9605,
+    "seconds_p95": 16.234
+  },
+  "agent_cost_usd": 0.428678,
+  "client_cost_usd": 0.052046,
+  "checks": {
+    "gets_cards": {
+      "cases": 114,
+      "yes": 110,
+      "share": 0.9649
+    },
+    "right_medicine": {
+      "cases": 114,
+      "yes": 112,
+      "share": 0.9825
+    },
+    "searches_with_the_truth": {
+      "cases": 114,
+      "yes": 114,
+      "share": 1.0
+    },
+    "waits_until_told": {
+      "cases": 114,
+      "yes": 114,
+      "share": 1.0
+    },
+    "asks_again": {
+      "cases": 114,
+      "yes": 6,
+      "share": 0.0526
+    },
+    "first_message_is_enough": {
+      "cases": 29,
+      "yes": 27,
+      "share": 0.931
+    }
+  },
+  "cost_usd": 0.480724
+}

@@ -131,6 +131,45 @@ class TestTurnsNobodyWaitsFor:
         assert (done, model.seen) == (0, [])
         assert scene.conversation(thread).pending_turn_at is None
 
+    def test_a_request_that_opened_again_gets_a_turn(self, scene: Scene) -> None:
+        """R-RQ12: everything was reserved, the request closed, then the pharmacy found
+        the box wasn't there. The agent is told, in sourcing mode, like in any open request.
+        """
+        from dawalink.domain.orders import OrderSource
+        from dawalink.services import counter, orders, requests
+        from dawalink.services.orders import ReserveLine
+
+        request, thread = scene.start_request(RequestLine(scene.augmentin))
+        work(scene, reply("Looking."))
+        item = scene.world.one("SELECT id FROM request_items WHERE request_id = :r", r=request)
+        tx = scene.world.tx()
+        requests.items_proposed(tx, request, [item.id])
+        (order,) = orders.reserve(
+            tx,
+            client_id=scene.client,
+            lines=[
+                ReserveLine(scene.stock(), 1, expected_price_lbp=600_000, request_item_id=item.id)
+            ],
+            pickup_day=tx.today,
+            source=OrderSource.REQUEST,
+            idempotency_key="tap-1",
+        )
+        scene.world.settle(tx)
+        closed, _ = work(scene, reply("Nothing to do."))
+        scene.world.later(minutes=30)
+
+        tx = scene.world.tx()
+        counter.mark_not_available(tx, scene.pharmacy, order.id)
+        scene.world.settle(tx)
+        done, _ = work(scene, reply("That box wasn't there. I'm looking again."))
+
+        assert (closed, done) == (0, 1)
+        run = scene.run()
+        assert (run.mode, run.trigger, run.request_id) == ("sourcing", "decision_event", request)
+        assert "request_reopened:" in block(scene)
+        assert "not_available:" in block(scene)
+        assert scene.messages(thread)[-1].text_redacted.endswith("I'm looking again.")
+
     def test_a_chat_is_never_run_by_the_worker_on_its_own(self, scene: Scene) -> None:
         scene.say("hello")
 
@@ -292,7 +331,7 @@ class TestTracing:
             "conversation_id": None,
             "request_id": None,
             "model": "scripted",
-            "prompt_version": "v1.3",
+            "prompt_version": "v1.13",
             "client_ref": None,
             "runs_in": "chat",
             "outcome": "ok",

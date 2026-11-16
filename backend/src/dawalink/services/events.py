@@ -31,6 +31,8 @@ class Decision(StrEnum):
     WINDOW_CHECK = "window_check"
     GROUP_ITEM_FAILED = "group_item_failed"
     ITEMS_UNTICKED = "items_unticked"
+    # The client accepted a change the agent proposed: other brands, or a higher budget.
+    CONSTRAINTS_CHANGED = "constraints_changed"
 
 
 def chat_of(tx: Tx, client_id: uuid.UUID) -> uuid.UUID | None:

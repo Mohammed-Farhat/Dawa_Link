@@ -294,6 +294,33 @@ class TestThePlanCard:
         assert case.items(request_id)[0].state == "SECURED"
         assert case.request(request_id).outcome == "FULFILLED"
 
+    def test_two_cards_of_one_plan_secure_a_split_quantity(self, case: Case, world: World) -> None:
+        """R-RQ5, as the agent does it: one plan, shown once, with a card per pharmacy. The
+        first tap leaves one unit to find; the second tap completes the medicine."""
+        request_id = case.start(RequestLine(case.concor, qty=2))
+        other = world.make.pharmacy(lat=33.898, lon=35.485)
+        boxes = [case.stock(case.concor, 1), case.stock(case.concor, 1, pharmacy_id=other)]
+        item = case.items(request_id)[0]
+        tx = world.tx()
+        requests.items_proposed(tx, request_id, [item.id])
+        world.settle(tx)
+
+        for number, box in enumerate(boxes):
+            tx = world.tx()
+            orders.reserve(
+                tx,
+                client_id=case.client,
+                lines=[ReserveLine(box, 1, expected_price_lbp=600_000, request_item_id=item.id)],
+                pickup_day=tx.today,
+                source=OrderSource.REQUEST,
+                idempotency_key=f"tap-{number}",
+            )
+            world.settle(tx)
+
+        concor = case.items(request_id)[0]
+        assert (concor.state, concor.qty_secured) == ("SECURED", 2)
+        assert case.request(request_id).outcome == "FULFILLED"
+
     def test_a_box_of_another_medicine_or_too_many_units_is_refused(
         self, case: Case, world: World
     ) -> None:
@@ -463,16 +490,170 @@ class TestWaitingForStock:
         ]
         secured_matches_orders(world)
 
-    def test_once_a_request_is_closed_nothing_reopens_it(self, case: Case, world: World) -> None:
-        """R-RQ9: later events are recorded on the orders only."""
-        request_id = case.start(RequestLine(case.concor))
-        (order,) = case.reserve_card(request_id, (1, case.stock(case.concor), 1))
 
-        counter.mark_not_available(world.tx(), case.pharmacy, order.id)
+class TestABoxLostAfterTheRequestClosed:
+    """R-RQ12 (the owner, 2026-11-15): a request closes as soon as everything is reserved.
+    If a box is then lost at the pharmacy, the request opens again while its six hours run."""
 
+    def closed(self, case: Case, units: int = 1) -> tuple[uuid.UUID, Any]:
+        request_id = case.start(RequestLine(case.concor, qty=units))
+        (order,) = case.reserve_card(request_id, (1, case.stock(case.concor), units))
         assert case.request(request_id).outcome == "FULFILLED"
+        return request_id, order
+
+    def not_available(self, case: Case, order_id: uuid.UUID, units: int | None = None) -> None:
+        tx = case.world.tx()
+        counter.mark_not_available(tx, case.pharmacy, order_id, units)
+        case.world.settle(tx)
+
+    def test_not_available_before_the_window_ends_opens_the_request_again(
+        self, case: Case, world: World
+    ) -> None:
+        request_id, order = self.closed(case)
+        with world.as_owner():  # as the agent's turn leaves a closed request: nothing asked for
+            world.connection.exec_driver_sql(
+                "UPDATE conversations SET pending_turn_at = NULL WHERE request_id = %s",
+                (request_id,),
+            )
+        world.later(hours=1)
+
+        self.not_available(case, order.id)
+
+        request = case.request(request_id)
+        assert (request.state, request.outcome, request.closed_at) == ("OPEN", None, None)
+        assert request.ends_at == NOW + timedelta(hours=6)  # its window is the one it had
+        concor = case.items(request_id)[0]
+        assert (concor.state, concor.qty_secured) == ("SEARCHING", 0)
+        assert case.thread(request_id)[-3:] == [
+            ("card", "request_reopened"),
+            ("card", "not_available"),
+            ("event", "not_available"),
+        ]
+        turn = world.one(
+            "SELECT pending_turn_at FROM conversations WHERE request_id = :id", id=request_id
+        )
+        assert turn.pending_turn_at == NOW + timedelta(hours=1)
+        secured_matches_orders(world)
+
+    def test_it_closes_again_when_the_medicine_is_reserved_again_and_says_so_again(
+        self, case: Case, world: World
+    ) -> None:
+        request_id, order = self.closed(case)
+        self.not_available(case, order.id)
+        other = world.make.pharmacy(lat=33.898, lon=35.485)
+
+        case.reserve_card(
+            request_id, (1, case.stock(case.concor, pharmacy_id=other), 1), key="card-2"
+        )
+
+        request = case.request(request_id)
+        assert (request.state, request.outcome) == ("CLOSED", "FULFILLED")
+        assert world.notifications(case.client).count("CN-17") == 2
+        assert [what for _, what in case.thread(request_id)].count("request_closed") == 2
+
+    def test_a_part_of_the_box_is_enough_to_open_it_again(self, case: Case, world: World) -> None:
+        request_id, order = self.closed(case, units=2)
+
+        self.not_available(case, order.id, 1)
+
+        assert case.request(request_id).state == "OPEN"
+        concor = case.items(request_id)[0]
+        assert (concor.state, concor.qty_secured) == ("SEARCHING", 1)
+        secured_matches_orders(world)
+
+    def test_a_waiting_medicine_goes_back_to_its_place_in_the_queue(
+        self, case: Case, world: World
+    ) -> None:
+        """Its claim was fulfilled by the reservation, and is active again (R-W3)."""
+        request_id = case.start(RequestLine(case.concor))
+        claim = TestWaitingForStock().waiting(case, request_id)
+        (order,) = case.reserve_card(request_id, (1, case.stock(case.concor), 1))
+        assert case.request(request_id).state == "CLOSED"
+
+        self.not_available(case, order.id)
+
+        waiting = world.one("SELECT * FROM claims WHERE id = :c", c=claim)
+        assert (waiting.state, waiting.qty_missing, waiting.created_at) == ("ACTIVE", 1, NOW)
+        assert case.items(request_id)[0].state == "WAITING"
+
+    def test_a_system_cancel_opens_it_again_too(self, case: Case, world: World) -> None:
+        request_id, order = self.closed(case)
+
+        tx = world.tx()
+        orders.cancel_by_system(tx, order.id, reason="pharmacy_suspended")
+        world.settle(tx)
+
+        assert case.request(request_id).state == "OPEN"
+        assert case.items(request_id)[0].state == "SEARCHING"
+        assert case.thread(request_id)[-1] == ("event", "system_cancelled")
+
+    def test_after_its_six_hours_nothing_opens_it_again(self, case: Case, world: World) -> None:
+        """R-RQ9: later events are recorded on the orders only."""
+        request_id, order = self.closed(case)
+        world.later(hours=6)
+
+        self.not_available(case, order.id)
+
+        request = case.request(request_id)
+        assert (request.state, request.outcome) == ("CLOSED", "FULFILLED")
         assert case.items(request_id)[0].state == "SECURED"
         assert case.thread(request_id)[-1] == ("card", "not_available")
+
+    def test_a_request_the_client_cancelled_stays_closed(self, case: Case, world: World) -> None:
+        request_id = case.start()
+        (order,) = case.reserve_card(request_id, (1, case.stock(case.concor), 2))
+        tx = world.tx()
+        requests.cancel_request(tx, case.client, request_id)
+        world.settle(tx)
+
+        self.not_available(case, order.id)
+
+        request = case.request(request_id)
+        assert (request.state, request.outcome) == ("CLOSED", "CANCELLED")
+        assert case.thread(request_id)[-1] == ("card", "not_available")
+
+    def test_what_the_client_gave_up_while_it_was_closed_stays_given_up(
+        self, case: Case, world: World
+    ) -> None:
+        """R-RQ11: the client cancelled the aspirin after the request closed. When the
+        concor is lost, only the concor is searched for again."""
+        request_id = case.start(RequestLine(case.concor), RequestLine(case.aspirin))
+        concor, aspirin = case.reserve_card(
+            request_id, (1, case.stock(case.concor), 1), (2, case.stock(case.aspirin), 1)
+        )
+        tx = world.tx()
+        orders.cancel_by_client(tx, case.client, aspirin.id)
+        world.settle(tx)
+        assert case.request(request_id).outcome == "FULFILLED"  # closed: nothing changed
+
+        self.not_available(case, concor.id)
+
+        assert case.request(request_id).state == "OPEN"
+        assert [(i.state, i.qty_secured) for i in case.items(request_id)] == [
+            ("SEARCHING", 0),
+            ("CANCELLED", 0),
+        ]
+        secured_matches_orders(world)
+
+    def test_a_medicine_the_client_gave_up_on_never_opens_it_again(
+        self, case: Case, world: World
+    ) -> None:
+        """Two boxes of one medicine: the client cancelled one, then the other is lost."""
+        request_id = case.start(RequestLine(case.concor, qty=2))
+        other = world.make.pharmacy(lat=33.898, lon=35.485)
+        kept, dropped = case.reserve_card(
+            request_id,
+            (1, case.stock(case.concor, 1), 1),
+            (1, case.stock(case.concor, 1, pharmacy_id=other), 1),
+        )
+        tx = world.tx()
+        orders.cancel_by_client(tx, case.client, dropped.id)
+        world.settle(tx)
+
+        self.not_available(case, kept.id)
+
+        request = case.request(request_id)
+        assert (request.state, request.outcome) == ("CLOSED", "FULFILLED")
 
 
 class TestTheWindow:
@@ -673,3 +854,60 @@ class TestChangingConstraints:
 
         assert made == 0
         assert world.one("SELECT state FROM claims WHERE id = :c", c=claim).state == "ACTIVE"
+
+    def test_a_change_the_client_accepted_asks_for_an_agent_turn(
+        self, case: Case, world: World
+    ) -> None:
+        """A client who just tapped "yes, tell me about other brands" expects to hear about
+        them now: without this event the agent would only act at the next one."""
+        request_id = case.start(RequestLine(case.concor, max_price_lbp=500_000))
+        item = case.items(request_id)[0]
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE conversations SET pending_turn_at = NULL WHERE request_id = %s",
+                (request_id,),
+            )
+
+        tx = world.tx()
+        requests.change_constraints(tx, case.client, request_id, alternatives_ok=True)
+        requests.change_constraints(tx, case.client, request_id, max_prices={item.id: 700_000})
+        world.settle(tx)
+
+        asked = world.one(
+            "SELECT pending_turn_at FROM conversations WHERE request_id = :id", id=request_id
+        )
+        events = world.all(
+            "SELECT m.text_redacted FROM chat_messages m JOIN conversations c "
+            "ON c.id = m.conversation_id WHERE c.request_id = :id AND m.kind = 'event' "
+            "ORDER BY m.seq",
+            id=request_id,
+        )
+        assert asked.pending_turn_at == NOW
+        assert [json.loads(row.text_redacted) for row in events][1:] == [
+            {
+                "type": "constraints_changed",
+                "request_id": str(request_id),
+                "other_brands": True,
+                "items": [],
+            },
+            {
+                "type": "constraints_changed",
+                "request_id": str(request_id),
+                "other_brands": False,
+                "items": [str(item.id)],
+            },
+        ]
+
+    def test_a_change_that_changes_nothing_asks_for_no_turn(self, case: Case, world: World) -> None:
+        request_id = case.start(
+            RequestLine(case.concor, max_price_lbp=500_000), alternatives_ok=True
+        )
+        item = case.items(request_id)[0]
+
+        tx = world.tx()
+        requests.change_constraints(
+            tx, case.client, request_id, alternatives_ok=True, max_prices={item.id: 500_000}
+        )
+        world.settle(tx)
+
+        assert case.thread(request_id) == [("event", "request_submitted")]

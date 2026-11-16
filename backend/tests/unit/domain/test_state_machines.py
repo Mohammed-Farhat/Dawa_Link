@@ -1,5 +1,7 @@
 """Every state machine of docs/04 §3: who may make which change, and what can never change."""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from dawalink.domain.accounts import (
@@ -27,7 +29,9 @@ from dawalink.domain.requests import (
     ITEM_MACHINE,
     REQUEST_MACHINE,
     ItemState,
+    RequestOutcome,
     RequestState,
+    may_reopen,
 )
 from dawalink.domain.state_machine import Actor, TransitionNotAllowed
 
@@ -158,10 +162,32 @@ def test_a_secured_item_reopens_when_its_reservation_is_marked_not_available() -
     assert ITEM_MACHINE.is_terminal(ItemState.CANCELLED)
 
 
-def test_a_request_closes_once_and_stays_closed() -> None:
+def test_a_request_closes_and_only_a_lost_box_opens_it_again() -> None:
+    """R-RQ9, R-RQ12: not the client, not the agent, not an admin."""
     REQUEST_MACHINE.check(RequestState.OPEN, RequestState.CLOSED, Actor.SYSTEM)
     REQUEST_MACHINE.check(RequestState.OPEN, RequestState.CLOSED, Actor.CLIENT)
-    assert REQUEST_MACHINE.is_terminal(RequestState.CLOSED)
+    REQUEST_MACHINE.check(RequestState.CLOSED, RequestState.OPEN, Actor.PHARMACY)
+    REQUEST_MACHINE.check(RequestState.CLOSED, RequestState.OPEN, Actor.SYSTEM)
+    for actor in (Actor.CLIENT, Actor.AGENT, Actor.ADMIN):
+        assert not REQUEST_MACHINE.allows(RequestState.CLOSED, RequestState.OPEN, actor)
+
+
+def test_when_a_closed_request_may_open_again() -> None:
+    """R-RQ12: a secured medicine, a request the client didn't cancel, inside its window."""
+    ends_at = datetime(2026, 11, 16, 16, 0, tzinfo=UTC)
+    before, after = ends_at - timedelta(minutes=1), ends_at
+
+    assert may_reopen(RequestOutcome.FULFILLED, ItemState.SECURED, now=before, ends_at=ends_at)
+    assert may_reopen(RequestOutcome.PARTIAL, ItemState.SECURED, now=before, ends_at=ends_at)
+    assert not may_reopen(RequestOutcome.FULFILLED, ItemState.SECURED, now=after, ends_at=ends_at)
+    assert not may_reopen(RequestOutcome.CANCELLED, ItemState.SECURED, now=before, ends_at=ends_at)
+    assert not may_reopen(RequestOutcome.PARTIAL, ItemState.CANCELLED, now=before, ends_at=ends_at)
+
+
+def test_the_second_card_of_a_split_quantity_completes_the_item() -> None:
+    """R-RQ5: the first tap left the item searching for the rest."""
+    ITEM_MACHINE.check(ItemState.SEARCHING, ItemState.SECURED, Actor.CLIENT)
+    assert not ITEM_MACHINE.allows(ItemState.SEARCHING, ItemState.SECURED, Actor.AGENT)
 
 
 def test_claim_transitions_of_sm_7() -> None:

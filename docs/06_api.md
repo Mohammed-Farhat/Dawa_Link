@@ -1,6 +1,6 @@
 # DawaLink: API Contracts
 
-**Version:** v1.7 (validated; v1.7: other brands are shown, never reserved, BLD-D17; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-14
+**Version:** v1.10 (validated; v1.10: `POST /requests` is removed, a request is created only by executing the agent's `request_summary` proposal, BLD-D30; v1.9: a closed request can be OPEN again, and the system card `request_reopened`, BLD-D21; v1.8: the decision event `constraints_changed`, BLD-D20; v1.7: other brands are shown, never reserved, BLD-D17; v1.6: what a stored card holds, as built in step 5) · **Date:** 2026-11-15
 **Builds on:** `04` v4.1 (rules; every guard below cites its rule) · `05` v3.1 (tables) · `03` v4.1 (screens) · `02` v3.1 (components) · ADR-004 · `10` (threat model)
 **Status:** ✅ validated 2026-10-18 (decision log §O). **v1.1 applies the professor's guidance** (decision log §S): location inputs, travel times on listings, `pickup_day` and `days_of_use` on reservations, `DOES_NOT_FIT`. **v1.2 applies the threat model** (`10`, decision log §T): registration never reveals an existing account (no `EMAIL_TAKEN`); the verification link logs the user in; admins log in with a TOTP code; random order numbers; new limits (§4); the location sentence in §2.3 corrected. **v1.3 applies step 12** (`12`, decision log §V): the API has its own CloudFront, so the login token travels in the `Authorization` header and the API uses CORS; `/health` always answers `200` while the process runs; no CI. **v1.4 applies the pickup-day decision** (decision log §W): search takes a `pickup_day` date instead of "today / tomorrow", and a listing says when its expiry limits the pickup days.
 
@@ -155,7 +155,7 @@ That is what the course asks for: *"interfaces between major components, includi
 | `LIMIT_WATCHES` | 409 | Already 5 live watches | R-W2 |
 | `WATCH_EXISTS` | 409 | Already watching this product; `details.watch_id` | R-W2 |
 | `PRODUCT_NOT_ALLOWED` | 422 | A controlled product | R-C6 |
-| `REQUEST_CLOSED` | 409 | Acting on a closed request | R-RQ9 |
+| `REQUEST_CLOSED` | 409 | Acting on a closed request. A request that opened again (R-RQ12) is OPEN: its `outcome` and `closed_at` are null again, and a system card `request_reopened` `{request_ref, order_ref}` is in its thread | R-RQ9, R-RQ12 |
 | `CLAIM_NOT_ACTIVE` | 409 | Asking pharmacies for a need that is already met, ended or cancelled (an agent tool's answer) | R-E1 |
 | `LIMIT_EARLY_RELEASE` | 409 | Already 5 open early-release requests, or the same medicine asked again within 24 h; `details.retry_after` (an agent tool's answer) | R-E5 |
 | **Agent and conversations** | | | |
@@ -500,12 +500,12 @@ Matching then runs **first come, first served** (R-PRI). The client is told by a
 
 | Method · Path | Who | Request → Response | Errors | Rule |
 |---|---|---|---|---|
-| `POST /requests` 🔑 | client ACTIVE | `{items: [{product_id, qty, days_of_use? (default 1), max_price?: MoneyIn}] (1–5), location?: LocationIn, alternatives_ok}` → **201** `SourcingRequest`. The agent's first turn starts within seconds (the search runs immediately). | `OUTSIDE_REQUEST_HOURS`, `LIMIT_OPEN_REQUESTS`, `PRODUCT_NOT_ALLOWED`, `VALIDATION_ERROR` (0 or > 5 items, qty outside 1–3, the same product twice), `CLIENT_PAUSED` | R-RQ1, R-RQ2, R-T8 |
+| ~~`POST /requests`~~ | – | **Removed (BLD-D30, 2026-11-15): there is no request form.** A request is created by `POST /proposals/{id}/execute` on the agent's `request_summary` card (§6.7), with the same checks and errors: `OUTSIDE_REQUEST_HOURS`, `LIMIT_OPEN_REQUESTS`, `PRODUCT_NOT_ALLOWED`, `VALIDATION_ERROR` (0 or > 5 items, qty outside 1–3, the same product twice), `CLIENT_PAUSED`. The agent's first turn in the thread starts within seconds. | – | R-RQ1, R-RQ2, R-T8 |
 | `GET /requests?state=open\|closed&cursor=` | client | → page of `SourcingRequest` | | CS-5 |
 | `GET /requests/{id}` | client (own) | → `SourcingRequest` | `NOT_FOUND` | CS-16 |
 | `POST /requests/{id}/cancel` | client (own) | → `SourcingRequest` (CANCELLED; its claims, asks and offers withdrawn; existing reservations kept) | `REQUEST_CLOSED` | R-RQ9 |
 
-The request form (CS-15), the agent's summary card ([Start sourcing], via `/proposals/{id}/execute`) and the search empty state (pre-filled form) all end in the same service. Changing constraints and removing an item are **agent cards** (§6.7).
+The agent's summary card ([Start sourcing], via `/proposals/{id}/execute`) is the one way to create a request (BLD-D30); the search page's empty state opens the chat. Changing constraints and removing an item are **agent cards** (§6.7).
 
 ### 6.6 Conversations and the agent
 
@@ -566,7 +566,7 @@ class ExecuteResult(BaseModel):
 | `reserve_group` | Reserves the ticked items at one pharmacy, **all or none** | `GROUP_ITEM_FAILED`, `LIMIT_*`, `PRICE_CHANGED` | R-RQ6 |
 | `accept_offer` | Accepts an open offer the agent re-showed | as `/offers/{id}/accept` | O9 |
 | `cancel` | Cancels a reservation | `RESERVATION_NOT_ACTIVE` | O5 |
-| `request_summary` | Creates the sourcing request ([Start sourcing]) | as `POST /requests` | R-RQ1 |
+| `request_summary` | Creates the sourcing request ([Start sourcing]) | `OUTSIDE_REQUEST_HOURS`, `LIMIT_OPEN_REQUESTS`, `PRODUCT_NOT_ALLOWED`, `VALIDATION_ERROR`, `CLIENT_PAUSED` | R-RQ1 |
 | `constraint_change` | Turns on "tell me about other brands", or raises a max price, on an open request | `REQUEST_CLOSED` | R-RQ4 |
 | `other_brand` | **Nothing.** The card says where another brand is and to ask the pharmacist first; its [Call] button dials the pharmacy. Executing it answers `VALIDATION_ERROR` and changes nothing | `VALIDATION_ERROR` | R-C10 |
 | `remove_item` | Cancels one item of an open request | `REQUEST_CLOSED` | R-RQ4 |
@@ -699,7 +699,7 @@ Within seconds, the clock check runs the agent turn. The client's request page, 
 | **Services** | API routers **and** agent tools → `services/` | The same Python functions do reservations, requests, watches and matching for both. Tools never call HTTP. That's why a tap and a tool can't disagree. |
 | **Proposals** | agent tools → `proposals` table → API → browser | One stored row per agent card. Its `payload` per kind:<br>• `reserve`: `{listing_id, qty, price_lbp_shown, pickup_day, days_of_use}`<br>• `reserve_group`: `{pharmacy_id, pickup_day, items: [{item_key, listing_id, qty, price_lbp_shown, days_of_use, request_item_id?}]}`<br>• `accept_offer`: `{offer_id}`<br>• `cancel`: `{order_id}`<br>• `request_summary`: `{items, district_id, alternatives_ok, max_prices}`<br>• `constraint_change`: `{request_id, alternatives_ok? \| item_max_prices?}`<br>• `remove_item`: `{request_id, request_item_id}`<br>The card's text is rendered from this payload.<br>**As built (step 5):** every payload also holds `card` (`title`, `lines`, `prescription_notice`, `recommended`): the text the card shows, written by code when the tool creates it. `reserve` and each `reserve_group` item also hold `product_id`; a group item holds its `label`. No tool creates an `accept_offer` card: offers are system cards with their own button. |
 | **Deadlines on rows** | services (writer) → worker clock check (reader) | `orders.offer_expires_at` / `deadline`, `sourcing_requests.ends_at` / `window_checked_at`, `claims.ends_at`, `early_release_asks.respond_by`, `email_outbox.next_attempt_at` (`04` R-T10, `05` §3.8) |
-| **Decision events** | services → agent | A `chat_messages` row with `kind = "event"`, a JSON body `{type, ids…}` (types: `not_available`, `system_cancelled`, `early_release_unfulfilled`, `window_check`, `group_item_failed`, `items_unticked`, `request_submitted`), and `conversations.pending_turn_at = now` (`04` R-AG4) |
+| **Decision events** | services → agent | A `chat_messages` row with `kind = "event"`, a JSON body `{type, ids…}` (types: `not_available`, `system_cancelled`, `early_release_unfulfilled`, `window_check`, `group_item_failed`, `items_unticked`, `constraints_changed`, `request_submitted`), and `conversations.pending_turn_at = now` (`04` R-AG4) |
 | **Turn lease** | API and worker | `conversations.turn_lease_until` / `turn_owner` (`05` §6). The API answers `CONVERSATION_BUSY` while it's held. |
 | **Email** | services → `email_outbox` → worker → SES | `{template: "CN-3" \| …, user_id, params}`. The address is resolved at send time; params hold display values and IDs only. |
 | **Clock** | everything | `clock.now()` (UTC, + the demo offset in demo mode) and `clock.today()` (Beirut date). Never `datetime.now()` in domain code (`04` R-T11). |

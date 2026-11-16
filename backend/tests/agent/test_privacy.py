@@ -182,7 +182,10 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
             ),
         ),
         after_status,
-        reply("Working on your request."),
+        # A card made in a turn is shown in it: here, the one that removes the item.
+        lambda prompt: reply(
+            "Working on your request.", proposal_ids=[results(prompt)[1]["proposal_id"]]
+        ),
     )
     assert PendingTurns(agent).run_pending_turns() == 1
 

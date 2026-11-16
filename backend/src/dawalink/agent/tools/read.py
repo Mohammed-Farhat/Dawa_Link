@@ -228,9 +228,31 @@ def _same_medicine(tx: Tx, product_ids: list[uuid.UUID]) -> None:
         )
 
 
+def _the_brand(turn: Turn, tx: Tx, product_id: uuid.UUID) -> set[uuid.UUID]:
+    """The catalog rows that are "the medicine the client asked for".
+
+    In a chat: every row of the brand they named (another box size, another importer).
+    The Ministry lists some brands several times, and a client who names the brand means
+    any of its boxes (`09` FA-43). In a request: the one row its item names, because
+    plans, claims and the item's count are all for that row (`04` R-C10).
+    """
+    if turn.request_id is not None:
+        return {product_id}
+    return catalog.same_brand(tx, product_id)
+
+
+def _with_the_brands_other_rows(
+    turn: Turn, tx: Tx, product_ids: list[uuid.UUID]
+) -> list[uuid.UUID]:
+    """The products to search: those asked for, and the other rows of the first one's brand."""
+    more = sorted(_the_brand(turn, tx, product_ids[0]) - set(product_ids), key=str)
+    return [*product_ids, *more]
+
+
 def _prepare_find_options(turn: Turn, args: FindOptions) -> None:
     def pharmacies(tx: Tx) -> list[uuid.UUID]:
-        return sorted({box.pharmacy_id for box in visible_boxes(tx, product_ids=args.product_ids)})
+        products = _with_the_brands_other_rows(turn, tx, args.product_ids)
+        return sorted({box.pharmacy_id for box in visible_boxes(tx, product_ids=products)})
 
     road_times_first(turn, pharmacies)
 
@@ -242,7 +264,7 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
     found = search.search_listings(
         tx,
         client_id=turn.client_id,
-        product_ids=args.product_ids,
+        product_ids=_with_the_brands_other_rows(turn, tx, args.product_ids),
         location=location_of(tx, turn),
         days_of_use=args.days_of_use,
         pickup_day=args.pickup_day,
@@ -253,12 +275,14 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
     )
     money = rate(tx)
     hours = pharmacies.weekly_hours(tx, [listing.pharmacy.id for listing in found.listings])
+    # Another box size of the brand asked for is that brand, not an alternative.
+    the_brand = _the_brand(turn, tx, asked)
     options = [
         OptionOut(
             listing_id=listing.id,
             product_id=listing.product.id,
             product=listing.product.name,
-            is_alternative=listing.product.id != asked,
+            is_alternative=listing.product.id not in the_brand,
             prescription_required=listing.product.prescription_required,
             pharmacy=pharmacy_out(listing.pharmacy),
             travel=travel_out(listing.travel),
@@ -386,11 +410,24 @@ def _lines(turn: Turn, tx: Tx, args: PlanBasket) -> list[BasketLine]:
 
 
 def _prepare_plan_basket(turn: Turn, args: PlanBasket) -> None:
-    def pharmacies(tx: Tx) -> list[uuid.UUID]:
-        in_play = planning.pharmacies_in_play(tx, _lines(turn, tx, args))
-        return planning.nearest(tx, location_of(tx, turn), in_play)
+    """The road times a plan needs. With more pharmacies than the planner weighs (N-48),
+    the trips from the client to all of them come first: the nearest are chosen by road."""
 
-    road_times_first(turn, pharmacies, between=True)
+    def everyone(tx: Tx) -> list[uuid.UUID]:
+        return planning.pharmacies_stocking(
+            tx, lines=_lines(turn, tx, args), pickup_day=args.pickup_day
+        )
+
+    def weighed(tx: Tx) -> list[uuid.UUID]:
+        return planning.pharmacies_to_weigh(
+            tx,
+            lines=_lines(turn, tx, args),
+            location=location_of(tx, turn),
+            pickup_day=args.pickup_day,
+        )
+
+    road_times_first(turn, everyone)
+    road_times_first(turn, weighed, between=True)
 
 
 def _names(tx: Tx, product_ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:

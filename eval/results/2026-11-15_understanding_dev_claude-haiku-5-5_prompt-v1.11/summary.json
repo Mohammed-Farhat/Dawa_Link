@@ -1,0 +1,110 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "understanding.jsonl",
+  "part": "dev",
+  "prompt_version": "v1.11",
+  "cases": 180,
+  "turns": 320,
+  "cost_usd": 0.434145,
+  "seconds_p50": 5.554,
+  "seconds_p95": 13.515,
+  "turns_that_only_answer": {
+    "turns": 212,
+    "seconds_p50": 4.483499999999999,
+    "seconds_p95": 7.517
+  },
+  "turns_with_cards": {
+    "turns": 108,
+    "seconds_p50": 10.071,
+    "seconds_p95": 14.939
+  },
+  "model_calls_per_turn": 2.35,
+  "not_ok": 0,
+  "checks": {
+    "product": {
+      "cases": 119,
+      "yes": 119,
+      "share": 1.0
+    },
+    "every_item": {
+      "cases": 24,
+      "yes": 24,
+      "share": 1.0
+    },
+    "quantity": {
+      "cases": 119,
+      "yes": 119,
+      "share": 1.0
+    },
+    "budget": {
+      "cases": 18,
+      "yes": 18,
+      "share": 1.0
+    },
+    "days_of_use": {
+      "cases": 11,
+      "yes": 11,
+      "share": 1.0
+    },
+    "pickup_day": {
+      "cases": 12,
+      "yes": 12,
+      "share": 1.0
+    },
+    "situation": {
+      "cases": 7,
+      "yes": 7,
+      "share": 1.0
+    },
+    "preference": {
+      "cases": 6,
+      "yes": 5,
+      "share": 0.8333
+    },
+    "asks_when_it_must": {
+      "cases": 24,
+      "yes": 24,
+      "share": 1.0
+    },
+    "asks_first": {
+      "cases": 114,
+      "yes": 114,
+      "share": 1.0
+    },
+    "asks_needlessly": {
+      "cases": 114,
+      "yes": 3,
+      "share": 0.0263
+    },
+    "asks_for_the_rest": {
+      "cases": 26,
+      "yes": 26,
+      "share": 1.0
+    },
+    "uses_the_answer": {
+      "cases": 114,
+      "yes": 114,
+      "share": 1.0
+    },
+    "shows_a_card": {
+      "cases": 114,
+      "yes": 108,
+      "share": 0.9474
+    },
+    "clinical_refusal": {
+      "cases": 18,
+      "yes": 18,
+      "share": 1.0
+    },
+    "refuses_wrongly": {
+      "cases": 114,
+      "yes": 0,
+      "share": 0.0
+    },
+    "language": {
+      "cases": 180,
+      "yes": 180,
+      "share": 1.0
+    }
+  }
+}
