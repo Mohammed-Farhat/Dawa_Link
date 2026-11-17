@@ -82,7 +82,9 @@ def append(
 ) -> ChatMessage:
     """Adds a message. The caller holds the conversation's lock: it makes the number safe.
 
-    `text` is already free of personal details (INV-10): the callers redact first.
+    `text` is already free of personal details (INV-10): the callers redact first. The
+    one exception is a team reply (`author="admin"`), stored as typed (the owner, Q46):
+    its readers clean it before the model, a trace or an export.
     """
     message = ChatMessage(
         conversation_id=conversation.id,

@@ -60,6 +60,7 @@ docker compose up -d postgres
 | Run the worker | `uv run --env-file ../.env python -m dawalink.worker` |
 | Talk to the agent as a demo client (uses the model in `.env`; Claude spends credit) | `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` |
 | Prepare the database (logins, tables, catalog, demo data) | `uv run --env-file ../.env python -m dawalink.ops.prepare_db` |
+| Create an admin (asks for a password, then shows once the key for an authenticator app) | `uv run --env-file ../.env python -m dawalink.ops.create_admin --email you@example.org --name "Your Name"` |
 | Re-export the API description | `uv run python -m dawalink.ops.export_openapi ../docs/openapi.json` |
 
 **Website** (run these inside `frontend/`):

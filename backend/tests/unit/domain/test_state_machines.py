@@ -127,12 +127,14 @@ def test_only_a_client_tap_secures_an_item() -> None:
 
 
 def test_items_become_unavailable_only_by_the_system_and_cancelled_only_by_the_client() -> None:
-    """R-RQ4: the agent never gives up on an item by itself."""
+    """R-RQ4: the agent never gives up on an item by itself. An item that is still
+    looked for is given up by the client, or by an admin who suspends that client
+    (SM-2: a suspension cancels the client's requests). Never by the agent or the system."""
     for (current, target), actors in ITEM_MACHINE.transitions.items():
         if target is ItemState.UNAVAILABLE:
             assert actors == frozenset({Actor.SYSTEM})
         if target is ItemState.CANCELLED and current is not ItemState.SECURED:
-            assert actors == frozenset({Actor.CLIENT})
+            assert actors == frozenset({Actor.CLIENT, Actor.ADMIN})
         assert Actor.AGENT not in actors or target in (
             ItemState.PROPOSED,
             ItemState.WAITING,

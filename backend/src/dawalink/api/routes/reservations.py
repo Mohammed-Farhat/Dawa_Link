@@ -12,7 +12,9 @@ from dawalink.api.schemas.orders import Reservation, ReservationsPage
 from dawalink.db.models import Order
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from dawalink.domain.orders import OrderState
-from dawalink.services import orders
+from dawalink.domain.state_machine import Actor
+from dawalink.domain.vocabulary import EscalationReason
+from dawalink.services import escalations, orders
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -70,4 +72,23 @@ def cancel_reservation(reservation_id: uuid.UUID, caller: AsClient, work: DoWork
     with work.tx() as tx:
         _own(tx, caller.user_id, reservation_id)
         order = orders.cancel_by_client(tx, caller.user_id, reservation_id)
+        return present.reservations(tx, [order])[0]
+
+
+@router.post("/reservations/{reservation_id}/contest")
+def contest_no_show(reservation_id: uuid.UUID, caller: AsClient, work: DoWork) -> Reservation:
+    """[I picked it up] on an expired reservation: the pharmacy forgot to press
+    [Picked up] (R-N3). Once per reservation, while the no-show still counts. A person
+    from DawaLink looks at it: nothing changes until they do."""
+    with work.tx() as tx:
+        order = orders.contest_no_show(tx, caller.user_id, reservation_id)
+        escalations.escalate(
+            tx,
+            client_id=caller.user_id,
+            reason=EscalationReason.COMPLAINT,
+            # An order number names no person.
+            summary=f"The client says they picked up {order.ref}; it expired as a no-show.",
+            conversation_id=orders.conversation_of(tx, order),
+            actor=Actor.CLIENT,
+        )
         return present.reservations(tx, [order])[0]

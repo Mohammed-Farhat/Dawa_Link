@@ -15,6 +15,7 @@ import re
 import uuid
 from typing import Any
 
+from dawalink.agent.chat import post_team_reply
 from dawalink.agent.llm import ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, calls, reply
 from dawalink.agent.pending import PendingTurns
@@ -149,6 +150,19 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
     request = tap(scene, seen["summary"]).request
     assert request is not None
 
+    # --- A person from DawaLink answers the escalation, and types what they shouldn't ---
+    admin = world.make.user("admin", totp_secret=b"not-a-real-secret")
+    (escalation,) = world.all("SELECT id FROM escalations")
+    tx = world.tx()
+    post_team_reply(
+        tx,
+        admin_id=admin,
+        escalation_id=escalation.id,
+        text="Hello Rami Haddad, we called 70 123 456 and wrote to rami.haddad@example.test. "
+        "The pharmacy at 33.8961, 35.4832 answers on 01 555 444.",
+    )
+    world.settle(tx)
+
     # --- Turn 2b, in the chat: the client names an area instead of sharing a location ---
     scene.turn(
         calls(
@@ -229,3 +243,12 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
     # What the client typed is still useful to the agent, without the details.
     assert "ana [name], e7kine 3a [phone] aw [email]. ana 3and [location]. baddi augmentin" in sent
     assert "Hamra Pharmacy" in sent  # the admin-approved name is the one exception (R-AG8)
+    # The team's reply is stored as the admin typed it (the owner, Q46): the client reads
+    # the number. What the agent reads of it is cleaned like the client's own words.
+    (stored,) = world.all("SELECT text_redacted FROM chat_messages WHERE author = 'admin'")
+    assert "Rami Haddad" in stored.text_redacted
+    assert "01 555 444" in stored.text_redacted
+    assert (
+        "DawaLink team: Hello [name], we called [phone] and wrote to [email]. "
+        "The pharmacy at [location] answers on [phone]." in sent
+    )

@@ -10,6 +10,7 @@ export function SearchChoicesProvider({ children }: { children: ReactNode }) {
     daysOfUse: null,
     pickupDay: null,
     sort: 'best',
+    maxPriceLbp: null,
   })
   const store = useMemo(
     () => ({

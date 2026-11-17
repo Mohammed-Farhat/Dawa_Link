@@ -5,17 +5,20 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, time
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, select
 
 from dawalink.agent import limits as agent_limits
 from dawalink.agent.chat import post_client_message
+from dawalink.agent.context import identity_of
+from dawalink.agent.guards.redact import redact
 from dawalink.agent.turn import Agent
 from dawalink.api import chat_stream, present
 from dawalink.api.deps import AsClient, DoWork, IdempotencyKey, get_agent
 from dawalink.api.errors import ApiError, ErrorCode, request_id_of
 from dawalink.api.limits import Limiter
+from dawalink.api.schemas.admin import AnswerReported, ReportAnswer
 from dawalink.api.schemas.chat import (
     ConversationRef,
     ExecuteProposal,
@@ -29,7 +32,8 @@ from dawalink.db.models import ChatMessage, Conversation
 from dawalink.domain.accounts import ClientStatus, client_can_use_assistant
 from dawalink.domain.clock import BEIRUT
 from dawalink.domain.numbers import CHAT_MESSAGES_PER_DAY, MAX_PAGE_SIZE
-from dawalink.services import clients, conversations, proposals, travel
+from dawalink.domain.vocabulary import ReportReason
+from dawalink.services import answer_reports, clients, conversations, proposals, travel
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -135,6 +139,35 @@ def read_messages(
             location=present.location_summary(tx, conversation),
             server_now=tx.now,
         )
+
+
+@router.post("/conversations/{conversation_id}/messages/{seq}/report", status_code=201)
+def report_answer(
+    conversation_id: uuid.UUID,
+    seq: Annotated[int, Path(ge=1)],
+    body: ReportAnswer,
+    caller: AsClient,
+    work: DoWork,
+) -> AnswerReported:
+    """The thumbs-down under a reply of the assistant, once per reply (SM-10). A copy of
+    the reply and of the messages before it is kept for DawaLink's team; the client's
+    comment is stored without personal details, like a message."""
+    with work.tx() as tx:
+        identity = identity_of(tx, caller.user_id)
+
+        def clean(text: str) -> str:
+            return redact(text, identity).text
+
+        created = answer_reports.report(
+            tx,
+            caller.user_id,
+            conversation_id,
+            seq,
+            reason=ReportReason(body.reason),
+            clean=clean,
+            comment=clean(body.comment) if body.comment else None,
+        )
+        return AnswerReported(id=created.id)
 
 
 def _sent_today(tx: Tx, client_id: uuid.UUID) -> int:

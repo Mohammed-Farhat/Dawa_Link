@@ -38,15 +38,23 @@ MAX_FILE_BYTES = 5 * 1024 * 1024  # N-15
 MAX_ROWS = 10_000  # N-15
 MAX_ERRORS_KEPT = 500
 REQUIRED_COLUMNS = ("product", "batch", "expiry", "quantity")
-ALLOWED_COLUMNS = (*REQUIRED_COLUMNS, "strength")
+# `code` is the Ministry's own number for a product. It is only needed for a medicine
+# whose name and strength the Ministry lists several times (other packs, other makers):
+# the file of rows that weren't read gives the code of each choice (the owner, Q44).
+ALLOWED_COLUMNS = (*REQUIRED_COLUMNS, "strength", "code")
+COLUMNS_SENTENCE = (
+    "the columns must be: product, strength, batch, expiry, quantity, and code if you use it"
+)
 # What the pharmacy downloads and fills in (PS-6). The two rows are invented examples.
 TEMPLATE_CSV = (
-    "product,strength,batch,expiry,quantity\r\n"
-    "Example medicine,500mg,A123,2027-03,12\r\n"
+    "product,strength,batch,expiry,quantity,code\r\n"
+    "Example medicine,500mg,A123,2027-03,12,\r\n"
     # Months only: a spreadsheet leaves "2027-03" alone and rewrites a full date in the
     # computer's own style ("6/30/2027"), tried with Excel on 2026-11-16.
-    "Another example,,B77,2027-06,4\r\n"
+    "Another example,,B77,2027-06,4,\r\n"
 )
+# How many choices a refused row lists.
+MAX_CHOICES = 8
 # A spreadsheet saves "CSV" with a comma, or with a semicolon where the comma is the
 # decimal sign, or with tabs.
 DELIMITERS = (",", ";", "\t")
@@ -222,7 +230,7 @@ def _read_rows(content: bytes) -> list[dict[str, str]]:
             reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
             break
     if reader is None:
-        raise _fail("the columns must be: product, strength, batch, expiry, quantity")
+        raise _fail(COLUMNS_SENTENCE)
     rows: list[dict[str, str]] = []
     for raw in reader:
         row = {
@@ -243,17 +251,53 @@ def _read_rows(content: bytes) -> list[dict[str, str]]:
     return rows
 
 
-def _match_product(tx: Tx, name: str, strength: str) -> tuple[Product | None, dict[str, Any]]:
-    """The catalog product a row names, or why not, with close names to suggest (R-C9)."""
+def _choice(product: Product) -> str:
+    """One of several medicines with the same name, as the errors file lists it: what
+    tells it apart (its form, its pack, its maker), then the code to copy into the file."""
+    what = " ".join(filter(None, (product.form_text, product.presentation_text)))
+    told_apart = ", ".join(filter(None, (what, product.manufacturer)))
+    return f"{told_apart or product.moph_name}: code {product.moph_code}"
+
+
+def _match_product(
+    tx: Tx, name: str, strength: str, code: str = ""
+) -> tuple[Product | None, dict[str, Any]]:
+    """The catalog product a row names, or why not, with close names to suggest (R-C9).
+
+    **A code chooses among the products the name already matches; it never replaces the
+    name.** A mistyped code would otherwise put another medicine on the shelf, at another
+    price, without anyone seeing it: the row has to say the same thing twice.
+    """
     wanted = normalize(name)
-    found = list(tx.session.execute(select(Product).where(Product.search_name == wanted)).scalars())
+    by_name = list(
+        tx.session.execute(select(Product).where(Product.search_name == wanted)).scalars()
+    )
+    found = by_name
+    # A row's strength that no product of that name has: without a code it is taken as a
+    # slip of the pen when the name is enough by itself. With a code it is a
+    # contradiction, and the row is refused: the code may not overrule what the row says.
+    strength_is_wrong = False
     if strength:
         compact = normalize(strength).replace(" ", "")
-        found = [
-            p for p in found if normalize(p.dosage_text or "").replace(" ", "") == compact
-        ] or found
+        with_it = [p for p in by_name if normalize(p.dosage_text or "").replace(" ", "") == compact]
+        strength_is_wrong = not with_it
+        found = with_it or by_name
     if any(product.controlled for product in found):
         return None, {"problem": "this medicine can't be listed on DawaLink"}
+    if code and found:
+        named = [
+            p
+            for p in found
+            if not strength_is_wrong and code.isdigit() and p.moph_code == int(code)
+        ]
+        if named:
+            return named[0], {}
+        found.sort(key=lambda p: p.moph_code)
+        return None, {
+            "problem": "this code is not the code of a medicine with this name and "
+            "strength: check both",
+            "did_you_mean": [_choice(p) for p in found[:MAX_CHOICES]],
+        }
     if len(found) == 1:
         return found[0], {}
     if len(found) > 1:
@@ -264,27 +308,29 @@ def _match_product(tx: Tx, name: str, strength: str) -> tuple[Product | None, di
                 "strengths": strengths,
             }
         # The Ministry lists this name and strength several times: other pack sizes,
-        # other makers, each with its own price. A file can't say which one, and a
-        # guess would put the wrong price on the box.
-        packs = sorted({" ".join(filter(None, (p.form_text, p.presentation_text))) for p in found})
+        # other makers, each with its own price. The name can't say which one, and a
+        # guess would put the wrong price on the box: the code says it.
+        found.sort(key=lambda p: p.moph_code)
         return None, {
             "problem": "several medicines have this name and strength (other packs or "
-            "makers): add this box by hand, choosing it from the list",
-            "did_you_mean": [pack for pack in packs if pack][:5],
+            "makers): write the code of yours in the code column, or add this box by hand",
+            "did_you_mean": [_choice(p) for p in found[:MAX_CHOICES]],
         }
     suggestions = catalog.search_products(tx, name, limit=3)
     names = [p.name for p in suggestions.products] or suggestions.did_you_mean
     return None, {"problem": "no product with this name", "did_you_mean": names}
 
 
-def no_file_can_name(tx: Tx, product_ids: set[uuid.UUID]) -> set[uuid.UUID]:
-    """Of these products, the ones a stock file has no way to point at: the Ministry
-    lists their name and strength several times (other packs, other makers), and a file
-    has a name and a strength only.
+def needs_a_code(tx: Tx, product_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+    """Of these products, the ones a name and a strength don't identify: the Ministry
+    lists them several times (other packs, other makers). A file names one only with
+    the `code` column; without it the row is refused and the box is added by hand.
 
-    Their rows are refused when a file is read, and the pharmacy adds such a box by
-    hand. So a file must not set it to 0 for "not being in the file" (R-U2): it never
-    can be in one.
+    **Such a box is changed by a row that names it, never by its absence** (the
+    exception to R-U2). A pharmacy whose files have no codes keeps these boxes by hand,
+    and its next file must not erase them. A pharmacy that does use codes writes the row
+    with quantity 0 when the box is gone. The count of boxes left alone is in the
+    upload's summary, so nobody takes them for updated.
     """
     if not product_ids:
         return set()
@@ -335,7 +381,9 @@ def validate_upload(
     order = day_month_order(row.get("expiry", "") for row in rows)
     for number, row in enumerate(rows, start=2):  # row 1 is the header
         problem: dict[str, Any] = {}
-        product, problem = _match_product(tx, row.get("product", ""), row.get("strength", ""))
+        product, problem = _match_product(
+            tx, row.get("product", ""), row.get("strength", ""), row.get("code", "")
+        )
         expiry: date | None = None
         quantity: int | None = None
         batch = ""
@@ -381,10 +429,15 @@ def validate_upload(
             select(InventoryItem).where(InventoryItem.pharmacy_id == pharmacy_id)
         ).scalars()
     }
-    beyond = no_file_can_name(tx, {key[0] for key in existing})
-    # What the file doesn't name is set to 0, except what no file could name.
-    dropped = [item for key, item in existing.items() if key not in staged and key[0] not in beyond]
+    beyond = needs_a_code(tx, {key[0] for key in existing})
+    # What the file doesn't name is set to 0, except a box that only a code can name.
+    absent = [item for key, item in existing.items() if key not in staged]
+    dropped = [item for item in absent if item.product_id not in beyond]
     summary = {
+        # In stock, absent from the file, and left as they are (R-U2's exception).
+        "left_alone": sum(
+            1 for item in absent if item.product_id in beyond and item.qty_on_hand > 0
+        ),
         "new": sum(1 for key in staged if key not in existing),
         "changed": sum(
             1 for key, qty in staged.items() if key in existing and existing[key].qty_on_hand != qty
@@ -428,8 +481,8 @@ def apply_upload(tx: Tx, pharmacy_id: uuid.UUID, upload_id: uuid.UUID) -> Invent
     """[Apply]: the file becomes the pharmacy's stock, in one transaction (R-U1 to R-U4).
 
     A box missing from the file is set to 0 and kept. Price overrides and paused listings
-    survive. Reserved units are never taken away. **A box that no file can name stays as
-    it is** (`no_file_can_name`): it was added by hand because it had to be.
+    survive. Reserved units are never taken away. **A box that only a code can name is
+    changed by a row that names it, never by its absence** (`needs_a_code`).
     """
     can_manage(tx, pharmacy_id)
     current = {
@@ -461,7 +514,7 @@ def apply_upload(tx: Tx, pharmacy_id: uuid.UUID, upload_id: uuid.UUID) -> Invent
     }
     protected = 0
     touched: set[uuid.UUID] = set()
-    beyond = no_file_can_name(tx, {key[0] for key in current})
+    beyond = needs_a_code(tx, {key[0] for key in current})
     for key, quantity in staged.items():
         item = current.get(key)
         if item is None:

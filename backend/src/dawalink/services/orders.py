@@ -45,6 +45,8 @@ from dawalink.domain.numbers import (
     DEFAULT_DAYS_OF_USE,
     MAX_AVAILABILITY_SHOWN,
     MAX_UNITS_PER_GROUP,
+    NO_SHOW_WINDOW,
+    NO_SHOWS_BEFORE_PAUSE,
     OFFER_SKIP_AFTER_DECLINE,
     PICKUP_REMINDER_BEFORE,
 )
@@ -698,6 +700,10 @@ def _pause_after_no_shows(tx: Tx, client: ClientProfile) -> None:
         after={"status": client.status, "paused_until": until.isoformat()},
         reason="counted no-shows (R-N1)",
     )
+    # Imported here: the flags' own service suspends accounts, which cancels orders.
+    from dawalink.services import abuse_flags
+
+    abuse_flags.raise_no_show_pause(tx, client.user_id, len(counted))
     notify(
         tx,
         client.user_id,
@@ -719,6 +725,104 @@ def _pause_after_no_shows(tx: Tx, client: ClientProfile) -> None:
             index_where=sql_text("state = 'OPEN'"),
         )
     )
+
+
+def _counted_no_shows(tx: Tx, client_id: uuid.UUID) -> list[datetime]:
+    return [
+        moment
+        for moment in tx.session.execute(
+            select(Order.closed_at).where(
+                Order.client_id == client_id,
+                Order.counts_as_no_show.is_(True),
+                Order.closed_at.is_not(None),
+            )
+        ).scalars()
+        if moment
+    ]
+
+
+def contest_no_show(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID) -> Order:
+    """[I picked it up] on an expired reservation (R-N3): the pharmacy forgot to press
+    [Picked up]. Once per reservation, while the no-show still counts (30 days). It
+    changes nothing by itself: a person from DawaLink looks at it.
+    """
+    clients.profile(tx, client_id, lock=True)
+    seen = _peek(tx, order_id)
+    if seen is None or seen.client_id != client_id:
+        raise ServiceError(Code.NOT_FOUND, "Unknown reservation.")
+    order = lock_order(tx, order_id)
+    assert order is not None
+    still_counts = (
+        order.state == OrderState.EXPIRED_NO_SHOW.value
+        and order.counts_as_no_show
+        and order.contested_at is None
+        and order.closed_at is not None
+        and order.closed_at > tx.now - NO_SHOW_WINDOW
+    )
+    if not still_counts:
+        raise ServiceError(Code.NOT_CONTESTABLE, "This reservation can't be contested.")
+    order.contested_at = tx.now
+    audit.record(
+        tx,
+        Actor.CLIENT,
+        "order.no_show_contested",
+        "order",
+        order.id,
+        actor_id=client_id,
+        after={"state": order.state, "contested": True},
+    )
+    return order
+
+
+def clear_no_show(tx: Tx, admin_id: uuid.UUID, order_id: uuid.UUID, *, reason: str) -> Order:
+    """An admin accepts a contest: the reservation no longer counts as a no-show, and a
+    pause it caused is lifted if the client's other no-shows don't justify it (R-N3).
+    The reservation itself stays what it is: expired (INV-4's one exception)."""
+    reason = audit.required_reason(reason)
+    seen = _peek(tx, order_id)
+    if seen is None:
+        raise ServiceError(Code.NOT_FOUND, "Unknown reservation.")
+    client = clients.profile(tx, seen.client_id, lock=True)
+    order = lock_order(tx, order_id)
+    assert order is not None
+    if (
+        order.state != OrderState.EXPIRED_NO_SHOW.value
+        or not order.counts_as_no_show
+        or order.contested_at is None
+    ):
+        raise ServiceError(
+            Code.NOT_CONTESTABLE, "Only a contested no-show that still counts can be cleared."
+        )
+    order.counts_as_no_show = False
+    audit.record(
+        tx,
+        Actor.ADMIN,
+        "order.no_show_cleared",
+        "order",
+        order.id,
+        actor_id=admin_id,
+        before={"counts_as_no_show": True},
+        after={"counts_as_no_show": False},
+        reason=reason,
+    )
+    if client.status == ClientStatus.PAUSED.value:
+        recent = [m for m in _counted_no_shows(tx, client.user_id) if m > tx.now - NO_SHOW_WINDOW]
+        if len(recent) < NO_SHOWS_BEFORE_PAUSE:
+            CLIENT_MACHINE.check(ClientStatus.PAUSED, ClientStatus.ACTIVE, Actor.ADMIN)
+            before = {"status": client.status, "paused_until": str(client.paused_until)}
+            client.status, client.paused_until = ClientStatus.ACTIVE.value, None
+            audit.record(
+                tx,
+                Actor.ADMIN,
+                "client.pause_lifted",
+                "client",
+                client.user_id,
+                actor_id=admin_id,
+                before=before,
+                after={"status": client.status},
+                reason="the no-show that caused the pause was cleared",
+            )
+    return order
 
 
 def lift_pause(tx: Tx, client_id: uuid.UUID) -> bool:

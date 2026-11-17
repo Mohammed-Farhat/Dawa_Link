@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import Field
 
 from dawalink.api.schemas.accounts import OpeningRange, PinIn
-from dawalink.api.schemas.common import In, Money, Out, Pin, ProductSummary
+from dawalink.api.schemas.common import DistrictId, In, Money, Out, Pin, ProductSummary
 from dawalink.api.schemas.search import DayHours
 
 
@@ -47,17 +47,22 @@ class RegistrationChange(In):
     license_number: str | None = Field(default=None, min_length=1, max_length=40)
     phone: str | None = Field(default=None, min_length=1, max_length=30)
     address: str | None = Field(default=None, min_length=1, max_length=300)
-    district_id: int | None = None
+    district_id: DistrictId | None = None
     location: PinIn | None = None
     pickup_days: int | None = Field(default=None, ge=1, le=3)
     hours: list[OpeningRange] | None = Field(default=None, max_length=14)
 
 
 class SettingsChange(In):
-    """What an approved pharmacy changes by itself (PS-10): its hours and its pickup
-    time. Its name, licence, address, pin and phone are changed by DawaLink's team."""
+    """What an approved pharmacy changes by itself (PS-10): its hours, its pickup time,
+    its phone number, its address and its pin. Its name and its licence are changed by
+    DawaLink's team."""
 
     pickup_days: int | None = Field(default=None, ge=1, le=3)
+    phone: str | None = Field(default=None, min_length=1, max_length=30)
+    address: str | None = Field(default=None, min_length=1, max_length=300)
+    district_id: DistrictId | None = None
+    location: PinIn | None = None
     hours: list[OpeningRange] | None = Field(default=None, max_length=14)
 
 

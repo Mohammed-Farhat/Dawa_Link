@@ -7,6 +7,7 @@ import { Banner } from '../../components/layout'
 import { clock, dayAndClock } from '../../format'
 import { strings } from '../../strings/en'
 import { UnverifiedBanner } from '../client/HomePage'
+import { NotificationsList } from '../client/NotificationsPage'
 import { AskCard } from './AskCard'
 import {
   useAsks,
@@ -50,7 +51,7 @@ export default function PharmacyPortal() {
         {!pharmacy.email_verified && <UnverifiedBanner text={s.confirmEmail} />}
         {pharmacy.status === 'PENDING' && pharmacy.email_verified && (
           <Banner tone={pharmacy.info_requested ? 'amber' : 'grey'}>
-            {pharmacy.info_requested ? s.infoRequested : s.pending}
+            {pharmacy.info_requested ? s.infoRequested(pharmacy.status_reason) : s.pending}
           </Banner>
         )}
         {pharmacy.status === 'REJECTED' && (
@@ -64,6 +65,14 @@ export default function PharmacyPortal() {
             {approved && <Route path="inventory" element={<InventoryPage />} />}
             {approved && <Route path="listings" element={<ListingsPage />} />}
             <Route path="settings" element={<SettingsPage pharmacy={pharmacy} />} />
+            <Route
+              path="notifications"
+              element={
+                <main className="portal__main">
+                  <NotificationsList />
+                </main>
+              }
+            />
           </Routes>
         ) : (
           // Waiting, or rejected: the pharmacy corrects what it typed (PS-2).
@@ -119,6 +128,9 @@ function Bar({
                 </NavLink>
               </>
             )}
+            <NavLink to="/pharmacy/notifications" className="bar__tab">
+              {strings.notifications.title}
+            </NavLink>
             <NavLink to="/pharmacy/settings" className="bar__tab">
               {s.settings}
             </NavLink>

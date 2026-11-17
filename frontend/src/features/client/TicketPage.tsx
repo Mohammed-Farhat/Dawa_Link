@@ -38,6 +38,23 @@ export function TicketPage() {
   const [asking, setAsking] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [contested, setContested] = useState(false)
+
+  /** [I picked it up]: the pharmacy forgot to press [Picked up] (docs/04 R-N3). */
+  async function contest() {
+    setFailed(null)
+    try {
+      const told = await unwrap(
+        api.POST('/api/v1/reservations/{reservation_id}/contest', {
+          params: { path: { reservation_id: id } },
+        }),
+      )
+      queryClient.setQueryData(['reservation', id], told)
+      setContested(true)
+    } catch (error) {
+      setFailed(error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR')
+    }
+  }
 
   async function cancel() {
     setCancelling(true)
@@ -170,6 +187,20 @@ export function TicketPage() {
                 {s.cancel}
               </button>
             )}
+            {reservation.contestable && !contested && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+                <span style={{ color: 'var(--ink-on-dark)', fontSize: 15, textAlign: 'center' }}>
+                  {s.contestHint}
+                </span>
+                <button type="button" className="pill-button pill-button--white" onClick={() => void contest()}>
+                  {s.contest}
+                </button>
+              </div>
+            )}
+            <div role="status" aria-live="polite">
+              {contested && <Banner tone="green">{s.contested}</Banner>}
+              {failed && !asking && <Banner tone="red">{errorMessage(failed)}</Banner>}
+            </div>
           </>
         )}
       </main>

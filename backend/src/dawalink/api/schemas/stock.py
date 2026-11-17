@@ -85,6 +85,9 @@ class UploadSummary(Out):
     zeroed: int
     # The file says less than clients have reserved: the reserved packs stay (R-U3).
     reserved_kept: int
+    # In stock, absent from the file, and left as they are: boxes of a medicine that only
+    # the `code` column can name. A row with their code and quantity 0 empties them.
+    left_alone: int
 
 
 class StockUpload(Out):

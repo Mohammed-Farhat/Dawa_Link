@@ -74,7 +74,7 @@ export const UPLOAD = {
   rows_total: 3,
   rows_ok: 2,
   rows_error: 1,
-  summary: { new: 2, changed: 0, zeroed: 1, reserved_kept: 1 },
+  summary: { new: 2, changed: 0, zeroed: 1, reserved_kept: 1, left_alone: 0 },
   errors: [
     { row: 3, product: 'Panadoll', problem: 'no product with this name', did_you_mean: ['PANADOL'] },
   ],

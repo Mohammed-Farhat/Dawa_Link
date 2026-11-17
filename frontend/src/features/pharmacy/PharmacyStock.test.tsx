@@ -119,8 +119,13 @@ describe("The pharmacy's inventory (PS-6)", () => {
     await user.click(await screen.findByRole('button', { name: a.submit }))
     expect(await screen.findByText(a.problem)).toBeInTheDocument()
     await user.type(screen.getByLabelText(a.product), 'augm')
-    // The pack and the price are on the choice: a name and a strength can be listed twice.
-    await user.click(await screen.findByRole('button', { name: /AUGMENTIN 1G · 1 g · tablet · 14 tablets/ }))
+    // The pack, the price and the code are on the choice: a name and a strength can be
+    // listed twice, and the code is what a stock file writes to say which one.
+    await user.click(
+      await screen.findByRole('button', {
+        name: /AUGMENTIN 1G · 1 g · tablet · 14 tablets · 1,000,000 LBP · code 7001/,
+      }),
+    )
     await user.type(screen.getByLabelText(a.batch), 'B77')
     await user.type(screen.getByLabelText(a.expiry), '2027-03-31')
     await user.type(screen.getByLabelText(a.quantity), '4')
@@ -172,6 +177,18 @@ describe('The files a pharmacy downloads', () => {
 })
 
 describe('A stock file (SM-4)', () => {
+  it('says which boxes a file left as they are, and how to empty one (Q44)', async () => {
+    stockApi({
+      'GET /api/v1/pharmacy/inventory/uploads/waiting': {
+        upload: { ...UPLOAD, summary: { ...UPLOAD.summary, left_alone: 2 } },
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+
+    expect(await screen.findByText(u.leftAlone(2))).toBeInTheDocument()
+    expect(screen.getByText(u.codeHint)).toBeInTheDocument()
+  })
+
   it('is read and summarised, and changes nothing until it is applied', async () => {
     let waiting: unknown = null
     const api = stockApi({

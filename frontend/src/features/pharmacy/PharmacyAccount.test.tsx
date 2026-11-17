@@ -166,13 +166,14 @@ describe('A pharmacy that waits (PS-2)', () => {
 
   it('corrects what it typed while it waits', async () => {
     const api = portalApi(
-      { status: 'PENDING', info_requested: true },
+      { status: 'PENDING', info_requested: true, status_reason: 'Which street is it on?' },
       { 'PATCH /api/v1/pharmacy/me/registration': { ...PROFILE, status: 'PENDING' } },
     )
     const { container } = renderApp(<AppRoutes />, { path: '/pharmacy' })
     const user = userEvent.setup()
 
-    expect(await screen.findByText(s.infoRequested)).toBeInTheDocument()
+    // What the admin asked for is on the pharmacy's own screen, in the admin's words.
+    expect(await screen.findByText(s.infoRequested('Which street is it on?'))).toBeInTheDocument()
     const name = await screen.findByLabelText(d.name)
     expect(name).toHaveValue('Hamra Pharmacy')
     // Midnight is shown as 00:00: a time field has no 24:00.
@@ -244,10 +245,96 @@ describe("The pharmacy's settings (PS-10)", () => {
         { weekday: 1, open: '08:00', close: '24:00' },
       ],
     })
-    // Its phone and its name are shown, with who changes them (TH-59, TM-D2). No field.
-    expect(screen.getByText('+9611000000')).toBeInTheDocument()
+    // Its name is shown with who changes it (TM-D2): no field. The phone was not
+    // touched, so it is not sent.
     expect(screen.getByText(d.fixed)).toBeInTheDocument()
-    expect(screen.queryByLabelText(d.phone)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(d.name)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(d.phone)).toHaveValue('+9611000000')
+  })
+
+  it('changes its own phone number (the owner, Q42)', async () => {
+    const api = portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': { ...PROFILE, phone: '+96170555123' },
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+
+    const phone = await screen.findByLabelText(d.phone)
+    await user.clear(phone)
+    await user.type(phone, '12')
+    await user.click(screen.getByRole('button', { name: d.save }))
+    // Not a number: said on the field, nothing sent.
+    expect(await screen.findByText(d.problems.phone)).toBeInTheDocument()
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me')).toEqual([])
+
+    await user.clear(phone)
+    await user.type(phone, '70 555 123')
+    await user.click(screen.getByRole('button', { name: d.save }))
+
+    expect(await screen.findByText(d.saved)).toBeInTheDocument()
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me')[0].body).toMatchObject({ phone: '70 555 123' })
+    // The field shows the number as it is stored now.
+    expect(phone).toHaveValue('+96170555123')
+  })
+
+  it('changes its own address and pin when it moves (the owner, Q45)', async () => {
+    const api = portalApi(
+      // It is at another place than where the test map puts the pin.
+      { location: { lat: 33.9, lon: 35.5 } },
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': {
+          ...PROFILE,
+          address: '9 New Street',
+          location: { lat: 33.8959, lon: 35.4828 },
+        },
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+    const page = s.settingsPage
+
+    const save = await screen.findByRole('button', { name: page.placeSave })
+    // Nothing was changed yet: nothing to save.
+    expect(save).toBeDisabled()
+    const address = screen.getByLabelText(d.address)
+    await user.clear(address)
+    await user.type(address, '9 New Street')
+    await user.click(await screen.findByRole('button', { name: 'put the pin' }))
+    await user.click(save)
+
+    expect(await screen.findByText(page.placeSaved)).toBeInTheDocument()
+    // Only what changed is sent: the district was not touched.
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me')[0].body).toEqual({
+      address: '9 New Street',
+      location: { lat: 33.8959, lon: 35.4828 },
+    })
+    // Its name and its licence stay with DawaLink's team.
+    expect(screen.queryByLabelText(d.name)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(d.license)).not.toBeInTheDocument()
+  })
+
+  it('says so when the new number belongs to another pharmacy', async () => {
+    portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': refusal(409, 'PHONE_TAKEN'),
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+
+    const phone = await screen.findByLabelText(d.phone)
+    await user.clear(phone)
+    await user.type(phone, '03 999 888')
+    await user.click(screen.getByRole('button', { name: d.save }))
+
+    expect(await screen.findByText(strings.errors.PHONE_TAKEN)).toBeInTheDocument()
   })
 
   it('refuses hours that overlap before sending them', async () => {

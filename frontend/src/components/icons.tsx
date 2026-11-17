@@ -122,3 +122,8 @@ export const InfoIcon = (p: Props) => (
     <path d="M12 11v6M12 7.5v.5" />
   </Icon>
 )
+export const ThumbDownIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M10 15v4a2 2 0 0 0 2 2l4-8V4H7.2a2 2 0 0 0-2 1.6l-1.2 7A2 2 0 0 0 6 15h4zM16 4h3v9h-3" />
+  </Icon>
+)

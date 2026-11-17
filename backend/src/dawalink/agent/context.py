@@ -189,7 +189,11 @@ def _agent_cards(tx: Tx, known: dict[uuid.UUID, Proposal], cards: Sequence[Any])
 
 
 def _transcript(
-    tx: Tx, conversation_id: uuid.UUID, messages: Sequence[ChatMessage], money: Any
+    tx: Tx,
+    conversation_id: uuid.UUID,
+    messages: Sequence[ChatMessage],
+    money: Any,
+    identity: Identity,
 ) -> list[str]:
     ids = []
     for message in messages:
@@ -217,8 +221,11 @@ def _transcript(
             cards = _agent_cards(tx, known, message.cards or [])
             lines.append(f"{head} you: {message.text_redacted or ''}{cards}")
         elif message.author == "admin":
-            # Typed by a person from DawaLink: patterns are removed again before the model.
-            lines.append(f"{head} DawaLink team: {redact(message.text_redacted or '').text}")
+            # Typed by a person from DawaLink and stored as typed (the owner, Q46): this
+            # is where the client's own details and every phone, email or coordinate are
+            # removed from it, before the model.
+            said = redact(message.text_redacted or "", identity).text
+            lines.append(f"{head} DawaLink team: {said}")
         else:
             lines.append(f"{head} client: {message.text_redacted or ''}")
     return lines
@@ -386,7 +393,8 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
             request_status(tx, request).model_dump_json(exclude_none=True),
         ]
     block += ["", "## The conversation so far (oldest first)"]
-    block += _transcript(tx, conversation_id, messages, money) or ["(nothing yet)"]
+    identity = identity_of(tx, client_id)
+    block += _transcript(tx, conversation_id, messages, money, identity) or ["(nothing yet)"]
     block += ["", "## What to do now", _WHAT_NOW[trigger]]
 
     return Loaded(
@@ -396,7 +404,7 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         request_id=request_id,
         trigger=trigger,
         case_state=case,
-        identity=identity_of(tx, client_id),
+        identity=identity,
         last_seq=messages[-1].seq if messages else 0,
         client_text=client_text,
         block="\n".join(block),

@@ -7,7 +7,7 @@ offers expire, windows end and no-shows happen, with no other change.
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, func, select
 from sqlalchemy.dialects.postgresql import insert as upsert
 
 from dawalink.db.models import AppState
@@ -56,7 +56,10 @@ def advance_demo_clock(
     statement = upsert(AppState).values(key=OFFSET_KEY, value=int(after.total_seconds()))
     tx.session.execute(
         statement.on_conflict_do_update(
-            index_elements=[AppState.key], set_={"value": statement.excluded.value}
+            index_elements=[AppState.key],
+            # `updated_at`: when the clock was last moved, in real time (the health page
+            # needs it to tell "the worker is late" from "the clock just jumped").
+            set_={"value": statement.excluded.value, "updated_at": func.now()},
         )
     )
     audit.record(

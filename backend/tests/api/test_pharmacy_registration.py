@@ -3,6 +3,7 @@ R-AU7; docs/03 PS-1, PS-2, PS-10; docs/06 §6.1, §6.9; docs/10 TH-59, TM-D2, TM
 
 import copy
 import uuid
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -262,8 +263,8 @@ class TestWhileItWaits:
         assert "pharmacy.resubmitted" in api.world.audit_actions(pharmacy)
 
     def test_after_approval_the_pharmacy_changes_none_of_it(self, api: Api) -> None:
-        """TM-D2, TH-59: clients rely on the name and dial the number; the AI reads the
-        name. After approval only DawaLink's team changes them."""
+        """TM-D2: the AI shows the name to clients, and the admin verified the licence.
+        After approval only DawaLink's team changes those two."""
         http = api.http()
         pharmacy, headers = a_pharmacy(api, "APPROVED")
 
@@ -275,10 +276,14 @@ class TestWhileItWaits:
             answer = http.patch("/api/v1/pharmacy/me/registration", json=body, headers=headers)
             assert (answer.status_code, code_of(answer)) == (403, "PHARMACY_NOT_APPROVED")
         # The settings endpoint doesn't know these fields at all.
-        sneaky = http.patch("/api/v1/pharmacy/me", json={"phone": "70 555 123"}, headers=headers)
-        assert sneaky.status_code == 422
-        stored = api.world.one("SELECT name, phone FROM pharmacies WHERE id = :id", id=pharmacy)
-        assert tuple(stored) == ("Hamra Pharmacy", "+9611234567")
+        for field, value in (("name", "Another Name"), ("license_number", "PH0000")):
+            sneaky = http.patch("/api/v1/pharmacy/me", json={field: value}, headers=headers)
+            assert sneaky.status_code == 422, field
+        stored = api.world.one(
+            "SELECT name, license_number, phone FROM pharmacies WHERE id = :id", id=pharmacy
+        )
+        assert (stored.name, stored.license_number) == ("Hamra Pharmacy", "PH1234")
+        assert stored.phone == "+9611234567"
 
 
 class TestSettings:
@@ -306,6 +311,126 @@ class TestSettings:
             {"weekday": 0, "open": "16:00", "close": "21:00"},
         ]
         assert api.world.audit_actions(pharmacy)[-1] == "pharmacy.settings"
+
+    def test_an_approved_pharmacy_changes_its_own_phone_number(self, api: Api) -> None:
+        """The owner, 2026-11-16 (Q42): an admin can't know that a pharmacy got a new
+        number. The change is checked like the first number, and the admin can see that
+        it happened: the audit event names the field, never the number."""
+        http = api.http()
+        pharmacy, headers = a_pharmacy(api, "APPROVED")
+
+        answer = http.patch("/api/v1/pharmacy/me", json={"phone": "70 555 123"}, headers=headers)
+        same_again = http.patch(
+            "/api/v1/pharmacy/me", json={"phone": "+961 70 555 123"}, headers=headers
+        )
+
+        assert (answer.status_code, answer.json()["phone"]) == (200, "+96170555123")
+        assert same_again.status_code == 200
+        events = api.world.all(
+            "SELECT action, before, after FROM audit_events WHERE entity_id = :id ORDER BY id",
+            id=pharmacy,
+        )
+        changes = [event for event in events if event.action == "pharmacy.phone_changed"]
+        # Written once: sending the number it already has changes nothing.
+        assert [(event.before, event.after) for event in changes] == [(None, {"fields": ["phone"]})]
+        assert "70555123" not in str([tuple(event) for event in events])
+
+    def test_an_approved_pharmacy_moves_its_own_address_and_pin(self, api: Api) -> None:
+        """The owner, 2026-11-16 (Q45). The new place counts at once: clients see it,
+        the pharmacy stays listed, and the road times counted to the old pin are dropped.
+        The pin waits for an admin's look, which gates nothing."""
+        http = api.http()
+        pharmacy, headers = a_pharmacy(api, "APPROVED")
+        with api.world.as_owner():
+            api.world.connection.exec_driver_sql(
+                "UPDATE pharmacies SET location_checked_at = now() WHERE id = %s", (pharmacy,)
+            )
+            api.world.connection.exec_driver_sql(
+                "INSERT INTO travel_time_cache "
+                "(pharmacy_id, origin_cell, mode, minutes, km, source, computed_at) "
+                "VALUES (%s, '33.890,35.500', 'car', 7, 2.1, 'road', %s)",
+                (pharmacy, api.world.clock.now()),
+            )
+
+        moved = http.patch(
+            "/api/v1/pharmacy/me",
+            json={
+                "address": "9 New Street",
+                "district_id": 2,
+                "location": {"lat": 33.9002, "lon": 35.4802},
+            },
+            headers=headers,
+        )
+        same = http.patch("/api/v1/pharmacy/me", json={"address": "9 New Street"}, headers=headers)
+
+        shown = moved.json()
+        assert (moved.status_code, shown["status"]) == (200, "APPROVED")
+        assert (shown["address"], shown["district_id"]) == ("9 New Street", 2)
+        assert shown["location"] == {"lat": 33.9002, "lon": 35.4802}
+        assert same.status_code == 200
+        stored = api.world.one(
+            "SELECT location_checked_at FROM pharmacies WHERE id = :id", id=pharmacy
+        )
+        assert stored.location_checked_at is None
+        fresh = api.world.one(
+            "SELECT count(*) AS n FROM travel_time_cache "
+            "WHERE pharmacy_id = :id AND computed_at > :day_ago",
+            id=pharmacy,
+            day_ago=api.world.clock.now() - timedelta(hours=24),
+        )
+        assert fresh.n == 0
+        events = api.world.all(
+            "SELECT action, after FROM audit_events WHERE entity_id = :id ORDER BY id", id=pharmacy
+        )
+        # Written once, with the fields that changed and none of their values.
+        assert [(event.action, event.after) for event in events] == [
+            ("pharmacy.moved", {"fields": ["address", "district_id", "lat", "lon"]})
+        ]
+
+    def test_a_new_place_is_checked_like_the_first_one(self, api: Api) -> None:
+        http = api.http()
+        pharmacy, headers = a_pharmacy(api, "APPROVED")
+        _, waiting = a_pharmacy_more(api, "PENDING")
+
+        def refused(body: dict[str, object], login: dict[str, str] = headers) -> tuple[int, str]:
+            answer = http.patch("/api/v1/pharmacy/me", json=body, headers=login)
+            field = answer.json()["error"]["details"].get("field", "")
+            return answer.status_code, field or code_of(answer)
+
+        assert refused({"address": "x"}) == (422, "address")
+        assert refused({"district_id": 999}) == (422, "district_id")
+        # A number no district could have is refused before the database sees it.
+        assert refused({"district_id": 99_999}) == (422, "VALIDATION_ERROR")
+        # A pin outside Lebanon.
+        assert refused({"location": {"lat": 48.85, "lon": 2.35}}) == (422, "location")
+        assert refused({"address": "9 New Street"}, waiting) == (403, "PHARMACY_NOT_APPROVED")
+        assert "pharmacy.moved" not in api.world.audit_actions(pharmacy)
+
+    def test_a_new_phone_number_is_checked_like_the_first_one(self, api: Api) -> None:
+        http = api.http()
+        pharmacy, headers = a_pharmacy(api, "APPROVED")
+        api.world.make.pharmacy(license_number="PH777", phone="+9613999888")
+        _, waiting = a_pharmacy_more(api, "PENDING")
+
+        not_a_number = http.patch(
+            "/api/v1/pharmacy/me", json={"phone": "call 03 123 456"}, headers=headers
+        )
+        abroad = http.patch(
+            "/api/v1/pharmacy/me", json={"phone": "+1 212 555 0100"}, headers=headers
+        )
+        taken = http.patch("/api/v1/pharmacy/me", json={"phone": "03 999 888"}, headers=headers)
+        not_approved = http.patch(
+            "/api/v1/pharmacy/me", json={"phone": "70 555 123"}, headers=waiting
+        )
+
+        for answer in (not_a_number, abroad):
+            assert (answer.status_code, code_of(answer)) == (422, "VALIDATION_ERROR")
+            assert answer.json()["error"]["details"]["field"] == "phone"
+        assert (taken.status_code, code_of(taken)) == (409, "PHONE_TAKEN")
+        assert (not_approved.status_code, code_of(not_approved)) == (403, "PHARMACY_NOT_APPROVED")
+        stored = api.world.one("SELECT phone FROM pharmacies WHERE id = :id", id=pharmacy)
+        assert stored.phone == "+9611234567"
+        assert "pharmacy.phone_changed" not in api.world.audit_actions(pharmacy)
 
     def test_only_the_pickup_time_changes_when_only_it_is_sent(self, api: Api) -> None:
         http = api.http()

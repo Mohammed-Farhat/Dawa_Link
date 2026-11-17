@@ -99,7 +99,7 @@ def read_product(product_id: uuid.UUID, _caller: SignedIn, work: DoWork) -> Prod
         )
 
 
-def _location(
+def location_of(
     tx: Tx, client_id: uuid.UUID, sent: LocationIn | None
 ) -> tuple[Location, LocationSummary]:
     """Where travel times are counted from in this search: what was sent, or the
@@ -125,7 +125,7 @@ def _location(
     return travel.district_location(tx, home.id), LocationSummary(source="profile", label=home.name)
 
 
-def _count_the_point(request: Request, client_id: uuid.UUID, sent: LocationIn | None) -> None:
+def count_the_point(request: Request, client_id: uuid.UUID, sent: LocationIn | None) -> None:
     """A new shared point can start a paid routing call, so a client may send only so
     many different ones an hour (N-47). The same place again costs nothing."""
     if sent is None or sent.lat is None or sent.lon is None:
@@ -158,7 +158,7 @@ def _road_times_first(
     if routing is None or time.monotonic() < request.app.state.routing_paused_until:
         return
     with work.tx() as tx:
-        origin, _ = _location(tx, client_id, sent)
+        origin, _ = location_of(tx, client_id, sent)
         pharmacy_ids = pharmacy_ids_of(tx)
         if not pharmacy_ids:
             return
@@ -181,7 +181,7 @@ def search_listings(
     With `days_of_use`, boxes that don't last are left out. With `pickup_day`, only
     pharmacies that accept that day are shown, and the fit is counted from it.
     """
-    _count_the_point(request, caller.user_id, body.location)
+    count_the_point(request, caller.user_id, body.location)
     _road_times_first(
         request,
         work,
@@ -192,7 +192,7 @@ def search_listings(
         ),
     )
     with work.tx() as tx:
-        origin, where = _location(tx, caller.user_id, body.location)
+        origin, where = location_of(tx, caller.user_id, body.location)
         lbp_per_usd = present.rate(tx)
         max_price_lbp = (
             to_lbp(body.max_price.amount, body.max_price.currency, int(lbp_per_usd or 1))
@@ -243,7 +243,7 @@ def view_listing(
 ) -> ListingDetail:
     """One box and its pharmacy, for their own page (CS-7). A box that stopped being
     visible answers `NOT_FOUND`."""
-    _count_the_point(request, caller.user_id, body.location)
+    count_the_point(request, caller.user_id, body.location)
     _road_times_first(
         request,
         work,
@@ -252,7 +252,7 @@ def view_listing(
         lambda tx: [box.pharmacy_id for box in search.visible_boxes(tx, item_ids=[listing_id])],
     )
     with work.tx() as tx:
-        origin, where = _location(tx, caller.user_id, body.location)
+        origin, where = location_of(tx, caller.user_id, body.location)
         found = search.one_listing(
             tx,
             client_id=caller.user_id,

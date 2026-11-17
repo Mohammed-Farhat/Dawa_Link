@@ -252,6 +252,32 @@ def cancel_request(tx: Tx, client_id: uuid.UUID, request_id: uuid.UUID) -> Sourc
     return request
 
 
+def end_for_suspension(tx: Tx, client_id: uuid.UUID, admin_id: uuid.UUID) -> int:
+    """An admin suspended the client: every open request of theirs ends, CANCELLED (SM-2).
+
+    What is still searched for or waited for is given up. A reserved box is not touched
+    here: the caller cancels the client's open orders next, and because the request is
+    already closed as cancelled, nothing opens it again (R-RQ12). The caller holds the
+    client's lock and the locks of the boxes behind their open orders.
+    """
+    open_requests = list(
+        tx.session.execute(
+            select(SourcingRequest)
+            .where(
+                SourcingRequest.client_id == client_id,
+                SourcingRequest.state == RequestState.OPEN.value,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars()
+    )
+    for request in open_requests:
+        for item in items_of(tx, request.id, lock=True):
+            _cancel_item(tx, item, Actor.ADMIN, "the client was suspended")
+        _close(tx, request, RequestOutcome.CANCELLED, Actor.ADMIN, actor_id=admin_id)
+    return len(open_requests)
+
+
 def remove_item(tx: Tx, client_id: uuid.UUID, request_item_id: uuid.UUID) -> RequestItem:
     """The client drops one medicine from the request (the agent may only propose it)."""
     clients.profile(tx, client_id, lock=True)

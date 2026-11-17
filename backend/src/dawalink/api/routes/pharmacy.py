@@ -180,8 +180,9 @@ def resubmit_registration(pharmacy_id: OwnPharmacy, work: DoWork) -> PharmacyPro
 def change_settings(
     body: SettingsChange, pharmacy_id: OwnPharmacy, work: DoWork
 ) -> PharmacyProfile:
-    """An approved pharmacy changes its opening hours or its pickup time (PS-10).
-    Reservations already made keep the deadline they were given (R-T5)."""
+    """An approved pharmacy changes its opening hours, its pickup time, its phone number,
+    its address or its pin (PS-10). Reservations already made keep the deadline they were
+    given (R-T5). A new address or pin counts at once; an admin looks at the pin again."""
     sent = body.model_fields_set
     with work.tx() as tx:
         weekly = pharmacies.weekly_hours(tx, [pharmacy_id])[pharmacy_id]
@@ -195,6 +196,12 @@ def change_settings(
                 else None
             ),
             pickup_days=body.pickup_days if "pickup_days" in sent else None,
+            phone=body.phone if "phone" in sent else None,
+            address=body.address if "address" in sent else None,
+            district_id=body.district_id if "district_id" in sent else None,
+            location=(body.location.lat, body.location.lon)
+            if "location" in sent and body.location is not None
+            else None,
         )
         return _profile(tx, pharmacy_id)
 

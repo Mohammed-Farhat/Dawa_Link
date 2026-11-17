@@ -12,7 +12,7 @@ This is the one place that says **what is built, what comes next, and what was l
 - **Answered on 2026-11-15** (§5): Q18, a closed request opens again when one of its boxes is lost before its 6 hours are over (built: `04` R-RQ12, BLD-D21); Q19, Q20 and the other-brand split, the simulation's assumptions (BLD-D22); and the owner read the first batch of evaluation cases: "everything looks clear and good", so the rest of the development cases can be written. Q21 to Q23, three details of these: a reopened request may be a third open one; a system cancel reopens too; and "the nearest pharmacies" of a plan are the nearest by road, not in a straight line. **Nothing waits for the owner now.**
 - **In progress:** step 6, the simulator and the evaluation, started on 2026-11-14 (the slices are in §3). **On 2026-11-15:** slices E2, E6, E7 and E8 done, E9 nearly; the first paid runs on Claude Haiku: the agent went from 136 to 168 of 241 units on seed 1 over prompts v1.4 to v1.8 and four new guards, level with plain search and clearly ahead of the policy with no AI; suite E1 (understanding) on 180 cases and suite E4 (safety) on 70 attacks; seeds 2 to 5, never tuned on, are running. **The same afternoon the owner changed what the agent does first** (BLD-D28: it asks, waits for the answer, then searches); prompt v1.10 and the two suites follow, and the runs on it are recorded below as development results: E1 on 180 cases, E4 on 70 attacks, the agent on 5 seeds (749 of 1,198 units, against 795 on the earlier prompt, 824 for search and 592 for the no-AI policy), the three ablations on seed 1, the sweep of the search baseline. **The same evening the owner answered Q27 to Q34** (§5, BLD-D29): the agent asks again for what an answer left out (prompt v1.11); a second model plays the client (suite E7 of `08`, slice E13); and the order from here is agreed (§2): step 6 closes as "tools built, development results", the website comes next, one side at a time, and the final evaluation runs on the finished agent. **Later the same evening he answered the last three** (BLD-D30): no cart on the search page; no request form, a request starts in the chat; a simulated client answers a question within 1 to 3 minutes. **Nothing waits for a decision; the second batch of cases waits for his read.** Moved to the final evaluation (slice 6b of §2): the final runs, the other sweeps (E6), the model comparison (E11), the held-out data in a separate session (E12).
 - **Step 6 was committed on 2026-11-15** as "tools built, development results". **Since 2026-11-16 the owner's rule is to build the rest through to the end** (§1): the slices of §2 follow each other without a "start".
-- **Done on 2026-11-16: slices 7a to 7e** (§3, step 7): logins and the client's chat with the agent in the browser; search and reserve without the agent; the pharmacy's counter; sourcing requests in the browser; the rest of the pharmacy's side (registration with the map pin, inventory, stock files, listings, settings). Slices 7a to 7d are committed and pushed. **Next: slice 7f,** the admin's side.
+- **Done on 2026-11-16: slices 7a to 7e** (§3, step 7): logins and the client's chat with the agent in the browser; search and reserve without the agent; the pharmacy's counter; sourcing requests in the browser; the rest of the pharmacy's side (registration with the map pin, inventory, stock files, listings, settings). Slices 7a to 7e are committed and pushed. **The same day: the owner's answers to Q42 to Q46** (a pharmacy changes its own phone, address and pin; dates stay as built; a stock file gets a `code` column; a team reply reaches the client as typed), **and the first half of slice 7f:** the admin's login, approvals, escalations with replies, reported answers, the audit log, the demo clock's screen. **On 2026-11-17: the second half of slice 7f** (suspensions, clients, the no-show contest, abuse flags, the catalog, health): the admin's side is complete. **And slice 7g** (the rest of the client's side: [Notify me] and watches, notifications, the profile, "Pick on the map", the wide screen). **Step 7 is built: the whole API and the whole website.** **Next: step 9, hardening.** **Since the evening of 2026-11-16 the owner commits once, when step 7 is finished** (Q47): everything from slice 7f on is uncommitted, with a copy in `Documents/Dawa_Link_backups/` after each slice.
 - **Order:** the agent and its evaluation came before the website screens (`02` §9).
 
 ---
@@ -41,9 +41,9 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | 3 | **Database** | Every table, constraint, trigger and index; migrations; the three database roles; the catalog import and the demo seed | `05` | ✅ 2026-11-12 |
 | 4 | **Services** | Search, reserve and group reserve, [Picked up] and [Not available], claims and matching, offers, early release, sourcing requests, the notification outbox, and the worker's clock-check tasks | `04`, `05` §6 | ✅ 2026-11-12 |
 | 5 | **The agent** | The tools (17, then 18 with `set_area` on 2026-11-14) and `reply`, proposals, the turn graph, guards, prompts, the fake, local and Claude models, turns in the worker, tracing and `agent_runs` | `07`, ADR-001 | ✅ 2026-11-13 |
-| 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | 🔨 started 2026-11-14 |
-| 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling, contract tests | `06`, `10` | ⏳ |
-| 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ⏳ |
+| 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | 🔨 tools built, development results (2026-11-15); the final evaluation is slice 6b below |
+| 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling | `06`, `10` | ✅ 2026-11-17, built with step 8 as slices 7a to 7g below; the contract tests of `06` §9 are part of step 9 |
+| 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ✅ 2026-11-17, as slices 7a to 7g below |
 | 9 | **Hardening** | Every Failure Matrix row tested, the security tests, a load test, the accessibility passes | `09`, `10`, `11` §9 | ⏳ |
 | 10 | **Cognito** | Passwords, email verification and admin codes move to Cognito, behind our API | `12` §10 | ⏳ |
 | 11 | **Deploy** | AWS by hand, following the checklist | `12` §11–§14 | ⏳ |
@@ -61,8 +61,8 @@ The owner agreed to move on to the website before the agent's final evaluation, 
 | 7c | **The pharmacy's counter** | A pharmacy logs in, sees Today, presses [Picked up] or [Not available], answers an early-release ask; the agent re-plans in the client's chat | 3 | ✅ 2026-11-16 |
 | 7d | **Sourcing requests** (started from the chat's [Start sourcing] card, BLD-D30) | A request for several medicines, its thread and page, plan cards, offers, the window check, the summary; the admin's demo clock | 4, 5, 6, 7, 13 | ✅ 2026-11-16 |
 | 7e | **The rest of the pharmacy's side** | Registration with the map pin, the inventory screens, the CSV upload with its row errors, the pickup-time setting | 14 | ✅ 2026-11-16 |
-| 7f | **The admin's side** | Two-factor login, approving a pharmacy, escalations and replies, the reports of bad answers, the read-only catalog | 7, 11 | ⏳ |
-| 7g | **The rest of the client's side** | Watches, notifications, the profile, "Pick on the map" (BLD-D16) | – | ⏳ |
+| 7f | **The admin's side** | Two-factor login; approving a pharmacy and correcting its details; suspending and reinstating a pharmacy or a client; clients without names, with an audited contact view; escalations and replies; the no-show contest; reported answers with their export; abuse flags; the read-only catalog; health; the audit log; the demo clock's screen | 7, 11 | ✅ 2026-11-17 |
+| 7g | **The rest of the client's side** | [Notify me] and watches, notifications (also the pharmacy's), the profile, "Pick on the map" (BLD-D16), the price limit, the wide-screen layout with the assistant beside the page | – | ✅ 2026-11-17 |
 | 9 | **Hardening** | Every Failure Matrix row tested, the security tests, the accessibility passes | – | ⏳ |
 | 6b | **The final evaluation, on the finished agent** | The held-out data (written in the owner's separate session), the final runs of E1 to E7, the model comparison and the choice of model (O1), the failure analysis, the regression cases | – | ⏳ |
 | 10, 11 | **Cognito, then AWS** | "When we finish the project" (the owner, Q33) | – | ⏳ |
@@ -680,7 +680,7 @@ The plan is `08`. Everything is first built and run **without a paid model** (th
 
 **Spent in the evening:** about $1.5 (E1 $0.43, E7 $0.48, its pilot $0.05, the re-check $0.12, E4 $0.11, a few real chat turns, and a day of the agent stopped halfway because of the request fix above), plus the agent's day on seed 1 that follows. About $15 of the $100 so far, by the runs' own counts.
 
-### Step 7 and 8: the API and the website, slice by slice (started 2026-11-16) 🔨
+### Step 7 and 8: the API and the website, slice by slice (2026-11-16 to 2026-11-17) ✅
 
 #### Slice 7a: logins, and the client's chat with the agent ✅ 2026-11-16
 
@@ -756,6 +756,70 @@ Tried by hand on the local stack: a registration with a French name and a pin in
 
 **For slice 7f, from this one:** the approval queue lists only pharmacies whose email is confirmed; a pending pharmacy can still edit its details, so an approval must be of what the admin saw (refuse it if the details changed since); an admin's edit of a phone or a name goes through the same checks (`domain/pharmacy_details.py`); the demo pharmacies' phones (`+961 00 …`) are not valid numbers and would fail that form.
 
+#### After slice 7e: the owner's answers to Q42 to Q46 ✅ 2026-11-16
+
+- **Q42, the phone:** an approved pharmacy changes its number in Settings. Checked like the first one, audited without the number, and the admin's page shows that it changed.
+- **Q45, the address and the pin:** the pharmacy changes them in Settings too, on a map. The new place counts at once; the road times to the old pin are dropped; the admins get a "pin to check" and confirm it with one click. The name and the licence stay with the admin.
+- **Q46, a team reply as typed:** the client reads exactly what the admin wrote, a phone number included. The agent, a trace and an exported report never see a name, a phone number or an email from it: the reply is cleaned where it is read for them.
+- **Q43, dates:** kept as built.
+- **Q44, the `code` column:** optional, found by its header. The code chooses among the medicines the row's name already matches and never replaces the name; a refused row lists each choice with its code. A box that only a code can name is changed by a row that names it, never by its absence; the summary counts the boxes left as they are. Decision log BLD-D33.
+
+#### Slice 7f, first half: the admin's console ✅ 2026-11-16
+
+**What works:** an admin is made with `python -m dawalink.ops.create_admin`, logs in at `/admin/login` with the code of an authenticator app, and has a console with a navy bar: **Pharmacies** (the approval queue first; a pharmacy's page with what it typed, its pin on a map, what the checks found; [Approve], [Ask for more information], [Reject]; corrections with a reason), **Escalations** (emergency claims first; the conversation as stored; take, reply, resolve), **Reported answers** (the reply with what came before and the agent turn; not a problem, or confirmed under a category and added to the regression cases; the export), **Audit log**, **Demo clock**. In the chat, a thumbs-down under each reply of the assistant, and a person's reply signed "DawaLink team".
+
+**Where:** `services/admin_pharmacies.py`, `services/escalations.py` (the admin's side), `services/answer_reports.py`, `services/audit.py` (reasons, the list), `agent/chat.py` (`post_team_reply`), `api/routes/admin.py`, `api/schemas/admin.py`, `ops/create_admin.py`; `frontend/src/features/admin/`, `frontend/src/features/client/assistant/ReportAnswer.tsx`. No schema change.
+
+**Tests:** `tests/api/test_admin.py` (the queue, approval of what was seen, reasons, corrections, replies, reports, the audit log, and a walk over the API's own description: no admin endpoint touches priority, stock or a price); the privacy run now includes an admin's reply typed with a name, a phone, an email and a coordinate; the walk over every endpoint covers the 20 admin endpoints for the three roles. Website: `AdminPortal.test.tsx` and three more chat tests, with an accessibility check on each screen.
+
+**Tried on the local stack:** a test admin made by the command and logged in with a code; a registered pharmacy asked for more information, then approved (both in the audit log, and the map shows its pin); a reply to an escalated demo client, which arrived in the chat the client has now, signed "DawaLink team"; the agent (Claude Haiku) then answered "what did the team tell me?" correctly; a thumbs-down on that answer, reviewed and confirmed by the admin, and present in the export. Not observed: the browser saving the exported file (the API's answer was read in the page instead).
+
+**Found while trying it, and fixed:** the audit table's two wordy columns were squeezed to one letter a line; scrolling the page with the mouse over a map zoomed the map instead (the wheel now scrolls the page, also on the pharmacy's registration); the report form opened half behind the message box.
+
+**Found while building the owner's last two answers:** a district number that no district could have (99,999) crashed the server instead of being refused, in sign-up and in every form with a district (`09` FI-24); the travel times of a pharmacy are cached by pharmacy, so a moved pin would have kept the old street's times for a day (`09` FR-29), also when an admin moved it.
+
+**Found by the review before the commit, and fixed:** the pharmacy's own screen showed a fixed sentence, not what the admin asked (it now shows the admin's words, and the PN-13 email is checked for them); a reply took its two locks in the wrong order (the escalation first, the conversation last, as `05` §6 says); when a reply went to the chat the client opened afterwards, the admin's page didn't show it (that chat now follows, from the reply on); the address check could list a registration whose email was never confirmed, which an admin can't open; a code next to a strength that no product of that name has was accepted.
+
+**The one paid call of the trial:** one chat turn on Claude Haiku, a few cents.
+
+**The last two answers, tried on the local stack too:** a demo pharmacy changed its address and moved its pin in its Settings; the admin's count showed one pin to check; an admin's correction put it back. A team reply with a phone number reached the demo client as typed. (Two admin logins inside the same half minute: the second was refused, as it should be, because a code works once.)
+
+**The owner's own admin** was made with the command, with the email he gave; its login is in `.env.admin`, which git ignores.
+
+**For the second half, from this one:** after logging in from a page deep in the console, an admin lands on the console's first page, not on the page asked for. **Left in the dev database by the trial, to remove when the slice is done:** the trial admin (its password and key are in a file of the session's scratch folder, nowhere in the repo), the pharmacy "Pharmacie du Cèdre" (approved), a "DawaLink team" message in demo client 3's chat, that client's escalation left "in progress", and one confirmed report that is in the regression export.
+
+#### Slice 7f, second half: suspensions, clients, flags, catalog, health ✅ 2026-11-17
+
+**What works:** an admin suspends a pharmacy (its medicines stop showing at once, what is reserved is kept) and reinstates it; sees clients as a status and counts, finds one by an order or request number, reads the contact details one audited look at a time, lifts a pause, suspends and reinstates; clears a no-show the client contests with [I picked it up]; handles flags; reads the catalog with the controlled products; and reads on one Health page how the assistant and the system are doing, with the alerts that fire now.
+
+**Where:** `services/admin_clients.py`, `services/admin_pharmacies.py` (suspend, reinstate), `services/abuse_flags.py`, `services/health.py`, `services/orders.py` (the contest and its clearing), `api/routes/admin.py`; `frontend/src/features/admin/ClientsPages.tsx`, `HealthPages.tsx`. No schema change.
+
+**Tests:** `tests/api/test_admin_accounts.py` (a pharmacy's suspension with its effects and the reservation that is kept; a client's suspension with everything it ends and nothing reopened; the contact view and its limit; the contest; flags; the catalog; health and an alert); website: `AdminAccounts.test.tsx`, with an accessibility check on each screen.
+
+**Tried on the local stack:** health with the real numbers of this laptop's runs (65 assistant turns, no alert), the clients' list, one contact view, the catalog, the open flag, and a suspension of the trial pharmacy.
+
+**Found on the way:** a guard test said "an item is given up only by the client"; it now says the client, or an admin who suspends them, never the agent. A pause for no-shows raised no flag although R-AB lists it.
+
+**To look at in hardening:** on the Health page the cost of this laptop's runs ($0.12) looks low next to their tokens (2.5 million read, most of them from the model's cache): compare one day with the provider's own count. "Warn" on a flag tells nobody anything by itself. The alerts are shown on the page and sent nowhere. After logging in from a page deep in the console, an admin lands on its first page.
+
+**The dev database after the trials:** the escalation is resolved, the trial report is out of the regression export, the two trial pharmacies are suspended, and the trial admin can no longer log in (its row stays, because audit events point at it). The only admin who can log in is the owner's (`.env.admin`).
+
+#### Slice 7g: the rest of the client's side ✅ 2026-11-17
+
+**What works:** a search that finds nothing offers [Ask DawaLink to find it] and [Notify me] (a 6-hour watch, with a price limit if wanted); search has a price limit; My medicines lists what is watched, with [Stop watching]; Me has the profile (phone, home district, other brands), the password and the notifications, which a pharmacy also has in its portal; the location sheet has "Pick on the map"; the chat says when requests are closed for the night or reservations are paused; on a computer the menu is a top bar and the assistant stands beside the page.
+
+**Where:** `api/routes/watches.py` (watches and notifications); `frontend/src/features/client/` (`search/NotifyMe.tsx`, `NotificationsPage.tsx`, `ProfilePage.tsx`, `assistant/LocationSheet.tsx`), `frontend/src/components/wide.ts`.
+
+**Tests:** `tests/api/test_watches.py` (a watch from start to its offer accepted; request hours; notifications listed, linked and marked by their owner only); `ClientExtras.test.tsx` (each new screen, the map pick sending its point only in a body, the banners by the server clock, the wide layout with one conversation and none on a phone).
+
+**Tried on the local stack:** the wide layout with the real conversation beside Home and Me, the profile, "Pick on the map" with the map's pictures.
+
+**Closed on the way, from slice 7f:** the console's times no longer say "today" (the demo clock makes that wrong); the Health page no longer calls the worker late right after a clock move; a test now suspends a client whose reserved box belongs to a request that closed fulfilled, and the request stays closed.
+
+**Found on the way:** two rows of the failure matrix shared a label (FR-21 twice since 2026-11-15, FR-28 twice since 2026-11-16): the newer of each became FR-31 and FR-29. `06` §6 was compared with the API's own description by a script: everything is built except two endpoints left out on purpose (`06` §12).
+
+**For hardening (step 9), from step 7 as a whole:** the contract tests of `06` §9 (three per endpoint, every error code, Schemathesis) are not all written; the keyboard and screen-reader passes of `11` §9; Lighthouse on Home and Search; the items already listed above (limits per address on `/auth/*`, unconfirmed registrations that hold a licence, the Health page's cost, alerts that are shown and sent nowhere).
+
 ---
 
 ## 4. Left for a later step
@@ -768,7 +832,7 @@ Tried by hand on the local stack: a registration with a French name and a pin in
 
 | What | Joins in |
 |---|---|
-| The answer report (👎), and the admin's side of an escalation and of an abuse flag (reply, resolve, dismiss). The agent's side is built: `escalate`, and the flag for repeated injection attempts. | Step 7, with their endpoints |
+| *(The admin's side of an abuse flag was built in slice 7f, second half.)* | done |
 | The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
 | The agent's quality on Claude, measured: understanding, decisions, safety, cost, and the choice of model (O1). Step 5 only looked at 27 turns. | Step 6 |
 | The website shows a reopened request (`04` R-RQ12): the thread card `request_reopened` ("This request is open again: the pharmacy didn't have the box"), the request's status back to "searching", and a second summary when it closes again. The API already returns all three. | Step 8, with the request page |
@@ -808,6 +872,10 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | **The count of rows with a problem stopped at 500** (step 4): the list of problems is cut at 500, and the count was the list's length. | Counted on its own. |
 | **1,179 of the 5,460 listable medicines can't be named by a stock file** (slice 7e, seen in the browser with "Panadol Advance 500mg"): the Ministry lists a name and a strength several times, for other packs and makers, each with its own price. The row answered "add the strength", which was already there. | The row now says what is true and sends the pharmacist to the form, where each choice shows its pack and its price. Whether the file should get a column for it is Q44. |
 | **`04` SM-1 and `03` PS-10 let a pharmacy change its phone; `10` TH-59 says only an admin does.** | Built as TH-59 says, the newer and stricter one; the three documents now agree. Asked back as Q42. |
+| **"No file can name it" stopped being true with the `code` column** (Q44), and the rule that protected such boxes rested on it. | Decided again on purpose (BLD-D33): a box that only a code can name is changed by a row that names it, never by its absence, and the summary counts the boxes left alone. |
+| **A pending pharmacy can correct its details after the admin has looked** (slice 7f): an approval could have been of details nobody checked. | [Approve] carries the version that was on the screen; changed since → `CHANGED_SINCE`, nothing approved (`09` FS-24). |
+| **The audit log quoted a pharmacy's name and licence** in the event of a correction (slice 7e), against its own rule (states and IDs only). | Corrections, by the pharmacy or by an admin, now log the names of the fields that changed. |
+| **One website test failed once in a full run and passed alone** (the first test of a file also loads the part of the website it opens, and the default wait is one second). | The tests wait up to three seconds for something to appear (`src/test/setup.ts`). |
 | **`03` PS-1 asks for a licence "format" and none is defined anywhere.** | 2 to 20 letters and digits, stored in capitals without spaces, so that the same licence typed two ways is one licence. The admin compares it with the real one. |
 | **`06` §6.2 put the client's location in the address** (`GET /listings?lat=…&lon=…`). An address is kept by the browser's history and by any proxy's log, CloudFront's included; a location is the most private thing a client sends us. | Search is a `POST` and the location is in its body (`06` §12). The website keeps the place in memory only, and a test checks no address ever holds it. |
 | **The daily purge deleted logins by the app clock** (found by a second review of slice 7a). Sessions and confirmation links are counted in real time since BLD-D31, but the purge still compared them with the app clock: after a demo-clock jump, the next daily task would have deleted every live session. | The purge compares them with real time. The test that moves the clock 30 days now also runs the daily tasks. |
@@ -910,20 +978,20 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q38 | **The same medicine name from another maker.** 127 names of the Ministry's list are carried by several makers (generics named after their ingredient). Is such a box what the client asked for, or another brand? | **2026-11-15: "same name same medicine".** The owner's reason: if it is the same exact medicine, a different company doesn't make it an alternative; the client named no company. Claude had built the cautious reading (another brand, "ask the pharmacist first") and recommended it, then agreed: the box carries exactly the name the client wrote. Built: `services/catalog.py` `same_brand`. Another brand is a box with another name (`04` R-C10). |
 | Q39 | **The short privacy note on the sign-up form.** No text existed; Claude wrote: *"DawaLink shows where a medicine is available and reserves it for you. It gives no medical advice: your pharmacist or doctor does. We keep your name, email and phone to run your account, and never share them with a pharmacy."* | **2026-11-16: kept** ("if you recommend keeping it deal no problem"). |
 | Q41 | **Commits while the rest is built.** On 2026-11-16 the owner first said he would commit once at the end; four slices then existed only as uncommitted changes. | **2026-11-16: one commit after each slice** ("deal give me the commit and push commands"). He commits and pushes himself, as before; Claude runs every check and the scan for secrets first and gives him the commands. Slices 7a to 7d go in one commit (their files were already mixed). The copies outside the repository (`Documents/Dawa_Link_backups/`) are no longer made. |
+| Q47 | **Commits while the rest of step 7 is built** (again). | **2026-11-16, evening: one commit when step 7 is completely finished** ("After finishing continue working, I will commit once when step 7 is completely finished"). Replaces Q41 from slice 7f on. Claude keeps a copy of the uncommitted work after each slice. |
 | Q40 | **Stock files: CSV only, or Excel (.xlsx) too?** | **2026-11-16: "deal CSV only".** Built in slice 7e (BLD-D32): an Excel workbook is refused with how to save it as CSV, and the reader takes what a spreadsheet writes. |
+| Q42 | **After approval, who changes a pharmacy's phone number?** | **2026-11-16: the pharmacy** ("admins dont know when the pharmacy changed its number"). Built (BLD-D33): in its Settings, checked like the first number, audited, and shown to the admin as changed. |
+| Q43 | **A date written `03/04/2027` in a stock file.** | **2026-11-16: "keep".** As built: read when the file itself shows the order, refused otherwise. |
+| Q44 | **Medicines the Ministry lists several times under one name and strength.** | **2026-11-16: "add".** Built (BLD-D33): the optional `code` column. |
+| Q45 | **Did "the phone number or a settings related to it" also mean the address or the map pin?** | **2026-11-16: "yes also the pharmacy can do that".** Built (BLD-D33): in its Settings; it counts at once, and the admins get a pin to check. The name and the licence stay with the admin. |
+| Q46 | **The five thumbs-down reasons, and a team reply without phone numbers.** | **2026-11-16: "no, make it real, its okay if the situation had to have the phone number".** Built (BLD-D33): a team reply is stored and shown as typed, and cleaned where the agent reads it. The five reasons stay. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
 
-**Three questions wait** (2026-11-16, from slice 7e). Each is built the careful way meanwhile, and none blocks the next slice:
+**No question waits** (2026-11-16).
 
-| # | Question | Claude's recommendation |
-|---|---|---|
-| Q42 | **After approval, who changes a pharmacy's phone number?** Two documents said the pharmacy, in its settings; the threat model said only an admin, because clients see the number and dial it (the "another brand" card). Built: only an admin. Example: a pharmacy that gets a new number writes to DawaLink's team, and the admin changes it. | **Only an admin (as built).** A pharmacy changes its number rarely, and a wrong or malicious number shown to clients is worse than a short wait. Say "pharmacy too" and the settings get the field. |
-| Q43 | **A date written `03/04/2027` in a stock file.** In Lebanon it is 3 April; Excel on a computer set to US dates (the owner's laptop is) writes 4 March the same way, and writes every full date with numbers: a typed `2027-03-31` came back as `3/31/2027`. Built: such dates are read **when the file itself shows the order** (one date with a day above 12 settles it for the whole file); when no date shows it, the row is refused with "write the month and the year (03/2027)". The template and the screen show months only, which Excel leaves readable. | **Keep it as built.** It reads real files without ever guessing. The only files it refuses are those whose every date has a day of 12 or less. Say "day first" and those are read the Lebanese way too, at the risk of a US-style file being read wrong. |
-| Q44 | **Medicines the Ministry lists several times under one name and strength** (1,179 of 5,460: "Panadol Advance 500mg" exists as packs of 24, 72 and 96, each with its own price). A stock file has a name and a strength only, so it can't say which. Built: that row is refused with the reason; the box is added by hand, chosen from a list that shows the pack and the price; and a file never sets such a box to 0 (otherwise every new file would erase what was typed by hand). So about a fifth of the catalog can only be kept up to date by hand. | **Add one optional column, `code`: the Ministry's own number for the product.** The errors file would give it next to each choice ("24 tablets: 1234"), and the pharmacy copies it into its file once. It names every product exactly. A `pack` column is friendlier but not enough: 177 names share their strength, form and pack too (other makers). Claude builds it on a yes; until then the team's demo files should use names that are listed once (the upload says which aren't). |
-
-Otherwise nothing waits for a decision. The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070), and says when the next step starts.
+The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070), and says when the next step starts.
 
 ---
 

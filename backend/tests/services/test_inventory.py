@@ -207,7 +207,13 @@ class TestUploads:
             3,
             0,
         )
-        assert upload.summary == {"new": 2, "changed": 0, "zeroed": 0, "reserved_kept": 0}
+        assert upload.summary == {
+            "new": 2,
+            "changed": 0,
+            "zeroed": 0,
+            "reserved_kept": 0,
+            "left_alone": 0,
+        }
         staged = world.all(
             "SELECT quantity, expiry_date FROM inventory_upload_rows "
             "WHERE upload_id = :u ORDER BY quantity",
@@ -316,7 +322,13 @@ class TestUploads:
         assert (
             world.all("SELECT 1 FROM inventory_upload_rows WHERE upload_id = :u", u=upload.id) == []
         )
-        assert upload.summary == {"new": 1, "changed": 1, "zeroed": 1, "reserved_kept": 0}
+        assert upload.summary == {
+            "new": 1,
+            "changed": 1,
+            "zeroed": 1,
+            "reserved_kept": 0,
+            "left_alone": 0,
+        }
 
     def test_an_upload_never_takes_a_reserved_box_away(self, store: Store, world: World) -> None:
         """R-U3."""
@@ -576,29 +588,6 @@ class TestReadingTheStock:
         assert read(query="nothing") == []
 
 
-def test_a_name_and_strength_that_several_catalog_rows_share_is_never_guessed(
-    store: Store, world: World
-) -> None:
-    """The Ministry lists some medicines several times, with one name and one strength:
-    other pack sizes, other makers, each with its own price. A file can't say which one;
-    the row says so and sends the pharmacist to the form, where the box is chosen."""
-    for pack in ("B/12", "B/24"):
-        world.make.product(
-            moph_name="TWINOL",
-            search_name="twinol",
-            dosage_text="500mg",
-            form_text="Tablet",
-            presentation_text=pack,
-        )
-
-    upload = store.upload("product,strength,batch,expiry,quantity\nTwinol,500mg,B1,2026-12,3\n")
-
-    (error,) = upload.errors
-    assert (upload.rows_ok, upload.rows_error) == (0, 1)
-    assert "add this box by hand" in error["problem"]
-    assert error["did_you_mean"] == ["Tablet B/12", "Tablet B/24"]
-
-
 class TestWhatExcelReallySaved:
     """Typed into the template in Excel on a computer set to US dates, then File, Save
     As, CSV (2026-11-16). The full dates came out month first, the months came out as
@@ -649,22 +638,132 @@ class TestWhatExcelReallySaved:
         assert expiries == ["2027-03", "2027-06"]
 
 
-class TestABoxNoFileCanName:
-    def test_it_is_refused_in_a_file_and_never_set_to_zero_by_one(
+def twinol(world: World) -> list[uuid.UUID]:
+    """An invented medicine listed twice under one name and strength, as the Ministry
+    lists many: a pack of 12 with code 7012, a pack of 24 with code 7024."""
+    return [
+        world.make.product(
+            moph_name="TWINOL",
+            search_name="twinol",
+            dosage_text="500mg",
+            form_text="Tablet",
+            presentation_text=pack,
+            manufacturer="Invented Labs",
+            moph_code=code,
+            public_price_lbp=price,
+        )
+        for pack, code, price in (("B/12", 7012, 300_000), ("B/24", 7024, 550_000))
+    ]
+
+
+class TestTheCodeColumn:
+    """The owner, 2026-11-16 (Q44): one optional column, the Ministry's number for the
+    product, names a medicine that a name and a strength can't."""
+
+    def test_a_code_says_which_pack_a_row_means(self, store: Store, world: World) -> None:
+        small, large = twinol(world)
+
+        upload = store.upload(
+            "product,strength,batch,expiry,quantity,code\n"
+            "Twinol,500mg,T1,2026-12,9,7024\n"
+            "Twinol,500mg,T2,2026-12,3,7012\n"
+            # A medicine listed once needs no code: the column stays empty.
+            "Concor,5mg,C1,2026-12,2,\n"
+        )
+        store.apply(upload.id)
+
+        assert (upload.rows_ok, upload.rows_error) == (3, 0)
+        by_batch = {
+            row.batch: row.product_id
+            for row in world.all(
+                "SELECT batch, product_id FROM inventory_items WHERE pharmacy_id = :id",
+                id=store.pharmacy,
+            )
+        }
+        assert (by_batch["T1"], by_batch["T2"]) == (large, small)
+
+    def test_the_column_can_stand_anywhere_and_old_files_still_work(
+        self, store: Store, world: World
+    ) -> None:
+        twinol(world)
+
+        first = store.upload(
+            "code;product;strength;batch;expiry;quantity\n7012;Twinol;500mg;T1;2026-12;4\n"
+        )
+        without = store.upload("product,batch,expiry,quantity\nPanadol,P1,2026-12,5\n")
+
+        assert (first.rows_ok, without.rows_ok) == (1, 1)
+
+    def test_without_a_code_the_row_lists_the_choices_with_their_codes(
+        self, store: Store, world: World
+    ) -> None:
+        twinol(world)
+
+        upload = store.upload("product,strength,batch,expiry,quantity\nTwinol,500mg,T1,2026-12,9\n")
+
+        (error,) = upload.errors
+        assert "write the code of yours in the code column" in error["problem"]
+        assert error["did_you_mean"] == [
+            "Tablet B/12, Invented Labs: code 7012",
+            "Tablet B/24, Invented Labs: code 7024",
+        ]
+        assert "code 7024" in inventory.errors_csv(upload)
+
+    @pytest.mark.parametrize(
+        ("row", "problem"),
+        [
+            # The code of another medicine: a typing mistake must never put another
+            # product, at another price, on the shelf.
+            ("Twinol,500mg,T1,2026-12,9,{concor}", "not the code of a medicine with this name"),
+            ("Twinol,500mg,T1,2026-12,9,7099", "not the code of a medicine with this name"),
+            ("Twinol,500mg,T1,2026-12,9,seven", "not the code of a medicine with this name"),
+            # The row's strength is not the strength of the medicine its code names.
+            ("Twinol,250mg,T1,2026-12,9,7024", "not the code of a medicine with this name"),
+            # A code never replaces the name.
+            ("Nosuchname,500mg,T1,2026-12,9,7024", "no product with this name"),
+            ("Concor,5mg,C1,2026-12,2,7024", "not the code of a medicine with this name"),
+        ],
+    )
+    def test_a_code_only_chooses_among_what_the_name_says(
+        self, store: Store, world: World, row: str, problem: str
+    ) -> None:
+        twinol(world)
+        concor = world.one("SELECT moph_code FROM products WHERE search_name = 'concor'").moph_code
+
+        upload = store.upload(
+            "product,strength,batch,expiry,quantity,code\n" + row.format(concor=concor) + "\n"
+        )
+
+        assert (upload.rows_ok, upload.rows_error) == (0, 1)
+        assert problem in upload.errors[0]["problem"]
+
+    def test_a_controlled_medicine_stays_refused_with_its_code(
+        self, store: Store, world: World
+    ) -> None:
+        world.make.product(
+            moph_name="LOCKEDOL", search_name="lockedol", controlled=True, moph_code=7500
+        )
+
+        upload = store.upload("product,batch,expiry,quantity,code\nLockedol,L1,2026-12,2,7500\n")
+
+        assert upload.rows_ok == 0
+        assert upload.errors[0]["problem"] == "this medicine can't be listed on DawaLink"
+
+    def test_the_template_has_the_column_empty(self) -> None:
+        header, *examples = inventory.TEMPLATE_CSV.splitlines()
+
+        assert header.split(",")[-1] == "code"
+        assert all(line.endswith(",") for line in examples)
+
+
+class TestABoxOnlyACodeCanName:
+    def test_a_file_without_its_code_refuses_it_and_never_sets_it_to_zero(
         self, store: Store, world: World
     ) -> None:
         """R-U2 sets to 0 what a file doesn't name. But a medicine the Ministry lists
-        twice under one name and strength can't be named by any file: its box is added
-        by hand, and the next file must leave it alone."""
-        packs = [
-            world.make.product(
-                moph_name="TWINOL",
-                search_name="twinol",
-                dosage_text="500mg",
-                presentation_text=pack,
-            )
-            for pack in ("B/12", "B/24")
-        ]
+        twice under one name and strength is named only by its code: a pharmacy whose
+        files have none adds the box by hand, and its next file must leave it alone."""
+        packs = twinol(world)
         tx = world.tx()
         by_hand = inventory.add_item(
             tx,
@@ -692,3 +791,22 @@ class TestABoxNoFileCanName:
         # Panadol can be named, and wasn't: set to 0, as R-U2 says.
         assert items[("PANADOL", "P1")].qty_on_hand == 0
         assert (upload.summary["zeroed"], applied.summary["new"]) == (1, 1)
+        # And the summary says that one box in stock was left as it is.
+        assert upload.summary["left_alone"] == 1
+
+    def test_a_row_with_its_code_changes_it_and_zero_empties_it(
+        self, store: Store, world: World
+    ) -> None:
+        """The other half of the rule: such a box is changed by a row that names it.
+        Its absence from a later file still changes nothing."""
+        twinol(world)
+        header = "product,strength,batch,expiry,quantity,code\n"
+        store.apply(store.upload(header + "Twinol,500mg,T1,2026-12,9,7024\n").id)
+
+        absent = store.upload(header + "Panadol,,P1,2026-12,5,\n")
+        store.apply(absent.id)
+        kept = store.items()[("TWINOL", "T1")].qty_on_hand
+        store.apply(store.upload(header + "Twinol,500mg,T1,2026-12,0,7024\n").id)
+
+        assert (absent.summary["left_alone"], kept) == (1, 9)
+        assert store.items()[("TWINOL", "T1")].qty_on_hand == 0

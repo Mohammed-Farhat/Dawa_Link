@@ -29,6 +29,11 @@ ANY_ROLE = {
     # a pharmacy picks its products from it. It never holds stock or a controlled medicine.
     ("GET", "/api/v1/catalog/products"),
     ("GET", "/api/v1/catalog/products/{id}"),
+    # Everyone has notifications: a client's are CN-x, a pharmacy's PN-x. Each route
+    # reads or changes the caller's own rows only.
+    ("GET", "/api/v1/notifications"),
+    ("GET", "/api/v1/notifications/unread-count"),
+    ("POST", "/api/v1/notifications/read"),
 }
 # Whose endpoints the others are, by where they live.
 PHARMACY_PATHS = ("/api/v1/pharmacy",)

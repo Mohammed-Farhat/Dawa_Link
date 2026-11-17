@@ -1,5 +1,6 @@
+import { NativeSelect, TextInput } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, lazy, Suspense, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { ChangePassword } from '../../components/ChangePassword'
@@ -7,7 +8,10 @@ import { Banner } from '../../components/layout'
 import { errorMessage, strings } from '../../strings/en'
 import { useDistricts } from '../client/data'
 import { DetailsFields, HoursFields, PickupDays } from './details'
-import { bodyOf, draftOf, hoursOf, problemsOf, weekOf, weekProblem } from './draft'
+import { bodyOf, draftOf, hoursOf, phoneProblem, problemsOf, weekOf, weekProblem } from './draft'
+
+// The map is downloaded only when the settings open (docs/11 §10).
+const PinMap = lazy(() => import('./PinMap'))
 
 const d = strings.pharmacy.details
 const s = strings.pharmacy.settingsPage
@@ -90,30 +94,42 @@ export function RegistrationPanel({ pharmacy }: { pharmacy: Profile }) {
 }
 
 /**
- * PS-10: what an approved pharmacy changes by itself: its opening hours and how long it
- * keeps a reservation. Its name, licence, phone, address and pin were checked by
- * DawaLink's team, and only they change them (docs/10 TM-D2, TH-59).
+ * PS-10: what an approved pharmacy changes by itself: its opening hours, how long it
+ * keeps a reservation, its phone number, its address and its pin (the owner, 2026-11-16:
+ * only the pharmacy knows that it got a new number or moved). Its name and its licence
+ * were checked by DawaLink's team, and only they change them (docs/10 TM-D2).
  */
 export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
   const queryClient = useQueryClient()
   const [week, setWeek] = useState(() => weekOf(pharmacy.hours))
   const [pickupDays, setPickupDays] = useState(pharmacy.pickup_days)
+  const [phone, setPhone] = useState(pharmacy.phone)
   const [state, setState] = useState<'idle' | 'sending' | 'saved'>('idle')
   const [tried, setTried] = useState(false)
   const [failed, setFailed] = useState<Failure | null>(null)
   const approved = pharmacy.status === 'APPROVED'
+  const phoneChanged = phone.trim() !== pharmacy.phone
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setTried(true)
     setFailed(null)
-    if (weekProblem(week)) return
+    if (weekProblem(week) || (phoneChanged && phoneProblem(phone))) return
     setState('sending')
     try {
       const saved = await unwrap(
-        api.PATCH('/api/v1/pharmacy/me', { body: { hours: hoursOf(week), pickup_days: pickupDays } }),
+        api.PATCH('/api/v1/pharmacy/me', {
+          body: {
+            hours: hoursOf(week),
+            pickup_days: pickupDays,
+            // Sent only when it was edited: the number is stored as +961…, and typing
+            // it again the local way would look like a change.
+            ...(phoneChanged ? { phone: phone.trim() } : {}),
+          },
+        }),
       )
       queryClient.setQueryData(['pharmacy', 'me'], saved)
+      setPhone(saved.phone)
       setState('saved')
     } catch (error) {
       setFailed(failureOf(error))
@@ -148,9 +164,25 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
                 setState('idle')
               }}
             />
+            <TextInput
+              label={d.phone}
+              description={d.phoneHint}
+              size="md"
+              type="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(event) => {
+                setPhone(event.currentTarget.value)
+                setState('idle')
+              }}
+              error={
+                (tried && phoneChanged && phoneProblem(phone)) ||
+                (failed?.field === 'phone' ? d.problems.phone : null)
+              }
+            />
             <div role="status" aria-live="polite">
               {state === 'saved' && <Banner tone="green">{d.saved}</Banner>}
-              {failed && failed.field !== 'hours' && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+              {failed && !failed.field && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
             </div>
             <button
               type="submit"
@@ -163,6 +195,8 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
           </form>
         </section>
       )}
+
+      {approved && <PlaceSettings pharmacy={pharmacy} />}
 
       <section className="panel" aria-labelledby="details">
         <h2 id="details" className="panel__title">
@@ -177,16 +211,6 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
             <dt>{d.license}</dt>
             <dd>{pharmacy.license_number}</dd>
           </div>
-          <div className="card__line">
-            <dt>{d.phone}</dt>
-            <dd>{pharmacy.phone}</dd>
-          </div>
-          <div className="card__line">
-            <dt>{d.address}</dt>
-            <dd>
-              {pharmacy.address}, {pharmacy.district}
-            </dd>
-          </div>
         </dl>
         <span className="hint">{d.fixed}</span>
       </section>
@@ -198,5 +222,110 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
         <ChangePassword />
       </section>
     </main>
+  )
+}
+
+/**
+ * Where the pharmacy is: its address, its district and its pin on the map. A pharmacy
+ * that moves changes them here (the owner, 2026-11-16, Q45). Clients see the new place
+ * at once; DawaLink's team then looks at the new pin, which holds nothing up.
+ */
+function PlaceSettings({ pharmacy }: { pharmacy: Profile }) {
+  const queryClient = useQueryClient()
+  const districts = useDistricts()
+  const [address, setAddress] = useState(pharmacy.address)
+  const [district, setDistrict] = useState(String(pharmacy.district_id))
+  const [pin, setPin] = useState(pharmacy.location)
+  const [state, setState] = useState<'idle' | 'sending' | 'saved'>('idle')
+  const [failed, setFailed] = useState<Failure | null>(null)
+
+  // Only what changed is sent: an address nobody touched is never checked again.
+  const changes: Schemas['SettingsChange'] = {
+    ...(address.trim() !== pharmacy.address ? { address: address.trim() } : {}),
+    ...(Number(district) !== pharmacy.district_id ? { district_id: Number(district) } : {}),
+    ...(pin.lat !== pharmacy.location.lat || pin.lon !== pharmacy.location.lon ? { location: pin } : {}),
+  }
+  const nothing = Object.keys(changes).length === 0
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setFailed(null)
+    setState('sending')
+    try {
+      const saved = await unwrap(api.PATCH('/api/v1/pharmacy/me', { body: changes }))
+      queryClient.setQueryData(['pharmacy', 'me'], saved)
+      setAddress(saved.address)
+      setState('saved')
+    } catch (error) {
+      setFailed(failureOf(error))
+      setState('idle')
+    }
+  }
+
+  const wrong = (field: string) => (failed?.field === field ? (d.problems[field] ?? null) : null)
+  return (
+    <section className="panel" aria-labelledby="place">
+      <div>
+        <h2 id="place" className="panel__title">
+          {s.placeTitle}
+        </h2>
+        <span className="hint">{s.placeNote}</span>
+      </div>
+      <form className="form" onSubmit={submit} noValidate>
+        <TextInput
+          label={d.address}
+          size="md"
+          autoComplete="street-address"
+          value={address}
+          onChange={(event) => {
+            setAddress(event.currentTarget.value)
+            setState('idle')
+          }}
+          error={wrong('address')}
+        />
+        <NativeSelect
+          label={d.district}
+          size="md"
+          value={district}
+          onChange={(event) => {
+            setDistrict(event.currentTarget.value)
+            setState('idle')
+          }}
+          error={wrong('district_id')}
+          data={(districts.data ?? []).map((row) => ({ value: String(row.id), label: row.name }))}
+        />
+        <fieldset className="choice">
+          <legend>{d.pin}</legend>
+          <span className="hint">{d.pinHint}</span>
+          <Suspense fallback={<p className="hint">{d.mapLoading}</p>}>
+            <PinMap
+              value={pin}
+              center={pharmacy.location}
+              onChange={(moved) => {
+                setPin(moved)
+                setState('idle')
+              }}
+            />
+          </Suspense>
+          {wrong('location') && (
+            <span role="status" className="field-problem">
+              {wrong('location')}
+            </span>
+          )}
+        </fieldset>
+        <div role="status" aria-live="polite">
+          {state === 'saved' && <Banner tone="green">{s.placeSaved}</Banner>}
+          {failed && !failed.field && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+        </div>
+        <button
+          type="submit"
+          className="pill-button"
+          style={{ alignSelf: 'flex-start' }}
+          disabled={state === 'sending' || nothing}
+        >
+          {s.placeSave}
+        </button>
+      </form>
+    </section>
   )
 }

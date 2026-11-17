@@ -85,6 +85,7 @@ function StockFile() {
       </ol>
       <span className="hint">{u.expiryHint}</span>
       <span className="hint">{u.replaceHint}</span>
+      <span className="hint">{u.codeHint}</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         <button
           type="button"
@@ -173,6 +174,9 @@ function UploadSummary({
       <span>{u.changes(upload.summary)}</span>
       {upload.summary.reserved_kept > 0 && (
         <Banner tone="amber">{u.reservedKept(upload.summary.reserved_kept)}</Banner>
+      )}
+      {upload.summary.left_alone > 0 && (
+        <Banner tone="amber">{u.leftAlone(upload.summary.left_alone)}</Banner>
       )}
       {upload.errors.length > 0 && (
         <>
@@ -355,10 +359,10 @@ function StockRow({ item }: { item: Item }) {
 
 /** A medicine as the Ministry lists it. The same name and strength can be listed
  * several times, for other packs or makers: the pack and the public price tell them
- * apart. */
+ * apart, and the code is what a stock file writes to say which one it means. */
 function fullName(product: Schemas['ProductSummary']): string {
   const parts = [product.name, product.strength, product.form, product.pack]
-  return `${parts.filter(Boolean).join(' · ')} · ${lbp(product.public_price.lbp)}`
+  return `${parts.filter(Boolean).join(' · ')} · ${lbp(product.public_price.lbp)} · ${s.add.code(product.code)}`
 }
 
 /** One box typed by hand, with the medicine chosen from the catalog (PS-6). */

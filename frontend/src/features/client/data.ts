@@ -56,3 +56,12 @@ export function useRequests(state: 'open' | 'closed') {
     refetchInterval: state === 'open' ? 10_000 : false,
   })
 }
+
+/** What the client watches for right now ([Notify me]). */
+export function useWatches() {
+  return useQuery({
+    queryKey: ['watches'],
+    queryFn: () => unwrap(api.GET('/api/v1/watches', { params: { query: { state: 'live' } } })),
+    refetchInterval: 30_000,
+  })
+}

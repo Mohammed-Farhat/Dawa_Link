@@ -61,6 +61,8 @@ class ChatMessage(Out):
     # Tapping a chip only sends its text as a new message.
     quick_replies: list[str]
     reportable: bool
+    # The client already pressed the thumbs-down on it: once per reply (SM-10).
+    reported: bool
     created_at: datetime
 
 

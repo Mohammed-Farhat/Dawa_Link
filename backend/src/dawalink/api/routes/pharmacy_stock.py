@@ -191,6 +191,7 @@ def _upload(row: InventoryUpload) -> StockUpload:
             changed=row.summary.get("changed", 0),
             zeroed=row.summary.get("zeroed", 0),
             reserved_kept=row.summary.get("reserved_kept", 0),
+            left_alone=row.summary.get("left_alone", 0),
         ),
         errors=[
             UploadRowError(

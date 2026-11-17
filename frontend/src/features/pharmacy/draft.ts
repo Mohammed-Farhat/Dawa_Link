@@ -92,14 +92,19 @@ export function weekProblem(week: Week): string | null {
   return null
 }
 
+/** A phone number that could be one: the API checks that it is a Lebanese number. */
+export function phoneProblem(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 13 ? null : d.problems.phone
+}
+
 /** What is wrong, by the API's own field names, so its refusals land on the same field. */
 export function problemsOf(draft: Draft): Record<string, string | null> {
   const p = d.problems
-  const digits = draft.phone.replace(/\D/g, '')
   return {
     name: draft.name.trim().length >= 2 && draft.name.trim().length <= 60 ? null : p.name,
     license_number: draft.license.trim().length >= 2 ? null : p.license_number,
-    phone: digits.length >= 7 && digits.length <= 13 ? null : p.phone,
+    phone: phoneProblem(draft.phone),
     address: draft.address.trim().length >= 5 ? null : p.address,
     district_id: draft.district ? null : p.district_id,
     location: draft.pin ? null : p.location,

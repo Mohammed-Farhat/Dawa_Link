@@ -163,7 +163,9 @@ class AgentToolCall(Base):
 
 
 class ChatMessage(Base):
-    """One message. Personal details are removed before it is stored (INV-10)."""
+    """One message. Personal details are removed before it is stored (INV-10), except
+    from a reply typed by DawaLink's team (`author = 'admin'`), which the client reads as
+    it was written: that one is cleaned wherever it is read for the model or copied."""
 
     __tablename__ = "chat_messages"
     __table_args__ = (

@@ -8,10 +8,10 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from dawalink.catalog.composition import normalize
-from dawalink.db.models import Product
+from dawalink.db.models import CatalogImport, Product
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -32,6 +32,9 @@ class ProductRef:
     prescription_required: bool
     public_price_lbp: int
     equivalence_key: str | None
+    # The Ministry's own number for the product: what a pharmacy's stock file may carry
+    # to say which pack it means. The agent's tools don't pass it on.
+    code: int
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ def ref(product: Product) -> ProductRef:
         prescription_required=product.prescription_required,
         public_price_lbp=product.public_price_lbp,
         equivalence_key=product.equivalence_key,
+        code=product.moph_code,
     )
 
 
@@ -165,3 +169,40 @@ def products_in_group(tx: Tx, product: Product, *, with_equivalents: bool) -> Se
     if not with_equivalents:
         return [product.id]
     return [product.id, *(other.id for other in equivalents(tx, product.id))]
+
+
+def admin_products(tx: Tx, query: str, *, offset: int = 0, limit: int = 50) -> list[Product]:
+    """The catalog as an admin reads it (AS-9): every product, **the controlled ones
+    included**, which nobody else ever sees (R-C6). Read-only: the catalog changes by the
+    import script and the team's override files."""
+    statement = select(Product)
+    wanted = normalize(query)
+    if wanted:
+        statement = statement.where(Product.search_name.contains(wanted, autoescape=True))
+    return list(
+        tx.session.execute(
+            statement.order_by(Product.moph_name, Product.moph_code).offset(offset).limit(limit)
+        ).scalars()
+    )
+
+
+def group_sizes(tx: Tx, keys: Sequence[str]) -> dict[str, int]:
+    """How many products share each "same medicine" key (R-C5)."""
+    if not keys:
+        return {}
+    return {
+        str(key): int(count)
+        for key, count in tx.session.execute(
+            select(Product.equivalence_key, func.count())
+            .where(Product.equivalence_key.in_(keys))
+            .group_by(Product.equivalence_key)
+        )
+    }
+
+
+def imports(tx: Tx) -> list[CatalogImport]:
+    return list(
+        tx.session.execute(
+            select(CatalogImport).order_by(CatalogImport.imported_at.desc())
+        ).scalars()
+    )

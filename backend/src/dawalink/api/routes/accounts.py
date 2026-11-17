@@ -1,5 +1,6 @@
 """Public configuration, registration and logins (docs/06 §6.1)."""
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -201,6 +202,10 @@ def change_password(body: ChangePassword, caller: SignedIn, work: DoWork) -> Res
     return Response(status_code=204)
 
 
+# 6 to 15 digits, with an optional + and spaces, dots, hyphens or brackets between them.
+PHONE_SHAPE = re.compile(r"\+?(?:[\s.()\-]*\d){6,15}[\s.()\-]*")
+
+
 @router.get("/me/profile")
 def read_profile(caller: AsClient, work: DoWork) -> Me:
     with work.tx() as tx:
@@ -215,7 +220,14 @@ def change_profile(body: ProfileChange, caller: AsClient, work: DoWork) -> Me:
         user = tx.session.get_one(User, caller.user_id)
         profile = tx.session.get_one(ClientProfile, caller.user_id)
         if "phone" in sent:
-            user.phone = body.phone or None
+            phone = (body.phone or "").strip()
+            # A phone is digits with the marks people write around them. Anything else
+            # is refused: the field is shown to DawaLink's team for support.
+            if phone and not PHONE_SHAPE.fullmatch(phone):
+                raise ServiceError(
+                    Code.VALIDATION_ERROR, "Enter a phone number, or leave it empty.", field="phone"
+                )
+            user.phone = phone or None
         if "district_id" in sent and body.district_id is not None:
             if tx.session.get(District, body.district_id) is None:
                 raise ServiceError(Code.VALIDATION_ERROR, "Unknown district.", field="district_id")

@@ -1432,3 +1432,172 @@ body {
 .stock-table td .banner {
   white-space: normal;
 }
+
+/* --- The admin's console (docs/11 §3.3): a navy bar, the same panels ------------------- */
+.bar--admin {
+  background: var(--ink);
+  border-bottom: 0;
+  color: var(--white);
+}
+.bar--admin .bar__tab {
+  color: var(--white);
+}
+.bar--admin .bar__tab[aria-current='page'] {
+  background: var(--white);
+  color: var(--ink);
+}
+.row-link {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.row-link:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.thread-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.thread-line:last-child {
+  border-bottom: 0;
+}
+.thread-line__who {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.thread-line--reported {
+  border: 2px solid var(--amber);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+.text-area {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 96px;
+  padding: 12px 14px;
+  border: 1px solid var(--field);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.audit-change {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* The audit log: its two wordy columns keep a width worth reading, and the table
+   scrolls sideways on a narrow screen. */
+.stock-table .audit-cell {
+  white-space: normal;
+  min-width: 240px;
+  vertical-align: top;
+}
+/* --- The thumbs-down under a reply of the assistant (docs/11 §6) ------------------------ */
+.bubble-label {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.report-button {
+  align-self: flex-start;
+  min-width: 44px;
+  min-height: 44px;
+  margin-top: -8px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-hint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.report-form {
+  align-self: stretch;
+  border-radius: 20px;
+  background: var(--white);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- The client's portal wider than 992 px (docs/11 §3.1): a top bar instead of the
+   floating menu, and the assistant beside the page -------------------------------------- */
+.wide {
+  min-height: 100dvh;
+}
+.nav--top {
+  position: sticky;
+  top: 0;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  height: 64px;
+  padding: 8px 28px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
+  justify-content: center;
+  gap: 8px;
+}
+.nav--top .nav__tab,
+.nav--top .nav__tab[aria-current='page'] {
+  flex: none;
+  flex-direction: row;
+  gap: 8px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+.wide__body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 0 28px;
+}
+.screen--wide {
+  flex: 0 1 560px;
+  min-height: 0;
+  margin: 0;
+  padding-bottom: 40px;
+}
+.wide__beside {
+  flex: 0 1 440px;
+  min-width: 320px;
+  position: sticky;
+  top: 64px;
+  height: calc(100dvh - 64px);
+  border-inline: 1px solid var(--line);
+  overflow: hidden;
+}
+.wide__beside .chat {
+  height: 100%;
+  max-width: none;
+}
+.wide__note {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

@@ -89,3 +89,19 @@ export function beirutHour(moment: Date = new Date()): number {
 export function directionsUrl(pin: Schemas['Pin']): string {
   return `https://www.openstreetmap.org/directions?to=${pin.lat}%2C${pin.lon}#map=16/${pin.lat}/${pin.lon}`
 }
+
+/** "Fri 13 Nov 09:30", in Beirut time: a moment said by its date, never "today". For
+ * lists of past events, where "today" would depend on which clock is asked. */
+export function dateAndClock(moment: string | Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: BEIRUT,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(new Date(moment))
+    .replace(',', '')
+}

@@ -11,6 +11,7 @@ import { calendarDate, dayWord } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { LocationSheet } from '../assistant/LocationSheet'
 import { placeBody, useSearchChoices } from './choices'
+import { NotifyMe } from './NotifyMe'
 import { PriceBlock } from './parts'
 import { openWords, travelWords } from './words'
 
@@ -123,7 +124,16 @@ function Results({ productId }: { productId: string }) {
   const [otherDays, setOtherDays] = useState(false)
   const [choosingPlace, setChoosingPlace] = useState(false)
   const result = useQuery({
-    queryKey: ['listings', productId, choices.place, choices.daysOfUse, choices.pickupDay, choices.sort, limit],
+    queryKey: [
+      'listings',
+      productId,
+      choices.place,
+      choices.daysOfUse,
+      choices.pickupDay,
+      choices.sort,
+      choices.maxPriceLbp,
+      limit,
+    ],
     queryFn: () =>
       unwrap(
         api.POST('/api/v1/listings/search', {
@@ -132,6 +142,7 @@ function Results({ productId }: { productId: string }) {
             location: placeBody(choices.place),
             days_of_use: choices.daysOfUse,
             pickup_day: choices.pickupDay,
+            max_price: choices.maxPriceLbp ? { amount: String(choices.maxPriceLbp), currency: 'LBP' } : null,
             sort: choices.sort,
             on_foot: false,
             cursor: 0,
@@ -246,6 +257,19 @@ function Results({ productId }: { productId: string }) {
             onChange={(event) => choices.set({ sort: event.currentTarget.value as typeof choices.sort })}
             data={Object.entries(s.sorts).map(([value, label]) => ({ value, label }))}
           />
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 14 }}>
+            {s.maxPrice}
+            <input
+              className="quantity-input quantity-input--wide"
+              type="text"
+              inputMode="numeric"
+              value={choices.maxPriceLbp ?? ''}
+              onChange={(event) => {
+                const digits = event.currentTarget.value.replace(/\D/g, '')
+                choices.set({ maxPriceLbp: digits ? Number(digits) : null })
+              }}
+            />
+          </label>
         </div>
       </section>
 
@@ -298,6 +322,7 @@ function Results({ productId }: { productId: string }) {
               <ChatIcon small />
               {s.askToFind}
             </button>
+            <NotifyMe productId={productId} />
           </div>
         )}
         {result.data.next_cursor !== null && limit < 50 && (

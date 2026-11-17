@@ -52,6 +52,9 @@ export default function PinMap({
     const made = L.map(holder.current, {
       center: pin ? [pin.lat, pin.lon] : [around.lat, around.lon],
       zoom: pin ? 16 : 12,
+      // The wheel scrolls the page, not the map: a form with a map in the middle must
+      // not swallow the scroll (seen while trying the admin's page). + and − zoom.
+      scrollWheelZoom: false,
     })
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,

@@ -96,6 +96,51 @@ describe('The assistant', () => {
     expect(container.querySelector('.chat__messages a')).toBeNull()
   })
 
+  it('reports an answer once, with a reason and a few words', async () => {
+    const api = chatApi(
+      { now: [QUESTION, REPLY] },
+      { [`POST ${MESSAGES}/2/report`]: answer(201, { id: 'report-1' }) },
+    )
+    const { container } = renderApp(<AppRoutes />, { path: '/assistant' })
+    const user = userEvent.setup()
+    const r = s.report
+
+    // Under the assistant's reply, not under the client's own message.
+    expect(await screen.findAllByRole('button', { name: r.open })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: r.open }))
+    expect(await accessibilityProblems(container)).toEqual([])
+    const send = screen.getByRole('button', { name: r.send })
+    // A reason is needed; the words are not.
+    expect(send).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: r.reasons.wrong_information }))
+    await user.type(screen.getByLabelText(r.comment), 'The price was wrong')
+    await user.click(send)
+
+    expect(await screen.findByText(r.thanks)).toBeInTheDocument()
+    expect(api.sent('POST', `${MESSAGES}/2/report`)[0].body).toEqual({
+      reason: 'wrong_information',
+      comment: 'The price was wrong',
+    })
+    expect(screen.queryByRole('button', { name: r.open })).not.toBeInTheDocument()
+  })
+
+  it('shows an answer that was already reported as reported', async () => {
+    chatApi({ now: [QUESTION, message(2, 'agent', 'Here it is.', { reported: true })] })
+    renderApp(<AppRoutes />, { path: '/assistant' })
+
+    expect(await screen.findByText(s.report.thanks)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: s.report.open })).not.toBeInTheDocument()
+  })
+
+  it("signs a person's reply as DawaLink's team, with nothing to report on it", async () => {
+    chatApi({ now: [QUESTION, message(2, 'admin', 'For an emergency, call 140.')] })
+    renderApp(<AppRoutes />, { path: '/assistant' })
+
+    expect(await screen.findByText('For an emergency, call 140.')).toBeInTheDocument()
+    expect(screen.getByText(s.team)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: s.report.open })).not.toBeInTheDocument()
+  })
+
   it('reserves with a tap, sending only the card and a key of its own', async () => {
     const messages = { now: [QUESTION, REPLY] }
     const api = chatApi(messages, {

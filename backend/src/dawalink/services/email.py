@@ -40,10 +40,16 @@ SUBJECTS: dict[str, str] = {
     "CN-10": "{product} is available for you",
     "CN-11": "Your watch ended without stock",
     "CN-12": "Your reservation {order_ref} was cancelled",
+    # The reply itself stays in the app: a person typed it, and an email is a template.
+    "CN-14": "DawaLink's team answered you",
     "CN-15": "Your request {request_ref}: a plan is ready",
     "CN-16": "Your request {request_ref}: one hour left",
     "CN-17": "Your request {request_ref} is closed",
     "PN-1": "We received your pharmacy's registration",
+    "PN-2": "Your pharmacy is approved on DawaLink",
+    "PN-3": "Your pharmacy's registration was not accepted",
+    "PN-12": "Your pharmacy on DawaLink is {account_state}",
+    "PN-13": "We need more information about your pharmacy's registration",
     "PN-4": "New reservation {order_ref}: put the box aside",
     "PN-7": "Can you release {product}?",
     "PN-8": "Reservation {order_ref} was cancelled: put the box back",
@@ -150,6 +156,8 @@ FACTS: tuple[tuple[str, str, Callable[[Any, Decimal | None], str]], ...] = (
     ("respond_by", "Please answer by", _moment),
     ("paused_until", "Paused until", _moment),
     ("items_missing", "Medicines still missing", _plain),
+    # What DawaLink's team wrote to a pharmacy about its registration (PN-3, PN-13).
+    ("team_message", "From DawaLink's team", _plain),
 )
 
 
@@ -172,15 +180,22 @@ def render(
     subject = FALLBACK_SUBJECT
     if template in SUBJECTS and not missing_fields(template, params):
         subject = SUBJECTS[template].format_map(params)
-    facts = [
+    lines = facts(template, params, lbp_per_usd)
+    return subject, "\n\n".join(part for part in (subject, "\n".join(lines), FOOTER) if part)
+
+
+def facts(template: str, params: dict[str, Any], lbp_per_usd: Decimal | None = None) -> list[str]:
+    """What a notification says besides its title, one fact per line: the same lines in
+    the email and in the app's list."""
+    lines = [
         f"{label}: {write(params[name], lbp_per_usd)}"
         for name, label, write in FACTS
         if params.get(name) not in (None, "") and not (name == "pickup_by" and template in ENDED)
     ]
     # The notice is for the client who will go to the counter, while the order is still on.
     if params.get("prescription_required") and template.startswith("CN-") and template not in ENDED:
-        facts.append(PRESCRIPTION_NOTICE)
-    return subject, "\n\n".join(part for part in (subject, "\n".join(facts), FOOTER) if part)
+        lines.append(PRESCRIPTION_NOTICE)
+    return lines
 
 
 def display_rate(tx: Tx) -> Decimal | None:

@@ -36,7 +36,7 @@ from dawalink.domain.money import usd_approx
 from dawalink.domain.numbers import LOCATION_DECIMALS, NO_SHOW_WINDOW, NO_SHOWS_BEFORE_PAUSE
 from dawalink.domain.orders import OrderState
 from dawalink.domain.vocabulary import MessageKind, ProposalKind, UserRole
-from dawalink.services import auth, email, pharmacies, proposals, search
+from dawalink.services import answer_reports, auth, email, pharmacies, proposals, search
 from dawalink.services.catalog import ProductRef
 from dawalink.services.context import Tx
 
@@ -74,6 +74,7 @@ def product_summary(product: Product, lbp_per_usd: Decimal | None) -> common.Pro
         pack=product.presentation_text,
         prescription_required=product.prescription_required,
         public_price=money(product.public_price_lbp, lbp_per_usd),
+        code=product.moph_code,
     )
 
 
@@ -119,6 +120,7 @@ def product_from_ref(ref: ProductRef, lbp_per_usd: Decimal | None) -> common.Pro
         pack=ref.pack,
         prescription_required=ref.prescription_required,
         public_price=money(ref.public_price_lbp, lbp_per_usd),
+        code=ref.code,
     )
 
 
@@ -194,6 +196,7 @@ def me(tx: Tx, user: User) -> account_schemas.Me:
         role=user.role,
         email=user.email,
         full_name=user.full_name,
+        phone=user.phone,
         email_verified=user.email_verified_at is not None,
         client=client,
         pharmacy=pharmacy,
@@ -403,6 +406,10 @@ def messages(tx: Tx, rows: Sequence[ChatMessage]) -> list[chat_schemas.ChatMessa
     """Messages as the client sees them. **Internal events are never among them**: those
     are what the agent reads, and the client sees the matching card instead (API-D11)."""
     rows = [row for row in rows if row.kind != MessageKind.EVENT.value]
+    reported: set[int] = set()
+    if rows:
+        owner = tx.session.get_one(Conversation, rows[0].conversation_id).client_id
+        reported = answer_reports.reported_seqs(tx, owner, rows)
     wanted = [
         uuid.UUID(str(card)) for row in rows if row.author == "agent" for card in (row.cards or [])
     ]
@@ -436,6 +443,7 @@ def messages(tx: Tx, rows: Sequence[ChatMessage]) -> list[chat_schemas.ChatMessa
                 cards=cards,
                 quick_replies=[str(chip) for chip in (row.quick_replies or [])],
                 reportable=row.author == "agent",
+                reported=row.seq in reported,
                 created_at=row.created_at,
             )
         )

@@ -128,6 +128,7 @@ export function loggedIn() {
 export const CLIENT = {
   id: '11111111-1111-4111-8111-111111111111',
   role: 'client',
+  phone: null,
   email: 'nour@example.com',
   full_name: 'Nour Khoury',
   email_verified: true,
@@ -181,6 +182,7 @@ export const RESERVATION = {
     pack: '14 tablets',
     prescription_required: true,
     public_price: money(1_000_000),
+    code: 7001,
   },
   pharmacy: {
     id: '44444444-4444-4444-8444-444444444444',
@@ -241,6 +243,7 @@ export function message(seq: number, author: string, text: string | null, more: 
     cards: [],
     quick_replies: [],
     reportable: author === 'agent',
+    reported: false,
     created_at: '2026-11-16T08:00:00Z',
     ...more,
   }

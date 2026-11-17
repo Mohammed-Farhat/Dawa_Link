@@ -251,7 +251,13 @@ class TestStockFiles:
         assert read.status_code == 201
         assert (summary["status"], summary["rows_total"]) == ("VALIDATED", 3)
         assert (summary["rows_ok"], summary["rows_error"]) == (2, 1)
-        assert summary["summary"] == {"new": 2, "changed": 0, "zeroed": 1, "reserved_kept": 0}
+        assert summary["summary"] == {
+            "new": 2,
+            "changed": 0,
+            "zeroed": 1,
+            "reserved_kept": 0,
+            "left_alone": 0,
+        }
         assert summary["errors"] == [
             {
                 "row": 3,

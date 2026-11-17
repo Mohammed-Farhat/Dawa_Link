@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,6 +18,11 @@ class In(BaseModel):
     """Something the API is sent. A field nobody declared is refused, never ignored."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+# A district's number as a form sends it. The range is the column's own: a larger number
+# used to reach the database and come back as a server error (found on 2026-11-16).
+DistrictId = Annotated[int, Field(ge=1, le=32_767)]
 
 
 class Message(Out):
@@ -55,6 +60,9 @@ class ProductSummary(Out):
     pack: str | None
     prescription_required: bool
     public_price: Money
+    # The Ministry's number for this product. A pharmacy writes it in the `code` column
+    # of a stock file when a name and a strength alone could mean several packs.
+    code: int
 
 
 class Pin(Out):
@@ -86,4 +94,4 @@ class LocationIn(In):
 
     lat: float | None = Field(default=None, ge=-90, le=90)
     lon: float | None = Field(default=None, ge=-180, le=180)
-    district_id: int | None = None
+    district_id: DistrictId | None = None

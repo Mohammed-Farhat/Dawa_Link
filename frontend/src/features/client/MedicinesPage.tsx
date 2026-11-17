@@ -1,12 +1,12 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import type { Schemas } from '../../api/client'
-import { useSession } from '../../api/session'
+import { api, type Schemas } from '../../api/client'
 import { Screen } from '../../components/layout'
-import { lbp } from '../../format'
+import { clock, lbp } from '../../format'
 import { strings } from '../../strings/en'
-import { useReservations } from './data'
+import { useReservations, useWatches } from './data'
 
 const s = strings.medicines
 
@@ -19,8 +19,56 @@ const TONE: Record<Schemas['Reservation']['state'], string> = {
   CANCELLED_BY_SYSTEM: 'grey',
 }
 
-/** "My medicines": one card per medicine (docs/11 §3.1). Requests and watches join the
- * same list when their screens are built. */
+/** CS-11: what DawaLink watches for, with [Stop watching]. A watch that got an offer
+ * says so: the offer's card is on Home. */
+function Watching() {
+  const queryClient = useQueryClient()
+  const watches = useWatches()
+  const items = watches.data?.items ?? []
+  if (items.length === 0) return null
+
+  async function stop(id: string) {
+    await api.POST('/api/v1/watches/{watch_id}/cancel', { params: { path: { watch_id: id } } })
+    await queryClient.invalidateQueries({ queryKey: ['watches'] })
+  }
+
+  return (
+    <section aria-label={s.watchingTitle} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {items.map((watch) => (
+        <article key={watch.id} className="row-card">
+          <div className="row-card__top">
+            <span style={{ fontSize: 17, fontWeight: 600 }}>
+              {watch.product.name} × {watch.qty}
+            </span>
+            <span className={`status-pill status-pill--${watch.state === 'OFFER_PENDING' ? 'green' : 'blue'}`}>
+              {watch.state === 'OFFER_PENDING' ? s.watchOffer : s.watchingTitle}
+            </span>
+          </div>
+          <span className="soft" style={{ fontSize: 14 }}>
+            {s.watchUntil(clock(watch.ends_at), watch.district)}
+            {watch.max_price && ` · ${s.watchMax(lbp(watch.max_price.lbp))}`}
+          </span>
+          {watch.state === 'OFFER_PENDING' ? (
+            <Link to="/" className="pill-button">
+              {s.seeOffer}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="text-button"
+              style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}
+              onClick={() => void stop(watch.id)}
+            >
+              {s.stopWatching}
+            </button>
+          )}
+        </article>
+      ))}
+    </section>
+  )
+}
+
+/** "My medicines": one card per medicine (docs/11 §3.1), the watches first. */
 export function MedicinesPage() {
   const [view, setView] = useState<'active' | 'history'>('active')
   const found = useReservations(view)
@@ -44,6 +92,7 @@ export function MedicinesPage() {
         ))}
       </div>
 
+      {view === 'active' && <Watching />}
       {found.isPending && <p className="soft">{strings.common.loading}</p>}
       {found.isSuccess && items.length === 0 && (
         <div className="empty">
@@ -71,36 +120,6 @@ export function MedicinesPage() {
           )}
         </article>
       ))}
-    </Screen>
-  )
-}
-
-/** CS-13, the first part: who is logged in, and logging out. */
-export function MePage() {
-  const m = strings.me
-  const { me, logout } = useSession()
-  return (
-    <Screen>
-      <h1 className="page-title">{m.title}</h1>
-      {me && (
-        <div className="row-card">
-          <span style={{ fontSize: 18, fontWeight: 600 }}>{me.full_name}</span>
-          <span className="soft">{me.email}</span>
-          {me.client?.district && (
-            <span className="soft">
-              {m.homeDistrict}: {me.client.district.name}
-            </span>
-          )}
-          {me.client && (
-            <span className="soft">
-              {m.missedPickups(me.client.missed_pickups_30d, me.client.missed_pickups_before_pause)}
-            </span>
-          )}
-        </div>
-      )}
-      <button type="button" className="pill-button pill-button--grey" onClick={() => void logout()}>
-        {m.logOut}
-      </button>
     </Screen>
   )
 }

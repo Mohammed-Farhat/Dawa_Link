@@ -401,6 +401,26 @@ def expire_ask(tx: Tx, ask_id: uuid.UUID) -> bool:
     return True
 
 
+def withdraw_asks_of_pharmacy(tx: Tx, pharmacy_id: uuid.UUID) -> int:
+    """The pharmacy was suspended: the asks it had not answered are withdrawn (SM-1), and
+    each one's request carries on with the other pharmacies, or ends."""
+    asked = list(
+        tx.session.execute(
+            select(EarlyReleaseAsk)
+            .where(
+                EarlyReleaseAsk.pharmacy_id == pharmacy_id,
+                EarlyReleaseAsk.state == AskState.ASKED.value,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).scalars()
+    )
+    for ask in asked:
+        _move_ask(tx, ask, AskState.WITHDRAWN, Actor.SYSTEM)
+        resolve(tx, ask.er_request_id)
+    return len(asked)
+
+
 def resolve(tx: Tx, er_request_id: uuid.UUID) -> bool:
     """Every ask ended and nothing was accepted: the request is UNFULFILLED (R-E7).
 

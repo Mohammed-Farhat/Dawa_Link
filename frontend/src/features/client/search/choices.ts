@@ -18,6 +18,8 @@ export type SearchChoices = {
   /** null: any day the pharmacy allows. */
   pickupDay: string | null
   sort: 'best' | 'nearest' | 'cheapest' | 'latest_expiry'
+  /** The most the client wants to pay for a pack, in LBP. null: no limit. */
+  maxPriceLbp: number | null
 }
 
 export type ChoicesStore = SearchChoices & { set: (change: Partial<SearchChoices>) => void }

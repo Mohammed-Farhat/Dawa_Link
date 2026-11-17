@@ -130,6 +130,29 @@ def cancel_watch(tx: Tx, client_id: uuid.UUID, claim_id: uuid.UUID) -> Claim:
     return claim
 
 
+def end_watches_for_suspension(tx: Tx, client_id: uuid.UUID) -> int:
+    """An admin suspended the client: their watches end, and any offer a watch held goes
+    to the next client who waits (SM-2). The caller holds the client's lock and the locks
+    of the boxes behind their open orders."""
+    watching = list(
+        tx.session.execute(
+            select(Claim.id).where(
+                Claim.client_id == client_id,
+                Claim.kind == ClaimKind.WATCH.value,
+                Claim.state.in_([state.value for state in LIVE_STATES]),
+            )
+        ).scalars()
+    )
+    for claim_id in watching:
+        claim = needs.lock_claim(tx, claim_id)
+        if ClaimState(claim.state) not in LIVE_STATES:
+            continue
+        orders.withdraw_offers(tx, claim.id, reason="the client was suspended")
+        needs.withdraw_asks(tx, claim, fulfilled=False)
+        needs.move_claim(tx, claim, ClaimState.CANCELLED, Actor.ADMIN)
+    return len(watching)
+
+
 def expire_watch(tx: Tx, claim_id: uuid.UUID) -> bool:
     """A watch's window ended (SM-7). Run by the clock check.
 

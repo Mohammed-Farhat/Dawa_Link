@@ -255,8 +255,8 @@ export function LoginPage({ withCode = false }: { withCode?: boolean }) {
 
   return (
     <main className="screen screen--plain screen--white">
-      <BackToWelcome />
-      <h1 className="page-title">{s.title}</h1>
+      {!withCode && <BackToWelcome />}
+      <h1 className="page-title">{withCode ? strings.admin.loginTitle : s.title}</h1>
       <form className="form" onSubmit={submit} noValidate>
         <TextInput
           label={s.email}
@@ -291,13 +291,16 @@ export function LoginPage({ withCode = false }: { withCode?: boolean }) {
         <button
           type="submit"
           className="pill-button pill-button--wide"
-          disabled={sending || !email.trim() || !password}
+          disabled={sending || !email.trim() || !password || (withCode && !code.trim())}
         >
           {s.submit}
         </button>
-        <Link to="/signup" className="text-button">
-          {s.noAccount}
-        </Link>
+        {/* An admin account is made by a command, never from the website (A-D1). */}
+        {!withCode && (
+          <Link to="/signup" className="text-button">
+            {s.noAccount}
+          </Link>
+        )}
       </form>
     </main>
   )

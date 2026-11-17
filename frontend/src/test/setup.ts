@@ -1,7 +1,12 @@
 import '@testing-library/jest-dom/vitest'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+
+// The first test of a file also loads the part of the website it opens (the pharmacy's
+// portal, the admin's console). On a busy laptop that alone can take the default second,
+// and a test then fails for a reason that has nothing to do with what it checks.
+configure({ asyncUtilTimeout: 3000 })
 
 afterEach(() => {
   cleanup()

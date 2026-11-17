@@ -21,12 +21,14 @@ from dawalink.api.middleware import (
 )
 from dawalink.api.routes import (
     accounts,
+    admin,
     conversations,
     pharmacy,
     pharmacy_stock,
     requests,
     reservations,
     search,
+    watches,
 )
 from dawalink.config import ConfigError, Settings, load_settings
 from dawalink.db.session import make_engine
@@ -131,12 +133,14 @@ def create_app(
     app.include_router(health_router, prefix=API_PREFIX)
     for routes in (
         accounts,
+        admin,
         conversations,
         pharmacy,
         pharmacy_stock,
         requests,
         reservations,
         search,
+        watches,
     ):
         app.include_router(routes.router, prefix=API_PREFIX)
     return app

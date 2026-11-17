@@ -132,6 +132,27 @@ class ReportState(StrEnum):
     CONFIRMED = "CONFIRMED"
 
 
+class ReportReason(StrEnum):
+    """What a client says is wrong with a reply, when they press the thumbs-down."""
+
+    WRONG_MEDICINE = "wrong_medicine"
+    WRONG_INFORMATION = "wrong_information"
+    NOT_HELPFUL = "not_helpful"
+    UNSAFE = "unsafe"
+    OTHER = "other"
+
+
+class ReportCategory(StrEnum):
+    """What an admin files a confirmed report under: the part of the agent that failed,
+    named like the evaluation's suites (docs/08)."""
+
+    UNDERSTANDING = "understanding"
+    DECISION = "decision"
+    SAFETY = "safety"
+    LANGUAGE = "language"
+    OTHER = "other"
+
+
 class EscalationReason(StrEnum):
     CLIENT_ASKED_HUMAN = "client_asked_human"
     EMERGENCY_CLAIM = "emergency_claim"

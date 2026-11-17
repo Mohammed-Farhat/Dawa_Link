@@ -1,13 +1,15 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useContext } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { strings } from '../strings/en'
 import { ChatIcon, HomeIcon, PersonIcon, PillIcon } from './icons'
+import { SidePanelContext, useWide } from './wide'
 
 const n = strings.nav
 
-/** The floating menu of the client's portal: Home · Medicines · Ask · Me (docs/11 §3.1). */
-export function NavBar() {
+/** The menu of the client's portal: Home · Medicines · Ask · Me (docs/11 §3.1). It
+ * floats at the bottom of a phone, and is a bar at the top of a wide screen. */
+export function NavBar({ top = false }: { top?: boolean }) {
   const tabs = [
     { to: '/', label: n.home, icon: <HomeIcon /> },
     { to: '/medicines', label: n.medicines, icon: <PillIcon /> },
@@ -15,7 +17,7 @@ export function NavBar() {
     { to: '/me', label: n.me, icon: <PersonIcon /> },
   ]
   return (
-    <nav className="nav" aria-label={n.label}>
+    <nav className={top ? 'nav nav--top' : 'nav'} aria-label={n.label}>
       {tabs.map((tab) => (
         <NavLink key={tab.to} to={tab.to} end className="nav__tab">
           {tab.icon}
@@ -26,13 +28,33 @@ export function NavBar() {
   )
 }
 
-/** A screen of the client's portal with the menu under it. */
+/** A screen of the client's portal with its menu. On a wide screen the menu is a top
+ * bar and the assistant stands beside the page, so a client on a computer searches and
+ * asks without changing page. On a phone nothing of the panel exists: it is not hidden,
+ * it is not mounted, so it asks the API for nothing. */
 export function Screen({ children }: { children: ReactNode }) {
+  const wide = useWide()
+  const beside = useContext(SidePanelContext)
+  if (!wide) {
+    return (
+      <>
+        <main className="screen">{children}</main>
+        <NavBar />
+      </>
+    )
+  }
   return (
-    <>
-      <main className="screen">{children}</main>
-      <NavBar />
-    </>
+    <div className="wide">
+      <NavBar top />
+      <div className="wide__body">
+        <main className="screen screen--wide">{children}</main>
+        {beside && (
+          <aside className="wide__beside" aria-label={strings.chat.title}>
+            {beside}
+          </aside>
+        )}
+      </div>
+    </div>
   )
 }
 

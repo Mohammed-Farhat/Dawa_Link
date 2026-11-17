@@ -1,6 +1,111 @@
 {
   "components": {
     "schemas": {
+      "AbuseFlagRow": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "DISMISSED",
+              "ACTIONED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "client",
+              "pharmacy"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "subject_type",
+          "subject_id",
+          "rule",
+          "severity",
+          "evidence",
+          "state",
+          "action",
+          "created_at"
+        ],
+        "title": "AbuseFlagRow",
+        "type": "object"
+      },
+      "AbuseFlags": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AbuseFlagRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AbuseFlags",
+        "type": "object"
+      },
       "AcceptAsk": {
         "additionalProperties": false,
         "properties": {
@@ -38,6 +143,17 @@
         "title": "AcceptOffer",
         "type": "object"
       },
+      "Actor": {
+        "enum": [
+          "CLIENT",
+          "PHARMACY",
+          "ADMIN",
+          "AGENT",
+          "SYSTEM"
+        ],
+        "title": "Actor",
+        "type": "string"
+      },
       "AddStockItem": {
         "additionalProperties": false,
         "properties": {
@@ -73,6 +189,574 @@
         "title": "AddStockItem",
         "type": "object"
       },
+      "AdminClient": {
+        "properties": {
+          "client": {
+            "$ref": "#/components/schemas/AdminClientRow"
+          },
+          "contested": {
+            "items": {
+              "$ref": "#/components/schemas/ContestedReservation"
+            },
+            "title": "Contested",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client",
+          "contested"
+        ],
+        "title": "AdminClient",
+        "type": "object"
+      },
+      "AdminClientRow": {
+        "description": "A client as an admin sees one: a status and counts, no name and no contact.",
+        "properties": {
+          "contested": {
+            "title": "Contested",
+            "type": "integer"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "no_shows": {
+            "title": "No Shows",
+            "type": "integer"
+          },
+          "open_orders": {
+            "title": "Open Orders",
+            "type": "integer"
+          },
+          "open_requests": {
+            "title": "Open Requests",
+            "type": "integer"
+          },
+          "paused_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused Until"
+          },
+          "status": {
+            "enum": [
+              "UNVERIFIED",
+              "ACTIVE",
+              "PAUSED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "paused_until",
+          "district",
+          "open_orders",
+          "no_shows",
+          "open_requests",
+          "contested"
+        ],
+        "title": "AdminClientRow",
+        "type": "object"
+      },
+      "AdminClients": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminClientRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminClients",
+        "type": "object"
+      },
+      "AdminHealth": {
+        "description": "The agent's and the system's numbers over the last `days` days, and the alerts\nthat fire right now (R-AL).",
+        "properties": {
+          "agent": {
+            "additionalProperties": true,
+            "title": "Agent",
+            "type": "object"
+          },
+          "alerts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "marketplace": {
+            "additionalProperties": true,
+            "title": "Marketplace",
+            "type": "object"
+          },
+          "requests": {
+            "additionalProperties": true,
+            "title": "Requests",
+            "type": "object"
+          },
+          "system": {
+            "additionalProperties": true,
+            "title": "System",
+            "type": "object"
+          }
+        },
+        "required": [
+          "days",
+          "agent",
+          "requests",
+          "marketplace",
+          "system",
+          "alerts"
+        ],
+        "title": "AdminHealth",
+        "type": "object"
+      },
+      "AdminOverview": {
+        "description": "What needs an admin's attention (AS-2).",
+        "properties": {
+          "contests_waiting": {
+            "title": "Contests Waiting",
+            "type": "integer"
+          },
+          "demo_mode": {
+            "title": "Demo Mode",
+            "type": "boolean"
+          },
+          "emergency_claims": {
+            "title": "Emergency Claims",
+            "type": "integer"
+          },
+          "escalations_open": {
+            "title": "Escalations Open",
+            "type": "integer"
+          },
+          "flags_high": {
+            "title": "Flags High",
+            "type": "integer"
+          },
+          "flags_open": {
+            "title": "Flags Open",
+            "type": "integer"
+          },
+          "pharmacies_waiting": {
+            "title": "Pharmacies Waiting",
+            "type": "integer"
+          },
+          "pins_to_check": {
+            "title": "Pins To Check",
+            "type": "integer"
+          },
+          "reports_new": {
+            "title": "Reports New",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pharmacies_waiting",
+          "pins_to_check",
+          "escalations_open",
+          "emergency_claims",
+          "reports_new",
+          "flags_open",
+          "flags_high",
+          "contests_waiting",
+          "demo_mode"
+        ],
+        "title": "AdminOverview",
+        "type": "object"
+      },
+      "AdminPharmacies": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminPharmacyRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminPharmacies",
+        "type": "object"
+      },
+      "AdminPharmacy": {
+        "description": "One pharmacy as the admin checks it: what it typed, its pin, and what the checks\nfound.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "district_id": {
+            "title": "District Id",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/OpeningRange"
+            },
+            "title": "Hours",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "info_requested": {
+            "title": "Info Requested",
+            "type": "boolean"
+          },
+          "license_number": {
+            "title": "License Number",
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Pin"
+          },
+          "moved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moved At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "phone_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Changed At"
+          },
+          "pickup_days": {
+            "title": "Pickup Days",
+            "type": "integer"
+          },
+          "pin_checked": {
+            "title": "Pin Checked",
+            "type": "boolean"
+          },
+          "pin_to_check": {
+            "title": "Pin To Check",
+            "type": "boolean"
+          },
+          "same_address": {
+            "items": {
+              "$ref": "#/components/schemas/OtherPharmacy"
+            },
+            "title": "Same Address",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "status_reason",
+          "info_requested",
+          "email",
+          "phone",
+          "license_number",
+          "address",
+          "district",
+          "district_id",
+          "location",
+          "pin_checked",
+          "pickup_days",
+          "hours",
+          "version",
+          "same_address",
+          "phone_changed_at",
+          "moved_at",
+          "pin_to_check",
+          "created_at",
+          "approved_at"
+        ],
+        "title": "AdminPharmacy",
+        "type": "object"
+      },
+      "AdminPharmacyEdit": {
+        "additionalProperties": false,
+        "description": "An admin corrects a pharmacy's details (SM-1). Only what is sent changes.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "district_id": {
+            "anyOf": [
+              {
+                "maximum": 32767.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
+          },
+          "license_number": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Number"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PinIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "AdminPharmacyEdit",
+        "type": "object"
+      },
+      "AdminPharmacyRow": {
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "district": {
+            "title": "District",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "info_requested": {
+            "title": "Info Requested",
+            "type": "boolean"
+          },
+          "license_number": {
+            "title": "License Number",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pin_to_check": {
+            "title": "Pin To Check",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "info_requested",
+          "pin_to_check",
+          "district",
+          "license_number",
+          "created_at",
+          "approved_at"
+        ],
+        "title": "AdminPharmacyRow",
+        "type": "object"
+      },
       "AdvanceClock": {
         "additionalProperties": false,
         "properties": {
@@ -96,6 +780,173 @@
         "title": "AdvanceClock",
         "type": "object"
       },
+      "AnswerReportDetail": {
+        "properties": {
+          "context": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedLine"
+            },
+            "title": "Context",
+            "type": "array"
+          },
+          "conversation_kind": {
+            "title": "Conversation Kind",
+            "type": "string"
+          },
+          "reply": {
+            "$ref": "#/components/schemas/ReportedLine"
+          },
+          "report": {
+            "$ref": "#/components/schemas/AnswerReportRow"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportedRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "report",
+          "conversation_kind",
+          "reply",
+          "context",
+          "run"
+        ],
+        "title": "AnswerReportDetail",
+        "type": "object"
+      },
+      "AnswerReportRow": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "in_regression": {
+            "title": "In Regression",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reply": {
+            "title": "Reply",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "NEW",
+              "DISMISSED",
+              "CONFIRMED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "reason",
+          "comment",
+          "category",
+          "in_regression",
+          "reply",
+          "created_at"
+        ],
+        "title": "AnswerReportRow",
+        "type": "object"
+      },
+      "AnswerReported": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AnswerReported",
+        "type": "object"
+      },
+      "AnswerReports": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerReportRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AnswerReports",
+        "type": "object"
+      },
+      "Approve": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "Approve",
+        "type": "object"
+      },
       "AskAnswered": {
         "properties": {
           "message": {
@@ -117,6 +968,132 @@
           "message"
         ],
         "title": "AskAnswered",
+        "type": "object"
+      },
+      "AuditPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AuditPage",
+        "type": "object"
+      },
+      "AuditRow": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_type": {
+            "title": "Actor Type",
+            "type": "string"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "actor_type",
+          "actor_id",
+          "entity_type",
+          "entity_id",
+          "action",
+          "before",
+          "after",
+          "reason"
+        ],
+        "title": "AuditRow",
         "type": "object"
       },
       "Body_upload_stock_file": {
@@ -263,6 +1240,188 @@
         "title": "CardLine",
         "type": "object"
       },
+      "CatalogImportRow": {
+        "properties": {
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "imported_at": {
+            "format": "date-time",
+            "title": "Imported At",
+            "type": "string"
+          },
+          "lbp_per_usd": {
+            "title": "Lbp Per Usd",
+            "type": "number"
+          },
+          "rows_imported": {
+            "title": "Rows Imported",
+            "type": "integer"
+          },
+          "rows_total": {
+            "title": "Rows Total",
+            "type": "integer"
+          },
+          "source_date": {
+            "format": "date",
+            "title": "Source Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "file_name",
+          "source_date",
+          "lbp_per_usd",
+          "rows_total",
+          "rows_imported",
+          "imported_at"
+        ],
+        "title": "CatalogImportRow",
+        "type": "object"
+      },
+      "CatalogImports": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogImportRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CatalogImports",
+        "type": "object"
+      },
+      "CatalogProduct": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
+          "controlled": {
+            "title": "Controlled",
+            "type": "boolean"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "prescription_required": {
+            "title": "Prescription Required",
+            "type": "boolean"
+          },
+          "public_price_lbp": {
+            "title": "Public Price Lbp",
+            "type": "integer"
+          },
+          "same_medicine": {
+            "title": "Same Medicine",
+            "type": "integer"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "strength",
+          "form",
+          "pack",
+          "manufacturer",
+          "public_price_lbp",
+          "prescription_required",
+          "controlled",
+          "same_medicine"
+        ],
+        "title": "CatalogProduct",
+        "type": "object"
+      },
+      "CatalogProducts": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogProduct"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CatalogProducts",
+        "type": "object"
+      },
       "ChangePassword": {
         "additionalProperties": false,
         "properties": {
@@ -330,6 +1489,10 @@
             "title": "Reportable",
             "type": "boolean"
           },
+          "reported": {
+            "title": "Reported",
+            "type": "boolean"
+          },
           "seq": {
             "title": "Seq",
             "type": "integer"
@@ -354,9 +1517,41 @@
           "cards",
           "quick_replies",
           "reportable",
+          "reported",
           "created_at"
         ],
         "title": "ChatMessage",
+        "type": "object"
+      },
+      "ClientContact": {
+        "description": "Read through one audited endpoint only (A-D3).",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "full_name",
+          "email",
+          "phone"
+        ],
+        "title": "ClientContact",
         "type": "object"
       },
       "ClientState": {
@@ -415,6 +1610,81 @@
           "missed_pickups_before_pause"
         ],
         "title": "ClientState",
+        "type": "object"
+      },
+      "ConfirmReport": {
+        "additionalProperties": false,
+        "properties": {
+          "add_to_regression": {
+            "default": false,
+            "title": "Add To Regression",
+            "type": "boolean"
+          },
+          "category": {
+            "enum": [
+              "understanding",
+              "decision",
+              "safety",
+              "language",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "title": "ConfirmReport",
+        "type": "object"
+      },
+      "ContestedReservation": {
+        "description": "An expired reservation the client says they picked up (R-N3).",
+        "properties": {
+          "contested_at": {
+            "format": "date-time",
+            "title": "Contested At",
+            "type": "string"
+          },
+          "expired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expired At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pharmacy": {
+            "title": "Pharmacy",
+            "type": "string"
+          },
+          "product": {
+            "title": "Product",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "product",
+          "pharmacy",
+          "expired_at",
+          "contested_at"
+        ],
+        "title": "ContestedReservation",
         "type": "object"
       },
       "ConversationRef": {
@@ -703,6 +1973,193 @@
         "title": "EarlyReleaseAsks",
         "type": "object"
       },
+      "EscalationDetail": {
+        "properties": {
+          "escalation": {
+            "$ref": "#/components/schemas/EscalationRow"
+          },
+          "thread": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessage"
+            },
+            "title": "Thread",
+            "type": "array"
+          },
+          "trace_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trace Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "escalation",
+          "thread",
+          "trace_ids"
+        ],
+        "title": "EscalationDetail",
+        "type": "object"
+      },
+      "EscalationNote": {
+        "description": "A later escalation of the same client, added to the open one (SM-9).",
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "summary",
+          "at"
+        ],
+        "title": "EscalationNote",
+        "type": "object"
+      },
+      "EscalationRow": {
+        "properties": {
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/EscalationNote"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "reason": {
+            "enum": [
+              "client_asked_human",
+              "emergency_claim",
+              "cannot_resolve",
+              "window_ending",
+              "suspicious",
+              "complaint"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "request_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Ref"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "RESOLVED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "reason",
+          "state",
+          "summary",
+          "request_ref",
+          "notes",
+          "created_at",
+          "resolved_at",
+          "resolution_note"
+        ],
+        "title": "EscalationRow",
+        "type": "object"
+      },
+      "Escalations": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EscalationRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Escalations",
+        "type": "object"
+      },
       "ExecuteProposal": {
         "additionalProperties": false,
         "properties": {
@@ -780,6 +2237,30 @@
           "message"
         ],
         "title": "ExecuteResult",
+        "type": "object"
+      },
+      "FlagAction": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "warn",
+              "suspend"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "FlagAction",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -975,6 +2456,8 @@
           "district_id": {
             "anyOf": [
               {
+                "maximum": 32767.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -1104,6 +2587,27 @@
         "title": "Login",
         "type": "object"
       },
+      "MarkRead": {
+        "additionalProperties": false,
+        "description": "`ids`, or `all: true` for everything.",
+        "properties": {
+          "all": {
+            "default": false,
+            "title": "All",
+            "type": "boolean"
+          },
+          "ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "title": "MarkRead",
+        "type": "object"
+      },
       "Me": {
         "properties": {
           "client": {
@@ -1143,6 +2647,17 @@
               }
             ]
           },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "role": {
             "enum": [
               "client",
@@ -1158,6 +2673,7 @@
           "role",
           "email",
           "full_name",
+          "phone",
           "email_verified",
           "client",
           "pharmacy"
@@ -1313,6 +2829,55 @@
         "title": "MoneyIn",
         "type": "object"
       },
+      "NewWatch": {
+        "additionalProperties": false,
+        "properties": {
+          "days_of_use": {
+            "default": 1,
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "qty": {
+            "default": 1,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Qty",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "NewWatch",
+        "type": "object"
+      },
       "NoMatch": {
         "description": "Boxes exist, but none lasts the client's days or can be had on their day (R-F4).",
         "properties": {
@@ -1359,6 +2924,93 @@
           }
         },
         "title": "NotAvailable",
+        "type": "object"
+      },
+      "NotificationOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "read": {
+            "title": "Read",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "lines",
+          "link",
+          "read",
+          "created_at"
+        ],
+        "title": "NotificationOut",
+        "type": "object"
+      },
+      "NotificationsPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "unread"
+        ],
+        "title": "NotificationsPage",
         "type": "object"
       },
       "Offer": {
@@ -1500,6 +3152,36 @@
         "title": "OpeningRange",
         "type": "object"
       },
+      "OtherPharmacy": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "OtherPharmacy",
+        "type": "object"
+      },
       "PharmacyCard": {
         "description": "What a client sees about a pharmacy.",
         "properties": {
@@ -1578,6 +3260,8 @@
             "type": "string"
           },
           "district_id": {
+            "maximum": 32767.0,
+            "minimum": 1.0,
             "title": "District Id",
             "type": "integer"
           },
@@ -2036,6 +3720,10 @@
             ],
             "title": "Atc Code"
           },
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
           "form": {
             "anyOf": [
               {
@@ -2112,6 +3800,7 @@
           "pack",
           "prescription_required",
           "public_price",
+          "code",
           "ingredients",
           "atc_code",
           "manufacturer"
@@ -2121,6 +3810,10 @@
       },
       "ProductSummary": {
         "properties": {
+          "code": {
+            "title": "Code",
+            "type": "integer"
+          },
           "form": {
             "anyOf": [
               {
@@ -2178,7 +3871,8 @@
           "form",
           "pack",
           "prescription_required",
-          "public_price"
+          "public_price",
+          "code"
         ],
         "title": "ProductSummary",
         "type": "object"
@@ -2224,6 +3918,8 @@
           "district_id": {
             "anyOf": [
               {
+                "maximum": 32767.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -2344,6 +4040,8 @@
             "type": "boolean"
           },
           "district_id": {
+            "maximum": 32767.0,
+            "minimum": 1.0,
             "title": "District Id",
             "type": "integer"
           },
@@ -2441,6 +4139,8 @@
           "district_id": {
             "anyOf": [
               {
+                "maximum": 32767.0,
+                "minimum": 1.0,
                 "type": "integer"
               },
               {
@@ -2528,6 +4228,226 @@
           }
         },
         "title": "RegistrationChange",
+        "type": "object"
+      },
+      "RegressionCases": {
+        "description": "Confirmed reports added to the regression set, as the team copies them into the\nrepo (docs/08 §5).",
+        "properties": {
+          "cases": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cases"
+        ],
+        "title": "RegressionCases",
+        "type": "object"
+      },
+      "ReportAnswer": {
+        "additionalProperties": false,
+        "description": "The client's thumbs-down on a reply.",
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "reason": {
+            "enum": [
+              "wrong_medicine",
+              "wrong_information",
+              "not_helpful",
+              "unsafe",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReportAnswer",
+        "type": "object"
+      },
+      "ReportedCard": {
+        "properties": {
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "recommended": {
+            "title": "Recommended",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "origin",
+          "type",
+          "title",
+          "recommended"
+        ],
+        "title": "ReportedCard",
+        "type": "object"
+      },
+      "ReportedLine": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "quick_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quick Replies",
+            "type": "array"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "seq",
+          "author",
+          "text",
+          "cards",
+          "quick_replies"
+        ],
+        "title": "ReportedLine",
+        "type": "object"
+      },
+      "ReportedRun": {
+        "description": "The agent turn that wrote the reply.",
+        "properties": {
+          "guardrails": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Guardrails",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "trigger",
+          "model",
+          "prompt_version",
+          "outcome",
+          "guardrails",
+          "trace_id"
+        ],
+        "title": "ReportedRun",
         "type": "object"
       },
       "RequestItem": {
@@ -2874,6 +4794,19 @@
         "title": "Reserve",
         "type": "object"
       },
+      "Resolve": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "Resolve",
+        "type": "object"
+      },
       "SearchListings": {
         "additionalProperties": false,
         "description": "A search. **It is a POST so that the client's location travels in the body**, never\nin an address that a browser's history or a server's log keeps.",
@@ -3083,8 +5016,34 @@
       },
       "SettingsChange": {
         "additionalProperties": false,
-        "description": "What an approved pharmacy changes by itself (PS-10): its hours and its pickup\ntime. Its name, licence, address, pin and phone are changed by DawaLink's team.",
+        "description": "What an approved pharmacy changes by itself (PS-10): its hours, its pickup time,\nits phone number, its address and its pin. Its name and its licence are changed by\nDawaLink's team.",
         "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "district_id": {
+            "anyOf": [
+              {
+                "maximum": 32767.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
+          },
           "hours": {
             "anyOf": [
               {
@@ -3099,6 +5058,29 @@
               }
             ],
             "title": "Hours"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PinIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           },
           "pickup_days": {
             "anyOf": [
@@ -3551,6 +5533,73 @@
         "title": "StockUpload",
         "type": "object"
       },
+      "TeamReply": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TeamReply",
+        "type": "object"
+      },
+      "ThreadMessage": {
+        "description": "One message of the conversation, as it is stored: without personal details.",
+        "properties": {
+          "author": {
+            "enum": [
+              "client",
+              "agent",
+              "system",
+              "admin"
+            ],
+            "title": "Author",
+            "type": "string"
+          },
+          "cards": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "seq",
+          "author",
+          "text",
+          "cards",
+          "created_at"
+        ],
+        "title": "ThreadMessage",
+        "type": "object"
+      },
       "Travel": {
         "description": "How far a pharmacy is from the client. Computed by code; never a coordinate.",
         "properties": {
@@ -3582,6 +5631,19 @@
           "source"
         ],
         "title": "Travel",
+        "type": "object"
+      },
+      "UnreadCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "UnreadCount",
         "type": "object"
       },
       "UploadRowError": {
@@ -3621,6 +5683,10 @@
             "title": "Changed",
             "type": "integer"
           },
+          "left_alone": {
+            "title": "Left Alone",
+            "type": "integer"
+          },
           "new": {
             "title": "New",
             "type": "integer"
@@ -3638,7 +5704,8 @@
           "new",
           "changed",
           "zeroed",
-          "reserved_kept"
+          "reserved_kept",
+          "left_alone"
         ],
         "title": "UploadSummary",
         "type": "object"
@@ -3788,6 +5855,122 @@
         ],
         "title": "WaitingUpload",
         "type": "object"
+      },
+      "Watch": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "days_of_use": {
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "qty_missing": {
+            "title": "Qty Missing",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "OFFER_PENDING",
+              "FULFILLED",
+              "EXPIRED",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product",
+          "qty",
+          "qty_missing",
+          "days_of_use",
+          "max_price",
+          "state",
+          "district",
+          "ends_at",
+          "created_at"
+        ],
+        "title": "Watch",
+        "type": "object"
+      },
+      "Watches": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Watch"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "server_now"
+        ],
+        "title": "Watches",
+        "type": "object"
+      },
+      "WithReason": {
+        "additionalProperties": false,
+        "description": "An admin's action and why. An empty reason is `REASON_REQUIRED`.",
+        "properties": {
+          "reason": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "WithReason",
+        "type": "object"
       }
     }
   },
@@ -3797,6 +5980,1285 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/abuse-flags": {
+      "get": {
+        "description": "The high ones first. A flag holds counts and IDs, never a message.",
+        "operationId": "list_abuse_flags",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "OPEN",
+                    "DISMISSED",
+                    "ACTIONED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "OPEN",
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbuseFlags"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Abuse Flags",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/abuse-flags/{flag_id}/act": {
+      "post": {
+        "description": "`warn` records that the account's owner was warned; `suspend` suspends the\naccount, with everything a suspension does.",
+        "operationId": "act_on_abuse_flag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flag Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbuseFlagRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Act On Abuse Flag",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/abuse-flags/{flag_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_abuse_flag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flag Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbuseFlagRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Abuse Flag",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/answer-reports": {
+      "get": {
+        "operationId": "list_answer_reports",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "NEW",
+                    "DISMISSED",
+                    "CONFIRMED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "NEW",
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReports"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Answer Reports",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/answer-reports/export": {
+      "get": {
+        "description": "The confirmed reports that were added to the regression set (A-D6): the reply, the\nmessages before it and the agent turn, without personal details. Audited.",
+        "operationId": "export_regression_cases",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegressionCases"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Regression Cases",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/answer-reports/{report_id}": {
+      "get": {
+        "operationId": "read_answer_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Answer Report",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/answer-reports/{report_id}/confirm": {
+      "post": {
+        "description": "[Confirmed], filed under a category; `add_to_regression` puts it in the export.",
+        "operationId": "confirm_answer_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Answer Report",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/answer-reports/{report_id}/dismiss": {
+      "post": {
+        "description": "[Not a problem].",
+        "operationId": "dismiss_answer_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Answer Report",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/audit": {
+      "get": {
+        "description": "Who changed what, newest first. Read-only: nothing can change or delete an event.\n`action=pharmacy.` gives every action of that kind; `cursor` is the last ID seen.",
+        "operationId": "read_audit_log",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Actor"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Audit Log",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/imports": {
+      "get": {
+        "operationId": "read_catalog_imports",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogImports"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Catalog Imports",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/products": {
+      "get": {
+        "description": "Every product of the Ministry's list as imported, the controlled ones included.\nNothing here changes the catalog: the import script and the team's files do.",
+        "operationId": "read_catalog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProducts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Catalog",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients": {
+      "get": {
+        "description": "Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the\nclient of an order number or a request number.",
+        "operationId": "list_clients",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "UNVERIFIED",
+                    "ACTIVE",
+                    "PAUSED",
+                    "SUSPENDED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ref",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 20,
+              "title": "Ref",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClients"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Clients",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients/{client_id}": {
+      "get": {
+        "operationId": "look_at_client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClient"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Look At Client",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients/{client_id}/contact": {
+      "get": {
+        "description": "The client's name, email and phone, for support. **Each view is written to the\naudit log**, and an admin gets 30 an hour (N-47): past that, `RATE_LIMITED`.",
+        "operationId": "view_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "View Client Contact",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients/{client_id}/lift-pause": {
+      "post": {
+        "operationId": "lift_client_pause",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClient"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lift Client Pause",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients/{client_id}/reinstate": {
+      "post": {
+        "operationId": "reinstate_client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClient"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reinstate Client",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/clients/{client_id}/suspend": {
+      "post": {
+        "description": "Every login of the client ends at once; their open requests and watches end, and\ntheir open reservations and offers are cancelled (SM-2).",
+        "operationId": "suspend_client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClient"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Client",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/demo-clock": {
       "get": {
         "operationId": "read_demo_clock",
@@ -3903,6 +7365,1183 @@
         "summary": "Advance Demo Clock",
         "tags": [
           "requests"
+        ]
+      }
+    },
+    "/api/v1/admin/escalations": {
+      "get": {
+        "description": "Emergency claims first, then the one that waits longest. Without `state`: every\nescalation that is not resolved.",
+        "operationId": "list_escalations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "OPEN",
+                    "IN_PROGRESS",
+                    "RESOLVED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Escalations"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Escalations",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/escalations/{escalation_id}": {
+      "get": {
+        "description": "The escalation with the conversation it came from, as stored: personal details\nwere removed before it was written (A-D4, INV-10).",
+        "operationId": "read_escalation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escalation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escalation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Escalation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/escalations/{escalation_id}/reply": {
+      "post": {
+        "description": "The client reads the reply in their conversation, signed \"DawaLink team\", and is\nnotified (CN-14). The client's own name, email and phone, and anything that looks\nlike an email or a phone number, are removed before it is stored, as for every\nmessage. **It changes no order and no priority** (R-PRI4).",
+        "operationId": "reply_to_escalation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escalation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escalation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamReply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reply To Escalation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/escalations/{escalation_id}/resolve": {
+      "post": {
+        "operationId": "resolve_escalation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escalation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escalation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Resolve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Escalation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/escalations/{escalation_id}/take": {
+      "post": {
+        "operationId": "take_escalation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escalation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escalation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Take Escalation",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/health": {
+      "get": {
+        "description": "The agent's numbers (turns, latency, errors, cost, guards), what it achieved\n(requests fulfilled, re-plans, early release), the marketplace's, the system's, and\nthe alerts that fire now (R-AL). Counted from our own tables: no personal data.",
+        "operationId": "read_health",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 30,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHealth"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Health",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/overview": {
+      "get": {
+        "description": "What waits for an admin (AS-2).",
+        "operationId": "overview",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies": {
+      "get": {
+        "description": "Pharmacies whose email is confirmed. `status=PENDING` is the approval queue, the\none that has waited longest first.",
+        "operationId": "list_pharmacies",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "APPROVED",
+                    "REJECTED",
+                    "SUSPENDED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacies"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pharmacies",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}": {
+      "get": {
+        "operationId": "look_at_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Look At Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "description": "An admin corrects a name, a licence, a phone, an address or the pin (SM-1). Only\nwhat is sent is checked and changed; the audit event names the fields, not the values.",
+        "operationId": "edit_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPharmacyEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/approve": {
+      "post": {
+        "description": "PENDING → APPROVED (SM-1). `version` is the one read with the details: if the\npharmacy corrected them since, the answer is `CHANGED_SINCE` and nothing changes.",
+        "operationId": "approve_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/check-pin": {
+      "post": {
+        "description": "The admin looked at the map: the pin is on the address. For a pharmacy that moved\nby itself; a wrong pin is corrected with `PATCH` instead.",
+        "operationId": "confirm_pharmacy_pin",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Pharmacy Pin",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/reinstate": {
+      "post": {
+        "description": "SUSPENDED → APPROVED: its listings are visible again (SM-1).",
+        "operationId": "reinstate_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reinstate Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/reject": {
+      "post": {
+        "description": "PENDING → REJECTED. The pharmacy reads the reason, and may correct and resubmit.",
+        "operationId": "reject_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/request-info": {
+      "post": {
+        "description": "Still PENDING: the pharmacy reads what is missing (`reason`) and corrects it.",
+        "operationId": "ask_pharmacy_for_more",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask Pharmacy For More",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/pharmacies/{pharmacy_id}/suspend": {
+      "post": {
+        "description": "APPROVED → SUSPENDED: its listings are hidden, the offers on its boxes are\ncancelled and its open asks withdrawn. Reservations already made are kept (SM-1).",
+        "operationId": "suspend_pharmacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pharmacy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pharmacy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPharmacy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Pharmacy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reservations/{reservation_id}/clear-no-show": {
+      "post": {
+        "description": "The admin accepts a contest: the expired reservation no longer counts as a\nno-show, and a pause it caused is lifted if it no longer applies (R-N3). The\nreservation itself is not changed.",
+        "operationId": "clear_no_show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithReason"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClient"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear No Show",
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -4738,6 +9377,86 @@
         ]
       }
     },
+    "/api/v1/conversations/{conversation_id}/messages/{seq}/report": {
+      "post": {
+        "description": "The thumbs-down under a reply of the assistant, once per reply (SM-10). A copy of\nthe reply and of the messages before it is kept for DawaLink's team; the client's\ncomment is stored without personal details, like a message.",
+        "operationId": "report_answer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "seq",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReported"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Answer",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
     "/api/v1/districts": {
       "get": {
         "operationId": "districts",
@@ -5019,6 +9738,187 @@
         "summary": "Change Profile",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "description": "The caller's own notifications, the newest first. `cursor` is the last ID seen.",
+        "operationId": "list_notifications",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Notifications",
+        "tags": [
+          "watches and notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read": {
+      "post": {
+        "description": "Marks the caller's own notifications as read. An ID that isn't theirs changes\nnothing: the numbers follow each other, so they must not be a way in.",
+        "operationId": "mark_read",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkRead"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Read",
+        "tags": [
+          "watches and notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "count_unread",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Count Unread",
+        "tags": [
+          "watches and notifications"
         ]
       }
     },
@@ -6070,7 +10970,7 @@
         ]
       },
       "patch": {
-        "description": "An approved pharmacy changes its opening hours or its pickup time (PS-10).\nReservations already made keep the deadline they were given (R-T5).",
+        "description": "An approved pharmacy changes its opening hours, its pickup time, its phone number,\nits address or its pin (PS-10). Reservations already made keep the deadline they were\ngiven (R-T5). A new address or pin counts at once; an admin looks at the pin again.",
         "operationId": "change_settings",
         "parameters": [
           {
@@ -7020,6 +11920,248 @@
         "summary": "Cancel Reservation",
         "tags": [
           "reservations"
+        ]
+      }
+    },
+    "/api/v1/reservations/{reservation_id}/contest": {
+      "post": {
+        "description": "[I picked it up] on an expired reservation: the pharmacy forgot to press\n[Picked up] (R-N3). Once per reservation, while the no-show still counts. A person\nfrom DawaLink looks at it: nothing changes until they do.",
+        "operationId": "contest_no_show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reservation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reservation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Contest No Show",
+        "tags": [
+          "reservations"
+        ]
+      }
+    },
+    "/api/v1/watches": {
+      "get": {
+        "description": "The client's own watches, the newest first. `live`: still waiting or holding an\noffer.",
+        "operationId": "list_watches",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "live",
+              "enum": [
+                "live",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Watches"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Watches",
+        "tags": [
+          "watches and notifications"
+        ]
+      },
+      "post": {
+        "description": "[Notify me]: DawaLink watches for this medicine for 6 hours and offers the first\nbox that appears, to whoever asked first (R-W1, R-PRI). Only during request hours.\n\nAsking twice for the same medicine answers `WATCH_EXISTS` with the watch's ID, so a\nrepeated tap creates nothing: this endpoint needs no idempotency key.",
+        "operationId": "notify_me",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewWatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Watch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Notify Me",
+        "tags": [
+          "watches and notifications"
+        ]
+      }
+    },
+    "/api/v1/watches/{watch_id}/cancel": {
+      "post": {
+        "description": "[Stop watching]. An offer the watch held goes to the next client who waits.",
+        "operationId": "stop_watching",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Watch Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Watch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Watching",
+        "tags": [
+          "watches and notifications"
         ]
       }
     }

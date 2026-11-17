@@ -38,7 +38,8 @@ REQUEST_MACHINE = StateMachine(
     "sourcing request (SM-8)",
     {
         # The window ended or every item is final (system), or the client cancelled.
-        (RequestState.OPEN, RequestState.CLOSED): by(Actor.SYSTEM, Actor.CLIENT),
+        # ... or an admin suspended the client (SM-2).
+        (RequestState.OPEN, RequestState.CLOSED): by(Actor.SYSTEM, Actor.CLIENT, Actor.ADMIN),
         # A reserved box was marked not available, or cancelled by the system, before
         # the window ended: the search for it starts again (R-RQ12).
         (RequestState.CLOSED, RequestState.OPEN): by(Actor.PHARMACY, Actor.SYSTEM),
@@ -70,7 +71,8 @@ ITEM_MACHINE = StateMachine(
         # The client cancelled the item's reservation while the request is open (O5), or
         # didn't come for it (O4): DawaLink doesn't look for that medicine again.
         (ItemState.SECURED, ItemState.CANCELLED): by(Actor.CLIENT, Actor.SYSTEM),
-        **{(state, ItemState.CANCELLED): by(Actor.CLIENT) for state in _NOT_FINAL},
+        # The client gives the item up, or an admin suspended the client (SM-2).
+        **{(state, ItemState.CANCELLED): by(Actor.CLIENT, Actor.ADMIN) for state in _NOT_FINAL},
         **{(state, ItemState.UNAVAILABLE): by(Actor.SYSTEM) for state in _NOT_FINAL},
     },
 )

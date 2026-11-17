@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import District, In, Out
+from dawalink.api.schemas.common import District, DistrictId, In, Out
 
 
 class ClientState(Out):
@@ -32,6 +32,8 @@ class Me(Out):
     role: Literal["client", "pharmacist", "admin"]
     email: str
     full_name: str
+    # The caller's own phone, for their profile's form. Nobody else's is ever in an answer.
+    phone: str | None
     email_verified: bool
     client: ClientState | None
     pharmacy: PharmacyState | None
@@ -54,7 +56,7 @@ class RegisterClient(In):
     password: str = Field(min_length=1, max_length=200)
     full_name: str = Field(min_length=2, max_length=80)
     phone: str | None = Field(default=None, max_length=30)
-    district_id: int
+    district_id: DistrictId
     accept_terms: Literal[True]
 
 
@@ -81,7 +83,7 @@ class PharmacyDetails(In):
     license_number: str = Field(min_length=1, max_length=40)
     phone: str = Field(min_length=1, max_length=30)
     address: str = Field(min_length=1, max_length=300)
-    district_id: int
+    district_id: DistrictId
     # The pin the pharmacy put on the map. An admin checks it against the address.
     location: PinIn
     pickup_days: int = Field(default=1, ge=1, le=3)
@@ -113,7 +115,7 @@ class ChangePassword(In):
 
 class ProfileChange(In):
     phone: str | None = Field(default=None, max_length=30)
-    district_id: int | None = None
+    district_id: DistrictId | None = None
     alternatives_ok_default: bool | None = None
 
 

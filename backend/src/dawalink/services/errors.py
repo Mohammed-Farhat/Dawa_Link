@@ -63,6 +63,8 @@ class Code(StrEnum):
     PRICE_ABOVE_PUBLIC = "PRICE_ABOVE_PUBLIC"
     # Admin
     REASON_REQUIRED = "REASON_REQUIRED"
+    # What the admin acts on is no longer what was on the screen: read it again.
+    CHANGED_SINCE = "CHANGED_SINCE"
     DEMO_MODE_OFF = "DEMO_MODE_OFF"
 
 

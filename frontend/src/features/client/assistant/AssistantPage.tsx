@@ -7,11 +7,13 @@ import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/clie
 import { useSession } from '../../../api/session'
 import { BackIcon, PinIcon, PlusIcon, SendIcon } from '../../../components/icons'
 import { Banner, Screen } from '../../../components/layout'
+import { beirutHour, dayAndClock } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { usePublicConfig } from '../data'
 import { UnverifiedBanner } from '../HomePage'
 import { MessageCards } from './Cards'
 import { LocationSheet } from './LocationSheet'
+import { ReportAnswer } from './ReportAnswer'
 
 const s = strings.chat
 
@@ -33,9 +35,14 @@ function locationLabel(location: Schemas['LocationSummary']): string | null {
   return location.label ?? null
 }
 
-/** CS-9: the assistant. It needs a confirmed email (R-AU5). */
-export function AssistantPage() {
+/** CS-9: the assistant. It needs a confirmed email (R-AU5).
+ *
+ * `embedded`: the same assistant beside a page on a wide screen. It then has no back
+ * button and no page title of its own, and its waiting states are plain lines: a screen
+ * inside the panel would bring a second menu, and a panel of its own. */
+export function AssistantPage({ embedded = false }: { embedded?: boolean }) {
   const { me } = useSession()
+  const Frame = embedded ? Plain : Screen
   const verified = Boolean(me?.email_verified)
   const chat = useQuery({
     queryKey: ['active-chat'],
@@ -46,31 +53,41 @@ export function AssistantPage() {
 
   if (!verified) {
     return (
-      <Screen>
+      <Frame>
         <h1 className="page-title">{s.title}</h1>
         <UnverifiedBanner />
-      </Screen>
+      </Frame>
     )
   }
   if (chat.isError) {
     const code = chat.error instanceof ApiFailure ? chat.error.code : 'INTERNAL_ERROR'
     return (
-      <Screen>
+      <Frame>
         <h1 className="page-title">{s.title}</h1>
         <Banner tone="red" alert>
           {errorMessage(code)}
         </Banner>
-      </Screen>
+      </Frame>
     )
   }
   if (!chat.data) {
     return (
-      <Screen>
+      <Frame>
         <p className="soft">{strings.common.loading}</p>
-      </Screen>
+      </Frame>
     )
   }
-  return <Conversation key={chat.data.conversation_id} conversationId={chat.data.conversation_id} />
+  return (
+    <Conversation
+      key={chat.data.conversation_id}
+      conversationId={chat.data.conversation_id}
+      embedded={embedded}
+    />
+  )
+}
+
+function Plain({ children }: { children: ReactNode }) {
+  return <div className="wide__note">{children}</div>
 }
 
 /**
@@ -99,9 +116,12 @@ export type ThreadFrame = {
 export function Conversation({
   conversationId,
   thread,
+  embedded = false,
 }: {
   conversationId: string
   thread?: ThreadFrame
+  /** Beside a page on a wide screen: no back button, and the page keeps the one title. */
+  embedded?: boolean
 }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -138,6 +158,15 @@ export function Conversation({
 
   const messages = page.data?.messages ?? []
   const last = messages[messages.length - 1]
+  // Said in the chat too (docs/11 §4): a client who asks the assistant to keep looking at
+  // night, or while paused, should know before asking. The hour is the app's own
+  // (`server_now`), never this device's: the demo clock moves it.
+  const { me } = useSession()
+  const paused = me?.client?.status === 'PAUSED'
+  const hour = page.data ? beirutHour(new Date(page.data.server_now)) : null
+  const opens = Number(config.data?.request_hours_start.slice(0, 2) ?? 8)
+  const closes = Number(config.data?.request_hours_end.slice(0, 2) ?? 20)
+  const night = hour !== null && (hour < opens || hour >= closes)
   const answered =
     awaitingAfter === null ||
     messages.some((message) => message.author === 'agent' && message.seq > awaitingAfter)
@@ -259,14 +288,20 @@ export function Conversation({
   return (
     <div className="chat">
       <header className="chat__header">
-        <Link to={thread?.backTo ?? '/'} className="round-button" aria-label={strings.common.back}>
-          <BackIcon />
-        </Link>
+        {!embedded && (
+          <Link to={thread?.backTo ?? '/'} className="round-button" aria-label={strings.common.back}>
+            <BackIcon />
+          </Link>
+        )}
         <span className="chat__mark" aria-hidden="true">
           D
         </span>
         <div className="chat__names">
-          <h1 className="chat__title">{thread?.title ?? s.title}</h1>
+          {embedded ? (
+            <h2 className="chat__title">{s.title}</h2>
+          ) : (
+            <h1 className="chat__title">{thread?.title ?? s.title}</h1>
+          )}
           <span className="chat__subtitle">{thread?.subtitle ?? s.subtitle}</span>
         </div>
         {!thread && (
@@ -294,6 +329,12 @@ export function Conversation({
 
       <div className="chat__messages" aria-live="polite">
         {degraded && <Banner tone="amber">{strings.banner.degraded}</Banner>}
+        {paused && me?.client?.paused_until && page.data && (
+          <Banner tone="amber">
+            {strings.banner.paused(dayAndClock(me.client.paused_until, page.data.server_now))}
+          </Banner>
+        )}
+        {night && config.data && <Banner tone="grey">{strings.banner.night(config.data.request_hours_start)}</Banner>}
         {page.isError && <Banner tone="amber">{strings.banner.offline}</Banner>}
         {thread?.above}
         {page.isSuccess && messages.length === 0 && pending === null && !thread && (
@@ -310,7 +351,13 @@ export function Conversation({
         )}
 
         {messages.map((message) => (
-          <MessageView key={message.seq} message={message} busy={acting} onAct={act} />
+          <MessageView
+            key={message.seq}
+            message={message}
+            conversationId={conversationId}
+            busy={acting}
+            onAct={act}
+          />
         ))}
         {pending !== null && !stored && (
           <p className="bubble bubble--mine bubble--waiting" dir="auto">
@@ -379,16 +426,20 @@ export function Conversation({
 
 function MessageView({
   message,
+  conversationId,
   busy,
   onAct,
 }: {
   message: Schemas['ChatMessage']
+  conversationId: string
   busy: boolean
   onAct: (card: Card, selectedItemKeys: string[] | null) => void
 }) {
   const mine = message.author === 'client'
   return (
     <>
+      {/* A person from DawaLink answered: it must not read as the AI's words. */}
+      {message.author === 'admin' && <span className="bubble-label">{s.team}</span>}
       {message.text && (
         // dir="auto": Arabic runs right to left, Arabizi and English left to right.
         <p className={`bubble ${mine ? 'bubble--mine' : 'bubble--theirs'}`} dir="auto">
@@ -396,6 +447,9 @@ function MessageView({
         </p>
       )}
       {message.cards.length > 0 && <MessageCards cards={message.cards} busy={busy} onAct={onAct} />}
+      {message.reportable && message.text && (
+        <ReportAnswer conversationId={conversationId} seq={message.seq} reported={message.reported} />
+      )}
     </>
   )
 }

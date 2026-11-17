@@ -3,9 +3,15 @@
 
 Who may change what:
 - **before approval** (PENDING or REJECTED) the pharmacy corrects anything it typed;
-- **after approval** it changes its opening hours and its pickup time only. The name, the
-  licence, the address, the pin **and the phone number** are what clients and the admin
-  relied on: only an admin changes them (docs/10 TM-D2, TH-59).
+- **after approval** it changes its opening hours, its pickup time, **its phone number,
+  its address and its pin** (the owner, 2026-11-16: an admin can't know that a pharmacy
+  got a new number or moved). A moved pharmacy is listed at once: nothing waits for an
+  admin. Its new pin is marked "to check", and an admin confirms it with one click.
+  The name and the licence are what the agent shows and what the admin verified: only
+  an admin changes them (docs/10 TM-D2, TH-59).
+
+The audit log never holds a name, a licence or a phone number: it says which fields
+changed, and the admin reads the current values on the pharmacy's page.
 """
 
 import uuid
@@ -13,18 +19,28 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from decimal import Decimal
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
-from dawalink.db.models import District, Pharmacy, PharmacyHours
+from dawalink.db.models import District, Pharmacy, PharmacyHours, TravelTimeCache
 from dawalink.domain import pharmacy_details as details_rules
 from dawalink.domain.accounts import PHARMACY_MACHINE, PharmacyStatus
-from dawalink.domain.numbers import PICKUP_TIME_MAX_DAYS, PICKUP_TIME_MIN_DAYS
+from dawalink.domain.numbers import (
+    PICKUP_TIME_MAX_DAYS,
+    PICKUP_TIME_MIN_DAYS,
+    TRAVEL_CACHE_TTL,
+)
 from dawalink.domain.opening_hours import MINUTES_PER_DAY, WeeklyHours
 from dawalink.domain.state_machine import Actor
 from dawalink.services import audit, notify
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+
+# The audit action of a pharmacy changing its own phone: the admin's page looks for it.
+PHONE_CHANGED = "pharmacy.phone_changed"
+# And of an approved pharmacy changing its own address, district or pin.
+MOVED = "pharmacy.moved"
+WHERE_FIELDS = ("address", "district_id", "lat", "lon")
 
 # One opening range as the forms send it: (weekday, "08:00", "13:00"), Monday = 0.
 HoursRow = tuple[int, str, str]
@@ -131,7 +147,7 @@ def check_free(tx: Tx, details: Details, *, own: uuid.UUID | None = None) -> Non
         )
 
 
-def _taken(problem: IntegrityError) -> ServiceError:
+def taken(problem: IntegrityError) -> ServiceError:
     """Two registrations at the same moment: the database's own rule caught the second."""
     if "license_number" in str(problem.orig):
         return ServiceError(
@@ -191,7 +207,7 @@ def create(tx: Tx, owner_user_id: uuid.UUID, details: Details) -> Pharmacy:
     try:
         tx.session.flush()
     except IntegrityError as problem:
-        raise _taken(problem) from None
+        raise taken(problem) from None
     _write_hours(tx, pharmacy.id, details.hours)
     audit.record(
         tx,
@@ -246,6 +262,58 @@ def current(tx: Tx, pharmacy: Pharmacy, hours: WeeklyHours) -> Details:
     )
 
 
+# The details that are text a person typed: the audit log names them, never quotes them.
+TYPED_FIELDS = ("name", "license_number", "phone", "address", "district_id", "lat", "lon")
+
+
+def changed_fields(before: Details, after: Details) -> list[str]:
+    """Which typed details differ: what an audit event says about an edit."""
+    return [field for field in TYPED_FIELDS if getattr(before, field) != getattr(after, field)]
+
+
+def forget_travel_times(tx: Tx, pharmacy_id: uuid.UUID) -> None:
+    """The pin moved: the road times counted to the old one are no longer true.
+
+    They are keyed by pharmacy, so without this the agent would weigh the old street for
+    up to a day (N-43). They are made stale, not deleted: the app's login may not delete
+    them, and the daily purge takes them away.
+    """
+    tx.session.execute(
+        update(TravelTimeCache)
+        .where(TravelTimeCache.pharmacy_id == pharmacy_id)
+        .values(computed_at=tx.now - 2 * TRAVEL_CACHE_TTL)
+    )
+
+
+def checked_place(
+    tx: Tx,
+    before: Details,
+    *,
+    address: str | None,
+    district_id: int | None,
+    location: tuple[float, float] | None,
+) -> Details:
+    """`before` with a new address, district or pin, each checked as at registration."""
+    after = before
+    if address is not None:
+        try:
+            after = replace(after, address=details_rules.clean_address(address))
+        except ValueError as problem:
+            raise _refuse("address", problem) from None
+    if district_id is not None:
+        if tx.session.get(District, district_id) is None:
+            raise _refuse("district_id", "Unknown district.")
+        after = replace(after, district_id=district_id)
+    if location is not None:
+        lat, lon = location
+        try:
+            details_rules.check_pin(lat, lon)
+        except ValueError as problem:
+            raise _refuse("location", problem) from None
+        after = replace(after, lat=Decimal(str(round(lat, 5))), lon=Decimal(str(round(lon, 5))))
+    return after
+
+
 def change_registration(tx: Tx, pharmacy_id: uuid.UUID, details: Details) -> Pharmacy:
     """A pharmacy that waits, or was rejected, corrects what it typed (PS-2)."""
     pharmacy = _locked(tx, pharmacy_id)
@@ -257,7 +325,7 @@ def change_registration(tx: Tx, pharmacy_id: uuid.UUID, details: Details) -> Pha
             status=status.value,
         )
     check_free(tx, details, own=pharmacy_id)
-    before = {"name": pharmacy.name, "license_number": pharmacy.license_number}
+    before = current(tx, pharmacy, details.hours)
     pharmacy.name = details.name
     pharmacy.license_number = details.license_number
     pharmacy.phone = details.phone
@@ -273,7 +341,7 @@ def change_registration(tx: Tx, pharmacy_id: uuid.UUID, details: Details) -> Pha
     try:
         tx.session.flush()
     except IntegrityError as problem:
-        raise _taken(problem) from None
+        raise taken(problem) from None
     _write_hours(tx, pharmacy_id, details.hours)
     audit.record(
         tx,
@@ -282,8 +350,7 @@ def change_registration(tx: Tx, pharmacy_id: uuid.UUID, details: Details) -> Pha
         "pharmacy",
         pharmacy_id,
         actor_id=pharmacy_id,
-        before=before,
-        after={"name": pharmacy.name, "license_number": pharmacy.license_number},
+        after={"fields": changed_fields(before, details), "status": pharmacy.status},
     )
     return pharmacy
 
@@ -321,11 +388,24 @@ def change_settings(
     *,
     hours: Sequence[HoursRow] | None = None,
     pickup_days: int | None = None,
+    phone: str | None = None,
+    address: str | None = None,
+    district_id: int | None = None,
+    location: tuple[float, float] | None = None,
 ) -> Pharmacy:
-    """An approved pharmacy changes its hours or its pickup time (PS-10).
+    """An approved pharmacy changes its hours, its pickup time, its phone, or where it
+    is (PS-10).
 
     Reservations already made keep the deadline they were given (R-T5): a client was told
     "pick up by Tuesday 21:00", and that stays true.
+
+    The phone is the number clients dial from an "another brand" card, so it has the
+    shape of a Lebanese number, belongs to one pharmacy, and every change leaves an audit
+    event of its own that the admin sees on the pharmacy's page (docs/10 TH-59).
+
+    **A new address or pin counts at once** (the owner, 2026-11-16, Q45): clients see it,
+    and travel times are counted to the new pin. The pin is no longer "checked by an
+    admin" until one looks at it again, and that gates nothing.
     """
     pharmacy = _locked(tx, pharmacy_id)
     status = PharmacyStatus(pharmacy.status)
@@ -343,14 +423,53 @@ def change_settings(
     if pickup_days is not None:
         after = replace(after, pickup_days=checked_pickup_days(pickup_days))
         pharmacy.pickup_days = after.pickup_days
-    audit.record(
-        tx,
-        Actor.PHARMACY,
-        "pharmacy.settings",
-        "pharmacy",
-        pharmacy_id,
-        actor_id=pharmacy_id,
-        before={"pickup_days": before.pickup_days, "hours": hours_rows(before.hours)},
-        after={"pickup_days": after.pickup_days, "hours": hours_rows(after.hours)},
-    )
+    if phone is not None:
+        try:
+            after = replace(after, phone=details_rules.clean_phone(phone))
+        except ValueError as problem:
+            raise _refuse("phone", problem) from None
+    if after.phone != before.phone:
+        check_free(tx, after, own=pharmacy_id)
+        pharmacy.phone = after.phone
+        try:
+            tx.session.flush()
+        except IntegrityError as problem:
+            raise taken(problem) from None
+        audit.record(
+            tx,
+            Actor.PHARMACY,
+            PHONE_CHANGED,
+            "pharmacy",
+            pharmacy_id,
+            actor_id=pharmacy_id,
+            after={"fields": ["phone"]},
+        )
+    after = checked_place(tx, after, address=address, district_id=district_id, location=location)
+    moved = [field for field in WHERE_FIELDS if getattr(before, field) != getattr(after, field)]
+    if moved:
+        pharmacy.address, pharmacy.district_id = after.address, after.district_id
+        pharmacy.lat, pharmacy.lon = after.lat, after.lon
+        pharmacy.location_checked_at = pharmacy.location_checked_by = None
+        if {"lat", "lon"} & set(moved):
+            forget_travel_times(tx, pharmacy_id)
+        audit.record(
+            tx,
+            Actor.PHARMACY,
+            MOVED,
+            "pharmacy",
+            pharmacy_id,
+            actor_id=pharmacy_id,
+            after={"fields": moved},
+        )
+    if hours is not None or pickup_days is not None:
+        audit.record(
+            tx,
+            Actor.PHARMACY,
+            "pharmacy.settings",
+            "pharmacy",
+            pharmacy_id,
+            actor_id=pharmacy_id,
+            before={"pickup_days": before.pickup_days, "hours": hours_rows(before.hours)},
+            after={"pickup_days": after.pickup_days, "hours": hours_rows(after.hours)},
+        )
     return pharmacy
