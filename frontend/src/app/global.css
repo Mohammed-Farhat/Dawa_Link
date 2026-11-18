@@ -37,6 +37,14 @@ body {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
+/* The component library's text boxes remove the outline and only change the colour of
+   their border. The ring is the same on everything that takes the focus (docs/11 §9), so
+   it is put back here; the class is written twice to win over the library's own rule. */
+.mantine-Input-input.mantine-Input-input:focus-visible,
+.mantine-PasswordInput-input.mantine-PasswordInput-input:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   * {

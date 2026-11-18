@@ -1,6 +1,6 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.15 · **Date:** 2026-11-16
+**Version:** v4.17 · **Date:** 2026-11-17
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
 **Status:** ✅ validated by the team (2026-10-20). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
@@ -597,7 +597,7 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 - **Only a registration whose email is confirmed is in the queue. An approval is of what the admin saw:** if the pharmacy corrected its details after the admin opened the page, [Approve] changes nothing and the page shows the new details.
 
 #### AS-4 Pharmacies
-- Status, live listings, last inventory update, [Not available] rate.
+- Status, live listings, last inventory update, [Not available] rate. **As built (2026-11-17):** the boxes clients can see now, the last change to its stock, and, of its reservations of the last 30 days that ended at the counter, how many were marked [Not available].
 - [Edit name/license/phone/address/pin] (audited, with a reason; the log names the fields that changed, never their values) · [Suspend] (reason) · [Reinstate]. The page shows when a pharmacy changed its own phone number or its place.
 - **A pharmacy that moved** is counted on the Pharmacies tab and marked "Pin to check": the admin looks at the map and presses **[The pin is right]**, or drags the pin and saves the correction.
 
@@ -628,7 +628,7 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 - No-show pause.
 - Repeated injection or cross-user attempts (high at ≥ 3 in 24 h).
 
-Actions: dismiss · warn · suspend, each with a reason. "Warn" records that the account's owner was warned (in a reply to their escalation, or outside DawaLink); "suspend" is a real suspension. A flag shows counts, never a message.
+Actions: dismiss · note a warning · suspend, each with a reason. "Note a warning" (the owner, 2026-11-17, Q52: it was "Warn"; the screen says that DawaLink sends nothing) records that the account's owner was warned (in a reply to their escalation, or outside DawaLink); "suspend" is a real suspension. A flag shows counts, never a message.
 
 #### AS-8 Reported answers
 - 👎 reports with the reply, reason, redacted context and trace.
@@ -646,7 +646,7 @@ Actions: dismiss · warn · suspend, each with a reason. "Warn" records that the
   - guardrail triggers;
   - model and prompt version (read-only).
 - **System:** clock-check delay, agent turns waiting, email failures, [Not available] rate.
-- **Alerts:** error rate > 5% / 15 min · LLM spend > 80% of budget · > 10 dead emails / h · clock check > 2 min late · an agent turn failed 4 times.
+- **Alerts:** error rate > 5% / 15 min · LLM spend > 80% of budget · the day's share of the budget used · > 10 dead emails / h · clock check > 2 min late · an agent turn failed 4 times · a count that doesn't add up · the daily purge failed twice running · an admin locked out · an admin at the limit of contact views (`04` R-AL).
 - **As built: one Health page** for AS-2's numbers and these, over today, 7 or 30 days, counted from our own tables; the alerts that fire now are at the top. The counts of what waits (approvals, pins to check, escalations, reports, contests, flags) are on the console's tabs. The trace ID of a turn is shown as text on an escalation and on a reported answer; no link to the tracing tool is built.
 
 #### AS-11 Audit log

@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from dawalink.agent.chat import post_client_message
-from dawalink.agent.llm import LLMUnavailable, UserText
+from dawalink.agent.llm import LLMRefused, LLMUnavailable, UserText
 from dawalink.agent.llm.scripted import ScriptedModel, call, reply
 from dawalink.agent.pending import PendingTurns
 from dawalink.agent.tracing import TurnTrace
@@ -271,6 +271,18 @@ class TestBudgetsAndTheBreaker:
             [],
         )
         assert after.status is Status.DONE
+
+    def test_a_model_that_declines_again_and_again_does_not_open_it(self, scene: Scene) -> None:
+        """docs/10 TH-56: the breaker is for a provider that is down. A message the model
+        won't answer is that message's business: someone who sends five of them must not
+        switch the assistant off for everybody else."""
+        for _ in range(5):
+            declined = scene.turn(LLMRefused("declined"))
+            assert (declined.status, declined.outcome) == (Status.DONE, "guardrail_blocked")
+
+        someone_else = scene.turn(reply("Hello"))
+
+        assert (someone_else.status, someone_else.text) == (Status.DONE, "Hello")
 
     def test_failures_far_apart_do_not_open_it(self, scene: Scene) -> None:
         for _ in range(3):

@@ -236,21 +236,36 @@ class ClockTasks:
                 return 0
             day = tx.today
         done = 0
+        retention_failed: bool | None = None
         if self._retention_sessions is None:
             log.warning("retention_skipped", reason="no retention login configured")
         else:
             # A purge that fails must not block the reminders, or be retried every pass:
-            # it is logged, and tomorrow's run deletes the same rows.
+            # it is logged, and tomorrow's run deletes the same rows. Two days in a row
+            # are an alert on the admins' Health page (FO-4).
             try:
                 with unit_of_work(self._retention_sessions, self._clock) as tx:
                     purged = daily.purge(tx)
             except Exception:
                 log.exception("retention_failed")
+                retention_failed = True
             else:
                 log.info("retention_done", **purged)
                 done += sum(purged.values())
+                retention_failed = False
         with unit_of_work(self._sessions, self._clock) as tx:
             done += daily.remind_stale_inventories(tx)
+            # The books are checked once a day too (FO-3): read only, and said loudly.
+            off = daily.books_that_are_off(tx)
+            kept = daily.keep_checks(tx, day, off, retention_failed=retention_failed)
+            if off["stock_off"] or off["requests_off"]:
+                log.error(
+                    "books_do_not_add_up",
+                    stock_off=kept["stock_off"],
+                    stock_off_count=kept["stock_off_count"],
+                    requests_off=kept["requests_off"],
+                    requests_off_count=kept["requests_off_count"],
+                )
             daily.mark_done(tx, day)
         return done
 

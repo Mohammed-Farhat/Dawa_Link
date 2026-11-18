@@ -93,6 +93,44 @@ describe("The admin's login and console", () => {
     expect(api.sent('POST', '/api/v1/auth/login')[0].body).toMatchObject({ totp_code: '123456' })
   })
 
+  it('says so when the network has made too many failed logins (N-52)', async () => {
+    pretendApi({
+      'GET /api/v1/auth/me': refusal(401, 'UNAUTHENTICATED'),
+      'POST /api/v1/auth/login': refusal(429, 'RATE_LIMITED'),
+    })
+    renderApp(<AppRoutes />, { path: '/admin/login' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(strings.login.email), 'admin@example.com')
+    await user.type(screen.getByLabelText(strings.login.password), 'a long enough passphrase')
+    await user.type(screen.getByLabelText(strings.login.code), '123456')
+    await user.click(screen.getByRole('button', { name: strings.login.submit }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.login.networkBlocked)
+  })
+
+  it('comes back, after the login, to the page that asked for it', async () => {
+    // A session that ran out while the admin was reading the audit log.
+    pretendApi({
+      'GET /api/v1/auth/me': refusal(401, 'UNAUTHENTICATED'),
+      'POST /api/v1/auth/login': { me: ADMIN, token: 'admin-token', expires_at: '2026-11-16T20:00:00Z' },
+      'GET /api/v1/admin/overview': OVERVIEW,
+      'GET /api/v1/admin/pharmacies': { items: [WAITING_ROW], next_cursor: null },
+      'GET /api/v1/admin/audit': { items: [AUDIT_EVENT], next_cursor: null },
+    })
+    renderApp(<AppRoutes />, { path: '/admin/audit' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('heading', { name: s.loginTitle })).toBeInTheDocument()
+    await user.type(screen.getByLabelText(strings.login.email), 'admin@example.com')
+    await user.type(screen.getByLabelText(strings.login.password), 'a long enough passphrase')
+    await user.type(screen.getByLabelText(strings.login.code), '123456')
+    await user.click(screen.getByRole('button', { name: strings.login.submit }))
+
+    expect(await screen.findByRole('heading', { name: s.audit.title })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: s.pharmacies.title })).not.toBeInTheDocument()
+  })
+
   it('shows what waits on its tabs, and the demo clock only in demo mode', async () => {
     adminApi({ 'GET /api/v1/admin/overview': { ...OVERVIEW, demo_mode: false } })
     const { container } = renderApp(<AppRoutes />, { path: '/admin' })
@@ -263,6 +301,41 @@ describe('An admin corrects a pharmacy (AS-4)', () => {
     expect(screen.queryByRole('button', { name: one.pinIsRight })).not.toBeInTheDocument()
   })
 
+  it('shows how an approved pharmacy is doing, and nothing of the kind for a new one (AS-4)', async () => {
+    const doing = {
+      ...WAITING,
+      status: 'APPROVED',
+      live_listings: 12,
+      last_inventory_update: '2026-11-15T09:30:00Z',
+      handed_over_30d: 6,
+      not_available_30d: 2,
+    }
+    adminApi({ [`GET ${PHARMACY}`]: doing })
+    const { container, unmount } = renderApp(<AppRoutes />, {
+      path: `/admin/pharmacies/${PHARMACY_ID}`,
+    })
+
+    expect(await screen.findByText(one.liveListings)).toBeInTheDocument()
+    expect(screen.getByText('12')).toBeInTheDocument()
+    expect(screen.getByText(/Sun 15 Nov 11:30/)).toBeInTheDocument()
+    expect(screen.getByText('2 of 8 reservations in the last 30 days (25%)')).toBeInTheDocument()
+    expect(await accessibilityProblems(container)).toEqual([])
+    unmount()
+
+    adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+    expect(await screen.findByRole('heading', { name: 'Hamra Pharmacy' })).toBeInTheDocument()
+    expect(screen.queryByText(one.liveListings)).not.toBeInTheDocument()
+  })
+
+  it('says so when no reservation ended at the counter', async () => {
+    adminApi({ [`GET ${PHARMACY}`]: { ...WAITING, status: 'APPROVED' } })
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+
+    expect(await screen.findByText(one.notAvailableOf(0, 0))).toBeInTheDocument()
+    expect(screen.getByText(one.never)).toBeInTheDocument()
+  })
+
   it('shows that the pharmacy changed its own phone', async () => {
     adminApi({ [`GET ${PHARMACY}`]: { ...WAITING, status: 'APPROVED', phone_changed_at: '2026-11-15T09:30:00Z' } })
     renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
@@ -311,6 +384,30 @@ describe('Escalations (AS-6)', () => {
     expect(api.sent('POST', `${ESCALATED}/reply`)[0].body).toEqual({ text: 'Please call 140.' })
     expect(screen.getByText('Please call 140.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: e.reply })).toHaveValue('')
+  })
+
+  it('shows a thread as plain text, whatever was typed into it (FS-8)', async () => {
+    // An admin's session can suspend accounts and read contacts: a client must not be
+    // able to run anything in it by writing a message.
+    const evil = '<img src=x onerror="alert(1)"><script>alert(2)</script><a href="javascript:alert(3)">x</a>'
+    adminApi({
+      [`GET ${ESCALATED}`]: {
+        ...ESCALATION_DETAIL,
+        escalation: { ...ESCALATION, summary: `Summary ${evil}` },
+        thread: [
+          { seq: 1, author: 'client', text: `Client ${evil}`, cards: [`Card ${evil}`], created_at: '2026-11-16T07:38:00Z' },
+          { seq: 2, author: 'admin', text: `Team ${evil}`, cards: [], created_at: '2026-11-16T07:39:00Z' },
+        ],
+      },
+    })
+    const { container } = renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+
+    expect(await screen.findByText(`Client ${evil}`)).toBeInTheDocument()
+    expect(screen.getByText(`Team ${evil}`)).toBeInTheDocument()
+    expect(screen.getByText(new RegExp('Summary <img'))).toBeInTheDocument()
+    expect(container.querySelector('script, img, iframe')).toBeNull()
+    expect(container.querySelector('a[href^="javascript"]')).toBeNull()
+    expect(container.querySelector('[onerror]')).toBeNull()
   })
 
   it('is resolved with a note, and then offers nothing more to do', async () => {

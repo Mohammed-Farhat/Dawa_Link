@@ -190,6 +190,23 @@ describe('Notifications and the profile (CS-12, CS-13)', () => {
     )
   })
 
+  it('shows a notification as plain text, and never follows a link that is not ours (FS-8)', async () => {
+    const evil = '<img src=x onerror="alert(1)"><script>alert(2)</script>'
+    clientApi({
+      'GET /api/v1/notifications': {
+        items: [{ ...NOTE, title: `Title ${evil}`, lines: [`Line ${evil}`], link: null }],
+        next_cursor: null,
+        unread: 1,
+      },
+    })
+    const { container } = renderApp(<AppRoutes />, { path: '/notifications' })
+
+    expect(await screen.findByText(`Title ${evil}`)).toBeInTheDocument()
+    expect(screen.getByText(`Line ${evil}`)).toBeInTheDocument()
+    expect(container.querySelector('script, img, iframe')).toBeNull()
+    expect(container.querySelector('[onerror]')).toBeNull()
+  })
+
   it('is reached from Me, where the profile is edited', async () => {
     const api = clientApi({ 'PATCH /api/v1/me/profile': { ...CLIENT, phone: '70 123 456' } })
     const { container } = renderApp(<AppRoutes />, { path: '/me' })

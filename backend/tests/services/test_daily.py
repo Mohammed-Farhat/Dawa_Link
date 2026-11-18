@@ -90,6 +90,195 @@ class TestOnceADay:
             daily.purge(world.tx())
 
 
+class TestWhenThePurgeFails:
+    """docs/09 FO-4."""
+
+    def test_the_rest_of_the_day_is_done_and_the_next_day_deletes_what_was_left(
+        self, world: World, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        insert(
+            world,
+            "notifications",
+            user_id=world.make.client(),
+            type="CN-3",
+            dedupe_key="a",
+            created_at=NOW - 91 * DAY,
+        )
+        stale = world.make.pharmacy()
+        world.make.item(pharmacy_id=stale, last_edited_at=NOW - 8 * DAY)
+        purge = daily.purge
+
+        def failing(_: Any) -> dict[str, int]:
+            raise RuntimeError("the retention login was refused")
+
+        monkeypatch.setattr(daily, "purge", failing)
+        first = run(world)
+        again_the_same_day = run(world)
+        world.later(days=1)
+        second = run(world)
+        failed_twice = daily.last_checks(world.tx())
+        monkeypatch.setattr(daily, "purge", purge)
+        world.later(days=1)
+        third = run(world)
+
+        # The reminder went out on the first day; the failed purge is not tried again
+        # that day, and is counted day after day until it works.
+        assert (first, again_the_same_day, second) == (1, 0, 0)
+        assert world.notifications(
+            world.one("SELECT owner_user_id AS id FROM pharmacies WHERE id = :id", id=stale).id
+        ) == ["PN-10"]
+        assert len(logged(caplog, "retention_failed")) == 2
+        assert failed_twice["retention_failed_days"] == 2
+        assert third >= 1
+        assert count(world, "notifications", "type = 'CN-3'") == 0
+        assert daily.last_checks(world.tx())["retention_failed_days"] == 0
+
+
+class TestTheBooks:
+    """docs/09 FO-3, docs/05 §4: once a day, every count is compared with what it counts."""
+
+    def test_books_that_add_up_are_quiet(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        world.make.item()
+
+        run(world)
+
+        kept = daily.last_checks(world.tx())
+        assert (kept["stock_off_count"], kept["requests_off_count"]) == (0, 0)
+        assert kept["day"] == world.tx().today.isoformat()
+        assert logged(caplog, "books_do_not_add_up") == []
+
+    @pytest.mark.rows_by_hand
+    def test_a_box_whose_reserved_count_is_wrong_is_named_and_left_as_it_is(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        fine = world.make.item(qty_on_hand=5)
+        off = world.make.item(qty_on_hand=5)
+        with world.as_owner():
+            # Two units reserved, and no reservation that holds them.
+            world.connection.execute(
+                text("UPDATE inventory_items SET qty_reserved = 2 WHERE id = :id"), {"id": off}
+            )
+
+        run(world)
+
+        kept = daily.last_checks(world.tx())
+        assert kept["stock_off"] == [str(off)]
+        assert str(fine) not in kept["stock_off"]
+        (said,) = logged(caplog, "books_do_not_add_up")
+        assert (said["stock_off"], said["stock_off_count"]) == ([str(off)], 1)
+        # Read only: the wrong count is for a person to look into.
+        assert (
+            world.one("SELECT qty_reserved AS n FROM inventory_items WHERE id = :id", id=off).n == 2
+        )
+
+
+class TestRegistrationsNobodyConfirmed:
+    """The owner, 2026-11-17 (Q49); docs/10 RR-18: a licence number and a phone belong to
+    one pharmacy, so a registration that was never confirmed must not keep them."""
+
+    def registration(
+        self, world: World, *, hours_ago: float, confirmed: bool = False, **details: Any
+    ) -> tuple[uuid.UUID, uuid.UUID]:
+        """A pharmacy that waits, registered so many hours ago: `(pharmacy, its user)`."""
+        pharmacy: uuid.UUID = world.make.pharmacy("PENDING", **details)
+        user = world.one("SELECT owner_user_id AS id FROM pharmacies WHERE id = :p", p=pharmacy).id
+        with world.as_owner():
+            world.connection.execute(
+                text(
+                    "UPDATE users SET created_at = now() - make_interval(secs => :s), "
+                    "email_verified_at = CASE WHEN :c THEN now() END WHERE id = :u"
+                ),
+                {"s": hours_ago * 3600, "c": confirmed, "u": user},
+            )
+        return pharmacy, user
+
+    def link(self, world: World, user: uuid.UUID, *, good_for_hours: float) -> None:
+        insert(
+            world,
+            "email_verification_tokens",
+            id=uuid.uuid4(),
+            user_id=user,
+            token_hash=uuid.uuid4().bytes,
+            expires_at=datetime.now(UTC) + timedelta(hours=good_for_hours),
+        )
+
+    def email(self, world: World, user: uuid.UUID, state: str) -> None:
+        insert(
+            world,
+            "email_outbox",
+            user_id=user,
+            template="CN-1",
+            dedupe_key=f"confirm-{uuid.uuid4()}",
+            state=state,
+            next_attempt_at=NOW,
+        )
+
+    def test_it_goes_with_everything_that_hung_on_it_and_its_licence_is_free_again(
+        self, world: World
+    ) -> None:
+        pharmacy, user = self.registration(
+            world, hours_ago=25, license_number="LB-777", phone="+96170555123"
+        )
+        # Everything a registration can leave behind before anyone approves it.
+        self.link(world, user, good_for_hours=-1)
+        self.email(world, user, "SENT")
+        insert(world, "notifications", user_id=user, type="PN-1", dedupe_key="n", created_at=NOW)
+        insert(
+            world,
+            "sessions",
+            id=uuid.uuid4(),
+            user_id=user,
+            token_hash=uuid.uuid4().bytes,
+            expires_at=datetime.now(UTC) + DAY,
+        )
+
+        run(world)
+
+        assert count(world, "users", "id = :u", u=user) == 0
+        assert count(world, "pharmacies", "id = :p", p=pharmacy) == 0
+        assert count(world, "pharmacy_hours", "pharmacy_id = :p", p=pharmacy) == 0
+        for table in ("sessions", "email_outbox", "notifications", "email_verification_tokens"):
+            assert count(world, table, "user_id = :u", u=user) == 0, table
+        # The real pharmacy can register with its own licence and phone now.
+        again = world.make.pharmacy("PENDING", license_number="LB-777", phone="+96170555123")
+        assert count(world, "pharmacies", "id = :p", p=again) == 1
+
+    def test_what_is_kept(self, world: World) -> None:
+        """Still within the link's 24 hours; confirmed, however long it waits for an
+        admin; a new link that is still good; an email that was never sent; a client."""
+        young, _ = self.registration(world, hours_ago=23)
+        confirmed, _ = self.registration(world, hours_ago=200, confirmed=True)
+        asked_again, asking = self.registration(world, hours_ago=30)
+        self.link(world, asking, good_for_hours=10)
+        never_mailed, unmailed = self.registration(world, hours_ago=30)
+        self.email(world, unmailed, "FAILED")
+        client = world.make.client("UNVERIFIED")
+        with world.as_owner():
+            world.connection.execute(
+                text("UPDATE users SET created_at = now() - interval '30 hours' WHERE id = :u"),
+                {"u": client},
+            )
+        approved = world.make.pharmacy()
+
+        run(world)
+
+        kept = {row.id for row in world.all("SELECT id FROM pharmacies")}
+        assert kept >= {young, confirmed, asked_again, never_mailed, approved}
+        assert count(world, "users", "id = :u", u=client) == 1
+
+    def test_the_demo_clock_never_ages_a_registration(self, world: World) -> None:
+        """R-T11: a link's 24 hours are real hours. Moving the app's clock three days on,
+        as a demo does, deletes nobody who registered a minute ago."""
+        pharmacy, _ = self.registration(world, hours_ago=0.1)
+
+        world.later(days=3)
+        run(world)
+
+        assert count(world, "pharmacies", "id = :p", p=pharmacy) == 1
+
+
 class TestConversations:
     def chat(self, world: World, last_activity: datetime) -> uuid.UUID:
         conversation: uuid.UUID = world.make.conversation(last_activity_at=last_activity)

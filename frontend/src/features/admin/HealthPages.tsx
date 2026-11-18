@@ -266,6 +266,7 @@ export function FlagsPage() {
                 {f.suspend}
               </button>
             </div>
+            <p className="hint">{f.warnHint}</p>
           </article>
         )
       })}

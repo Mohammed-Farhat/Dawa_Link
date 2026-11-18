@@ -10,6 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from dawalink.services.errors import Code, ServiceError
@@ -203,6 +204,14 @@ async def _on_http_error(request: Request, error: Exception) -> JSONResponse:
     assert isinstance(error, StarletteHTTPException)
     by_status = {404: ErrorCode.NOT_FOUND, 405: ErrorCode.METHOD_NOT_ALLOWED}
     code = by_status.get(error.status_code)
+    if error.status_code == 400:
+        # The framework's own answer to a body it can't even read as text (bytes that are
+        # not UTF-8). It used to end as a server error; found by `tests/api/test_fuzz.py`.
+        return error_response(
+            ErrorCode.VALIDATION_ERROR,
+            request_id_of(request),
+            details={"fields": [{"field": "body", "problem": "The body can't be read."}]},
+        )
     if code is None:
         # Our own code raises ApiError, so any other status here is unexpected.
         log.error(
@@ -216,7 +225,8 @@ async def _on_http_error(request: Request, error: Exception) -> JSONResponse:
 
 
 async def _on_database_error(request: Request, error: Exception) -> JSONResponse:
-    """The database is unreachable or cut a statement off: safe to retry (FX-10, FX-11)."""
+    """The database is unreachable, cut a statement off, or has no free connection: safe to
+    retry (FX-10, FX-11, FX-12)."""
     log.error(
         "database_unavailable",
         request_id=request_id_of(request),
@@ -232,3 +242,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, _on_validation_error)
     app.add_exception_handler(StarletteHTTPException, _on_http_error)
     app.add_exception_handler(OperationalError, _on_database_error)
+    # No free connection within the wait (FX-12): the same answer, "try again".
+    app.add_exception_handler(PoolTimeout, _on_database_error)

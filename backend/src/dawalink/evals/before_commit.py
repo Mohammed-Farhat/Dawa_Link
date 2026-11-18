@@ -1,12 +1,14 @@
 """The free checks to run before committing a change (docs/08 §7):
 python -m dawalink.evals.before_commit
 
-No paid model is called. Three things, each of which stops a kind of mistake the tests
+No paid model is called. Four things, each of which stops a kind of mistake the tests
 alone don't:
 1. **the planner on the P-set:** every one of the 200 rankings exact;
 2. **the written datasets:** every case well formed, every medicine a label names in the
    local catalog;
-3. **one simulated day of the policy with no AI** (seed 1, about 3 minutes): the units it
+3. **the saved results:** no email address, phone number or coordinates in any file of
+   `eval/results/`, which is public (`python -m dawalink.evals.scan_results`);
+4. **one simulated day of the policy with no AI** (seed 1, about 3 minutes): the units it
    secures must not be below the recorded number (`eval/baseline.json`). It drops when a
    change breaks matching, early release, the expiry fit or the planner.
 
@@ -23,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from dawalink.config import load_settings
 from dawalink.db.session import make_engine
-from dawalink.evals import catalog_match, plan_set
+from dawalink.evals import catalog_match, plan_set, scan_results
 from dawalink.evals.catalog_match import CatalogNames
 from dawalink.evals.datasets import DATASETS, RCase, UCase, read
 from dawalink.observability.logging import configure_logging
@@ -74,6 +76,11 @@ def main() -> None:
     problems = datasets()
     print(f"datasets: {'valid' if not problems else problems[:5]}")
     failed |= bool(problems)
+
+    read, personal = scan_results.scan(scan_results.RESULTS)
+    said = "nothing personal" if not personal else [f"{p.what} in {p.file}" for p in personal[:5]]
+    print(f"the saved results ({read} files): {said}")
+    failed |= bool(personal)
 
     if not arguments.skip_day:
         day = simulated_day()

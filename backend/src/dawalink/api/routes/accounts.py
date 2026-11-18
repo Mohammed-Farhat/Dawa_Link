@@ -1,7 +1,7 @@
 """Public configuration, registration and logins (docs/06 §6.1)."""
 
 import re
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
@@ -16,8 +16,10 @@ from dawalink.api.deps import (
     caller_address,
     get_agent,
     secret_key,
+    stated_address,
 )
 from dawalink.api.errors import ApiError, ErrorCode
+from dawalink.api.limits import Limiter
 from dawalink.api.schemas.accounts import (
     ChangePassword,
     DiscountTier,
@@ -96,17 +98,38 @@ def register_client(
     """Always "check your email", whether or not the address already has an account
     (R-AU7): nobody can find out here who uses DawaLink."""
     address = auth.address_hash(secret_key(settings), caller_address(request, settings))
+    phone = _a_phone_or_nothing(body.phone)
+    _refuse_a_full_address(request, address)
     with work.tx() as tx:
         auth.register_client(
             tx,
             email=body.email,
             password=body.password,
             full_name=body.full_name,
-            phone=body.phone,
+            phone=phone,
             district_id=body.district_id,
             signup_address=address,
         )
+    _count_the_sign_up(request, address)
     return CHECK_YOUR_EMAIL
+
+
+def _refuse_a_full_address(request: Request, address: bytes) -> None:
+    """R-AU5, for every sign-up that got as far as an account or an "already registered"
+    email, whichever it was.
+
+    The service counts the accounts made, and that count survives a restart. Counting
+    only those would tell who already has an account: after four new sign-ups, one more
+    with someone's email and one more again, the limit would come one sign-up later if
+    that email was known (docs/10 TH-3).
+    """
+    limiter = cast(Limiter, request.app.state.signups_per_address)
+    if limiter.full(address):
+        raise ServiceError(Code.SIGNUP_LIMIT, "Too many sign-ups. Please try again later.")
+
+
+def _count_the_sign_up(request: Request, address: bytes) -> None:
+    cast(Limiter, request.app.state.signups_per_address).wait_s(address)
 
 
 @router.post("/auth/register/pharmacy", status_code=202)
@@ -118,6 +141,7 @@ def register_pharmacy(
     team once the email is confirmed. A licence or a phone number that another pharmacy
     has is refused."""
     address = auth.address_hash(secret_key(settings), caller_address(request, settings))
+    _refuse_a_full_address(request, address)
     details = body.pharmacy
     with work.tx() as tx:
         auth.register_pharmacy(
@@ -138,24 +162,47 @@ def register_pharmacy(
             ),
             signup_address=address,
         )
+    _count_the_sign_up(request, address)
     return CHECK_YOUR_EMAIL
 
 
 @router.post("/auth/login")
-def login(body: Login, work: DoWork, settings: TheSettings) -> LoggedIn:
-    with work.tx() as tx:
-        # A wrong login is counted, and the count is committed, before we answer.
-        done = auth.login(
-            tx,
-            email=body.email,
-            password=body.password,
-            totp_code=body.totp_code,
-            secret_key=secret_key(settings),
+def login(body: Login, request: Request, work: DoWork, settings: TheSettings) -> LoggedIn:
+    """A wrong login is counted twice before we answer: for its account (R-AU2, five and
+    it is locked), and for the network address it came from (N-52). An account's lock
+    stops guessing one account; the address's limit stops one visitor from trying a few
+    passwords on every account, each of which costs the server a password hash."""
+    address = stated_address(request, settings)
+    failures = cast(Limiter, request.app.state.failed_logins_per_address)
+    if address is not None and failures.full(address):
+        # Before any lookup or hash, and whatever the password: a right one too.
+        raise ApiError(
+            ErrorCode.RATE_LIMITED,
+            "Too many failed logins from this network. Please try again in a few minutes.",
+            details={"retry_after_s": failures.wait_s(address)},
         )
-        if done is not None:
-            return LoggedIn(
-                me=present.me(tx, done.user), token=done.token, expires_at=done.expires_at
+    try:
+        with work.tx() as tx:
+            done = auth.login(
+                tx,
+                email=body.email,
+                password=body.password,
+                totp_code=body.totp_code,
+                secret_key=secret_key(settings),
+                nobody=request.app.state.failed_logins_of_nobody,
             )
+            if done is not None:
+                # A login that works is never counted: a whole room behind one address
+                # (a pharmacy, a classroom) logs in as often as it likes.
+                return LoggedIn(
+                    me=present.me(tx, done.user), token=done.token, expires_at=done.expires_at
+                )
+    except ServiceError as refused:
+        if refused.code is Code.ACCOUNT_LOCKED and address is not None:
+            failures.wait_s(address)
+        raise
+    if address is not None:
+        failures.wait_s(address)
     raise ApiError(ErrorCode.INVALID_CREDENTIALS)
 
 
@@ -206,6 +253,20 @@ def change_password(body: ChangePassword, caller: SignedIn, work: DoWork) -> Res
 PHONE_SHAPE = re.compile(r"\+?(?:[\s.()\-]*\d){6,15}[\s.()\-]*")
 
 
+def _a_phone_or_nothing(sent: str | None) -> str | None:
+    """A client's phone as typed at sign-up or in the profile, or nothing.
+
+    A phone is digits with the marks people write around them. Anything else is refused:
+    the field is shown to DawaLink's team for support.
+    """
+    phone = (sent or "").strip()
+    if phone and not PHONE_SHAPE.fullmatch(phone):
+        raise ServiceError(
+            Code.VALIDATION_ERROR, "Enter a phone number, or leave it empty.", field="phone"
+        )
+    return phone or None
+
+
 @router.get("/me/profile")
 def read_profile(caller: AsClient, work: DoWork) -> Me:
     with work.tx() as tx:
@@ -220,14 +281,7 @@ def change_profile(body: ProfileChange, caller: AsClient, work: DoWork) -> Me:
         user = tx.session.get_one(User, caller.user_id)
         profile = tx.session.get_one(ClientProfile, caller.user_id)
         if "phone" in sent:
-            phone = (body.phone or "").strip()
-            # A phone is digits with the marks people write around them. Anything else
-            # is refused: the field is shown to DawaLink's team for support.
-            if phone and not PHONE_SHAPE.fullmatch(phone):
-                raise ServiceError(
-                    Code.VALIDATION_ERROR, "Enter a phone number, or leave it empty.", field="phone"
-                )
-            user.phone = phone or None
+            user.phone = _a_phone_or_nothing(body.phone)
         if "district_id" in sent and body.district_id is not None:
             if tx.session.get(District, body.district_id) is None:
                 raise ServiceError(Code.VALIDATION_ERROR, "Unknown district.", field="district_id")

@@ -38,6 +38,21 @@ def stock_arrives(api: Api, product: uuid.UUID, **values: Any) -> uuid.UUID:
 
 
 class TestNotifyMe:
+    def test_a_price_limit_is_in_pounds_or_dollars(self, api: Api, product: uuid.UUID) -> None:
+        """FI-5: any other currency is a field that is wrong, never a guess at a rate."""
+        http = api.http()
+        login = api.token(api.client())
+
+        euros = http.post(
+            WATCHES,
+            json={"product_id": str(product), "max_price": {"amount": 10, "currency": "EUR"}},
+            headers=login,
+        )
+
+        assert (euros.status_code, code_of(euros)) == (422, "VALIDATION_ERROR")
+        assert euros.json()["error"]["details"]["fields"][0]["field"] == "max_price.currency"
+        assert api.world.all("SELECT 1 FROM claims") == []
+
     def test_a_watch_is_made_listed_and_stopped(self, api: Api, product: uuid.UUID) -> None:
         http = api.http()
         login = api.token(api.client())

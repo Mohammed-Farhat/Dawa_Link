@@ -3,9 +3,10 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import Query
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Out(BaseModel):
@@ -19,6 +20,39 @@ class In(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _no_zero_byte(cls, sent: Any) -> Any:
+        """PostgreSQL can't store a zero byte in a text: refused here, as a field that is
+        wrong, before it can reach a statement and come back as a server error."""
+        if _holds_a_zero_byte(sent):
+            raise ValueError("Text can't contain a zero byte.")
+        return sent
+
+
+def _holds_a_zero_byte(sent: Any) -> bool:
+    if isinstance(sent, str):
+        return "\x00" in sent
+    if isinstance(sent, dict):
+        return any(_holds_a_zero_byte(part) for pair in sent.items() for part in pair)
+    if isinstance(sent, list | tuple):
+        return any(_holds_a_zero_byte(part) for part in sent)
+    return False
+
+
+# Every number that goes on to the database has an upper bound. Without one, a number the
+# column can't hold comes back as the database's own error, a server error (found by the
+# random requests of `tests/api/test_fuzz.py`, as the district's number was by hand).
+MAX_SKIP = 1_000_000  # rows a list may skip: far more than any list here has
+MAX_ID = 2**63 - 1  # the largest ID of a log table
+MAX_SEQ = 2**31 - 1  # the largest number of a message in its conversation
+MAX_LBP = 100_000_000_000  # no medicine costs more: about a million dollars
+
+# Where a list goes on. Lists that grow at the top go on "before this ID"; the others
+# skip the rows already shown.
+Skip = Annotated[int, Query(ge=0, le=MAX_SKIP)]
+BeforeId = Annotated[int | None, Query(ge=1, le=MAX_ID)]
+Lbp = Annotated[int, Field(ge=0, le=MAX_LBP)]
 
 # A district's number as a form sends it. The range is the column's own: a larger number
 # used to reach the database and come back as a server error (found on 2026-11-16).
@@ -38,7 +72,7 @@ class Money(Out):
 
 
 class MoneyIn(In):
-    amount: Decimal = Field(gt=0)
+    amount: Decimal = Field(gt=0, le=MAX_LBP)
     currency: Literal["LBP", "USD"]
 
 

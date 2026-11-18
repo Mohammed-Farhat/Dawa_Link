@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Response, UploadFile
 from dawalink.api import present
 from dawalink.api.deps import AsPharmacist, DoWork
 from dawalink.api.routes.pharmacy import OwnPharmacy
-from dawalink.api.schemas.common import Money
+from dawalink.api.schemas.common import Money, Skip
 from dawalink.api.schemas.stock import (
     AddStockItem,
     Stock,
@@ -108,7 +108,7 @@ def list_stock(
     work: DoWork,
     q: Annotated[str, Query(max_length=100)] = "",
     zone: Literal["NEAR_EXPIRY", "EARLY_RELEASE", "PRIVATE", "EXPIRED"] | None = None,
-    cursor: Annotated[int, Query(ge=0)] = 0,
+    cursor: Skip = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> Stock:
     """The pharmacy's boxes, soonest expiry first. `zone=NEAR_EXPIRY` is its listings."""

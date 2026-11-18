@@ -92,6 +92,27 @@ class TestSearching:
         assert [product["name"] for product in found["products"]] == ["AUGMENTIN 1G"]
         assert found["products"][0]["public_price"] == "1,000,000 LBP (about $11.17)"
 
+    def test_a_name_nobody_sells_comes_back_with_the_close_ones(self, scene: Scene) -> None:
+        """FI-2: the model is handed names to ask "did you mean…?" with, never a guess."""
+        scene.world.make.product(moph_name="GLUCOPHAGE", search_name="glucophage")
+
+        close = scene.tool("search_catalog", query="glucofaj")
+        unknown = scene.tool("search_catalog", query="zzzzqqq")
+
+        assert (close["products"], close["did_you_mean"]) == ([], ["GLUCOPHAGE"])
+        assert (unknown["ok"], unknown["products"], unknown["did_you_mean"]) == (True, [], [])
+
+    def test_a_budget_is_in_pounds_or_dollars(self, scene: Scene) -> None:
+        """FI-5: another currency is an argument that is wrong; the model asks the client."""
+        found = scene.tool(
+            "find_options",
+            product_ids=[scene.augmentin],
+            max_price={"amount": 10, "currency": "EUR"},
+        )
+
+        assert (found["ok"], found["error_code"]) == (False, "INVALID_ARGUMENTS")
+        assert found["details"]["problems"][0]["argument"] == "max_price.currency"
+
     def test_equivalents_are_the_same_medicine_only(self, scene: Scene) -> None:
         """R-C5, hard rule 2."""
         with scene.world.as_owner():
@@ -177,6 +198,8 @@ class TestSearching:
         assert today["options"][0]["pickup_days_allowed"] == [TODAY.isoformat()]
         assert today["options"][0]["expiry_limits_pickup"] is True
         assert (tomorrow["options"], tomorrow["left_out_by_pickup_day"]) == ([], 1)
+        # FA-27: the model is told the last day that works, so it never works one out.
+        assert tomorrow["no_match"]["latest_pickup_day"] == TODAY.isoformat()
 
     def test_a_pickup_day_in_the_past_is_refused(self, scene: Scene) -> None:
         """FA-27."""
@@ -534,6 +557,21 @@ class TestProposing:
         assert [item["max_price_lbp"] for item in proposal.payload["items"]] == [None, 895_000]
         assert scene.world.one("SELECT count(*) AS n FROM sourcing_requests").n == 0
 
+    def test_a_request_is_one_to_five_medicines_each_once(self, scene: Scene) -> None:
+        """FI-7, R-RQ1: there is no form for a request, so the card's tool is where a
+        sixth medicine or the same one twice is refused."""
+        six = [{"product_id": scene.world.make.product()} for _ in range(6)]
+        twice = [{"product_id": scene.augmentin}, {"product_id": scene.augmentin}]
+
+        too_many = scene.tool("prepare_request_summary", items=six, alternatives_ok=False)
+        repeated = scene.tool("prepare_request_summary", items=twice, alternatives_ok=False)
+        none = scene.tool("prepare_request_summary", items=[], alternatives_ok=False)
+
+        assert too_many["error_code"] == "INVALID_ARGUMENTS"
+        assert repeated["error_code"] == "VALIDATION_ERROR"
+        assert none["error_code"] == "INVALID_ARGUMENTS"
+        assert scene.world.all("SELECT 1 FROM proposals") == []
+
     def test_no_request_card_outside_request_hours(self, scene: Scene) -> None:
         """R-T3."""
         scene.world.later(hours=12)
@@ -627,6 +665,29 @@ class TestInARequest:
         asked = scene.tool("request_early_release", thread, claim_id=claim["claim_id"])
 
         assert asked == {"ok": True, "asked": 0, "reason": "no_candidates"}
+
+    def test_the_agent_cant_ask_past_the_limits_and_is_told_so(self, scene: Scene) -> None:
+        """FS-14, R-E3, R-E5: a pharmacy that had its ten asks today is left alone, and a
+        client with five open asks gets no sixth. The model is given a code, never a way
+        round."""
+        request, thread = scene.start_request(RequestLine(scene.augmentin))
+        scene.stock(days_left=200)  # private: in the early-release zone
+        item = scene.world.one("SELECT id FROM request_items WHERE request_id = :r", r=request).id
+        claim = scene.tool("open_claim", thread, request_item_id=item)["claim_id"]
+        for _ in range(10):
+            scene.world.make.early_release_ask(pharmacy_id=scene.pharmacy)
+
+        pharmacy_is_full = scene.tool("request_early_release", thread, claim_id=claim)
+        for _ in range(5):
+            scene.world.make.early_release_request(client_id=scene.client)
+        client_is_full = scene.tool("request_early_release", thread, claim_id=claim)
+
+        assert pharmacy_is_full == {"ok": True, "asked": 0, "reason": "no_candidates"}
+        assert (client_is_full["ok"], client_is_full["error_code"]) == (
+            False,
+            "LIMIT_EARLY_RELEASE",
+        )
+        assert scene.world.one("SELECT count(*) AS n FROM early_release_asks").n == 10
 
     def test_another_clients_item_or_claim_does_not_exist(self, scene: Scene) -> None:
         _, thread = scene.start_request()

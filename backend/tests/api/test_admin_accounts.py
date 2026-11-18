@@ -6,13 +6,14 @@ details, the no-show contest, abuse flags, the catalog and the health numbers.
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
 
 from dawalink.domain.clock import beirut_date
 from dawalink.domain.orders import OrderSource
-from dawalink.services import orders
+from dawalink.services import daily, orders
 from dawalink.services.orders import ReserveLine
 from tests.api.conftest import PASSWORD, Api, code_of
 
@@ -98,6 +99,31 @@ def shop(api: Api) -> Shop:
         make.item(pharmacy_id=pharmacy, product_id=product, days_left=60, qty_on_hand=5),
         api.client(**PERSON),
     )
+
+
+class TestAPharmacysActivity:
+    def test_the_admin_sees_its_listings_its_last_stock_change_and_what_was_not_available(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """AS-4; docs/10 RR-2, RR-11: a pharmacy that lists boxes it doesn't have shows
+        up as a high share of [Not available]."""
+        http = api.http()
+        counter = "/api/v1/pharmacy/reservations"
+        edited = api.world.clock.now() - timedelta(days=2)
+        # A box it keeps private, edited two days ago: not one of the listings.
+        api.world.make.item(pharmacy_id=shop.pharmacy, days_left=250, last_edited_at=edited)
+        handed, missing, _still_waiting = shop.reserve(), shop.reserve(), shop.reserve()
+        http.post(f"{counter}/{handed.id}/picked-up", json={}, headers=shop.pharmacist)
+        http.post(
+            f"{counter}/{missing.id}/not-available", json={"units": 1}, headers=shop.pharmacist
+        )
+
+        seen = http.get(f"{ADMIN}/pharmacies/{shop.pharmacy}", headers=admin).json()
+
+        assert seen["live_listings"] == 1
+        assert seen["last_inventory_update"] == edited.isoformat().replace("+00:00", "Z")
+        # The reservation that is still open counts for neither.
+        assert (seen["handed_over_30d"], seen["not_available_30d"]) == (1, 1)
 
 
 class TestSuspendingAPharmacy:
@@ -577,3 +603,98 @@ class TestCatalogAndHealth:
         assert "agent_turn_stuck" in loud["alerts"]
         # Numbers only: nobody's name is in a health answer.
         assert "Rana" not in str(quiet)
+
+    def test_an_admin_locked_out_or_over_the_contact_limit_is_an_alert_for_the_others(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """R-AL, R-AU6, docs/10 RR-5: both are about an admin's own login, so the other
+        admins must see them without reading the audit log."""
+        http = api.http()
+        api.world.make.user("admin", email="other@example.com", totp_secret=b"not-a-real-secret")
+        api.client(email="rami@example.com")
+
+        quiet = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+        for email in ("rami@example.com", "other@example.com"):
+            for _ in range(5):
+                http.post("/api/v1/auth/login", json={"email": email, "password": "nope"})
+            if email == "rami@example.com":
+                # A client's own lock is nobody's alert.
+                after_a_client = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+        for _ in range(31):
+            http.get(f"{ADMIN}/clients/{shop.client}/contact", headers=admin)
+        loud = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+        api.world.later(hours=25)
+        next_day = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+
+        assert quiet == after_a_client == []
+        assert set(loud) == {"admin_login_locked", "contact_views_limit"}
+        assert next_day == []
+
+    def test_a_day_that_used_its_share_of_the_ai_budget_is_an_alert(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """R-AL, N-46: a day may use 10% of the month's budget; the assistant then stops
+        for everyone until midnight, and the admins are told why."""
+        http = api.http(llm_monthly_budget_usd=Decimal(20))
+        chat = api.world.make.conversation(client_id=shop.client)
+        spend = {"conversation_id": chat, "started_at": api.world.clock.now()}
+
+        api.world.make.agent_run(**spend, cost_usd=1.5)
+        below = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+        api.world.make.agent_run(**spend, cost_usd=0.5)
+        at_the_cap = http.get(f"{ADMIN}/health", headers=admin).json()["alerts"]
+
+        assert below == []
+        assert at_the_cap == ["llm_daily_cap"]
+
+    @pytest.mark.rows_by_hand
+    def test_what_the_daily_run_found_is_an_alert(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """docs/09 FO-3, FO-4: a count that is off, and a purge that failed two days running."""
+        http = api.http()
+        tasks = api.world.clock_tasks()
+        tasks.run_daily_tasks()
+        quiet = http.get(f"{ADMIN}/health", headers=admin).json()
+
+        with api.world.as_owner():
+            api.world.connection.exec_driver_sql(
+                "UPDATE inventory_items SET qty_reserved = 1 WHERE id = %s", (shop.box,)
+            )
+        api.world.later(days=1)
+        tasks.run_daily_tasks()
+        off = http.get(f"{ADMIN}/health", headers=admin).json()
+        tx = api.world.tx()
+        for _ in range(2):
+            daily.keep_checks(
+                tx, tx.today, {"stock_off": [], "requests_off": []}, retention_failed=True
+            )
+        api.world.settle(tx)
+        failing = http.get(f"{ADMIN}/health", headers=admin).json()
+
+        assert quiet["alerts"] == []
+        assert (quiet["system"]["stock_off"], quiet["system"]["retention_failed_days"]) == (0, 0)
+        assert off["alerts"] == ["books_do_not_add_up"]
+        assert off["system"]["stock_off"] == 1
+        assert failing["alerts"] == ["retention_failing"]
+        assert failing["system"]["retention_failed_days"] == 2
+
+    def test_a_worker_that_is_late_on_deadlines_is_an_alert_until_it_catches_up(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """FX-14, R-AL: the API can't see the worker, so it reads how old the oldest
+        deadline is that nobody acted on."""
+        http = api.http()
+        order = shop.reserve()
+
+        on_time = http.get(f"{ADMIN}/health", headers=admin).json()
+        api.world.later(days=2)  # long past the pickup deadline, and no worker ran
+        late = http.get(f"{ADMIN}/health", headers=admin).json()
+        expired = api.world.clock_tasks().expire_reservations()
+        caught_up = http.get(f"{ADMIN}/health", headers=admin).json()
+
+        assert (on_time["system"]["clock_check_late_s"], on_time["alerts"]) == (0, [])
+        assert late["system"]["clock_check_late_s"] > 120
+        assert late["alerts"] == ["clock_check_late"]
+        assert (expired, shop.state_of(order.id)) == (1, "EXPIRED_NO_SHOW")
+        assert (caught_up["system"]["clock_check_late_s"], caught_up["alerts"]) == (0, [])

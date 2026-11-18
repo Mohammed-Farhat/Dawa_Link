@@ -112,6 +112,8 @@ PASSWORD_MIN_CHARS = 10  # R-AU1
 COMMON_PASSWORDS = 10_000  # R-AU1: a password among the most common ones is refused
 FAILED_LOGINS_BEFORE_LOCK = 5  # R-AU2
 LOGIN_LOCK = timedelta(minutes=15)  # R-AU2: both the counting window and the lock
+FAILED_LOGINS_PER_ADDRESS = 30  # N-52: from one network address, on any accounts
+FAILED_LOGINS_PER_ADDRESS_WINDOW = timedelta(minutes=15)  # N-52
 SESSION_LIFETIME = timedelta(days=7)  # R-AU3
 ADMIN_SESSION_LIFETIME = timedelta(hours=12)  # R-AU3
 VERIFICATION_LINK_VALID = timedelta(hours=24)  # R-AU4

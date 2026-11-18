@@ -107,6 +107,16 @@ class TestTheStockList:
         assert [box["batch"] for box in shop.stock(q="conc")] == ["LATER"]
         assert [box["batch"] for box in shop.stock(q="soon")] == ["SOON"]
 
+    def test_a_percent_sign_or_an_underscore_in_the_search_is_only_itself(self, shop: Shop) -> None:
+        """They mean "anything" to the database: typed by a pharmacist, they must not."""
+        shop.box(batch="SOON", days_left=20)
+        shop.box(shop.concor, batch="LOT_7", days_left=200)
+
+        assert shop.stock(q="%") == []
+        assert shop.stock(q="s%n") == []
+        assert shop.stock(q="s__n") == []
+        assert [box["batch"] for box in shop.stock(q="t_7")] == ["LOT_7"]
+
     def test_it_comes_in_pages(self, shop: Shop) -> None:
         for number in range(3):
             shop.box(batch=f"B{number}", days_left=10 + number)
@@ -322,6 +332,18 @@ class TestStockFiles:
         assert "Save As" in workbook.json()["error"]["details"]["reason"]
         assert "columns" in wrong_columns.json()["error"]["details"]["reason"]
         assert no_file.status_code == 422
+
+    def test_a_zero_byte_anywhere_in_a_file_is_refused_never_a_crash(self, shop: Shop) -> None:
+        """A zero byte can't be stored. Near the start it marks a file that is not text;
+        further down it would have reached the database."""
+        rows = "".join(f"Panadol,500mg,B{number},2027-03,1\n" for number in range(200))
+        early = shop.upload((HEADER + "Panadol,500mg,B\x001,2027-03,1\n").encode())
+        late = shop.upload((HEADER + rows + "Panadol,500mg,LATE\x00,2027-03,1\n").encode())
+
+        assert len(rows) > 4096
+        for answer in (early, late):
+            assert (answer.status_code, code_of(answer)) == (422, "UPLOAD_FAILED"), answer.text
+        assert shop.api.world.all("SELECT 1 FROM inventory_upload_rows") == []
 
 
 class TestTheSizeOfWhatIsSent:

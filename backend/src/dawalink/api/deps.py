@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Annotated, cast
 
+import structlog
 from fastapi import Depends, Header, Request
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -24,6 +25,8 @@ from dawalink.domain.clock import Clock
 from dawalink.domain.vocabulary import UserRole
 from dawalink.services import auth
 from dawalink.services.context import Tx, unit_of_work
+
+log = structlog.get_logger(__name__)
 
 
 def get_settings(request: Request) -> Settings:
@@ -137,8 +140,23 @@ def caller_address(request: Request, settings: Settings) -> str:
     In AWS every request arrives through CloudFront, which states the visitor's address
     in a header of its own that a visitor can't set. `X-Forwarded-For` is never read.
     """
-    if settings.app_env == "aws":
-        viewer = request.headers.get("cloudfront-viewer-address", "")
-        if viewer:
-            return viewer.rsplit(":", 1)[0]
-    return request.client.host if request.client else "unknown"
+    return stated_address(request, settings) or (
+        request.client.host if request.client else "unknown"
+    )
+
+
+def stated_address(request: Request, settings: Settings) -> str | None:
+    """The visitor's address when it is known to be the visitor's own, or None.
+
+    Locally it is the peer's. In AWS it is the one CloudFront states; if that header is
+    missing (the distribution's origin request policy was changed, docs/12 §4), every
+    request would seem to come from the load balancer, and a limit counted per address
+    would count everybody together. So there it is None, and said loudly in the log.
+    """
+    if settings.app_env != "aws":
+        return request.client.host if request.client else None
+    viewer = request.headers.get("cloudfront-viewer-address", "")
+    if viewer:
+        return viewer.rsplit(":", 1)[0]
+    log.error("visitor_address_not_stated", path=request.url.path)
+    return None

@@ -285,7 +285,7 @@ export function LoginPage({ withCode = false }: { withCode?: boolean }) {
         )}
         {failed && (
           <Banner tone="red" alert>
-            {errorMessage(failed)}
+            {failed === 'RATE_LIMITED' ? s.networkBlocked : errorMessage(failed)}
           </Banner>
         )}
         <button

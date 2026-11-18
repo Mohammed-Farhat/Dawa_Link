@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from dawalink.api import present
 from dawalink.api.deps import AsClient, DoWork
+from dawalink.api.schemas.common import Skip
 from dawalink.api.schemas.orders import Reservation, ReservationsPage
 from dawalink.db.models import Order
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
@@ -28,7 +29,7 @@ def list_reservations(
     caller: AsClient,
     work: DoWork,
     view: Literal["active", "history"] = "active",
-    cursor: Annotated[int, Query(ge=0)] = 0,
+    cursor: Skip = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> ReservationsPage:
     """`active`: what is reserved now, the soonest pickup first. `history`: the rest,

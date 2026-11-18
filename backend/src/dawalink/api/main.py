@@ -18,6 +18,7 @@ from dawalink.api.middleware import (
     OriginCheckMiddleware,
     RequestContextMiddleware,
     UnhandledErrorMiddleware,
+    ZeroByteMiddleware,
 )
 from dawalink.api.routes import (
     accounts,
@@ -36,10 +37,14 @@ from dawalink.domain.clock import Clock
 from dawalink.domain.numbers import (
     API_CALLS_PER_MINUTE,
     CHAT_MESSAGES_PER_MINUTE,
+    FAILED_LOGINS_PER_ADDRESS,
+    FAILED_LOGINS_PER_ADDRESS_WINDOW,
     LOCATION_UPDATES_PER_HOUR,
     MAX_JSON_BODY_BYTES,
+    SIGNUPS_PER_ADDRESS_PER_HOUR,
 )
 from dawalink.observability.logging import configure_logging
+from dawalink.services import auth
 from dawalink.services.clock import AppClock
 from dawalink.services.inventory import MAX_FILE_BYTES
 
@@ -107,10 +112,16 @@ def create_app(
     app.state.calls_per_session = Limiter(API_CALLS_PER_MINUTE, 60)
     app.state.chat_per_client = Limiter(CHAT_MESSAGES_PER_MINUTE, 60)
     app.state.locations_per_client = Limiter(LOCATION_UPDATES_PER_HOUR, 3600)
+    app.state.signups_per_address = Limiter(SIGNUPS_PER_ADDRESS_PER_HOUR, 3600)
+    app.state.failed_logins_of_nobody = auth.FailedLoginsOfNobody()
+    app.state.failed_logins_per_address = Limiter(
+        FAILED_LOGINS_PER_ADDRESS, FAILED_LOGINS_PER_ADDRESS_WINDOW.total_seconds()
+    )
 
     # The last one added runs first:
-    # request context > CORS > the origin check > unhandled errors > the routes.
+    # request context > CORS > the origin check > zero bytes > unhandled errors > the routes.
     app.add_middleware(UnhandledErrorMiddleware)
+    app.add_middleware(ZeroByteMiddleware)
     app.add_middleware(
         OriginCheckMiddleware,
         website_url=settings.website_url,

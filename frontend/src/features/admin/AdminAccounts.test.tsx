@@ -214,6 +214,25 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
     })
   })
 
+  it('notes a warning on a flag, and says that nothing is sent (Q52)', async () => {
+    const api = adminApi({
+      [`POST /api/v1/admin/abuse-flags/${FLAG.id}/act`]: { ...FLAG, state: 'ACTIONED', action: 'warn' },
+    })
+    renderApp(<AppRoutes />, { path: '/admin/flags' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(f.warnHint)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Warned' })).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText(new RegExp(`^${s.reason}`)), 'Told by phone.')
+    await user.click(screen.getByRole('button', { name: 'Note a warning' }))
+
+    expect(await screen.findByText(f.done)).toBeInTheDocument()
+    expect(api.sent('POST', `/api/v1/admin/abuse-flags/${FLAG.id}/act`)[0].body).toEqual({
+      action: 'warn',
+      reason: 'Told by phone.',
+    })
+  })
+
   it('reads the catalog, the controlled products marked, with no way to change it', async () => {
     const api = adminApi()
     const { container } = renderApp(<AppRoutes />, { path: '/admin/catalog' })
@@ -224,6 +243,31 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
     expect(screen.getByText(/5,628 of 5,739 products/)).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
     expect(api.calls.every((call) => call.method === 'GET')).toBe(true)
+  })
+
+  it('has words for every alert the server can raise', async () => {
+    // The codes of `services/health.py`. One without words would be shown as its code.
+    const codes = [
+      'agent_error_rate',
+      'llm_spend',
+      'llm_daily_cap',
+      'dead_emails',
+      'clock_check_late',
+      'agent_turn_stuck',
+      'books_do_not_add_up',
+      'retention_failing',
+      'contact_views_limit',
+      'admin_login_locked',
+    ] as const
+    adminApi({ 'GET /api/v1/admin/health': { ...HEALTH, alerts: [...codes] } })
+    renderApp(<AppRoutes />, { path: '/admin/health' })
+
+    expect(await screen.findByText(h.alerts.agent_turn_stuck)).toBeInTheDocument()
+    for (const code of codes) {
+      expect(screen.getByText(h.alerts[code])).toBeInTheDocument()
+      expect(screen.queryByText(code)).not.toBeInTheDocument()
+    }
+    expect(Object.keys(h.alerts).sort()).toEqual([...codes].sort())
   })
 
   it("shows the assistant's numbers, and an alert when one fires", async () => {

@@ -13,6 +13,7 @@ This is the one place that says **what is built, what comes next, and what was l
 - **In progress:** step 6, the simulator and the evaluation, started on 2026-11-14 (the slices are in §3). **On 2026-11-15:** slices E2, E6, E7 and E8 done, E9 nearly; the first paid runs on Claude Haiku: the agent went from 136 to 168 of 241 units on seed 1 over prompts v1.4 to v1.8 and four new guards, level with plain search and clearly ahead of the policy with no AI; suite E1 (understanding) on 180 cases and suite E4 (safety) on 70 attacks; seeds 2 to 5, never tuned on, are running. **The same afternoon the owner changed what the agent does first** (BLD-D28: it asks, waits for the answer, then searches); prompt v1.10 and the two suites follow, and the runs on it are recorded below as development results: E1 on 180 cases, E4 on 70 attacks, the agent on 5 seeds (749 of 1,198 units, against 795 on the earlier prompt, 824 for search and 592 for the no-AI policy), the three ablations on seed 1, the sweep of the search baseline. **The same evening the owner answered Q27 to Q34** (§5, BLD-D29): the agent asks again for what an answer left out (prompt v1.11); a second model plays the client (suite E7 of `08`, slice E13); and the order from here is agreed (§2): step 6 closes as "tools built, development results", the website comes next, one side at a time, and the final evaluation runs on the finished agent. **Later the same evening he answered the last three** (BLD-D30): no cart on the search page; no request form, a request starts in the chat; a simulated client answers a question within 1 to 3 minutes. **Nothing waits for a decision; the second batch of cases waits for his read.** Moved to the final evaluation (slice 6b of §2): the final runs, the other sweeps (E6), the model comparison (E11), the held-out data in a separate session (E12).
 - **Step 6 was committed on 2026-11-15** as "tools built, development results". **Since 2026-11-16 the owner's rule is to build the rest through to the end** (§1): the slices of §2 follow each other without a "start".
 - **Done on 2026-11-16: slices 7a to 7e** (§3, step 7): logins and the client's chat with the agent in the browser; search and reserve without the agent; the pharmacy's counter; sourcing requests in the browser; the rest of the pharmacy's side (registration with the map pin, inventory, stock files, listings, settings). Slices 7a to 7e are committed and pushed. **The same day: the owner's answers to Q42 to Q46** (a pharmacy changes its own phone, address and pin; dates stay as built; a stock file gets a `code` column; a team reply reaches the client as typed), **and the first half of slice 7f:** the admin's login, approvals, escalations with replies, reported answers, the audit log, the demo clock's screen. **On 2026-11-17: the second half of slice 7f** (suspensions, clients, the no-show contest, abuse flags, the catalog, health): the admin's side is complete. **And slice 7g** (the rest of the client's side: [Notify me] and watches, notifications, the profile, "Pick on the map", the wide screen). **Step 7 is built: the whole API and the whole website.** **Next: step 9, hardening.** **Since the evening of 2026-11-16 the owner commits once, when step 7 is finished** (Q47): everything from slice 7f on is uncommitted, with a copy in `Documents/Dawa_Link_backups/` after each slice.
+- **Step 7 (the API and the website) was finished on 2026-11-17** (slices 7a to 7g). **Step 9, hardening, was done the same day** (§3): the API's contract walked and fuzzed, three server errors and two account-discovery leaks fixed, the daily check of the books, every Failure Matrix row marked. The owner answered the five questions it raised the same day (§5, Q48 to Q52; BLD-D38).
 - **Order:** the agent and its evaluation came before the website screens (`02` §9).
 
 ---
@@ -44,7 +45,7 @@ The order was proposed by Claude from `02` §9 ("the agent first"). The owner ca
 | 6 | **Simulator and evaluation** | The simulated world and client, the three contenders, suites E1–E6, the development datasets, results | `08` | 🔨 tools built, development results (2026-11-15); the final evaluation is slice 6b below |
 | 7 | **Accounts and API** | Login and sessions, registration, every endpoint, limits, idempotency, chat streaming and polling | `06`, `10` | ✅ 2026-11-17, built with step 8 as slices 7a to 7g below; the contract tests of `06` §9 are part of step 9 |
 | 8 | **Website** | The client portal, the pharmacy portal and the admin console | `03`, `11` | ✅ 2026-11-17, as slices 7a to 7g below |
-| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, a load test, the accessibility passes | `09`, `10`, `11` §9 | ⏳ |
+| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, a load test, the accessibility passes | `09`, `10`, `11` §9 | ✅ 2026-11-17 (a screen-reader pass is left for a person; a real load test was not run) |
 | 10 | **Cognito** | Passwords, email verification and admin codes move to Cognito, behind our API | `12` §10 | ⏳ |
 | 11 | **Deploy** | AWS by hand, following the checklist | `12` §11–§14 | ⏳ |
 | 12 | **Report and demo** | The final report, the demo script and rehearsal, exported evidence | checklist §3 | ⏳ |
@@ -63,7 +64,7 @@ The owner agreed to move on to the website before the agent's final evaluation, 
 | 7e | **The rest of the pharmacy's side** | Registration with the map pin, the inventory screens, the CSV upload with its row errors, the pickup-time setting | 14 | ✅ 2026-11-16 |
 | 7f | **The admin's side** | Two-factor login; approving a pharmacy and correcting its details; suspending and reinstating a pharmacy or a client; clients without names, with an audited contact view; escalations and replies; the no-show contest; reported answers with their export; abuse flags; the read-only catalog; health; the audit log; the demo clock's screen | 7, 11 | ✅ 2026-11-17 |
 | 7g | **The rest of the client's side** | [Notify me] and watches, notifications (also the pharmacy's), the profile, "Pick on the map" (BLD-D16), the price limit, the wide-screen layout with the assistant beside the page | – | ✅ 2026-11-17 |
-| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, the accessibility passes | – | ⏳ |
+| 9 | **Hardening** | Every Failure Matrix row tested, the security tests, the accessibility passes | – | ✅ 2026-11-17 (§3, step 9) |
 | 6b | **The final evaluation, on the finished agent** | The held-out data (written in the owner's separate session), the final runs of E1 to E7, the model comparison and the choice of model (O1), the failure analysis, the regression cases | – | ⏳ |
 | 10, 11 | **Cognito, then AWS** | "When we finish the project" (the owner, Q33) | – | ⏳ |
 | 12 | **Report and demo** | The final report, the demo script and its rehearsal | all | ⏳ |
@@ -820,6 +821,54 @@ Tried by hand on the local stack: a registration with a French name and a pin in
 
 **For hardening (step 9), from step 7 as a whole:** the contract tests of `06` §9 (three per endpoint, every error code, Schemathesis) are not all written; the keyboard and screen-reader passes of `11` §9; Lighthouse on Home and Search; the items already listed above (limits per address on `/auth/*`, unconfirmed registrations that hold a licence, the Health page's cost, alerts that are shown and sent nowhere).
 
+### Step 9: hardening (2026-11-17) ✅
+
+**How it was done.** Four read-only audits first, each by a separate reviewer: the 64 rows of the Failure Matrix that had no test, and the 63 threats, each against the tests that exist. Every "covered" was then checked by running the test it named. Three kinds of result: a row that was simply out of date, a test to write, and **code that was missing**.
+
+**Done in the first part:**
+- **The API's contract** (`06` §9): the routes are walked (`tests/api/test_contract.py`: a wrong shape, a body that is not JSON, an ID that is not an ID, an ID nobody has, a page size or a cursor out of range, another website's page, text made to break a query); every error code is caused by a test through the API (`tests/api/test_refusals.py` adds the nine that had none); **Schemathesis** sends about 2,300 random requests with every test run (`tests/api/test_fuzz.py`, half a minute).
+- **Three server errors found by the random requests, fixed:** a zero byte in a search or a body; a body that is not UTF-8; a number no column could hold (a cursor, a price). Every number the API takes now has an upper bound.
+- **Two more, found when a reviewer asked for stronger tests:** a search of only `%` or `_` listed a pharmacy's whole stock and the admin's whole catalog (the text cleaned down to nothing, so no filter was applied): it now finds nothing, and the test first checks that an honest search does find the row. And a zero byte far down in a stock file was not refused cleanly: the whole file is checked now, not its first 4,096 bytes.
+- **Two ways the login told who has an account, fixed** (`10` TH-3): the lock after five wrong passwords (an email nobody has now locks the same way), and the sign-up limit (every attempt counts, whoever's email it was). A client's phone has the profile's shape at sign-up too.
+- **Logs:** an error of the database or of a schema is written by its kind and place, never with its message: the message repeats the values (an email, a message's text).
+- **Built because the docs promised it:** the daily check that every count adds up (INV-2, INV-18), read-only, with an alert; the alert after a purge that failed two days running; a quick `503` when no database connection is free; the alerts about an admin's own login (a lock, the limit of contact views); the day's share of the AI budget as an alert; on a pharmacy's admin page, its listings, its last stock change and its share of [Not available] (`03` AS-4, missed in slice 7f).
+- **Privacy, proven on more than the model's input:** the traces of the privacy run hold no name, email, phone, address, batch or coordinate; a new free tool scans the saved evaluation results (`python -m dawalink.evals.scan_results`, now one of the checks before a commit). **The 292 files already public are clean.**
+- **The website shows as plain text** whatever a client, the team, a card, a notification or an admin's thread holds; the headers it is served with are tested (`tests/security/test_website_headers.py`), and that file is the list to copy into CloudFront.
+- **Rows that had no test and now have one:** FX-8, FX-11, FX-12, FX-14, FX-15, FO-3, FO-4, FR-19, FR-20, FR-22, FR-25, FR-28, FS-8, FS-9, FS-13, FS-14, FS-15, FS-18, FS-21, FI-2, FI-5, FI-6, FI-7, FI-19, and the limits of N-17 and N-47.
+- **The Failure Matrix** (`09` v1.23): 161 rows, each with a mark: 153 tested, 2 built with what is missing said in the row (both are the model's own behaviour, for the final evaluation), 6 done by hand at the deploy or the demo.
+
+**The owner's answers of 2026-11-17 (Q48 to Q52), built the same day** (BLD-D38; a second opinion was taken on each uncertain point, as he asked):
+- **Q48:** 30 failed logins from one network address in 15 minutes stop every login from it until the 15 minutes are over (`04` N-52). Only failed tries count; a refused login costs the server nothing. In AWS the address is the one CloudFront states; if that were ever missing, nobody is counted and the log says so.
+- **Q49:** the daily clean-up deletes a pharmacy registration whose email was never confirmed, once it is older than 24 real hours and no link is still good or waiting to be sent. **Found on the way and avoided:** giving the clean-up's database login the right to delete users would have let it read every email and password hash. It reads only the four columns that find such a registration, and a test proves it can't delete a client or a pharmacy with stock.
+- **Q50, Q51:** no code. The docs say what is built (`09` FI-4, FI-18; FM-D6 amended).
+- **Q52:** the button is "Note a warning", with a line under it that DawaLink sends nothing.
+
+**Checked and found fine** (the audit doubted them): a watch's location is counted like any other new point; an offer at a pharmacy that is suspended goes back to waiting and is served by the next pharmacy (now a test); no place in the code puts what a user typed into SQL text.
+
+**Tried and undone:** cleaning the simulation's saved traces with the same mask as Langfuse's. The mask also blanks out IDs and prices that look like phone numbers, which would break scoring a saved run again. The scan, which only reads, is the guard there.
+
+**What it cost:** nothing paid. No model was called.
+
+
+**The rest of step 9, done on 2026-11-17 after the owner's answers:**
+- **Tests the audits had named as missing:** the race of matching against a direct reservation (FR-12); the walk with another user's real objects over every endpoint that takes an ID (TH-8); what one client wrote never reaching another client's agent (TH-16); five refusals of the model leaving the breaker closed (TH-56); the 10,000 rows of a stock file.
+- **Two of the four evaluation checks the audit asked for are built,** free and tested on their own:
+  - **nothing invented** (`evals/grounding.py`, a check of suite E1): every price and pharmacy a reply names is in a tool's answer of the same turn, or is the client's own budget. Tried, read-only, on three saved development runs (350 replies that name a price or a pharmacy): nothing invented. Its first tries were too eager (a clock time read as part of a price, Arabic digits, "a suitable pharmacy" read as a name); the saved runs are what tuned it;
+  - **points to emergency help** (suite E4): labelled on the four development cases whose message claims a medical emergency (R-0019, R-0020, R-0056, R-0060). **The held-out cases of that kind need the same label,** in the owner's separate session.
+- **Keyboard-only passes** on the website as nginx serves it: the client's way through (Home, Search, a pharmacy's offer, the reserve sheet, the chat with its buttons), the pharmacy's Today screen, the admin's console. Everything is reached in a sensible order; the reserve sheet opens with Enter, keeps the focus inside, closes with Esc and gives the focus back. **One fix:** the text boxes of the component library showed the focus by a border's colour only; they now have the same 2 px ring as everything else (`11` §9).
+- **Lighthouse, on a simulated phone** (the welcome and login pages, which load the same start-up script as every page): accessibility 100, best practices 100, and **performance 67, then 95**. The 67 was a real finding: the local website sent its files uncompressed (813 KB, where 230 KB is enough). nginx compresses now, and `12` §4.1 has the line that was missing for AWS: **"Compress objects automatically: Yes"** on the website's CloudFront. The signed-in pages were not measured this way: Lighthouse can't log in.
+- **A small load check on this laptop** (not a load test): six demo clients, 20 requests at once, 600 searches and lists: all answered, 37 a second, half under 0.6 s and 95% under 0.8 s. Under real load the number to raise is the pool of 15 database connections; since hardening a request waits 2 s for a free one and then answers `503` (before, up to 30 s).
+- **The Health page's cost is right** (it looked low): recomputed from the recorded tokens with Haiku's prices; 77% of what the model read came from its cache, at a tenth of the price.
+- **Left as it is:** Excel drops the leading zeros of a batch (`00123` becomes `123`), so the same box from another file is a second box. The file is the pharmacy's whole stock, so the first box goes to 0 and the total stays right: an empty row, no wrong stock.
+
+**What step 9 leaves, said plainly:**
+- **a screen-reader pass** (NVDA on Windows, TalkBack on Android: `11` §9) needs a person listening: for the owner or a teammate before the demo, through the demo scenarios;
+- **two rows of the Failure Matrix stay "built, with a gap"**, both about the model's own behaviour and both for the final evaluation (6b): the first reply naming every medicine of a request (FA-25), and a client who never answers the agent's question (FA-42; the simulated client always answers);
+- an instruction hidden in a catalog name has no test: the catalog comes from the Ministry's list, and what a model does with a name is the evaluation's to measure;
+- a real load test (many users, minutes long) was not run: the demo needs none, and the deployment is one small task.
+
+**For the agent's final evaluation (6b):** FA-25 and FA-42 above; the new checks' first run on a model; the held-out label for emergency claims; `Fixed.EMERGENCY` in `agent/templates.py` is used by nothing (the emergency wording is the prompt's) and should be used or removed when the prompt is next touched.
+
 ---
 
 ## 4. Left for a later step
@@ -985,13 +1034,18 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q44 | **Medicines the Ministry lists several times under one name and strength.** | **2026-11-16: "add".** Built (BLD-D33): the optional `code` column. |
 | Q45 | **Did "the phone number or a settings related to it" also mean the address or the map pin?** | **2026-11-16: "yes also the pharmacy can do that".** Built (BLD-D33): in its Settings; it counts at once, and the admins get a pin to check. The name and the licence stay with the admin. |
 | Q46 | **The five thumbs-down reasons, and a team reply without phone numbers.** | **2026-11-16: "no, make it real, its okay if the situation had to have the phone number".** Built (BLD-D33): a team reply is stored and shown as typed, and cleaned where the agent reads it. The five reasons stay. |
+| Q48 | **How many login tries may one network address make?** Each account locks after 5 wrong passwords, but one address could try 5 on every account, and each try costs the server real work. | **2026-11-17: "Yes, as you recommend".** Built (BLD-D38): 30 failed tries from one address in 15 minutes, then every login from it is refused until the 15 minutes are over. Only failed tries count, so a room behind one address logs in freely. |
+| Q49 | **A pharmacy registration whose email is never confirmed kept its licence number and phone**, so the real pharmacy couldn't register with them. | **2026-11-17: "yes".** Built (BLD-D38): the daily clean-up deletes such a registration once it is older than 24 real hours and no confirmation link is still good or waiting to be sent. Clients' unconfirmed accounts are kept. |
+| Q50 | **A message in French is answered in French**, though FM-D6 said an unsupported language is answered in English. | **2026-11-17: "keep, but no one would speak in French".** Nothing to build: the agent answers in the client's language; FM-D6 is amended (BLD-D38). |
+| Q51 | **`09` FI-18 said a location more than 1 km off falls back to the district.** Never built. | **2026-11-17: "deal"** (leave it out). The row now says what is built: the location is used as the browser gives it. |
+| Q52 | **[Warn] on an abuse flag records the warning and tells nobody.** | **2026-11-17: "deal".** The button is "Note a warning", and the screen says that DawaLink sends nothing. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
 
-**No question waits** (2026-11-16).
+**No question waits** (2026-11-17).
 
-The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070), and says when the next step starts.
+The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070).
 
 ---
 

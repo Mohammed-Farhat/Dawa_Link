@@ -707,7 +707,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login */
+        /**
+         * Login
+         * @description A wrong login is counted twice before we answer: for its account (R-AU2, five and
+         *     it is locked), and for the network address it came from (N-52). An account's lock
+         *     stops guessing one account; the address's limit stops one visitor from trying a few
+         *     passwords on every account, each of which costs the server a password hash.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -2054,6 +2060,8 @@ export interface components {
             district_id: number;
             /** Email */
             email: string;
+            /** Handed Over 30D */
+            handed_over_30d: number;
             /** Hours */
             hours: components["schemas"]["OpeningRange"][];
             /**
@@ -2063,13 +2071,19 @@ export interface components {
             id: string;
             /** Info Requested */
             info_requested: boolean;
+            /** Last Inventory Update */
+            last_inventory_update: string | null;
             /** License Number */
             license_number: string;
+            /** Live Listings */
+            live_listings: number;
             location: components["schemas"]["Pin"];
             /** Moved At */
             moved_at: string | null;
             /** Name */
             name: string;
+            /** Not Available 30D */
+            not_available_30d: number;
             /** Phone */
             phone: string;
             /** Phone Changed At */

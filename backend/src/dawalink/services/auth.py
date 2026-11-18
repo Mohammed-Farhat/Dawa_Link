@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -396,26 +397,93 @@ def _count_failure(tx: Tx, user: User) -> None:
         audit.record(tx, Actor.SYSTEM, "login.locked", "user", user.id)
 
 
+class FailedLoginsOfNobody:
+    """Failed logins for emails that have **no account**, counted exactly like an
+    account's own (R-AU2): five within 15 minutes, then "locked" for 15 minutes.
+
+    Without it the lock itself says who has an account: after five wrong passwords a real
+    email answers `ACCOUNT_LOCKED`, while an email nobody has would answer
+    `INVALID_CREDENTIALS` for ever (docs/10 TH-3, TM-D7).
+
+    Kept in memory, under a hash of the email: there is no row to count on, and nothing
+    here has to outlive a restart. The API keeps one for its whole life.
+    """
+
+    MOST = 10_000
+
+    def __init__(self) -> None:
+        # hash of the email -> (failures, when the last one was, locked until)
+        self._seen: dict[bytes, tuple[int, datetime, datetime | None]] = {}
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(email: str) -> bytes:
+        return hashlib.sha256(email.strip().lower().encode()).digest()
+
+    def locked_until(self, email: str, now: datetime) -> datetime | None:
+        with self._lock:
+            found = self._seen.get(self._key(email))
+        return found[2] if found and found[2] is not None and found[2] > now else None
+
+    def count(self, email: str, now: datetime) -> None:
+        """One more failure, by the rule of `_count_failure`."""
+        key = self._key(email)
+        with self._lock:
+            failures, last, _ = self._seen.get(key, (0, now, None))
+            if failures and last < now - LOGIN_LOCK:
+                failures = 0
+            failures += 1
+            locked = failures >= FAILED_LOGINS_BEFORE_LOCK
+            self._seen[key] = (
+                0 if locked else failures,
+                now,
+                now + LOGIN_LOCK if locked else None,
+            )
+            if len(self._seen) > self.MOST:
+                self._forget(now)
+
+    def _forget(self, now: datetime) -> None:
+        idle = [key for key, (_, last, _until) in self._seen.items() if last < now - LOGIN_LOCK]
+        for key in idle or list(self._seen)[: self.MOST // 2]:
+            del self._seen[key]
+
+
+def _locked(until: datetime, now: datetime) -> ServiceError:
+    return ServiceError(
+        Code.ACCOUNT_LOCKED,
+        "Too many failed logins. Please try again in a few minutes.",
+        retry_after=int((until - now).total_seconds()) + 1,
+    )
+
+
 def login(
-    tx: Tx, *, email: str, password: str, totp_code: str | None, secret_key: str
+    tx: Tx,
+    *,
+    email: str,
+    password: str,
+    totp_code: str | None,
+    secret_key: str,
+    nobody: FailedLoginsOfNobody,
 ) -> LoggedIn | None:
     """Checks a login. **Returns None for a wrong email, password or code**, after
     counting the failure: the caller commits that count, then answers
     `INVALID_CREDENTIALS`. Raising here would undo the count with the transaction.
+
+    An email that has no account goes the same way as one that has: the same work, the
+    same answers, the same lock after the same number of failures (`nobody` counts them).
     """
     user = tx.session.execute(
         select(User).where(User.email == email.strip()).with_for_update()
     ).scalar()
     if user is None:
+        until = nobody.locked_until(email, tx.real_now)
+        if until is not None:
+            raise _locked(until, tx.real_now)
         _password_matches(_NOBODY, password)
+        nobody.count(email, tx.real_now)
         return None
     if user.locked_until is not None and user.locked_until > tx.real_now:
-        retry_after = int((user.locked_until - tx.real_now).total_seconds()) + 1
-        raise ServiceError(
-            Code.ACCOUNT_LOCKED,
-            "Too many failed logins. Please try again in a few minutes.",
-            retry_after=retry_after,
-        )
+        raise _locked(user.locked_until, tx.real_now)
     step: int | None = None
     known = _password_matches(user.password_hash, password)
     if known and user.role == UserRole.ADMIN.value:

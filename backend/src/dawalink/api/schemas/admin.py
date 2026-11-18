@@ -103,6 +103,12 @@ class AdminPharmacy(Out):
     pin_to_check: bool
     created_at: datetime
     approved_at: datetime | None
+    # AS-4: boxes clients can see now, the last change to its stock, and its reservations
+    # of the last 30 days that ended at the counter, by how they ended.
+    live_listings: int
+    last_inventory_update: datetime | None
+    handed_over_30d: int
+    not_available_30d: int
 
 
 class Approve(In):

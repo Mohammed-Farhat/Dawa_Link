@@ -37,6 +37,13 @@ class Limiter:
                 self._forget_idle(now)
             return 0
 
+    def full(self, key: Hashable) -> bool:
+        """Whether one more event for `key` would be refused, without counting one."""
+        now = self._monotonic()
+        with self._lock:
+            events = self._events.get(key, ())
+            return sum(1 for at in events if at > now - self._window_s) >= self._limit
+
     def _forget_idle(self, now: float) -> None:
         for key in [k for k, v in self._events.items() if not v or v[-1] <= now - self._window_s]:
             del self._events[key]

@@ -279,6 +279,17 @@ class TestUploads:
         assert error.code is Code.UPLOAD_FAILED
         assert reason in error.details["reason"]
 
+    def test_a_file_of_more_than_ten_thousand_rows_is_refused_whole(self, store: Store) -> None:
+        """N-15, docs/10 TH-34: refused before a single row is looked up or stored."""
+        header = "product,batch,expiry,quantity\n"
+        rows = "".join(f"Panadol,B{number},2027-03,1\n" for number in range(10_001))
+
+        error = refusal(lambda: store.upload(header + rows))
+
+        assert error.code is Code.UPLOAD_FAILED
+        assert "10,000 rows" in error.details["reason"]
+        assert store.world.all("SELECT 1 FROM inventory_upload_rows") == []
+
     def test_a_file_over_five_megabytes_is_refused(self, store: Store, world: World) -> None:
         big = b"product,batch,expiry,quantity\n" + b"x" * (5 * 1024 * 1024)
 

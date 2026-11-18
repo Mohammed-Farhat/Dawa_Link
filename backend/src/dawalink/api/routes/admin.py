@@ -19,7 +19,7 @@ from dawalink.agent.guards.redact import redact
 from dawalink.api.deps import AsAdmin, DoWork, TheSettings
 from dawalink.api.schemas import admin as schemas
 from dawalink.api.schemas.accounts import OpeningRange
-from dawalink.api.schemas.common import Pin
+from dawalink.api.schemas.common import BeforeId, Pin, Skip
 from dawalink.db.models import (
     AbuseFlag,
     AgentRun,
@@ -51,7 +51,7 @@ from dawalink.services.errors import Code, ServiceError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-Cursor = Annotated[int, Query(ge=0)]
+Cursor = Skip
 PageSize = Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)]
 REPLY_PREVIEW = 160
 
@@ -120,6 +120,10 @@ def _pharmacy(tx: Tx, pharmacy_id: uuid.UUID) -> schemas.AdminPharmacy:
         pin_to_check=found.pin_to_check,
         created_at=pharmacy.created_at,
         approved_at=pharmacy.approved_at,
+        live_listings=found.live_listings,
+        last_inventory_update=found.last_inventory_update,
+        handed_over_30d=found.handed_over_30d,
+        not_available_30d=found.not_available_30d,
     )
 
 
@@ -799,7 +803,7 @@ def read_audit_log(
     entity_id: uuid.UUID | None = None,
     action: Annotated[str | None, Query(max_length=60)] = None,
     actor: Annotated[Actor | None, Query()] = None,
-    cursor: Annotated[int | None, Query(ge=1)] = None,
+    cursor: BeforeId = None,
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.AuditPage:
     """Who changed what, newest first. Read-only: nothing can change or delete an event.

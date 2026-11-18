@@ -3,6 +3,7 @@ docs/06 §2, §6.1; docs/10 TH-1 to TH-9)."""
 
 import re
 from datetime import timedelta
+from typing import Any
 
 import pyotp
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from dawalink.api.limits import Limiter
 from dawalink.api.main import create_app
 from dawalink.config import ConfigError
+from dawalink.domain.numbers import FAILED_LOGINS_PER_ADDRESS
 from dawalink.services import auth
 from tests.api.conftest import PASSWORD, Api, code_of
 
@@ -92,6 +94,48 @@ class TestRegistration:
 
         assert (sixth.status_code, code_of(sixth)) == (429, "SIGNUP_LIMIT")
 
+    def test_the_limit_never_tells_whether_an_email_was_known(self, api: Api) -> None:
+        """docs/10 TH-3: four new sign-ups, one with someone's email, then one more. The
+        sixth is refused whether that email had an account or not; counting only the
+        accounts made would have let it through when it had."""
+        http = api.http()
+        api.client(email="rami@example.com")
+        for number in range(4):
+            http.post(
+                "/api/v1/auth/register/client", json=NEW | {"email": f"n{number}@example.com"}
+            )
+
+        known = http.post("/api/v1/auth/register/client", json=NEW | {"email": "rami@example.com"})
+        sixth = http.post("/api/v1/auth/register/client", json=NEW | {"email": "n6@example.com"})
+
+        assert known.status_code == 202
+        assert (sixth.status_code, code_of(sixth)) == (429, "SIGNUP_LIMIT")
+
+    def test_a_phone_is_a_phone_at_sign_up_too(self, api: Api) -> None:
+        """docs/10 TH-63: the field is read by DawaLink's team, so it holds a number or
+        nothing, as in the profile."""
+        http = api.http()
+
+        words = http.post(
+            "/api/v1/auth/register/client", json=NEW | {"phone": "<b>call me</b> 70 123 456"}
+        )
+        typed = http.post("/api/v1/auth/register/client", json=NEW | {"phone": " +961 70 123 456 "})
+
+        assert (words.status_code, code_of(words)) == (422, "VALIDATION_ERROR")
+        assert typed.status_code == 202
+        assert api.world.one("SELECT phone FROM users WHERE email = :e", e=NEW["email"]) == (
+            "+961 70 123 456",
+        )
+
+    def test_a_form_sent_back_for_a_mistake_is_not_a_sign_up(self, api: Api) -> None:
+        """Someone who mistypes five times can still sign up."""
+        http = api.http()
+        for _ in range(6):
+            weak = http.post("/api/v1/auth/register/client", json=NEW | {"password": "password"})
+            assert code_of(weak) == "WEAK_PASSWORD"
+
+        assert http.post("/api/v1/auth/register/client", json=NEW).status_code == 202
+
     def test_a_link_works_once_and_for_a_day(self, api: Api) -> None:
         http = api.http()
         http.post("/api/v1/auth/register/client", json=NEW)
@@ -130,6 +174,26 @@ class TestRegistration:
         assert (second.status_code, code_of(second)) == (429, "RATE_LIMITED")
         assert int(second.headers["Retry-After"]) <= 60
         assert len(api.emails()) == 1
+
+    def test_and_only_so_many_times_a_day(self, api: Api) -> None:
+        """N-47, docs/10 TH-53: nobody can make DawaLink send one address email after
+        email. The first email is the sign-up's own; five more may be asked for."""
+        http = api.http()
+        client = api.client("UNVERIFIED")
+        headers = api.token(client)
+
+        answers = []
+        for _ in range(7):
+            answers.append(http.post("/api/v1/auth/verify-email/resend", headers=headers))
+            with api.world.as_owner():
+                # Two minutes pass: the wait between two emails is not what is tested.
+                api.world.connection.exec_driver_sql(
+                    "UPDATE email_outbox SET created_at = created_at - interval '2 minutes'"
+                )
+
+        assert [answer.status_code for answer in answers] == [202] * 6 + [429]
+        assert code_of(answers[-1]) == "RATE_LIMITED"
+        assert int(answers[-1].headers["Retry-After"]) == 3600
 
 
 class TestLogin:
@@ -189,6 +253,89 @@ class TestLogin:
         assert (locked.status_code, code_of(locked)) == (429, "ACCOUNT_LOCKED")
         assert 0 < locked.json()["error"]["details"]["retry_after"] <= 15 * 60 + 1
         assert "login.locked" in api.world.audit_actions(client)
+
+    def test_an_email_nobody_has_locks_exactly_like_a_real_one(self, api: Api) -> None:
+        """docs/10 TH-3: otherwise five wrong passwords would say who has an account."""
+        http = api.http()
+        api.client(email="rami@example.com")
+
+        def five_then_one(email: str) -> list[tuple[int, str]]:
+            answers = [
+                http.post("/api/v1/auth/login", json={"email": email, "password": "nope"})
+                for _ in range(6)
+            ]
+            assert 0 < answers[-1].json()["error"]["details"]["retry_after"] <= 15 * 60 + 1
+            return [(answer.status_code, code_of(answer)) for answer in answers]
+
+        real = five_then_one("rami@example.com")
+        nobody = five_then_one("nobody@example.com")
+        someone_else = http.post(
+            "/api/v1/auth/login", json={"email": "another@example.com", "password": "nope"}
+        )
+
+        assert real == nobody == [(401, "INVALID_CREDENTIALS")] * 5 + [(429, "ACCOUNT_LOCKED")]
+        # An account's email is the same in capitals; so is one that nobody has.
+        shouted = [
+            http.post("/api/v1/auth/login", json={"email": email, "password": "nope"})
+            for email in ("RAMI@EXAMPLE.COM", "NOBODY@Example.com")
+        ]
+        assert [code_of(answer) for answer in shouted] == ["ACCOUNT_LOCKED"] * 2
+        # The lock is that email's own: nobody else is slowed down.
+        assert someone_else.status_code == 401
+
+    def test_thirty_failed_tries_from_one_network_stop_every_login_from_it(self, api: Api) -> None:
+        """N-52 (the owner, Q48): an account's own lock stops guessing that account; this
+        stops one visitor from trying a few passwords on each of many accounts."""
+        http = api.http()
+        api.client(email="rami@example.com")
+
+        def a_try(number: int, password: str = "nope") -> Any:
+            # A different email each time: no account's own lock is ever reached.
+            body = {"email": f"someone{number}@example.com", "password": password}
+            return http.post("/api/v1/auth/login", json=body)
+
+        tries = [a_try(number) for number in range(FAILED_LOGINS_PER_ADDRESS)]
+        one_more = a_try(99)
+        the_right_password = http.post(
+            "/api/v1/auth/login", json={"email": "rami@example.com", "password": PASSWORD}
+        )
+
+        assert {answer.status_code for answer in tries} == {401}
+        for answer in (one_more, the_right_password):
+            assert (answer.status_code, code_of(answer)) == (429, "RATE_LIMITED")
+            assert 0 < int(answer.headers["Retry-After"]) <= 15 * 60 + 1
+        assert "network" in one_more.json()["error"]["message"]
+
+    def test_logins_that_work_are_never_counted(self, api: Api) -> None:
+        """A room of people behind one address logs in as often as it likes."""
+        http = api.http()
+        api.client(email="rami@example.com")
+        right = {"email": "rami@example.com", "password": PASSWORD}
+
+        worked = [
+            http.post("/api/v1/auth/login", json=right).status_code
+            for _ in range(FAILED_LOGINS_PER_ADDRESS + 5)
+        ]
+        a_mistake = http.post("/api/v1/auth/login", json=right | {"password": "nope"})
+
+        assert set(worked) == {200}
+        assert (a_mistake.status_code, code_of(a_mistake)) == (401, "INVALID_CREDENTIALS")
+
+    def test_a_locked_accounts_tries_count_for_the_network_too(self, api: Api) -> None:
+        http = api.http()
+        api.client(email="rami@example.com")
+        wrong = {"email": "rami@example.com", "password": "nope"}
+
+        answers = [
+            http.post("/api/v1/auth/login", json=wrong)
+            for _ in range(FAILED_LOGINS_PER_ADDRESS + 1)
+        ]
+
+        # Five wrong passwords, then "locked" until the network itself is stopped.
+        assert [code_of(answer) for answer in answers[:6]] == ["INVALID_CREDENTIALS"] * 5 + [
+            "ACCOUNT_LOCKED"
+        ]
+        assert code_of(answers[-1]) == "RATE_LIMITED"
 
     def test_a_lock_ends_by_itself(self, api: Api) -> None:
         http = api.http()

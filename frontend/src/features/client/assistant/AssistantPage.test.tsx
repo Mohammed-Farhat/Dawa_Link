@@ -96,6 +96,35 @@ describe('The assistant', () => {
     expect(container.querySelector('.chat__messages a')).toBeNull()
   })
 
+  it('shows as plain text whatever a client, the team or a card holds (FS-8)', async () => {
+    // The login token is kept where a script could read it (docs/10 RR-13), so nothing
+    // anyone typed may ever become part of the page.
+    const evil = '<script>alert(1)</script><img src=x onerror="alert(2)"><a href="javascript:alert(3)">x</a>'
+    const card = {
+      ...RESERVE_CARD,
+      title: `Title ${evil}`,
+      lines: [{ label: `Label ${evil}`, value: `Value ${evil}` }],
+    }
+    chatApi({
+      now: [
+        message(1, 'client', `Mine ${evil}`),
+        message(2, 'admin', `Team ${evil}`),
+        message(3, 'agent', 'Here it is.', { cards: [card], quick_replies: [`Chip ${evil}`] }),
+      ],
+    })
+
+    const { container } = renderApp(<AppRoutes />, { path: '/assistant' })
+
+    for (const said of ['Mine', 'Team', 'Title', 'Label', 'Value']) {
+      expect(await screen.findByText(`${said} ${evil}`)).toBeInTheDocument()
+    }
+    expect(screen.getByRole('button', { name: `Chip ${evil}` })).toBeInTheDocument()
+    expect(container.querySelector('script, img, iframe, object, embed')).toBeNull()
+    expect(container.querySelector('a[href^="javascript"]')).toBeNull()
+    expect(container.querySelector('.chat__messages a')).toBeNull()
+    expect(container.querySelector('[onerror], [onclick], [onload]')).toBeNull()
+  })
+
   it('reports an answer once, with a reason and a few words', async () => {
     const api = chatApi(
       { now: [QUESTION, REPLY] },

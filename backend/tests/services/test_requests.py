@@ -437,6 +437,27 @@ class TestWaitingForStock:
         )
         assert watch.code is Code.OUTSIDE_REQUEST_HOURS
 
+    def test_a_box_that_becomes_visible_at_midnight_is_offered_to_who_waits(
+        self, case: Case, world: World
+    ) -> None:
+        """FR-19, R-T9: nothing is stored about a box's zone. A box 181 days from its
+        expiry is private this evening and listed after midnight, and the next sweep
+        offers it to the request that has been waiting since 19:00."""
+        world.later(hours=9)  # 19:00
+        request_id = case.start(RequestLine(case.concor))
+        claim = self.waiting(case, request_id)
+        case.stock(case.concor, days_left=181)
+
+        world.clock_tasks().matching_sweep()
+        this_evening = world.all("SELECT 1 FROM orders WHERE claim_id = :c", c=claim)
+        world.later(hours=5, minutes=1)  # 00:01 the next day: 180 days are left
+        world.clock_tasks().matching_sweep()
+        after_midnight = world.all("SELECT state FROM orders WHERE claim_id = :c", c=claim)
+
+        assert this_evening == []
+        assert [row.state for row in after_midnight] == ["OFFERED"]
+        assert case.thread(request_id)[-1] == ("card", "offer")
+
     def test_new_stock_is_offered_in_the_thread_and_accepting_it_secures_the_item(
         self, case: Case, world: World
     ) -> None:

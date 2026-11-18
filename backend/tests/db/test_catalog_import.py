@@ -173,6 +173,27 @@ def test_a_lower_public_price_caps_a_pharmacys_own_price(db: Connection) -> None
     assert result.overrides_capped == 1
 
 
+def test_a_reservation_keeps_its_price_and_new_ones_get_the_new_one(db: Connection) -> None:
+    """FR-25, R-C8: the client was told a price at the tap. A new price list changes what
+    the next client sees, never what this one pays."""
+    run_import(db, ROWS)
+    product = products(db)[501].id
+    box = make.item(db, product_id=product, price_override_lbp=450_000, qty_reserved=1)
+    reserved = make.order(db, inventory_item_id=box, product_id=product, price_snapshot_lbp=450_000)
+
+    run_import(db, [row(501, "TESTAMOL", "Paracetamol - 500mg", price=300_000)])
+
+    kept = db.execute(
+        text("SELECT price_snapshot_lbp FROM orders WHERE id = :id"), {"id": reserved}
+    ).scalar_one()
+    listed = db.execute(
+        text("SELECT price_lbp FROM visible_listings(:today) WHERE inventory_item_id = :id"),
+        {"today": make.TODAY, "id": box},
+    ).scalar_one()
+    assert kept == 450_000
+    assert listed == 300_000
+
+
 def test_a_controlled_product_is_never_visible_even_if_it_is_in_stock(db: Connection) -> None:
     """INV-6, through the one definition of visibility."""
     run_import(db, ROWS)

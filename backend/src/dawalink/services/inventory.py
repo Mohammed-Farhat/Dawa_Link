@@ -212,8 +212,9 @@ def _read_rows(content: bytes) -> list[dict[str, str]]:
     """The file's rows as dictionaries, or a refusal of the whole file (SM-4: FAILED)."""
     if len(content) > MAX_FILE_BYTES:
         raise ServiceError(Code.FILE_TOO_LARGE, "The file is larger than 5 MB.")
-    if b"\x00" in content[:4096] or content.startswith(b"PK"):
-        # An Excel workbook, or anything else that isn't text.
+    if b"\x00" in content or content.startswith(b"PK"):
+        # An Excel workbook, or anything else that isn't text. A zero byte anywhere: no
+        # text file has one, and the database can't store one.
         raise _fail("not a CSV file: in Excel, use File > Save As > CSV")
     try:
         text = content.decode("utf-8-sig")
@@ -668,13 +669,14 @@ def stock_lines(
     )
     if item_ids is not None:
         statement = statement.where(InventoryItem.id.in_(item_ids))
-    wanted = normalize(query)
-    if wanted:
+    typed = query.strip().lower()
+    if typed:
+        # A batch is searched as typed (`%` and `_` are only themselves); a medicine's
+        # name by its letters and digits, when the text has any.
+        in_the_batch = func.lower(InventoryItem.batch).contains(typed, autoescape=True)
+        wanted = normalize(query)
         statement = statement.where(
-            or_(
-                Product.search_name.contains(wanted),
-                func.lower(InventoryItem.batch).contains(query.strip().lower()),
-            )
+            or_(Product.search_name.contains(wanted), in_the_batch) if wanted else in_the_batch
         )
     if zone is not None:
         statement = statement.where(zone_now == zone.value)

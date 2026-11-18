@@ -1,6 +1,6 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.5 · **Date:** 2026-11-16
+**Version:** v2.6 · **Date:** 2026-11-17
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
 **Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.4:** the development budget setting is 20 (decision log BLD-D13), and Langfuse is proven with real keys (§2). **v2.3** (build step 5): the agent's settings, the development model (Claude, decision log BLD-D11) and the terminal chat command (§2). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
@@ -105,6 +105,7 @@ No domain and no certificate: both use their `*.cloudfront.net` address. CloudFr
 | Viewer | Redirect HTTP to HTTPS |
 | Default root object | `index.html` |
 | Error pages | `403` and `404` → `/index.html` with status `200`, so React routes like `/requests/Q-4HX9TM` work. This is safe here because this CloudFront serves no API. |
+| Cache policy | `Managed-CachingOptimized`, with **Compress objects automatically: Yes**. **Required for phones** (added 2026-11-17, found by Lighthouse): the website's script and styles are about 810 KB as written and about 230 KB compressed; without it a phone on a slow connection waits several seconds more (`11` §10). File names under `/assets` carry a hash of their content, so a long cache is safe, and each release invalidates `/index.html` (§12) |
 | Response headers policy | The security headers below |
 
 **Security headers** (defenses that `10` relies on):

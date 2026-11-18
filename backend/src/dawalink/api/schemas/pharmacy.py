@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import Field
 
 from dawalink.api.schemas.accounts import OpeningRange, PinIn
-from dawalink.api.schemas.common import DistrictId, In, Money, Out, Pin, ProductSummary
+from dawalink.api.schemas.common import DistrictId, In, Lbp, Money, Out, Pin, ProductSummary
 from dawalink.api.schemas.search import DayHours
 
 
@@ -146,7 +146,7 @@ class EarlyReleaseAsks(Out):
 
 class AcceptAsk(In):
     qty: int = Field(ge=1, le=3)
-    price_lbp: int = Field(ge=0)
+    price_lbp: Lbp
 
 
 class DeclineAsk(In):

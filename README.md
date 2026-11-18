@@ -54,6 +54,7 @@ docker compose up -d postgres
 |---|---|
 | Install | `uv sync` |
 | Tests | `uv run --env-file ../.env pytest` |
+| Only the random requests against the API (about half a minute; they also run with the tests) | `uv run --env-file ../.env pytest -m fuzz` |
 | Lint and format | `uv run ruff check .` and `uv run ruff format .` |
 | Type check | `uv run mypy` |
 | Run the API | `uv run --env-file ../.env uvicorn dawalink.api.main:create_app --factory --reload` |
@@ -126,6 +127,7 @@ here calls a paid model. Inside `backend/`:
 | Print the evaluation's tables from the saved runs, with their 95% intervals | `uv run python -m dawalink.evals.report` (add `--write` for `eval/results/REPORT.md`) |
 | Play a day again with each assumption at its low and high value (free contenders) | `uv run --env-file ../.env python -m dawalink.sim.sweep --contender rules --seeds 1` |
 | The free checks before committing a change (about 3 minutes) | `uv run --env-file ../.env python -m dawalink.evals.before_commit` |
+| Only the scan of the saved results for an email, a phone number or coordinates (seconds; part of the checks above) | `uv run python -m dawalink.evals.scan_results` |
 
 ## What's where
 

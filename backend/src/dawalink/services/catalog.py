@@ -177,6 +177,10 @@ def admin_products(tx: Tx, query: str, *, offset: int = 0, limit: int = 50) -> l
     import script and the team's override files."""
     statement = select(Product)
     wanted = normalize(query)
+    if query.strip() and not wanted:
+        # Typed, but no letter or digit in it ("%", "_"): that names no product. Without
+        # this it would list the whole catalog, as an empty search does.
+        return []
     if wanted:
         statement = statement.where(Product.search_name.contains(wanted, autoescape=True))
     return list(

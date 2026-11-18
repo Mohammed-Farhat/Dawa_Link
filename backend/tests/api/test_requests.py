@@ -175,6 +175,48 @@ class TestAnOffer:
         assert sourcing.get("/offers").json()["items"] == []
         assert (again.status_code, code_of(again)) == (409, "OFFER_NOT_OPEN")
 
+    def test_an_offer_at_a_pharmacy_that_is_suspended_ends_and_the_search_goes_on(
+        self, sourcing: Sourcing
+    ) -> None:
+        """FR-22, SM-1: the box is no longer held, the client is told in the thread, and
+        the medicine waits again for another pharmacy (it was never reserved, so nothing
+        has to be planned again)."""
+        world = sourcing.api.world
+        offer = sourcing.offer_arrives()
+        admin = sourcing.api.token(world.make.user("admin", totp_secret=b"not-a-real-secret"))
+        with world.as_owner():
+            # An admin only ever sees a pharmacy whose email is confirmed.
+            world.connection.exec_driver_sql(
+                "UPDATE users SET email_verified_at = now() WHERE role = 'pharmacist'"
+            )
+
+        suspended = sourcing.http.post(
+            f"/api/v1/admin/pharmacies/{sourcing.pharmacy}/suspend",
+            json={"reason": "Sold expired stock."},
+            headers=admin,
+        )
+
+        assert suspended.json().get("status") == "SUSPENDED", suspended.text
+        assert sourcing.get("/offers").json()["items"] == []
+        assert world.one("SELECT state FROM orders WHERE id = :id", id=offer) == (
+            "CANCELLED_BY_SYSTEM",
+        )
+        assert world.one(
+            "SELECT state FROM request_items WHERE request_id = :r AND product_id = :p",
+            r=sourcing.request,
+            p=sourcing.concor,
+        ) == ("WAITING",)
+        assert world.all("SELECT state FROM claims") == [("ACTIVE",)]
+        assert world.one(
+            "SELECT qty_reserved FROM inventory_items WHERE product_id = :p", p=sourcing.concor
+        ) == (0,)
+        # Another pharmacy lists the medicine: the same need gets a new offer.
+        other = world.make.pharmacy(name="Verdun Pharmacy", lat=33.89, lon=35.49)
+        world.make.item(pharmacy_id=other, product_id=sourcing.concor, days_left=60)
+        world.clock_tasks().matching_sweep()
+        (again,) = sourcing.get("/offers").json()["items"]
+        assert again["pharmacy"]["name"] == "Verdun Pharmacy"
+
     def test_someone_elses_offer_does_not_exist(self, sourcing: Sourcing) -> None:
         offer = sourcing.offer_arrives()
         other = sourcing.api.token(sourcing.api.client())

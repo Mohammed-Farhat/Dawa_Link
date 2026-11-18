@@ -8,7 +8,9 @@ from pydantic import Field
 
 from dawalink.api.schemas.chat import LocationSummary
 from dawalink.api.schemas.common import (
+    MAX_SKIP,
     In,
+    Lbp,
     LocationIn,
     Money,
     MoneyIn,
@@ -88,7 +90,7 @@ class SearchListings(In):
     max_price: MoneyIn | None = None
     sort: Literal["best", "nearest", "cheapest", "latest_expiry"] = "best"
     on_foot: bool = False
-    cursor: int = Field(default=0, ge=0)
+    cursor: int = Field(default=0, ge=0, le=MAX_SKIP)
     limit: int = Field(default=20, ge=1, le=50)
 
 
@@ -130,6 +132,6 @@ class Reserve(In):
     listing_id: uuid.UUID
     qty: int = Field(ge=1, le=3)
     # The price the client was shown: if it went up since, nothing is reserved (API-D4).
-    expected_price_lbp: int = Field(ge=0)
+    expected_price_lbp: Lbp
     pickup_day: date
     days_of_use: int = Field(default=1, ge=1, le=365)

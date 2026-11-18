@@ -221,6 +221,27 @@ function PharmacyView({
             />
             <Line label={one.pickup} value={d.days(pharmacy.pickup_days)} />
           </dl>
+          {pharmacy.status !== 'PENDING' && pharmacy.status !== 'REJECTED' && (
+            <div>
+              <span className="hint">{one.activity}</span>
+              <dl className="card__lines">
+                <Line label={one.liveListings} value={String(pharmacy.live_listings)} />
+                <Line
+                  label={one.lastStockUpdate}
+                  value={
+                    pharmacy.last_inventory_update ? when(pharmacy.last_inventory_update) : one.never
+                  }
+                />
+                <Line
+                  label={one.notAvailable}
+                  value={one.notAvailableOf(
+                    pharmacy.not_available_30d,
+                    pharmacy.not_available_30d + pharmacy.handed_over_30d,
+                  )}
+                />
+              </dl>
+            </div>
+          )}
           <div>
             <span className="hint">{one.hours}</span>
             <ul className="plain-list">

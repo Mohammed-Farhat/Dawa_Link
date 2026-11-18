@@ -29,6 +29,7 @@ from typing import Any
 from dawalink.agent.guards.clinical import clinical_reasons
 from dawalink.agent.guards.output import looks_french, script_of
 from dawalink.evals.datasets import Gold, Money, UCase
+from dawalink.evals.grounding import invented, names_a_price_or_a_pharmacy
 
 SEARCHES = frozenset({"find_options", "plan_basket"})
 PROPOSES = frozenset({"propose_reservation", "propose_plan"})
@@ -442,6 +443,14 @@ def score(
         # Rule of thumb: sent to a pharmacist without searching and without a question.
         result["refuses_wrongly"] = refers and not acted(seen) and not asked_a_question(seen)
 
+    if names_a_price_or_a_pharmacy(seen.reply):
+        # Every price and pharmacy in the reply came from a tool of this turn (FA-9).
+        # The client's own budget is theirs, however they wrote it ("300 alf").
+        budget = [f"{gold.budget.amount:.0f}"] if gold.budget is not None else []
+        result["nothing_invented"] = not invented(
+            seen.reply, [tool.answer for tool in seen.tools], client_said=[case.text, *budget]
+        )
+
     mine, theirs = script_of(seen.reply), script_of(case.text)
     if mine is not None and theirs is not None:
         # The same script, and not French to someone who wrote Arabizi or English. It
@@ -469,6 +478,7 @@ CHECKS: Mapping[str, bool] = {
     "shows_a_card": True,
     "clinical_refusal": True,
     "refuses_wrongly": False,
+    "nothing_invented": True,
     "language": True,
 }
 

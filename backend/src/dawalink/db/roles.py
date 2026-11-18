@@ -49,6 +49,20 @@ RETENTION_DELETES = (
     "claim_skips",
     "audit_events",
 )
+# For one thing only: a pharmacy registration whose email was never confirmed
+# (`services/daily.py`, the owner's Q49). The login may delete rows of these tables and
+# read **only the columns that find them**: never an email, a name, a phone, a password
+# hash or a licence. A client, or a pharmacy that has stock or reservations, can't be
+# deleted by it: the rows that hang on them are in tables it may not touch.
+RETENTION_DELETES_FOUND_BY = {
+    "users": ("id", "role", "email_verified_at", "created_at"),
+    "pharmacies": ("id", "owner_user_id", "status"),
+    "pharmacy_hours": ("pharmacy_id",),
+    "email_outbox": ("user_id", "template", "state"),
+}
+# A registration's user row is locked before it is deleted (`FOR UPDATE`), which
+# PostgreSQL allows only to a login that may update some column of the table.
+RETENTION_LOCKS = {"users": ("updated_at",)}
 # A request and a claim are kept; only the client's location on them is erased.
 RETENTION_ERASES = {
     "sourcing_requests": ("loc_lat", "loc_lon", "loc_source"),
@@ -157,6 +171,20 @@ def _grant(connection: Connection, privileges: tuple[str, ...], table: str, role
     )
 
 
+def _grant_columns(
+    connection: Connection, privilege: str, columns: tuple[str, ...], table: str, role: str
+) -> None:
+    _run(
+        connection,
+        sql.SQL("GRANT {} ({}) ON {} TO {}").format(
+            sql.SQL(privilege),
+            sql.SQL(", ").join(sql.Identifier(column) for column in columns),
+            sql.Identifier(table),
+            sql.Identifier(role),
+        ),
+    )
+
+
 def grant_privileges(migrator_url: str) -> None:
     """Gives the app and retention logins exactly their privileges. Safe to run again.
 
@@ -178,13 +206,11 @@ def grant_privileges(migrator_url: str) -> None:
                 _grant(connection, ("SELECT", "DELETE"), table, RETENTION)
             for table, columns in RETENTION_ERASES.items():
                 _grant(connection, READ, table, RETENTION)
-                _run(
-                    connection,
-                    sql.SQL("GRANT UPDATE ({}) ON {} TO {}").format(
-                        sql.SQL(", ").join(sql.Identifier(c) for c in columns),
-                        sql.Identifier(table),
-                        sql.Identifier(RETENTION),
-                    ),
-                )
+                _grant_columns(connection, "UPDATE", columns, table, RETENTION)
+            for table, columns in RETENTION_DELETES_FOUND_BY.items():
+                _grant(connection, ("DELETE",), table, RETENTION)
+                _grant_columns(connection, "SELECT", columns, table, RETENTION)
+            for table, columns in RETENTION_LOCKS.items():
+                _grant_columns(connection, "UPDATE", columns, table, RETENTION)
     finally:
         engine.dispose()

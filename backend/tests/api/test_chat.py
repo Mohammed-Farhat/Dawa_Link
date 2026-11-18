@@ -4,15 +4,18 @@
 import json
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from dawalink.agent.chat import post_client_message
 from dawalink.agent.llm import ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, reply
 from dawalink.api import chat_stream
 from dawalink.api.limits import Limiter
+from dawalink.api.routes import conversations as conversations_routes
 from tests.api.conftest import HAMRA, Api, code_of, events_of
 from tests.db.factories import TODAY
 
@@ -140,6 +143,17 @@ class TestAMessageAndItsAnswer:
         page = http.get(chat.path(), headers=chat.headers).json()
         assert [m["author"] for m in page["messages"]].count("client") == 1
 
+    @pytest.mark.parametrize("text", ["", "   ", "\n\t"])
+    def test_an_empty_message_is_refused_and_nothing_is_kept(self, chat: Chat, text: str) -> None:
+        """FI-6."""
+        http = chat.api.http()
+
+        answer = chat.say(http, text)
+
+        assert (answer.status_code, code_of(answer)) == (422, "VALIDATION_ERROR")
+        assert chat.api.world.all("SELECT 1 FROM chat_messages") == []
+        assert chat.api.models[-1].seen == []
+
     def test_a_message_that_is_too_long_is_refused(self, chat: Chat) -> None:
         answer = chat.say(chat.api.http(), "x" * 1_001)
 
@@ -204,6 +218,38 @@ class TestWhenTheAssistantCantAnswer:
         assert answer.json()["error"]["details"]["retry_after_ms"] > 0
         assert http.get(chat.path(), headers=chat.headers).json()["busy"] is True
 
+    def test_a_message_whose_turn_died_with_the_server_is_answered_when_sent_again(
+        self, chat: Chat
+    ) -> None:
+        """FX-15: the API stopped in the middle of a turn. The message is kept, the turn's
+        lease runs out by itself, and the website's [Retry] sends the same message: it is
+        answered, and stored once."""
+        world = chat.api.world
+        sent = uuid.uuid4()
+        tx = world.tx()
+        post_client_message(
+            tx,
+            client_id=chat.client,
+            conversation_id=chat.chat,
+            text="I need Augmentin",
+            client_message_id=sent,
+        )
+        world.settle(tx)
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE conversations SET turn_lease_until = %s, turn_owner = 'api'",
+                (world.clock.now() - timedelta(seconds=1),),
+            )
+        http = chat.api.http(reply("Which strength?"))
+
+        answer = chat.say(http, "I need Augmentin", client_message_id=str(sent))
+
+        assert answer.status_code == 200
+        assert dict(events_of(answer))["message"]["text"] == "Which strength?"
+        written = world.all("SELECT author FROM chat_messages ORDER BY seq")
+        assert [row.author for row in written] == ["client", "agent"]
+        assert http.get(chat.path(), headers=chat.headers).json()["busy"] is False
+
     def test_a_client_may_write_only_so_fast(self, chat: Chat) -> None:
         http = chat.api.http(reply("Yes?"))
         http.app.state.chat_per_client = Limiter(1, 60)  # type: ignore[attr-defined]
@@ -212,6 +258,24 @@ class TestWhenTheAssistantCantAnswer:
         second = chat.say(http)
 
         assert (second.status_code, code_of(second)) == (429, "RATE_LIMITED")
+
+    def test_a_client_has_only_so_many_messages_a_day(
+        self, chat: Chat, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """N-17, docs/10 TH-52: counted from the messages kept, so a restart changes
+        nothing. (The real number is 100; two here.)"""
+        monkeypatch.setattr(conversations_routes, "CHAT_MESSAGES_PER_DAY", 2)
+        http = chat.api.http(reply("One."), reply("Two."), reply("Never said."))
+
+        answers = [chat.say(http, f"message {number}") for number in range(3)]
+
+        assert [answer.status_code for answer in answers] == [200, 200, 429]
+        assert code_of(answers[-1]) == "RATE_LIMITED"
+        assert "Search still works" in answers[-1].json()["error"]["message"]
+        assert len(chat.api.models[-1].seen) == 2
+        assert chat.api.world.one("SELECT count(*) FROM chat_messages WHERE author = 'client'") == (
+            2,
+        )
 
     def test_before_the_email_is_confirmed_there_is_no_assistant(self, api: Api) -> None:
         http = api.http()

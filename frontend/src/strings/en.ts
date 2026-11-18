@@ -91,6 +91,8 @@ export const strings = {
     code: 'Code from your authenticator app',
     submit: 'Log in',
     noAccount: 'Create a free account',
+    // N-52: too many failed logins from one network address, whoever's accounts they were.
+    networkBlocked: 'Too many failed logins from this network. Please try again in a few minutes.',
   },
   nav: {
     label: 'Main',
@@ -721,6 +723,15 @@ export const strings = {
       hours: 'Opening hours',
       closed: 'closed',
       phoneChanged: (when: string) => `changed by the pharmacy on ${when}`,
+      activity: 'How it is doing',
+      liveListings: 'Boxes clients can see now',
+      lastStockUpdate: 'Last change to its stock',
+      never: 'never',
+      notAvailable: 'Marked [Not available]',
+      notAvailableOf: (not: number, ended: number) =>
+        ended === 0
+          ? 'no reservation ended at its counter in the last 30 days'
+          : `${not} of ${ended} reservations in the last 30 days (${Math.round((100 * not) / ended)}%)`,
       where: 'Where it is',
       whereHint:
         'Check that the pin is on the address. Drag it to correct it, then save the change below with a reason.',
@@ -820,7 +831,9 @@ export const strings = {
       openClient: "Open the client's page",
       openPharmacy: "Open the pharmacy's page",
       dismiss: 'Dismiss',
-      warn: 'Warned',
+      // It records that someone warned the account's owner. It sends nothing itself.
+      warn: 'Note a warning',
+      warnHint: 'Notes that the owner was warned. DawaLink sends them nothing: tell them yourself.',
       suspend: 'Suspend the account',
       done: 'Done.',
     },
@@ -851,6 +864,13 @@ export const strings = {
         dead_emails: 'More than 10 emails could not be sent in the last hour.',
         clock_check_late: 'The worker is more than 2 minutes late on deadlines.',
         agent_turn_stuck: 'An assistant turn failed 4 times and waits.',
+        llm_daily_cap: "Today's share of the AI budget is used: the assistant is off until midnight.",
+        contact_views_limit: 'An admin reached the limit of contact details in the last 24 hours. See the audit log.',
+        books_do_not_add_up:
+          "The daily check found reserved counts that don't match the reservations. The IDs are in the worker's log (books_do_not_add_up).",
+        retention_failing:
+          "The daily clean-up of old data has failed two days in a row. See the worker's log (retention_failed).",
+        admin_login_locked: "An admin's login was locked after 5 wrong tries in the last 24 hours. See the audit log.",
       },
       agent: 'The assistant',
       turns: 'Turns',

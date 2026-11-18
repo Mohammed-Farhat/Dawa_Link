@@ -54,6 +54,10 @@ export const WAITING = {
   same_address: [],
   phone_changed_at: null,
   moved_at: null,
+  live_listings: 0,
+  last_inventory_update: null,
+  handed_over_30d: 0,
+  not_available_30d: 0,
 } satisfies Schemas['AdminPharmacy']
 
 export const ESCALATION_ID = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'

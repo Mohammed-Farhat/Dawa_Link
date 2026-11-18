@@ -4,7 +4,7 @@ assistant)."""
 
 import uuid
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 import pytest
@@ -118,6 +118,32 @@ class TestSearching:
         assert result["location"] == {"source": "profile", "label": "Beirut"}
         assert len(result["upcoming_days"]) >= 3
 
+    def test_without_a_road_time_the_distance_is_an_estimate_and_says_so(self, shop: Shop) -> None:
+        """FI-18, R-RT3: no routing service is set up here, so the time is worked out in
+        a straight line; the website writes "about" for it."""
+        (listing,) = shop.search().json()["items"]
+
+        assert listing["travel"]["source"] == "straight"
+
+    def test_nobody_said_for_how_long_so_one_day_is_assumed(self, shop: Shop) -> None:
+        """FI-19, R-F2, N-44: a box that expires today is still shown to a client who gave
+        no days of use (one day: today), and left out for two days."""
+        make = shop.api.world.make
+        concor = make.product(moph_name="CONCOR 5MG", search_name="concor 5mg")
+        make.item(pharmacy_id=shop.near, product_id=concor, days_left=0, qty_on_hand=2)
+
+        def found(**more: Any) -> list[Any]:
+            body = {"product_id": str(concor)} | more
+            answer = shop.http.post("/api/v1/listings/search", json=body, headers=shop.headers)
+            return list(answer.json()["items"])
+
+        (unknown,) = found()
+        (one_day,) = found(days_of_use=1)
+
+        assert (unknown["fits"], unknown["expiry_date"]) == (None, str(TODAY))
+        assert one_day["fits"] is True
+        assert found(days_of_use=2) == []
+
     def test_search_shows_only_what_was_searched_never_another_brand(self, shop: Shop) -> None:
         """R-S4: another brand of the same medicine is only ever shown by the assistant."""
         clavox = shop.api.world.make.product(
@@ -212,6 +238,37 @@ class TestOneOffer:
         assert len(detail["week"]) == 7
         assert detail["week"][0]["hours"] == "08:00-21:00"
 
+    def test_a_pharmacy_with_no_opening_hours_has_no_day_to_offer(self, shop: Shop) -> None:
+        """FR-20, R-F3: its box can't be reserved for now."""
+        make = shop.api.world.make
+        closed = make.pharmacy(name="Closed Pharmacy", lat=33.898, lon=35.485, hours={})
+        concor = make.product(
+            moph_name="CONCOR 5MG", search_name="concor 5mg", public_price_lbp=1_000_000
+        )
+        box = make.item(pharmacy_id=closed, product_id=concor, days_left=60, qty_on_hand=2)
+
+        found = shop.http.post(
+            "/api/v1/listings/search", json={"product_id": str(concor)}, headers=shop.headers
+        ).json()
+        view = shop.http.post(f"/api/v1/listings/{box}/view", json={}, headers=shop.headers).json()
+        tap = shop.http.post(
+            "/api/v1/reservations",
+            json={
+                "listing_id": str(box),
+                "qty": 1,
+                "expected_price_lbp": view["listing"]["price"]["lbp"],
+                "pickup_day": str(TODAY),
+            },
+            headers=shop.headers | {"Idempotency-Key": "a-tap"},
+        )
+
+        # Search leaves it out, and its own page says why: closed every day.
+        assert (found["items"], found["no_match"]["latest_pickup_day"]) == ([], None)
+        assert view["listing"]["pickup_days_allowed"] == []
+        assert {day["hours"] for day in view["week"]} == {"closed"}
+        assert (tap.status_code, code_of(tap)) == (422, "PICKUP_DAY_INVALID")
+        assert shop.api.world.all("SELECT 1 FROM orders") == []
+
     def test_an_offer_that_is_gone_is_not_found(self, shop: Shop) -> None:
         with shop.api.world.as_owner():
             shop.api.world.connection.exec_driver_sql("UPDATE inventory_items SET qty_on_hand = 0")
@@ -287,7 +344,55 @@ class TestReservingFromSearch:
 
         assert (answer.status_code, code_of(answer)) == (422, "PICKUP_DAY_INVALID")
 
-    def test_more_packs_than_the_limit_are_refused_by_the_form(self, shop: Shop) -> None:
-        answer = shop.reserve(qty=4)
+    @pytest.mark.parametrize("qty", [0, 4, -1, "two"])
+    def test_a_quantity_that_is_not_one_to_three_is_refused_by_the_form(
+        self, shop: Shop, qty: object
+    ) -> None:
+        """FI-7."""
+        answer = shop.reserve(qty=qty)
 
-        assert code_of(answer) == "VALIDATION_ERROR"
+        assert (answer.status_code, code_of(answer)) == (422, "VALIDATION_ERROR")
+        assert answer.json()["error"]["details"]["fields"][0]["field"] == "qty"
+        assert shop.api.world.all("SELECT 1 FROM orders") == []
+
+    def test_a_later_pickup_day_or_a_new_day_can_end_the_fit(self, shop: Shop) -> None:
+        """FR-28, R-F5, R-F6: a box that expires in 7 days lasts 8 days of use only if it
+        is picked up today. The tap checks it again, whatever the page showed."""
+        make = shop.api.world.make
+        concor = make.product(
+            moph_name="CONCOR 5MG", search_name="concor 5mg", public_price_lbp=1_000_000
+        )
+        box = make.item(pharmacy_id=shop.near, product_id=concor, days_left=7, qty_on_hand=2)
+
+        def search() -> Any:
+            body = {"product_id": str(concor), "days_of_use": 8}
+            return shop.http.post("/api/v1/listings/search", json=body, headers=shop.headers).json()
+
+        def tap(day: date, key: str) -> Any:
+            body = {
+                "listing_id": str(box),
+                "qty": 1,
+                "expected_price_lbp": shown["price"]["lbp"],
+                "pickup_day": str(day),
+                "days_of_use": 8,
+            }
+            return shop.http.post(
+                "/api/v1/reservations", json=body, headers=shop.headers | {"Idempotency-Key": key}
+            )
+
+        (shown,) = search()["items"]
+        tomorrow = tap(TODAY + timedelta(days=1), "a-later-day")
+        shop.api.world.later(days=1)
+        after_midnight = tap(TODAY, "the-day-the-page-showed")
+        the_new_day = tap(TODAY + timedelta(days=1), "the-new-day")
+        searched_again = search()
+
+        # Only today was offered: the expiry, not the pharmacy, rules tomorrow out.
+        assert shown["pickup_days_allowed"] == [str(TODAY)]
+        assert (tomorrow.status_code, code_of(tomorrow)) == (409, "DOES_NOT_FIT")
+        assert tomorrow.json()["error"]["details"]["expiry_date"] == str(TODAY + timedelta(days=7))
+        # After midnight the day the page showed is gone, and the new day doesn't fit.
+        assert (after_midnight.status_code, code_of(after_midnight)) == (422, "PICKUP_DAY_INVALID")
+        assert (the_new_day.status_code, code_of(the_new_day)) == (409, "DOES_NOT_FIT")
+        assert searched_again["items"] == []
+        assert shop.api.world.all("SELECT 1 FROM orders") == []

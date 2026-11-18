@@ -90,6 +90,32 @@ class UnhandledErrorMiddleware:
             await response(scope, receive, send)
 
 
+class ZeroByteMiddleware:
+    """Refuses an address that holds a zero byte (`%00`).
+
+    PostgreSQL can't store one in a text, so a search for such a text used to come back as
+    a server error (found by the random requests of `tests/api/test_fuzz.py`). No browser
+    sends one. The same is refused inside a body by the `In` schemas.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and (b"%00" in scope["query_string"] or "\x00" in scope["path"]):
+            request_id = str(scope.get("state", {}).get("request_id", ""))
+            response = error_response(
+                ErrorCode.VALIDATION_ERROR,
+                request_id,
+                details={"fields": [{"field": "query", "problem": ZERO_BYTE}]},
+            )
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+ZERO_BYTE = "Text can't contain a zero byte."
+
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 

@@ -11,6 +11,13 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=()" always;
 
+    # Text is sent compressed, as CloudFront does it ("Compress objects automatically"):
+    # the start-up script is 536 KB as written and about 160 KB on the wire (docs/11 §10).
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+    gzip_vary on;
+
     # File names under /assets contain a hash of their content, so browsers can keep them a year.
     location /assets/ {
         expires 1y;

@@ -80,8 +80,11 @@ function ForClients({ children }: { children: ReactNode }) {
 /** A public screen: someone already logged in goes straight to Home. */
 function ForVisitors({ children }: { children: ReactNode }) {
   const { me } = useSession()
+  const { state } = useLocation() as { state: { from?: string } | null }
   if (me === undefined) return null
-  if (me !== null) return <Navigate to="/" replace />
+  // Someone who just logged in goes back to the screen that asked for the login (a page
+  // of ours, kept by the router: never an address taken from a link).
+  if (me !== null) return <Navigate to={state?.from ?? '/'} replace />
   return <>{children}</>
 }
 

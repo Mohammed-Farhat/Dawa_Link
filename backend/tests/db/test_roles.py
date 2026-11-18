@@ -7,7 +7,7 @@ from collections.abc import Iterator
 
 import pytest
 from sqlalchemy import Connection, create_engine, text
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 import dawalink.db.models  # noqa: F401
 from dawalink.db.base import Base
@@ -16,7 +16,9 @@ from dawalink.db.roles import (
     MIGRATOR,
     RETENTION,
     RETENTION_DELETES,
+    RETENTION_DELETES_FOUND_BY,
     RETENTION_ERASES,
+    RETENTION_LOCKS,
     RoleSetupError,
     app_privileges,
     ensure_roles,
@@ -71,7 +73,24 @@ def test_the_grants_in_the_database_are_exactly_the_lists(db: Connection) -> Non
     }
     expected |= {(RETENTION, table): {"SELECT", "DELETE"} for table in RETENTION_DELETES}
     expected |= {(RETENTION, table): {"SELECT"} for table in RETENTION_ERASES}
+    # On these it may delete, and read a few columns only (checked below, by column).
+    expected |= {(RETENTION, table): {"DELETE"} for table in RETENTION_DELETES_FOUND_BY}
     assert granted == expected
+
+    by_column: dict[tuple[str, str], set[str]] = {}
+    for table, column, privilege in db.execute(
+        text(
+            "SELECT table_name, column_name, privilege_type "
+            "FROM information_schema.column_privileges "
+            "WHERE table_schema = 'public' AND grantee = :retention AND table_name = ANY(:tables)"
+        ),
+        {"retention": RETENTION, "tables": list(RETENTION_DELETES_FOUND_BY)},
+    ):
+        by_column.setdefault((table, privilege), set()).add(column)
+    assert by_column == {
+        **{(table, "SELECT"): set(cols) for table, cols in RETENTION_DELETES_FOUND_BY.items()},
+        **{(table, "UPDATE"): set(cols) for table, cols in RETENTION_LOCKS.items()},
+    }
 
 
 class TestTheAppLogin:
@@ -232,6 +251,69 @@ class TestTheRetentionLogin:
         )
         denied(as_retention, "DELETE FROM orders")
         denied(as_retention, "SELECT email FROM users")
+
+    def test_it_finds_an_unconfirmed_registration_without_reading_who_it_is(
+        self, as_retention: Connection
+    ) -> None:
+        """The owner's Q49: it may delete a registration nobody confirmed. It reads the
+        columns that find one, and nothing that says whose it is."""
+        as_retention.execute(text("SELECT id, role, email_verified_at, created_at FROM users"))
+        as_retention.execute(text("SELECT id, owner_user_id, status FROM pharmacies"))
+
+        for statement in (
+            "SELECT full_name FROM users",
+            "SELECT phone FROM users",
+            "SELECT password_hash FROM users",
+            "SELECT totp_secret FROM users",
+            "SELECT * FROM users",
+            "SELECT name FROM pharmacies",
+            "SELECT license_number FROM pharmacies",
+            "SELECT phone FROM pharmacies",
+            "SELECT params FROM email_outbox",
+            "UPDATE users SET email = 'x@example.com'",
+            "UPDATE users SET email_verified_at = now()",
+            "UPDATE pharmacies SET status = 'APPROVED'",
+            "DELETE FROM client_profiles",
+            "DELETE FROM inventory_items",
+        ):
+            denied(as_retention, statement)
+
+    def test_it_cannot_delete_a_client_or_a_pharmacy_that_trades(
+        self, urls: DatabaseUrls, as_retention: Connection
+    ) -> None:
+        """What hangs on them is in tables this login may not touch, so the database
+        itself refuses."""
+        owner = create_engine(urls.migrator)
+        try:
+            with owner.begin() as connection:
+                client = make.client(connection)
+                pharmacy = make.pharmacy(connection)
+                box = make.item(connection, pharmacy_id=pharmacy)
+            for statement, values in (
+                ("DELETE FROM users WHERE id = :id", {"id": client}),
+                ("DELETE FROM pharmacies WHERE id = :id", {"id": pharmacy}),
+            ):
+                with pytest.raises(IntegrityError), as_retention.begin_nested():
+                    as_retention.execute(text(statement), values)
+        finally:
+            with owner.begin() as connection:
+                # This test commits, so it removes what it added.
+                (product,) = connection.execute(
+                    text("SELECT product_id FROM inventory_items WHERE id = :i"), {"i": box}
+                ).one()
+                (pharmacist,) = connection.execute(
+                    text("SELECT owner_user_id FROM pharmacies WHERE id = :p"), {"p": pharmacy}
+                ).one()
+                for statement, value in (
+                    ("DELETE FROM inventory_items WHERE id = :v", box),
+                    ("DELETE FROM products WHERE id = :v", product),
+                    ("DELETE FROM pharmacy_hours WHERE pharmacy_id = :v", pharmacy),
+                    ("DELETE FROM pharmacies WHERE id = :v", pharmacy),
+                    ("DELETE FROM client_profiles WHERE user_id = :v", client),
+                    ("DELETE FROM users WHERE id IN (:v, :w)", client),
+                ):
+                    connection.execute(text(statement), {"v": value, "w": pharmacist})
+            owner.dispose()
 
     def test_it_erases_a_location_and_nothing_else_on_a_request(
         self, as_retention: Connection

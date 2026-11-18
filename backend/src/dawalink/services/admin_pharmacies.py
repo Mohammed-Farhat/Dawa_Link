@@ -17,15 +17,15 @@ An admin never touches a pharmacy's stock or prices (A-D7): nothing here does.
 import hashlib
 import uuid
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import ColumnElement, and_, func, or_, select
+from sqlalchemy import ColumnElement, and_, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.selectable import Exists
 
 from dawalink.catalog.composition import normalize
-from dawalink.db.models import AuditEvent, District, Order, Pharmacy, User
+from dawalink.db.models import AuditEvent, District, InventoryItem, Order, Pharmacy, User
 from dawalink.domain import pharmacy_details as details_rules
 from dawalink.domain.accounts import PHARMACY_MACHINE, PharmacyStatus
 from dawalink.domain.orders import OrderState
@@ -41,6 +41,9 @@ from dawalink.services import (
 )
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+
+# What "lately" is for a pharmacy's activity on its page (AS-4).
+ACTIVITY_OVER = timedelta(days=30)
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,14 @@ class Detail:
     # has looked at the pin since.
     moved_at: datetime | None
     pin_to_check: bool
+    # AS-4: how the pharmacy is doing. Boxes clients can see now; when it last touched its
+    # stock; and of its reservations of the last 30 days that ended at the counter, how
+    # many were handed over and how many were marked [Not available] (docs/10 RR-2, RR-11:
+    # a pharmacy that lists boxes it doesn't have shows up here).
+    live_listings: int
+    last_inventory_update: datetime | None
+    handed_over_30d: int
+    not_available_30d: int
 
 
 def details_version(pharmacy: Pharmacy) -> str:
@@ -202,6 +213,16 @@ def detail(tx: Tx, pharmacy_id: uuid.UUID) -> Detail:
         ).scalar()
 
     moved_at = last(pharmacy_profile.MOVED)
+    live_listings = tx.session.execute(
+        text("SELECT count(*) FROM visible_listings(:today) WHERE pharmacy_id = :id"),
+        {"today": tx.today, "id": pharmacy.id},
+    ).scalar_one()
+    handed_over, not_available = tx.session.execute(
+        select(
+            func.count().filter(Order.state == OrderState.PICKED_UP.value),
+            func.count().filter(Order.state == OrderState.NOT_AVAILABLE.value),
+        ).where(Order.pharmacy_id == pharmacy.id, Order.reserved_at > tx.now - ACTIVITY_OVER)
+    ).one()
     return Detail(
         pharmacy=pharmacy,
         district=district.name,
@@ -215,6 +236,14 @@ def detail(tx: Tx, pharmacy_id: uuid.UUID) -> Detail:
             and pharmacy.location_checked_at is None
             and moved_at is not None
         ),
+        live_listings=int(live_listings),
+        last_inventory_update=tx.session.execute(
+            select(func.max(InventoryItem.last_edited_at)).where(
+                InventoryItem.pharmacy_id == pharmacy.id
+            )
+        ).scalar(),
+        handed_over_30d=int(handed_over),
+        not_available_30d=int(not_available),
     )
 
 

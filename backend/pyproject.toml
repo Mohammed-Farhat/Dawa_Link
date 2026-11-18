@@ -60,6 +60,7 @@ testpaths = ["tests"]
 addopts = "-q --strict-markers"
 markers = [
     "rows_by_hand: the test builds orders or stock by hand, so the stock isn't reconciled after it",
+    "fuzz: random requests against the API; alone with -m fuzz",
 ]
 
 [dependency-groups]
@@ -69,5 +70,6 @@ dev = [
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.4",
+    "schemathesis>=4.33.4",
     "xlrd>=2.0.2",
 ]

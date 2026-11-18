@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import In, Money, Out, ProductSummary
+from dawalink.api.schemas.common import In, Lbp, Money, Out, ProductSummary
 
 
 class StockPrice(Out):
@@ -60,7 +60,7 @@ class StockItemChange(In):
     price."""
 
     qty_on_hand: int | None = Field(default=None, ge=0, le=100_000)
-    price_override_lbp: int | None = Field(default=None, ge=0)
+    price_override_lbp: Lbp | None = None
     paused: bool | None = None
 
 

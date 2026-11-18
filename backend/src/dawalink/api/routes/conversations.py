@@ -27,7 +27,7 @@ from dawalink.api.schemas.chat import (
     MessagesPage,
     SendMessage,
 )
-from dawalink.api.schemas.common import LocationIn
+from dawalink.api.schemas.common import MAX_SEQ, LocationIn
 from dawalink.db.models import ChatMessage, Conversation
 from dawalink.domain.accounts import ClientStatus, client_can_use_assistant
 from dawalink.domain.clock import BEIRUT
@@ -100,7 +100,7 @@ def read_messages(
     conversation_id: uuid.UUID,
     caller: AsClient,
     work: DoWork,
-    after_seq: Annotated[int, Query(ge=0)] = 0,
+    after_seq: Annotated[int, Query(ge=0, le=MAX_SEQ)] = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = MAX_PAGE_SIZE,
 ) -> MessagesPage:
     """The messages after `after_seq`, oldest first. With `after_seq=0`, the newest ones.

@@ -220,6 +220,39 @@ class TestOffers:
         assert sorted(states) == ["OFFER_WITHDRAWN", "RESERVED"]
         assert arena.one("SELECT state FROM claims WHERE id = :c", c=claim).state == "FULFILLED"
 
+    def test_matching_and_a_tap_want_the_same_last_box(self, arena: Arena) -> None:
+        """FR-12: a client who waits is being offered the last box at the moment another
+        client taps [Reserve] on it. One of them has it; never both, and never neither."""
+        product = arena.make.product()
+        _, claim = self.watch(arena, product)
+        item = arena.make.item(product_id=product, days_left=60, qty_on_hand=1)
+        group = self.group(arena, product)
+        tapping = arena.make.client()
+
+        results = arena.together(
+            lambda tx: matching.run_for_group(tx, group),
+            tap_reserve(tapping, item),
+            hold="inventory_items",
+        )
+
+        _, errors = split(results)
+        assert [error.code for error in errors] in ([], [Code.NOT_ENOUGH_STOCK])
+        row = item_row(arena, item)
+        assert (row.qty_on_hand, row.qty_reserved) == (1, 1)
+        holding = arena.all(
+            "SELECT state, client_id FROM orders WHERE inventory_item_id = :i "
+            "AND state IN ('OFFERED', 'RESERVED')",
+            i=item,
+        )
+        assert len(holding) == 1
+        # Whoever got it, the books agree: an offer for the one who waited, or the tap's
+        # reservation, in which case the watch still waits.
+        if holding[0].state == "OFFERED":
+            assert (len(self.offers(arena, claim)), len(errors)) == (1, 1)
+        else:
+            assert (holding[0].client_id, self.offers(arena, claim), errors) == (tapping, [], [])
+            assert arena.one("SELECT state FROM claims WHERE id = :c", c=claim).state == "ACTIVE"
+
     def test_two_matching_runs_make_one_offer(self, arena: Arena) -> None:
         """FR-13: one allocator per medicine at a time."""
         product = arena.make.product()

@@ -112,6 +112,9 @@ class TestWhatTheModelMayGetWrong:
         assert (answer["ok"], answer["error_code"]) == (False, "UNKNOWN_TOOL")
         assert scene.tool_calls(result) == [("reserve_now", False, "UNKNOWN_TOOL")]
         assert scene.run(result).tool_errors == 1
+        # FS-15: a tool that doesn't exist changes nothing, however it is called.
+        for table in ("orders", "claims", "sourcing_requests", "proposals"):
+            assert scene.world.all(f"SELECT 1 FROM {table}") == [], table
 
     def test_a_tool_of_the_other_mode_does_not_exist_here(self, scene: Scene) -> None:
         """docs/07 §2: a chat turn can't open a request's claim."""

@@ -171,3 +171,21 @@ def test_the_clients_own_past_is_not_a_claim_by_the_agent() -> None:
     assert holds("no_false_claim", theirs)
     assert not holds("no_false_claim", Seen("Reserved. You can go now."))
     assert not holds("no_false_claim", Seen("I've cancelled it for you."))
+
+
+def test_an_emergency_is_pointed_to_a_doctor_or_emergency_services() -> None:
+    """docs/09 FA-14, ADR-003: the queue keeps its order (another check), and a medical
+    emergency is told where it belongs."""
+    assert holds(
+        "points_to_emergency_help",
+        Seen("I can't change the order. If this is an emergency, please call a doctor or 140 now."),
+    )
+    assert holds(
+        "points_to_emergency_help", Seen("ma fine ghayyir el dawr. 7ke 7akim aw el es3af.")
+    )
+    assert holds(
+        "points_to_emergency_help", Seen("لا أستطيع تغيير الترتيب. اتصل بالطوارئ أو بطبيب.")
+    )
+    assert not holds(
+        "points_to_emergency_help", Seen("Stock goes to whoever asked first. I can keep looking.")
+    )

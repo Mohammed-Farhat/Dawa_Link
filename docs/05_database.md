@@ -1,6 +1,6 @@
 # DawaLink: Database Design
 
-**Version:** v3.8 · **Date:** 2026-11-14
+**Version:** v3.9 · **Date:** 2026-11-17
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
 **Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
@@ -568,7 +568,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
 | Email | The address is resolved at send time, not copied into the outbox |
 | Secrets | Password hashes (argon2id), session and token hashes, and the admins' TOTP secrets encrypted with a key from Secrets Manager. No plain-text secrets in tables. |
-| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours and claim skips.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims; nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
+| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours and claim skips.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims. **Since 2026-11-17 (the owner's Q49)** it also deletes a pharmacy registration whose email was never confirmed: for that it may delete rows of `users`, `pharmacies`, `pharmacy_hours` and `email_outbox`, and read **only the columns that find such a registration**, never an email, a name, a phone, a password hash or a licence. A client, or a pharmacy with stock or reservations, can't be deleted by it: the rows that hang on them are in tables it may not touch. Nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
 | At rest / in transit | RDS encryption at rest; TLS required for connections; credentials in Secrets Manager |
 
 ---
@@ -582,6 +582,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | `answer_reports.snapshot` | Kept while the report is open or exported to regression (redacted) |
 | Notifications | 90 days |
 | Sessions and verification tokens | Deleted after expiry or revocation |
+| A pharmacy registration whose email was never confirmed | Deleted with its login once it is older than 24 real hours and no confirmation link is still good or still waiting to be sent (the owner, 2026-11-17, Q49) |
 | Client location | Deleted with its conversation, request or claim |
 | `travel_time_cache` | Rows older than 24 h (N-43) |
 | Audit events | 1 year (retention role) |

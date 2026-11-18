@@ -6,7 +6,7 @@ the worker should already have handled for the system. No personal data is read.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -15,14 +15,20 @@ from sqlalchemy import func, or_, select
 from dawalink.db.models import (
     AgentRun,
     AppState,
+    AuditEvent,
     Conversation,
     EarlyReleaseAsk,
     EmailOutbox,
     Escalation,
     Order,
     SourcingRequest,
+    User,
 )
+from dawalink.domain.clock import at_beirut
+from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.domain.orders import OrderState
+from dawalink.domain.vocabulary import UserRole
+from dawalink.services import daily
 from dawalink.services.clock import OFFSET_KEY
 from dawalink.services.context import Tx
 
@@ -33,6 +39,11 @@ SPEND_ALERT_SHARE = Decimal("0.8")
 DEAD_EMAILS_ALERT = 10
 CLOCK_LATE_ALERT = timedelta(minutes=2)
 TURN_ATTEMPTS_ALERT = 4
+RETENTION_FAILED_DAYS_ALERT = 2
+# How long an alert about an admin's login or contact views stays on the page.
+ALERT_KEPT = timedelta(hours=24)
+CONTACT_LIMIT_HIT = "pii.view_limit"
+LOGIN_LOCKED = "login.locked"
 
 
 @dataclass(frozen=True)
@@ -205,6 +216,7 @@ def _system(tx: Tx) -> dict[str, Any]:
     ).scalar()
     if moved is not None:
         late = min(late, max(tx.real_now - moved, timedelta(0)))
+    checks = daily.last_checks(tx)
     return {
         "clock_check_late_s": int(late.total_seconds()),
         "turns_waiting": int(pending),
@@ -212,7 +224,53 @@ def _system(tx: Tx) -> dict[str, Any]:
         "turns_stuck": int(stuck),
         "emails_failed": int(failed),
         "emails_dead_last_hour": int(dead_last_hour),
+        # From the worker's last daily run: boxes and request items whose counts don't
+        # add up (their number; the IDs are in the log line `books_do_not_add_up`), and
+        # how many days in a row the purge has failed.
+        "stock_off": int(checks.get("stock_off_count", 0)),
+        "requests_off": int(checks.get("requests_off_count", 0)),
+        "retention_failed_days": int(checks.get("retention_failed_days", 0)),
+        "daily_run_on": checks.get("day"),
     }
+
+
+def _spent_since(tx: Tx, since: datetime) -> Decimal:
+    return Decimal(
+        tx.session.execute(
+            select(func.coalesce(func.sum(AgentRun.cost_usd), 0)).where(
+                AgentRun.started_at >= since
+            )
+        ).scalar_one()
+    )
+
+
+def _audited_lately(tx: Tx, action: str) -> bool:
+    return (
+        tx.session.execute(
+            select(AuditEvent.id)
+            .where(AuditEvent.action == action, AuditEvent.occurred_at > tx.now - ALERT_KEPT)
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
+def _admin_locked_lately(tx: Tx) -> bool:
+    """An admin's login was locked after 5 wrong passwords or codes: someone may be
+    guessing, or locking the admin out on purpose."""
+    return (
+        tx.session.execute(
+            select(AuditEvent.id)
+            .join(User, User.id == AuditEvent.entity_id)
+            .where(
+                AuditEvent.action == LOGIN_LOCKED,
+                AuditEvent.occurred_at > tx.now - ALERT_KEPT,
+                User.role == UserRole.ADMIN.value,
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
 
 
 def _alerts(
@@ -224,23 +282,35 @@ def _alerts(
             AgentRun.started_at > tx.now - ERROR_RATE_OVER
         )
     ).one()
-    month_start = tx.now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    spent = tx.session.execute(
-        select(func.coalesce(func.sum(AgentRun.cost_usd), 0)).where(
-            AgentRun.started_at >= month_start
-        )
-    ).scalar_one()
+    # The month and the day are Beirut's, as the caps themselves count them (N-46).
+    spent = _spent_since(tx, at_beirut(tx.today.replace(day=1), time(0, 0)))
+    spent_today = _spent_since(tx, at_beirut(tx.today, time(0, 0)))
     alerts = []
     if recent[0] and recent[1] / recent[0] > ERROR_RATE_ALERT:
         alerts.append("agent_error_rate")
     if monthly_budget_usd > 0 and Decimal(spent) > SPEND_ALERT_SHARE * monthly_budget_usd:
         alerts.append("llm_spend")
+    if monthly_budget_usd > 0 and (
+        Decimal(spent_today) >= monthly_budget_usd * DAILY_SPEND_CAP_SHARE / 100
+    ):
+        alerts.append("llm_daily_cap")
     if system["emails_dead_last_hour"] > DEAD_EMAILS_ALERT:
         alerts.append("dead_emails")
     if system["clock_check_late_s"] > CLOCK_LATE_ALERT.total_seconds():
         alerts.append("clock_check_late")
     if system["turns_stuck"]:
         alerts.append("agent_turn_stuck")
+    # Two things about the admins themselves, for the other admins (R-AU6, docs/10 RR-5):
+    # each stays up for a day, on the clock of the audit log it is read from.
+    # What the worker's daily run found (docs/09 FO-3, FO-4).
+    if system["stock_off"] or system["requests_off"]:
+        alerts.append("books_do_not_add_up")
+    if system["retention_failed_days"] >= RETENTION_FAILED_DAYS_ALERT:
+        alerts.append("retention_failing")
+    if _audited_lately(tx, CONTACT_LIMIT_HIT):
+        alerts.append("contact_views_limit")
+    if _admin_locked_lately(tx):
+        alerts.append("admin_login_locked")
     return alerts, {
         "month_spend_usd": float(spent),
         "month_budget_usd": float(monthly_budget_usd),

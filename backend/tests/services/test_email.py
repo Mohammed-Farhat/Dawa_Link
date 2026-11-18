@@ -192,6 +192,32 @@ class TestFailures:
         assert (row.state, row.last_error) == ("FAILED", "SMTPRecipientsRefused")
         assert outbox(world, fine).state == "SENT"
 
+    def test_an_address_that_keeps_refusing_is_given_up_and_the_client_still_has_the_note(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """FX-8: a bounce or an address that doesn't exist. Tried again after 1, 5 and 30
+        minutes like any failure, then left; what happened is in the app all along."""
+        mailer = FakeMailer()
+        gone, fine = world.make.client(), world.make.client()
+        queue(world, gone)
+        mailer.refuses = {address(world, gone)}
+        tasks = world.clock_tasks(mailer=mailer)
+
+        tasks.send_emails()
+        for minutes in (1, 5, 30):
+            assert outbox(world, gone).state == "FAILED"
+            world.later(minutes=minutes)
+            tasks.send_emails()
+        queue(world, fine)
+        sent_after = tasks.send_emails()
+
+        row = outbox(world, gone)
+        assert (row.state, row.attempts, row.last_error) == ("DEAD", 4, "SMTPRecipientsRefused")
+        assert len(logged(caplog, "email_dead")) == 1
+        assert world.notifications(gone) == ["CN-11"]
+        # One dead address holds nobody else's email up.
+        assert (sent_after, outbox(world, fine).state) == (1, "SENT")
+
     def test_the_in_app_notification_does_not_depend_on_the_email(self, world: World) -> None:
         client, mailer = world.make.client(), FakeMailer()
         queue(world, client)

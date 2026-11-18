@@ -23,7 +23,15 @@ from sqlalchemy import func, select, update
 from dawalink.api import present
 from dawalink.api.deps import AsClient, DoWork, SignedIn
 from dawalink.api.routes.search import count_the_point, location_of
-from dawalink.api.schemas.common import In, LocationIn, Money, MoneyIn, Out, ProductSummary
+from dawalink.api.schemas.common import (
+    BeforeId,
+    In,
+    LocationIn,
+    Money,
+    MoneyIn,
+    Out,
+    ProductSummary,
+)
 from dawalink.db.models import Claim, District, Notification, Product
 from dawalink.domain.claims import LIVE_STATES
 from dawalink.domain.money import to_lbp
@@ -221,7 +229,7 @@ def _unread(tx: Tx, user_id: uuid.UUID) -> int:
 def list_notifications(
     caller: SignedIn,
     work: DoWork,
-    cursor: Annotated[int | None, Query(ge=1)] = None,
+    cursor: BeforeId = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> NotificationsPage:
     """The caller's own notifications, the newest first. `cursor` is the last ID seen."""

@@ -14,7 +14,7 @@ from sqlalchemy import func, select, text
 from dawalink.api import present
 from dawalink.api.deps import AsPharmacist, DoWork, Work, get_work
 from dawalink.api.schemas.accounts import OpeningRange
-from dawalink.api.schemas.common import Pin
+from dawalink.api.schemas.common import Pin, Skip
 from dawalink.api.schemas.pharmacy import (
     AcceptAsk,
     AskAnswered,
@@ -317,7 +317,7 @@ def list_pharmacy_reservations(
     work: DoWork,
     view: Literal["active", "history"] = "active",
     q: Annotated[str | None, Query(max_length=20)] = None,
-    cursor: Annotated[int, Query(ge=0)] = 0,
+    cursor: Skip = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> PharmacyReservations:
     """The pharmacy's reservations. With `q`, the one with that order number, however it
