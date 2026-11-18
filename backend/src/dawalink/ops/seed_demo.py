@@ -18,12 +18,14 @@ from sqlalchemy import Connection, create_engine, func, insert, select, update
 
 from dawalink.config import load_settings, required
 from dawalink.db.models import (
+    Area,
     ClientProfile,
     District,
     InventoryItem,
     Pharmacy,
     PharmacyHours,
     Product,
+    TravelTimeCache,
     User,
 )
 from dawalink.domain.clock import SystemClock, beirut_date
@@ -98,16 +100,94 @@ def _products_to_stock(connection: Connection, numbers: random.Random) -> list[u
     return with_equivalents[:400] + others[:100]
 
 
+# Two demo pharmacies of a district are at least this far apart, in degrees (about 800 m):
+# near enough to be one town, far enough for travel times to differ.
+_APART = Decimal("0.008")
+DEMO_LICENCES = "DEMO-%"
+
+
+def land_pins(
+    connection: Connection, district_id: int, count: int
+) -> list[tuple[Decimal, Decimal]]:
+    """Where a district's demo pharmacies stand: the centres of its named towns and
+    neighbourhoods, the nearest to the district's own centre first, about 800 m apart.
+
+    A random point around the centre, as before, put pharmacies of a coastal town in the
+    sea (the owner found Sidon's there on 2026-11-18, through [Directions]). A named
+    place's centre is where people live. The same district always gets the same pins.
+    """
+    centre_lat, centre_lon = connection.execute(
+        select(District.ref_lat, District.ref_lon).where(District.id == district_id)
+    ).one()
+
+    def far(point: tuple[Decimal, Decimal]) -> Decimal:
+        return (point[0] - centre_lat) ** 2 + (point[1] - centre_lon) ** 2
+
+    places = sorted(
+        {
+            (lat, lon)
+            for lat, lon in connection.execute(
+                select(Area.ref_lat, Area.ref_lon).where(
+                    Area.district_id == district_id, Area.whole_district.is_(False)
+                )
+            )
+        },
+        key=lambda point: (far(point), point),
+    )
+    pins: list[tuple[Decimal, Decimal]] = []
+    for place in places:
+        if len(pins) == count:
+            break
+        if all(abs(place[0] - lat) >= _APART or abs(place[1] - lon) >= _APART for lat, lon in pins):
+            pins.append(place)
+    # A district with too few named places (the tests' small list): the rest go east of
+    # its centre, which in Lebanon is away from the sea.
+    step = 0
+    while len(pins) < count:
+        pins.append((centre_lat, centre_lon + _APART * step))
+        step += 1
+    return pins
+
+
+def move_demo_pins_onto_land(connection: Connection, *, now: datetime) -> int:
+    """Puts the demo pharmacies of a database seeded before 2026-11-18 where `land_pins`
+    says. Safe to run again: a pharmacy already there is left alone. Returns how many
+    moved. The road times counted to an old pin are made stale, as when a pharmacy moves
+    its own pin (`services/pharmacy_profile.py`)."""
+    moved = 0
+    districts = dict(connection.execute(select(District.name, District.id)).all())
+    for district, count in PHARMACIES_PER_DISTRICT:
+        if district not in districts:
+            continue
+        demo = connection.execute(
+            select(Pharmacy.id, Pharmacy.lat, Pharmacy.lon)
+            .where(
+                Pharmacy.district_id == districts[district],
+                Pharmacy.license_number.like(DEMO_LICENCES),
+            )
+            .order_by(Pharmacy.license_number)
+        ).all()
+        pins = land_pins(connection, districts[district], max(count, len(demo)))
+        for (pharmacy_id, lat, lon), (new_lat, new_lon) in zip(demo, pins, strict=False):
+            if (lat, lon) == (new_lat, new_lon):
+                continue
+            connection.execute(
+                update(Pharmacy).where(Pharmacy.id == pharmacy_id).values(lat=new_lat, lon=new_lon)
+            )
+            connection.execute(
+                update(TravelTimeCache)
+                .where(TravelTimeCache.pharmacy_id == pharmacy_id)
+                .values(computed_at=now - timedelta(days=3))
+            )
+            moved += 1
+    return moved
+
+
 def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult:
     """Adds the demo data inside the caller's transaction. `now` comes from the app clock."""
     today = beirut_date(now)
     numbers = random.Random(seed)
-    districts = {
-        name: (district_id, lat, lon)
-        for district_id, name, lat, lon in connection.execute(
-            select(District.id, District.name, District.ref_lat, District.ref_lon)
-        )
-    }
+    districts = dict(connection.execute(select(District.name, District.id)).all())
     users: list[dict[str, Any]] = []
     pharmacies: list[dict[str, Any]] = []
     hours: list[dict[str, Any]] = []
@@ -115,10 +195,15 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
 
     number = 0
     for district, count in PHARMACIES_PER_DISTRICT:
-        district_id, lat, lon = districts[district]
-        for letter in "ABCDE"[:count]:
+        district_id = districts[district]
+        pins = land_pins(connection, district_id, count)
+        for letter, (lat, lon) in zip("ABCDE"[:count], pins, strict=True):
             number += 1
             user_id, pharmacy_id = _uuid(numbers), _uuid(numbers)
+            # Two numbers were drawn here for a random pin, until 2026-11-18. They are
+            # still drawn, so that everything after them (IDs, stock) stays what it was.
+            numbers.randrange(-150, 151)
+            numbers.randrange(-150, 151)
             users.append(
                 {
                     "id": user_id,
@@ -138,9 +223,9 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
                     "license_number": f"DEMO-{number:04d}",
                     "phone": f"+961 00 000 {number:03d}",
                     "district_id": district_id,
-                    # Within about 1.5 km of the district's reference point.
-                    "lat": lat + Decimal(numbers.randrange(-150, 151)) / Decimal(10_000),
-                    "lon": lon + Decimal(numbers.randrange(-150, 151)) / Decimal(10_000),
+                    # The centre of a named place of the district: on land.
+                    "lat": lat,
+                    "lon": lon,
                     "pickup_days": numbers.choice((1, 1, 2, 3)),
                     "status": "APPROVED",
                     "approved_at": now,
@@ -176,7 +261,7 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
             {
                 "user_id": user_id,
                 "status": "ACTIVE",
-                "district_id": districts[district][0],
+                "district_id": districts[district],
                 "first_name": first_name,
                 "last_name": last_name or None,
             }

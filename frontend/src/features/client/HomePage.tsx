@@ -50,8 +50,12 @@ export function UnverifiedBanner({ text }: { text?: string }) {
 export function HomePage() {
   const { me } = useSession()
   const active = useReservations('active')
-  const reservations = active.data?.items ?? []
-  const [next, ...others] = reservations
+  // Every reservation still to pick up, the nearest deadline first. Each one is the
+  // same ticket (the owner, 2026-11-18, BLD-D43): until then only the first had its
+  // order number and its button, and the others looked like something else.
+  const reservations = [...(active.data?.items ?? [])].sort((a, b) =>
+    (a.deadline ?? '').localeCompare(b.deadline ?? ''),
+  )
   const [opened] = useState(() => new Date().toISOString())
   // The server's clock when it answers: the demo clock may be ahead of this device's.
   const now = active.data?.server_now ?? opened
@@ -87,39 +91,25 @@ export function HomePage() {
       )}
 
       <div className="cols cols--cards">
-        {next && next.deadline && (
-          <section className="today" aria-label={s.pickUp}>
+        {reservations.map((order) => (
+          <section key={order.id} className="today" aria-label={`${s.pickUp} ${order.ref}`}>
             <div className="today__top">
               <span className="today__label">{s.pickUp}</span>
-              <span className="order-ref today__ref">{next.ref}</span>
+              <span className="order-ref today__ref">{order.ref}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span className="today__when">{s.pickUpBy(dayAndClock(next.deadline, now))}</span>
+              <span className="today__when">
+                {order.deadline ? s.pickUpBy(dayAndClock(order.deadline, now)) : order.status_text}
+              </span>
               <span className="today__what">
-                {next.product.name} ×{next.qty} · {next.pharmacy.name}, {next.pharmacy.district}
+                {order.product.name} ×{order.qty} · {order.pharmacy.name}, {order.pharmacy.district}
               </span>
             </div>
-            <Link to={`/reservations/${next.id}`} className="pill-button pill-button--white">
+            <Link to={`/reservations/${order.id}`} className="pill-button pill-button--white">
               <TicketIcon small />
               {s.showAtCounter}
             </Link>
           </section>
-        )}
-        {others.map((order) => (
-          <Link key={order.id} to={`/reservations/${order.id}`} className="tile">
-            <span className="tile__icon">
-              <TicketIcon />
-            </span>
-            <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span className="tile__title">
-                {order.product.name} ×{order.qty}
-              </span>
-              <span className="tile__hint">
-                {order.deadline ? s.pickUpBy(dayAndClock(order.deadline, now)) : order.status_text} ·{' '}
-                {order.pharmacy.name}
-              </span>
-            </span>
-          </Link>
         ))}
 
         {/* What needs the client's tap comes before everything else (docs/11 §1). */}

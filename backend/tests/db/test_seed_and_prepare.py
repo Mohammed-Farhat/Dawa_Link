@@ -23,7 +23,7 @@ from dawalink.domain.numbers import DISCOUNT_TIERS, NEAR_EXPIRY_MAX_DAYS
 from dawalink.domain.places import key
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
 from dawalink.ops.prepare_db import login_passwords, prepare
-from dawalink.ops.seed_demo import CLIENT_NAMES, seed_demo
+from dawalink.ops.seed_demo import CLIENT_NAMES, move_demo_pins_onto_land, seed_demo
 from dawalink.osm_places import FIRST_ID, script
 from tests.conftest import DatabaseUrls, make_settings, run_as_admin
 from tests.db import factories as make
@@ -189,6 +189,61 @@ class TestDemoSeed:
 
         assert one == again
         assert snapshot(db)["pharmacies"] != one["pharmacies"]
+
+    def test_every_demo_pharmacy_stands_on_a_named_place_of_its_district(
+        self, db: Connection
+    ) -> None:
+        """Found by the owner on 2026-11-18: [Directions] to a pharmacy of Sidon led into
+        the sea. The pins were random points around the district's centre."""
+        stock_some_products(db)
+
+        seed_demo(db, seed=42, now=NOW)
+
+        pins = db.execute(
+            text(
+                "SELECT p.name, p.lat, p.lon, d.ref_lon, EXISTS (SELECT 1 FROM areas a "
+                "WHERE a.district_id = p.district_id AND NOT a.whole_district "
+                "AND a.ref_lat = p.lat AND a.ref_lon = p.lon) FROM pharmacies p "
+                "JOIN districts d ON d.id = p.district_id"
+            )
+        ).all()
+        assert len(pins) == 16
+        # On a named place; where the tests' short list has too few, east of the centre,
+        # which in Lebanon is away from the sea.
+        assert all(on_a_place or lon >= centre_lon for _, _, lon, centre_lon, on_a_place in pins)
+        assert sum(on_a_place for *_, on_a_place in pins) >= 8
+        assert len({(lat, lon) for _, lat, lon, _, _ in pins}) == 16
+
+    def test_pins_of_an_older_seed_are_moved_once_and_their_road_times_forgotten(
+        self, db: Connection
+    ) -> None:
+        stock_some_products(db)
+        seed_demo(db, seed=42, now=NOW)
+        right = snapshot(db)["pharmacies"]
+        (sidon,) = db.execute(
+            text("SELECT id FROM pharmacies WHERE name = 'Sidon Pharmacy B (demo)'")
+        ).one()
+        # As the seed put it before: a point out at sea, with a road time counted to it.
+        db.execute(
+            text("UPDATE pharmacies SET lat = 33.5505, lon = 35.3595 WHERE id = :p"), {"p": sidon}
+        )
+        db.execute(
+            text(
+                "INSERT INTO travel_time_cache (pharmacy_id, origin_cell, mode, minutes, km, "
+                "source, computed_at) VALUES (:p, '33.560,35.370', 'car', 9, 3.1, 'road', :now)"
+            ),
+            {"p": sidon, "now": NOW},
+        )
+
+        moved = move_demo_pins_onto_land(db, now=NOW)
+        again = move_demo_pins_onto_land(db, now=NOW)
+
+        assert (moved, again) == (1, 0)
+        assert snapshot(db)["pharmacies"] == right
+        (computed,) = db.execute(
+            text("SELECT computed_at FROM travel_time_cache WHERE pharmacy_id = :p"), {"p": sidon}
+        ).one()
+        assert computed < NOW
 
     def test_no_controlled_medicine_is_ever_stocked(self, db: Connection) -> None:
         stock_some_products(db)

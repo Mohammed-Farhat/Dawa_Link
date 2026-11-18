@@ -8,7 +8,7 @@ import { BackIcon, MapIcon, PhoneIcon, ShieldIcon } from '../../../components/ic
 import { Banner, Screen } from '../../../components/layout'
 import { calendarDate, dayWord, directionsUrl, lbp, plainAmount } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
-import { placeBody, useSearchChoices } from './choices'
+import { MAX_DAYS_OF_USE, placeBody, useSearchChoices } from './choices'
 import { FitBadge, PrescriptionLine, PriceBlock } from './parts'
 import { openWords, travelWords } from './words'
 
@@ -38,9 +38,28 @@ export function OfferPage() {
   })
 
   if (found.isError) {
+    // Only "not found" means the box is gone. Anything else (the connection, a value the
+    // server refused) is said as what it is, with a way to try again that starts from
+    // clean choices: no error stays with the client from one offer to the next.
+    const code = found.error instanceof ApiFailure ? found.error.code : 'INTERNAL_ERROR'
+    const gone = code === 'NOT_FOUND'
     return (
       <Screen plain narrow>
-        <Banner tone="amber">{o.gone}</Banner>
+        <Banner tone="amber" alert>
+          {gone ? o.gone : errorMessage(code)}
+        </Banner>
+        {!gone && (
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() => {
+              choices.set({ daysOfUse: null, pickupDay: null })
+              void found.refetch()
+            }}
+          >
+            {strings.common.tryAgain}
+          </button>
+        )}
         <Link to="/search" className="pill-button pill-button--grey">
           {o.backToSearch}
         </Link>
@@ -256,8 +275,12 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
             label={s.otherDays}
             size="md"
             min={1}
-            max={365}
+            max={MAX_DAYS_OF_USE}
+            // A number over the most can't be typed at all, and the store would cut it
+            // down anyway (`tidy`).
+            clampBehavior="strict"
             allowDecimal={false}
+            allowNegative={false}
             value={choices.daysOfUse ?? ''}
             onChange={(value) => choices.set({ daysOfUse: typeof value === 'number' && value >= 1 ? value : null })}
           />

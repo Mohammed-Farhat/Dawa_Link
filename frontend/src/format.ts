@@ -84,10 +84,16 @@ export function beirutHour(moment: Date = new Date()): number {
   )
 }
 
-/** Where OpenStreetMap shows the way to a pharmacy. Only the pharmacy's pin is in the
- * link: never where the client is (docs/11 §11). */
+/**
+ * Where Google Maps shows the way to a pharmacy (the owner, 2026-11-18, BLD-D43).
+ *
+ * **Only the pharmacy's pin is in the link: never where the client is** (docs/11 §11).
+ * Google Maps fills "from" itself with the device's own location, if the client lets it:
+ * that is between the client's device and Google, and nothing of it passes through
+ * DawaLink. On a phone the link opens the Maps app.
+ */
 export function directionsUrl(pin: Schemas['Pin']): string {
-  return `https://www.openstreetmap.org/directions?to=${pin.lat}%2C${pin.lon}#map=16/${pin.lat}/${pin.lon}`
+  return `https://www.google.com/maps/dir/?api=1&destination=${pin.lat}%2C${pin.lon}`
 }
 
 /** "Fri 13 Nov 09:30", in Beirut time: a moment said by its date, never "today". For

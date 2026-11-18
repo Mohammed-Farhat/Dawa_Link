@@ -29,6 +29,30 @@ export type SearchChoices = {
 
 export type ChoicesStore = SearchChoices & { set: (change: Partial<SearchChoices>) => void }
 
+/** The most the API takes (its schemas say the same): a longer treatment is a year. */
+export const MAX_DAYS_OF_USE = 365
+/** Eleven digits: under the API's own limit for a price in LBP. */
+export const MAX_PRICE_LBP = 99_999_999_999
+
+/**
+ * What the client chose, made safe to send. These choices go with **every** search and
+ * every offer the client opens, so one number the API refuses (999 days of use) would
+ * make each of them fail until the page is loaded again: the owner found exactly that on
+ * 2026-11-18. Whatever a form hands over, the store keeps only what can be sent.
+ */
+export function tidy(change: Partial<SearchChoices>): Partial<SearchChoices> {
+  const safe = { ...change }
+  if ('daysOfUse' in safe) safe.daysOfUse = within(safe.daysOfUse, MAX_DAYS_OF_USE)
+  if ('maxPriceLbp' in safe) safe.maxPriceLbp = within(safe.maxPriceLbp, MAX_PRICE_LBP)
+  return safe
+}
+
+/** A whole number from 1 to `most`; more than that is `most`; anything else is "not said". */
+function within(value: number | null | undefined, most: number): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) return null
+  return Math.min(Math.floor(value), most)
+}
+
 export const ChoicesContext = createContext<ChoicesStore | null>(null)
 
 export function useSearchChoices(): ChoicesStore {

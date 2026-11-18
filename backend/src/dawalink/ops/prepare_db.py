@@ -38,6 +38,7 @@ from dawalink.ops.import_catalog import (
 from dawalink.ops.seed_demo import (
     DEFAULT_SEED,
     has_pharmacies,
+    move_demo_pins_onto_land,
     seed_demo,
     set_demo_passwords,
 )
@@ -137,6 +138,11 @@ def prepare(
             with engine.begin() as connection:
                 if has_pharmacies(connection):
                     log.info("demo_seed_skipped", reason="pharmacies already exist")
+                    # A database seeded before 2026-11-18 has demo pharmacies at random
+                    # points, some in the sea.
+                    moved = move_demo_pins_onto_land(connection, now=SystemClock().now())
+                    if moved:
+                        log.info("demo_pins_moved_onto_land", pharmacies=moved)
                 else:
                     result = seed_demo(connection, seed=seed, now=SystemClock().now())
                     log.info(

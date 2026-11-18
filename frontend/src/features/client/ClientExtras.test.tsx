@@ -402,6 +402,38 @@ describe('Home is what needs the client now (CS-5)', () => {
     expect(screen.queryByText(strings.home.nothingReserved)).not.toBeInTheDocument()
   })
 
+  it('shows every reservation to pick up as the same ticket, the nearest deadline first', async () => {
+    const later = {
+      ...RESERVATION,
+      id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+      ref: 'R-42RZCD',
+      deadline: '2026-11-18T18:00:00Z',
+    }
+    clientApi({
+      // The later one comes first in the answer: the page puts them in order.
+      'GET /api/v1/reservations': {
+        items: [later, RESERVATION],
+        next_cursor: null,
+        server_now: CONFIG.server_now,
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/' })
+
+    const first = await screen.findByRole('region', { name: `${strings.home.pickUp} ${RESERVATION.ref}` })
+    const second = screen.getByRole('region', { name: `${strings.home.pickUp} ${later.ref}` })
+    for (const [ticket, order] of [
+      [first, RESERVATION],
+      [second, later],
+    ] as const) {
+      expect(within(ticket).getByText(order.ref)).toBeInTheDocument()
+      expect(within(ticket).getByRole('link', { name: strings.home.showAtCounter })).toHaveAttribute(
+        'href',
+        `/reservations/${order.id}`,
+      )
+    }
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('says that nothing is waiting, with the two ways on', async () => {
     clientApi()
     renderApp(<AppRoutes />, { path: '/' })

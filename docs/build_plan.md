@@ -980,6 +980,29 @@ Before committing round 1 the owner tried the client's side on his own: he signe
 
 ---
 
+### After step 9: the owner's last test of the client's side, round 3 (2026-11-18) ✅
+
+Rounds 1 and 2 are pushed. The owner then went through the client's side once more, from sign-up to a cancel through the assistant. **What worked as wanted:** sign-up with [Use my location] ("the pin was exactly on my location"), search, reserving from the search and through the assistant, the notifications. Two choices were his and were asked first (§5, Q61, Q62; decision log BLD-D43).
+
+| What he found | What was done |
+|---|---|
+| "For how many days?" with "Other" and 999: "This offer is no longer available", and every other product said the same until a reload | The server refuses more than 365 days, the page called every failure "no longer available", and the choice travels with each offer the client opens. **Now:** a number over the most can't be typed; whatever a form hands to the search's choices is made safe in one place; the offer's page says "no longer available" only for an offer that is gone, and any other failure as what it is, with [Try again] |
+| [Directions]: "the destination pin gets me to a sea" | The demo pharmacies were at random points around their district's centre. They now stand at the centres of named neighbourhoods and towns (Sidon's two: Sit Naffiseh and Bestein El Kbir). The local database was corrected: 16 pharmacies moved |
+| [Directions]: "there is no from, only destination" | Deliberate until now: the link never carries where the client is. **His choice:** Google Maps, which fills "from" itself from the client's own device. The link still carries only the pharmacy's pin |
+| Home: "why is the first one black with show at counter while the other one is white with nothing?" | **His choice:** every reservation to pick up is the same dark ticket, the nearest deadline first |
+| "Search history doesn't save when I type a single letter" | As built: a search is kept on Enter or when a result is opened, from two letters, and only if it names a medicine. Unchanged |
+
+**Told to the owner, not asked:**
+- With [Directions] on Google Maps, Google learns the pharmacy looked at and the viewer's network address, as any site does, and the client's place only from their own device if they allow it there (`10` §4.3).
+- The demo pharmacies of the deployed app will be on land from the start; a database seeded earlier is corrected when it is prepared again.
+- Typing stops at the most: "999" in the days box stays "99".
+
+**Checks:** the backend suite (2,039 tests); the website's 177 tests; lint and types clean. Seen in the real app: a days box that refuses a third 9 and an offer that stays on the screen with "this box expires … before your 45 days end"; the [Directions] link to Google Maps with the pharmacy's new pin and nothing else; the 16 pins on the map's named places.
+
+**Not checked:** Home with two reservations in the browser (it is tested in the website's tests); Google Maps itself opening with a start (it is Google's page); the pharmacy's and the admin's sides.
+
+---
+
 ## 4. Left for a later step
 
 **For the agent's final evaluation (slice 6b), seen in the browser on 2026-11-16:** the agent offers quick replies that read like buttons: "Yes, start sourcing" next to the [Start sourcing] card, "Reserve at Pharmacy C" next to a [Reserve] card. A quick reply only sends its words as a message and never acts, so nothing wrong happens; but a client may think they reserved. To add as regression cases and to the prompt's rules then. Also: `03` PS-10 lets a pharmacy change its phone in its settings, while `10` TH-59 says only an admin changes it (the number is shown to clients). Claude follows TH-59, the newer and stricter one, in slice 7e.
@@ -991,6 +1014,7 @@ Before committing round 1 the owner tried the client's side on his own: he signe
 | What | Joins in |
 |---|---|
 | *(The admin's side of an abuse flag was built in slice 7f, second half.)* | done |
+| **One hunt for inputs that can break or lock a page, across the three sides** (the owner, 2026-11-18, after 999 days of use locked every offer, `09` FI-33): every number, date and text box of the client's, the pharmacy's and the admin's pages, typed with too much, too little and the wrong kind; every page's answer to a refusal of the server. The API itself was walked and fuzzed in step 9; this is about what the pages do with it | After the owner has tried the pharmacy's and the admin's sides |
 | The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
 | The agent's quality on Claude, measured: understanding, decisions, safety, cost, and the choice of model (O1). Step 5 only looked at 27 turns. | Step 6 |
 | The website shows a reopened request (`04` R-RQ12): the thread card `request_reopened` ("This request is open again: the pharmacy didn't have the box"), the request's status back to "searching", and a second summary when it closes again. The API already returns all three. | Step 8, with the request page |
@@ -1156,6 +1180,8 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q58 | **When is a pickup reminder sent?** Every 12 hours plus one 2 hours before closing (recommended); every 12 hours only; or once, the evening before. | **2026-11-18: every 12 hours, plus one 2 hours before closing.** Built: none in the first hour (N-8). |
 | Q59 | **Without the side panel and Home's search box, where is Search on a phone?** A Search tab in the menu (recommended), or a search icon at the top of each page. | **2026-11-18: a Search tab.** Built. |
 | Q60 | **Where are the last searches kept?** In the account, on the server; or only in the browser. | **2026-11-18: "In the account, on the server".** Built; `10` RR-22 says what it leaves. |
+| Q61 | **[Directions] showed a destination and no start.** Open Google Maps, which fills the start itself from the client's device (recommended), or keep OpenStreetMap. | **2026-11-18: Google Maps.** Built (BLD-D43); the link still carries only the pharmacy's pin. |
+| Q62 | **Home with several reservations:** all the same dark ticket (recommended), or the first dark and the others smaller but complete. | **2026-11-18: all the same dark ticket.** Built. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision

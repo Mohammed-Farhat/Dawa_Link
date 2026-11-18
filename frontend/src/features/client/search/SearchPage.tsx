@@ -407,6 +407,7 @@ function Filters({ location, children }: { location: Where; children?: ReactNode
               style={{ width: '100%' }}
               type="text"
               inputMode="numeric"
+              maxLength={11}
               value={choices.maxPriceLbp ?? ''}
               onChange={(event) => {
                 const digits = event.currentTarget.value.replace(/\D/g, '')

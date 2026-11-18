@@ -42,9 +42,15 @@ describe('The pickup ticket', () => {
 
     const link = await screen.findByRole('link', { name: s.directions })
 
+    // Google Maps, with the pharmacy as the destination and nothing else (BLD-D43):
+    // the map fills "from" itself, on the client's own device.
     expect(link).toHaveAttribute('href', directionsUrl(RESERVATION.pharmacy.pin))
-    expect(link.getAttribute('href')).toContain('to=33.897%2C35.484')
-    expect(link.getAttribute('href')).not.toContain('from=')
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/dir/?api=1&destination=33.897%2C35.484',
+    )
+    expect(link.getAttribute('href')).not.toMatch(/origin=|from=/)
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'))
   })
 
   it('cancels after asking, and then says it is cancelled', async () => {

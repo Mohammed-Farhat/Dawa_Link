@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Schemas } from '../../../api/client'
 import { AppRoutes } from '../../../app/App'
+import { tidy } from './choices'
 import { errorMessage, strings } from '../../../strings/en'
 import {
   accessibilityProblems,
@@ -357,5 +358,74 @@ describe('Reserving from an offer', () => {
     renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
 
     expect(await screen.findByText(strings.offer.gone)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: strings.common.tryAgain })).not.toBeInTheDocument()
+  })
+
+  it('never sends more days of use than the most, whatever is typed', async () => {
+    // Found by the owner on 2026-11-18: 999 days were sent, the server refused them, the
+    // page said "this offer is no longer available", and every other offer said the
+    // same until the page was loaded again, because the choice travels with each one.
+    const api = searchApi()
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: strings.offer.reserve }))
+    await user.click(await screen.findByRole('button', { name: strings.search.other }))
+    await user.type(screen.getByLabelText(strings.search.otherDays), '99999')
+
+    await waitFor(() => {
+      const days = api
+        .sent('POST', `/api/v1/listings/${LISTING_ID}/view`)
+        .map((call) => (call.body as { days_of_use: number | null }).days_of_use)
+      expect(days.at(-1)).not.toBeNull()
+      expect(days.every((count) => count === null || (count >= 1 && count <= 365))).toBe(true)
+    })
+    // The offer is still on the screen, with its sheet.
+    expect(screen.getByRole('button', { name: strings.reserve.submit(1) })).toBeInTheDocument()
+    expect(screen.queryByText(strings.offer.gone)).not.toBeInTheDocument()
+  })
+
+  it('says a failure as what it is, and tries again from clean choices', async () => {
+    let refuse = true
+    const api = searchApi({
+      [`POST /api/v1/listings/${LISTING_ID}/view`]: () =>
+        refuse
+          ? refusal(422, 'VALIDATION_ERROR')
+          : {
+              listing: LISTING,
+              week: [{ day: '2026-11-16', hours: '08:00-21:00' }],
+              location: { source: 'profile', label: 'Beirut' },
+              server_now: CONFIG.server_now,
+            },
+    })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+    const user = userEvent.setup()
+
+    // Not "no longer available": the box is there, the request was wrong.
+    expect(await screen.findByRole('alert')).toHaveTextContent(errorMessage('VALIDATION_ERROR'))
+    expect(screen.queryByText(strings.offer.gone)).not.toBeInTheDocument()
+
+    refuse = false
+    await user.click(screen.getByRole('button', { name: strings.common.tryAgain }))
+
+    expect(await screen.findByRole('button', { name: strings.offer.reserve })).toBeInTheDocument()
+    expect(api.sent('POST', `/api/v1/listings/${LISTING_ID}/view`).at(-1)?.body).toMatchObject({
+      days_of_use: null,
+    })
+  })
+})
+
+describe('What the client chose is always safe to send', () => {
+  it('cuts a number down to the most, and takes anything else as not said', () => {
+    expect(tidy({ daysOfUse: 999 })).toEqual({ daysOfUse: 365 })
+    expect(tidy({ daysOfUse: 12 })).toEqual({ daysOfUse: 12 })
+    expect(tidy({ daysOfUse: 0 })).toEqual({ daysOfUse: null })
+    expect(tidy({ daysOfUse: -3 })).toEqual({ daysOfUse: null })
+    expect(tidy({ daysOfUse: Number.NaN })).toEqual({ daysOfUse: null })
+    expect(tidy({ daysOfUse: 2.7 })).toEqual({ daysOfUse: 2 })
+    expect(tidy({ maxPriceLbp: 1e30 })).toEqual({ maxPriceLbp: 99_999_999_999 })
+    expect(tidy({ maxPriceLbp: 500_000 })).toEqual({ maxPriceLbp: 500_000 })
+    // What is not a number is left as it is.
+    expect(tidy({ sort: 'cheapest', openNow: true })).toEqual({ sort: 'cheapest', openNow: true })
   })
 })
