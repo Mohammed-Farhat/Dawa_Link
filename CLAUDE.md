@@ -125,6 +125,7 @@ If the user's first message is general ("let's continue"), summarize where we ar
    - Claude runs each change's tests, tries it on the local website, and explains what changed and why, in plain language. It must meet the Definition of Done.
 7. **Git and publishing:**
    - Never commit, push or publish without the user's explicit permission.
+   - **`main` is protected on GitHub** (the owner, 2026-11-18): the ruleset `protect-main` asks for a pull request approved by the code owner (`.github/CODEOWNERS`: the owner), and forbids force pushes and deleting the branch. Only a repository admin bypasses it, so the owner still pushes straight to `main` as before (GitHub then prints "Bypassed rule violations", which is expected). It is a lock for everyone else, not a review process for us: how changes are checked is unchanged (INF-D14).
    - `.gitignore` is Claude's to change since 2026-11-14. Claude says what changed. Before removing a line, Claude checks that it can't put a secret, a personal file or the Ministry's files into the public repo.
    - Since 2026-10-18, `/docs`, `CLAUDE.md`, `DawaLink_Project_Proposal.md` and `Project_Requirements.md` are **tracked** (the user changed `.gitignore` so the team can read them). The user commits and pushes these updates themselves.
    - The repo is public: nothing secret or personal goes in tracked files. Before any doc is committed, check it for emails, keys and tokens.
