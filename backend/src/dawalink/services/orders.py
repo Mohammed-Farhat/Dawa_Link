@@ -48,11 +48,11 @@ from dawalink.domain.numbers import (
     NO_SHOW_WINDOW,
     NO_SHOWS_BEFORE_PAUSE,
     OFFER_SKIP_AFTER_DECLINE,
-    PICKUP_REMINDER_BEFORE,
 )
 from dawalink.domain.orders import OPEN_STATES, ORDER_MACHINE, OrderSource, OrderState
 from dawalink.domain.pickup import pharmacy_pickup_days, pickup_deadline
 from dawalink.domain.refs import new_ref
+from dawalink.domain.reminders import next_reminder
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import CloseReason
 from dawalink.domain.windows import offer_expires_at
@@ -472,6 +472,7 @@ def reserve(
         product = products[box.product_id]
         pharmacy = tx.session.get_one(Pharmacy, box.pharmacy_id)
         item.qty_reserved = Stock(item.qty_on_hand, item.qty_reserved).reserve(line.qty).reserved
+        deadline = _pickup_by(tx, pharmacy, pickup_day, box.expiry_date)
         order = Order(
             id=uuid.uuid4(),
             ref=_new_ref(tx),
@@ -489,9 +490,10 @@ def reserve(
             pickup_day=pickup_day,
             days_of_use=line.days_of_use,
             price_snapshot_lbp=box.price_lbp,
-            deadline=_pickup_by(tx, pharmacy, pickup_day, box.expiry_date),
+            deadline=deadline,
             idempotency_key=key,
             reserved_at=tx.now,
+            next_reminder_at=next_reminder(tx.now, deadline, after=tx.now),
         )
         tx.session.add(order)
         tx.session.flush()
@@ -847,16 +849,19 @@ def lift_pause(tx: Tx, client_id: uuid.UUID) -> bool:
 
 
 def send_pickup_reminder(tx: Tx, order_id: uuid.UUID) -> bool:
-    """One reminder, a few hours before the deadline (N-8). Run by the clock check."""
+    """The reminder that is due, and the moment of the next one (N-8). Run by the clock
+    check. **Only a reservation that still stands is reminded:** one that was picked up,
+    cancelled or expired in the meantime gets nothing."""
     order = lock_order(tx, order_id)
-    if order is None or order.state != "RESERVED" or order.reminder_sent_at is not None:
+    if order is None or order.state != "RESERVED" or order.next_reminder_at is None:
         return False
-    if (
-        order.deadline is None
-        or not order.deadline - PICKUP_REMINDER_BEFORE <= tx.now < order.deadline
-    ):
+    if order.next_reminder_at > tx.now:
+        return False
+    if order.deadline is None or order.reserved_at is None or tx.now >= order.deadline:
+        order.next_reminder_at = None
         return False
     order.reminder_sent_at = tx.now
+    order.next_reminder_at = next_reminder(order.reserved_at, order.deadline, after=tx.now)
     product = tx.session.get_one(Product, order.product_id)
     pharmacy = tx.session.get_one(Pharmacy, order.pharmacy_id)
     notify(
@@ -864,7 +869,8 @@ def send_pickup_reminder(tx: Tx, order_id: uuid.UUID) -> bool:
         order.client_id,
         Template.PICKUP_REMINDER,
         order_summary(order, product, pharmacy),
-        event=f"order:{order.id}",
+        # A reservation may be reminded several times: each reminder is its own event.
+        event=f"order:{order.id}:reminder:{tx.now.isoformat()}",
     )
     return True
 
@@ -994,6 +1000,7 @@ def accept_offer(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID, pickup_day: 
     order.pickup_day = pickup_day
     order.deadline = pickup_deadline(hours, pickup_day, item.expiry_date)
     order.reserved_at = tx.now
+    order.next_reminder_at = next_reminder(tx.now, order.deadline, after=tx.now)
     move(
         tx,
         order,

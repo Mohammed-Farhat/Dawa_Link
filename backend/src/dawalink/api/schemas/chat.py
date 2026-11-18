@@ -66,6 +66,22 @@ class ChatMessage(Out):
     created_at: datetime
 
 
+class ChatSummary(Out):
+    """One line of the client's list of chats (D9)."""
+
+    conversation_id: uuid.UUID
+    active: bool
+    started_at: datetime
+    last_activity_at: datetime
+    # The start of the client's first message, or None for a chat with none yet.
+    title: str | None
+
+
+class Chats(Out):
+    items: list[ChatSummary]
+    server_now: datetime
+
+
 class MessagesPage(Out):
     """What the page asks for every few seconds while it is open (API-D7)."""
 
@@ -76,13 +92,16 @@ class MessagesPage(Out):
     last_seq: int
     # An agent turn is running: show "…".
     busy: bool
+    # An earlier chat, put away by [New chat]: it can be read, not written in.
+    archived: bool
     # Where the agent's tools count travel times from, as words. Never coordinates.
     location: "LocationSummary"
     server_now: datetime
 
 
 class LocationSummary(Out):
-    source: Literal["shared", "district", "area", "profile", "none"]
+    # "place": the place saved in the profile; "profile": its home town or district.
+    source: Literal["shared", "district", "area", "profile", "place", "none"]
     label: str | None
 
 

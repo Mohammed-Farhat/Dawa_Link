@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -229,6 +230,28 @@ class TestPeopleAndPlaces:
     def test_a_paused_client_has_an_end_date(self, db: Connection) -> None:
         refused(db, lambda: make.client(db, "PAUSED"), "paused_has_an_end")
         make.client(db, "PAUSED", paused_until=NOW + timedelta(days=7))
+
+    def test_a_kept_search_has_the_length_of_a_medicines_name(self, db: Connection) -> None:
+        """BLD-D42."""
+        client = make.client(db)
+
+        def keep(query: str) -> None:
+            db.execute(
+                text(
+                    "INSERT INTO search_history (client_id, query, searched_at) "
+                    "VALUES (:client, :query, :at)"
+                ),
+                {"client": client, "query": query, "at": NOW},
+            )
+
+        refused(db, lambda: keep("p"), "query_not_empty")
+        refused(db, lambda: keep("p" * 61), "query_not_empty")
+        keep("panadol")
+
+    def test_a_saved_home_place_is_a_whole_point(self, db: Connection) -> None:
+        """BLD-D40: a latitude without its longitude is no place."""
+        refused(db, lambda: make.client(db, home_lat=Decimal("33.895")), "home_place_is_whole")
+        make.client(db, home_lat=Decimal("33.895"), home_lon=Decimal("35.478"))
 
     @pytest.mark.parametrize("days", [0, 4])
     def test_a_pharmacy_holds_reservations_for_one_to_three_days(

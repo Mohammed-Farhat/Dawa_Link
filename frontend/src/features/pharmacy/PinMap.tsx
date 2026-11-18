@@ -32,10 +32,13 @@ export default function PinMap({
   value,
   center,
   onChange,
+  label = d.map,
 }: {
   value: Pin | null
   center: Pin
   onChange: (pin: Pin) => void
+  /** What the map is for, said to a screen reader. A pharmacy's pin unless told. */
+  label?: string
 }) {
   const holder = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
@@ -105,7 +108,7 @@ export default function PinMap({
 
   return (
     <div className="map-field">
-      <div ref={holder} className="map" role="application" aria-label={d.map} />
+      <div ref={holder} className="map" role="application" aria-label={label} />
       <button
         type="button"
         className="text-button"

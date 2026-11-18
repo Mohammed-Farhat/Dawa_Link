@@ -941,7 +941,8 @@ body {
   font-weight: 500;
   cursor: pointer;
 }
-.tabs__tab[aria-selected='true'] {
+.tabs__tab[aria-selected='true'],
+.tabs__tab[aria-checked='true'] {
   background: var(--ink);
   color: var(--white);
   font-weight: 600;
@@ -1549,63 +1550,693 @@ body {
   gap: 12px;
 }
 
-/* --- The client's portal wider than 992 px (docs/11 §3.1): a top bar instead of the
-   floating menu, and the assistant beside the page -------------------------------------- */
-.wide {
-  min-height: 100dvh;
+/* --- Lists that become columns ---------------------------------------------------------
+   One column on a phone; as many columns as fit on a computer. "As fit" and not a fixed
+   number: the page gets narrower when the assistant's panel is open. */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
-.nav--top {
-  position: sticky;
-  top: 0;
-  left: auto;
-  bottom: auto;
-  transform: none;
-  width: 100%;
-  height: 64px;
-  padding: 8px 28px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--line);
-  box-shadow: none;
-  justify-content: center;
-  gap: 8px;
-}
-.nav--top .nav__tab,
-.nav--top .nav__tab[aria-current='page'] {
-  flex: none;
-  flex-direction: row;
-  gap: 8px;
-  padding: 0 20px;
-  font-size: 15px;
-}
-.wide__body {
+.stack {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 28px;
-  padding: 0 28px;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
-.screen--wide {
-  flex: 0 1 560px;
-  min-height: 0;
+.section-title {
   margin: 0;
-  padding-bottom: 40px;
+  font-size: 18px;
+  font-weight: 600;
 }
-.wide__beside {
-  flex: 0 1 440px;
-  min-width: 320px;
-  position: sticky;
-  top: 64px;
-  height: calc(100dvh - 64px);
-  border-inline: 1px solid var(--line);
-  overflow: hidden;
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.wide__beside .chat {
-  height: 100%;
-  max-width: none;
+.search-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
-.wide__note {
-  padding: 20px 16px;
+.search-form .chat__input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- A password's rule, ticked as it is typed (R-AU1) ---------------------------------- */
+.rules {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 4px 16px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rules__mark {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 9px;
+  border: 1.5px solid var(--field);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+}
+.rules li[data-met='true'] {
+  color: var(--green);
+}
+.rules li[data-met='true'] .rules__mark {
+  background: var(--green);
+  border-color: var(--green);
+}
+.rules__mark .icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+/* --- Search by name: a medicine and its boxes ------------------------------------------- */
+.medicine-group {
+  border-radius: 24px;
+  background: var(--white);
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: var(--float);
+}
+.medicine-group__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.medicine-group__name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.medicine-group .search-row {
+  background: var(--page);
+  box-shadow: none;
+}
+.not-in-stock {
+  border-radius: 20px;
+  border: 1px dashed var(--field);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.not-in-stock__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.filters {
+  border-radius: 24px;
+  background: var(--white);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --- The list of a client's chats (D9) --------------------------------------------------- */
+.chat-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.chat-list__item {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  padding: 10px 12px;
+  text-align: start;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-list__item:hover {
+  background: var(--page);
+}
+.chat-list__item[aria-current='true'] {
+  background: var(--blue-tint);
+}
+.chat-list__title {
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat__new {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--blue-tint);
+  color: var(--blue);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.chat__tool {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: 20px;
+  background: var(--page);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* --- The public pages (welcome, sign up, log in) ------------------------------------------
+   A phone shows the form alone. A computer puts it beside a panel that says what
+   DawaLink is. */
+.auth {
+  min-height: 100dvh;
+  background: var(--white);
+}
+.auth__side {
+  display: none;
+}
+.auth__form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+/* --- The client's portal on a computer (docs/11 §3.1, decision log BLD-D40) ---------------- */
+.wide {
+  min-height: 100dvh;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  height: 64px;
+  padding: 0 28px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.topbar__brand {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 19px;
+}
+.topbar__nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar__link {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar__link:hover {
+  background: var(--page);
+}
+.topbar__link[aria-current='page'] {
+  background: var(--blue-tint);
+  color: var(--blue);
+  font-weight: 600;
+}
+.topbar__ask,
+.topbar__account {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 20px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.topbar__ask {
+  background: var(--blue);
+  color: var(--white);
+}
+.topbar__ask[aria-current='page'] {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+.topbar__account {
+  background: var(--page);
+  color: var(--ink);
+  font-weight: 500;
+}
+.topbar__name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wide__body {
+  display: flex;
+  align-items: flex-start;
+}
+.page {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 32px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.page--narrow {
+  max-width: 760px;
+}
+.wide__chat .chat {
+  height: 100%;
+  max-width: none;
+}
+/* The assistant's own page on a computer: the chats on the left, the conversation in the
+   middle. */
+.wide__chats {
+  flex: none;
+  box-sizing: border-box;
+  width: 300px;
+  position: sticky;
+  top: 64px;
+  height: calc(100dvh - 64px);
+  padding: 20px 16px;
+  border-inline-end: 1px solid var(--line);
+  background: var(--white);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wide__chat {
+  flex: 1;
+  min-width: 0;
+  height: calc(100dvh - 64px);
+  position: sticky;
+  top: 64px;
+}
+.wide__chat .chat__messages,
+.wide__chat .chat__form,
+.wide__chat .chat__notice,
+.wide__chat .chat__header {
+  padding-inline: max(16px, calc((100% - 860px) / 2));
+}
+
+@media (min-width: 992px) {
+  .page .page-title {
+    font-size: 30px;
+  }
+  .page .cols--cards {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  .page .cols--two {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  }
+  .page .cols--side {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  }
+  .page .cols--side > .filters {
+    position: sticky;
+    top: 92px;
+  }
+  .page .search-form {
+    max-width: 720px;
+  }
+  .page .search-pill {
+    max-width: 720px;
+  }
+  .page .medicine-group__rows {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 10px;
+  }
+  /* A page that pins its main button to the bottom of a phone keeps it in the flow here. */
+  .page .pinned {
+    position: static;
+    transform: none;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* The public pages: what DawaLink is on the left, the form on the right. */
+  .auth {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  }
+  .auth__side {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    box-sizing: border-box;
+    padding: 40px 48px;
+    background: var(--ink);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    justify-content: center;
+  }
+  .auth__side .brand {
+    position: absolute;
+    top: 32px;
+    left: 48px;
+    color: var(--white);
+  }
+  .auth__side h2 {
+    margin: 0;
+    font-size: 38px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .auth__side p {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink-on-dark);
+  }
+  .auth__side .steps {
+    flex-direction: column;
+    gap: 14px;
+    color: var(--white);
+    font-size: 17px;
+  }
+  .auth__side .steps li {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .auth__side .steps__number {
+    background: var(--ink-raised);
+    color: var(--sun-strong);
+  }
+  .auth__main.screen {
+    max-width: 640px;
+    padding: 48px 40px;
+    justify-content: center;
+  }
+  .auth__form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .auth__form-row--three {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+
+  /* Welcome: the words on the left, the picture on the right. */
+  .welcome {
+    max-width: 1180px;
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: 56px;
+    align-items: center;
+    background: var(--white);
+  }
+  .welcome.screen {
+    max-width: 1180px;
+  }
+  .welcome .hero {
+    order: 2;
+    height: 440px;
+    margin: 0;
+    border-radius: 36px;
+  }
+  .welcome .hero__price {
+    left: 48px;
+    top: 120px;
+    width: 260px;
+  }
+  .welcome .hero__ticket {
+    right: 40px;
+    top: 220px;
+    width: 180px;
+  }
+  .welcome .hero__walk {
+    left: 72px;
+    top: 320px;
+  }
+  .welcome__words {
+    order: 1;
+    gap: 24px;
+  }
+  .welcome__words .page-title {
+    font-size: 48px;
+    letter-spacing: -1px;
+  }
+  .welcome__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .welcome__actions .pill-button--wide {
+    width: auto;
+    padding: 0 32px;
+  }
+
+  /* The pickup ticket and other single cards don't stretch over a whole monitor. */
+  .ticket-screen__inner {
+    max-width: 640px;
+  }
+}
+
+/* --- Small pieces of the screens above ------------------------------------------------- */
+
+/* A list with a mistake is outlined in red; its choices stay readable. */
+.mantine-NativeSelect-input option {
+  color: var(--ink);
+  background: var(--white);
+}
+
+/* Home's search box: a real box to type in, on a phone and on a computer. */
+form.search-pill {
+  padding: 0 8px 0 20px;
+}
+.search-pill__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+}
+.search-pill__input:focus-visible {
+  outline: none;
+}
+form.search-pill:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.search-pill__go {
+  flex: none;
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--blue);
+  color: var(--white);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* On a phone a pinned button covers the page's end: this keeps the last lines above it. */
+.pinned-space {
+  height: 90px;
+  flex: none;
+}
+.welcome__words .page-title {
+  font-size: 30px;
+}
+.welcome__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+@media (min-width: 992px) {
+  .page .pinned-space {
+    display: none;
+  }
+  .welcome__words .page-title {
+    font-size: 48px;
+    letter-spacing: -1px;
+  }
+  .welcome__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 0;
+  }
+}
+
+/* The account's menu of the top bar. */
+.menu {
+  position: relative;
+}
+.menu__list {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  min-width: 220px;
+  box-sizing: border-box;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: var(--float-strong);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+.menu__item {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: start;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.menu__item:hover {
+  background: var(--page);
+}
+.menu__item--last {
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  padding-top: 6px;
+}
+
+@media (min-width: 992px) {
+  /* The welcome page is white from edge to edge, with its content kept in the middle. */
+  .welcome {
+    box-shadow: 0 0 0 100vmax var(--white);
+    clip-path: inset(0 -100vmax);
+  }
+}
+
+/* A chat's title stays on one line next to its buttons. */
+.chat__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 992px) {
+  .auth--alone {
+    display: block;
+  }
+}
+
+/* What is marked hidden is hidden, whatever its own display rule says. Without this a
+   form with `display: flex` stayed on the screen (found 2026-11-18: the box to write in
+   under an earlier chat, and under a closed request). */
+[hidden] {
+  display: none !important;
+}
+.chat__closed {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* The search's choices, folded on a phone. */
+.filters__fold {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.filters__fold::after {
+  content: '';
+}
+@media (max-width: 600px) {
+  /* A medicine's boxes on a phone: the pharmacy's letter gives its room to the words. */
+  .medicine-group {
+    padding: 14px 12px;
+  }
+  .medicine-group .search-row {
+    padding: 12px;
+    gap: 10px;
+  }
+  .medicine-group .search-row__initial {
+    display: none;
+  }
 }

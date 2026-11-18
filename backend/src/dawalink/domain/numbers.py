@@ -61,7 +61,11 @@ STRAIGHT_LINE_CAR_KMH = 30
 STRAIGHT_LINE_WALK_KMH = 4.5
 DEFAULT_PAGE_SIZE = 20  # R-S1
 MAX_PAGE_SIZE = 50  # N-31
-PICKUP_REMINDER_BEFORE = timedelta(hours=4)  # N-8
+# N-8 (the owner, 2026-11-18): a reminder every 12 hours while reserved, a last one
+# 2 hours before the deadline, and none in the first hour (nor two within an hour).
+PICKUP_REMINDER_EVERY = timedelta(hours=12)
+PICKUP_REMINDER_LAST_BEFORE = timedelta(hours=2)
+PICKUP_REMINDER_QUIET = timedelta(hours=1)
 SAME_PRODUCT_EARLY_RELEASE_WAIT = timedelta(hours=24)  # R-E5
 
 # --- The system ---
@@ -130,5 +134,9 @@ SSE_HEARTBEAT_S = 15  # docs/06 §6.6.1
 
 # --- Retention (N-19, R-RET) ---
 CONVERSATION_RETENTION = timedelta(days=30)
+# A client's last searches (BLD-D42): how many are shown, how many are kept, how long.
+SEARCH_HISTORY_SHOWN = 8
+SEARCH_HISTORY_KEPT = 20
+SEARCH_HISTORY_RETENTION = timedelta(days=30)
 NOTIFICATION_RETENTION = timedelta(days=90)
 AUDIT_RETENTION = timedelta(days=365)

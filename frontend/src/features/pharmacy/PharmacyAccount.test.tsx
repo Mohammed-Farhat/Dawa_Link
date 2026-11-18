@@ -38,7 +38,7 @@ const visitorApi = (more: Record<string, unknown> = {}) =>
 
 async function fillIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText(r.email), 'owner@hamra.example.com')
-  await user.type(screen.getByLabelText(r.password), 'a long enough passphrase')
+  await user.type(screen.getByLabelText(r.password), 'A long enough passphrase, 1')
   await user.type(screen.getByLabelText(d.name), 'Hamra Pharmacy')
   await user.type(screen.getByLabelText(d.license), 'PH 1234')
   await user.type(screen.getByLabelText(d.phone), '01 234 567')
@@ -364,13 +364,13 @@ describe("The pharmacy's settings (PS-10)", () => {
     const p = strings.password
 
     await user.type(await screen.findByLabelText(p.current), 'the old passphrase')
-    await user.type(screen.getByLabelText(p.new), 'a new long passphrase')
+    await user.type(screen.getByLabelText(p.new), 'A new long passphrase, 2')
     await user.click(screen.getByRole('button', { name: p.submit }))
 
     expect(await screen.findByText(p.done)).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/auth/password')[0].body).toEqual({
       current_password: 'the old passphrase',
-      new_password: 'a new long passphrase',
+      new_password: 'A new long passphrase, 2',
     })
   })
 })

@@ -64,9 +64,9 @@ def test_the_demo_accounts_get_their_password_from_the_settings(api: Api) -> Non
     other = api.world.make.client(person={"email": "someone@example.com", "password_hash": "!"})
 
     with api.world.as_owner():
-        changed = set_demo_passwords(api.world.connection, "a demo password of ours")
+        changed = set_demo_passwords(api.world.connection, "A demo password of ours, 1")
 
     assert changed == 1
     hashes = dict(api.world.all("SELECT id, password_hash FROM users"))
-    assert auth._password_matches(hashes[demo], "a demo password of ours")
+    assert auth._password_matches(hashes[demo], "A demo password of ours, 1")
     assert hashes[other] == "!"

@@ -79,11 +79,11 @@ class Order(Base):
         Index(
             "ix_orders_offer_due", "offer_expires_at", postgresql_where=text("state = 'OFFERED'")
         ),
-        # Reservations whose pickup reminder hasn't been sent yet (docs/04 N-8).
+        # Reservations with a reminder still to send (docs/04 N-8).
         Index(
             "ix_orders_reminder_due",
-            "deadline",
-            postgresql_where=text("state = 'RESERVED' AND reminder_sent_at IS NULL"),
+            "next_reminder_at",
+            postgresql_where=text("state = 'RESERVED' AND next_reminder_at IS NOT NULL"),
         ),
         Index("ix_orders_request_item_id", "request_item_id"),
         Index("ix_orders_claim_id", "claim_id"),
@@ -117,7 +117,10 @@ class Order(Base):
     price_snapshot_lbp: Mapped[int] = mapped_column(BigInteger)
     offer_expires_at: Mapped[datetime | None] = mapped_column(Moment)
     deadline: Mapped[datetime | None] = mapped_column(Moment)
+    # The last reminder sent, and when the next one is due (N-8): what the clock check
+    # looks for. None: no reminder is left for this reservation.
     reminder_sent_at: Mapped[datetime | None] = mapped_column(Moment)
+    next_reminder_at: Mapped[datetime | None] = mapped_column(Moment)
     counts_as_no_show: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     contested_at: Mapped[datetime | None] = mapped_column(Moment)
     close_reason: Mapped[str | None] = mapped_column(Text)

@@ -14,6 +14,8 @@ PUBLIC = {
     ("GET", "/api/v1/health"),  # the load balancer's check
     ("GET", "/api/v1/config/public"),  # timers and the exchange rate, before login
     ("GET", "/api/v1/districts"),  # the sign-up form's list
+    # The sign-up form's towns: our own list of places, which is public in the repo.
+    ("GET", "/api/v1/places"),
     ("POST", "/api/v1/auth/register/client"),
     ("POST", "/api/v1/auth/register/pharmacy"),
     ("POST", "/api/v1/auth/login"),

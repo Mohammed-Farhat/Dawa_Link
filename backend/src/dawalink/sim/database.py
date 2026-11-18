@@ -81,6 +81,11 @@ def ensure_template(settings: Settings, *, catalog_folder: Path = DEFAULT_FOLDER
     admin = _outside_a_transaction(base.admin)
     try:
         if _exists(admin, TEMPLATE):
+            # A template made before the newest migration would give every run tables
+            # the code no longer matches (found 2026-11-18, with the sixth migration).
+            # Bringing it up to date is nothing to do when it already is.
+            run_migrations(template.migrator)
+            grant_privileges(template.migrator)
             return template
         if not catalog_is_available(catalog_folder):
             raise FileNotFoundError(

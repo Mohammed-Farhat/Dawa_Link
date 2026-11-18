@@ -14,10 +14,12 @@ import base64
 import hashlib
 import hmac
 import secrets
+import string
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import pyotp
 from argon2 import PasswordHasher
@@ -29,13 +31,13 @@ from zxcvbn.frequency_lists import FREQUENCY_LISTS
 
 from dawalink.db.models import (
     ClientProfile,
-    District,
     EmailOutbox,
     EmailVerificationToken,
     Pharmacy,
     Session,
     User,
 )
+from dawalink.domain import client_details
 from dawalink.domain.accounts import ClientStatus
 from dawalink.domain.numbers import (
     ADMIN_SESSION_LIFETIME,
@@ -51,7 +53,7 @@ from dawalink.domain.numbers import (
 )
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import UserRole
-from dawalink.services import audit, pharmacy_profile
+from dawalink.services import audit, clients, pharmacy_profile
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -76,16 +78,42 @@ class LoggedIn:
 # --- Passwords --------------------------------------------------------------------------
 
 
+# R-AU1 (the owner, 2026-11-18): what a password must hold, in the order the form lists
+# it. Letters and symbols are the plain ASCII ones, which is also what Cognito counts
+# (docs/12 §10), so the rule can move there unchanged.
+PASSWORD_PARTS: dict[str, Callable[[str], bool]] = {
+    "length": lambda password: len(password) >= PASSWORD_MIN_CHARS,
+    "capital": lambda password: any(c in string.ascii_uppercase for c in password),
+    "small": lambda password: any(c in string.ascii_lowercase for c in password),
+    "number": lambda password: any(c in string.digits for c in password),
+    "symbol": lambda password: any(c in string.punctuation for c in password),
+}
+
+
+def password_gaps(password: str) -> list[str]:
+    """What this password still lacks, by the names of `PASSWORD_PARTS`."""
+    return [part for part, holds in PASSWORD_PARTS.items() if not holds(password)]
+
+
 def check_strength(password: str) -> None:
-    """R-AU1: at least 10 characters, and not one of the most common passwords."""
-    if len(password) < PASSWORD_MIN_CHARS:
+    """R-AU1: at least 10 characters with a capital letter, a small letter, a number and
+    a symbol, and not one of the most common passwords."""
+    missing = password_gaps(password)
+    if missing:
         raise ServiceError(
             Code.WEAK_PASSWORD,
-            f"Use at least {PASSWORD_MIN_CHARS} characters.",
+            f"Use at least {PASSWORD_MIN_CHARS} characters, with a capital letter, "
+            "a small letter, a number and a symbol.",
             min_chars=PASSWORD_MIN_CHARS,
+            missing=missing,
         )
-    if password.lower() in _COMMON:
-        raise ServiceError(Code.WEAK_PASSWORD, "This password is too common. Choose another.")
+    # A common word dressed up to pass the rule ("Password123!") is still the common word:
+    # the numbers and symbols around it are not counted.
+    word = password.lower()
+    if word in _COMMON or word.strip(string.digits + string.punctuation) in _COMMON:
+        raise ServiceError(
+            Code.WEAK_PASSWORD, "This password is too common. Choose another.", missing=["uncommon"]
+        )
 
 
 def hash_password(password: str) -> str:
@@ -199,17 +227,34 @@ def register_client(
     *,
     email: str,
     password: str,
-    full_name: str,
+    first_name: str,
+    middle_name: str | None,
+    last_name: str,
+    birth_date: date,
     phone: str | None,
-    district_id: int,
+    district_id: int | None = None,
+    home_area_id: int | None = None,
+    home_place: tuple[float, float] | None = None,
     signup_address: bytes,
 ) -> None:
     """A new client account, not yet confirmed. **It answers the same way whether or not
     the email already has an account** (R-AU7): the difference is only in the email sent.
     """
     check_strength(password)
-    if tx.session.get(District, district_id) is None:
-        raise ServiceError(Code.VALIDATION_ERROR, "Unknown district.", field="district_id")
+    # Everything typed is checked before the email is looked at, so a mistake in the form
+    # answers the same way for a known address as for a new one (R-AU7).
+    profile = ClientProfile(user_id=uuid.uuid4())
+    clients.check_details(
+        tx,
+        profile,
+        first=first_name,
+        middle=middle_name,
+        last=last_name,
+        born=birth_date,
+        district_id=district_id,
+        area_id=home_area_id,
+        place=home_place,
+    )
     _check_signup_limit(tx, signup_address)
     # Hashed before we look: registering takes as long for a known email as for a new one.
     password_hash = hash_password(password)
@@ -219,17 +264,19 @@ def register_client(
         _queue(tx, existing.id, ALREADY_REGISTERED, tx.real_now.date().isoformat())
         return
     user = User(
-        id=uuid.uuid4(),
+        id=profile.user_id,
         email=email.strip(),
         password_hash=password_hash,
         role=UserRole.CLIENT.value,
-        full_name=full_name.strip(),
+        full_name=client_details.whole_name(
+            profile.first_name or "", profile.middle_name, profile.last_name or ""
+        ),
         phone=(phone or "").strip() or None,
         signup_ip_hash=signup_address,
     )
     tx.session.add(user)
     tx.session.flush()
-    tx.session.add(ClientProfile(user_id=user.id, district_id=district_id))
+    tx.session.add(profile)
     audit.record(
         tx,
         Actor.CLIENT,

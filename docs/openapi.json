@@ -1552,6 +1552,72 @@
         "title": "ChatMessage",
         "type": "object"
       },
+      "ChatSummary": {
+        "description": "One line of the client's list of chats (D9).",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "last_activity_at": {
+            "format": "date-time",
+            "title": "Last Activity At",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "active",
+          "started_at",
+          "last_activity_at",
+          "title"
+        ],
+        "title": "ChatSummary",
+        "type": "object"
+      },
+      "Chats": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "server_now"
+        ],
+        "title": "Chats",
+        "type": "object"
+      },
       "ClientContact": {
         "description": "Read through one audited endpoint only (A-D3).",
         "properties": {
@@ -1589,6 +1655,18 @@
             "title": "Alternatives Ok Default",
             "type": "boolean"
           },
+          "birth_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
           "district": {
             "anyOf": [
               {
@@ -1599,12 +1677,67 @@
               }
             ]
           },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "home_area": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "home_place_saved": {
+            "title": "Home Place Saved",
+            "type": "boolean"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
           "missed_pickups_30d": {
             "title": "Missed Pickups 30D",
             "type": "integer"
           },
           "missed_pickups_before_pause": {
             "title": "Missed Pickups Before Pause",
+            "type": "integer"
+          },
+          "missed_pickups_pause_days": {
+            "title": "Missed Pickups Pause Days",
+            "type": "integer"
+          },
+          "missed_pickups_window_days": {
+            "title": "Missed Pickups Window Days",
             "type": "integer"
           },
           "paused_until": {
@@ -1634,9 +1767,17 @@
           "status",
           "paused_until",
           "district",
+          "home_area",
+          "home_place_saved",
+          "first_name",
+          "middle_name",
+          "last_name",
+          "birth_date",
           "alternatives_ok_default",
           "missed_pickups_30d",
-          "missed_pickups_before_pause"
+          "missed_pickups_before_pause",
+          "missed_pickups_window_days",
+          "missed_pickups_pause_days"
         ],
         "title": "ClientState",
         "type": "object"
@@ -2336,6 +2477,25 @@
         "title": "Health",
         "type": "object"
       },
+      "HomePlace": {
+        "description": "The client's own saved place, as they put it (rounded to about 100 m).",
+        "properties": {
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "HomePlace",
+        "type": "object"
+      },
       "Ingredient": {
         "properties": {
           "name": {
@@ -2544,6 +2704,7 @@
               "district",
               "area",
               "profile",
+              "place",
               "none"
             ],
             "title": "Source",
@@ -2710,6 +2871,48 @@
         "title": "Me",
         "type": "object"
       },
+      "MedicineGroup": {
+        "description": "One medicine of a search by name: a catalog product under its own name.",
+        "properties": {
+          "by_ingredient": {
+            "title": "By Ingredient",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Listing"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "no_match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoMatch"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "total_found": {
+            "title": "Total Found",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product",
+          "by_ingredient",
+          "items",
+          "total_found",
+          "no_match"
+        ],
+        "title": "MedicineGroup",
+        "type": "object"
+      },
       "Message": {
         "description": "A plain sentence, for the answers that say nothing else.",
         "properties": {
@@ -2740,6 +2943,10 @@
       "MessagesPage": {
         "description": "What the page asks for every few seconds while it is open (API-D7).",
         "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
           "busy": {
             "title": "Busy",
             "type": "boolean"
@@ -2796,6 +3003,7 @@
           "messages",
           "last_seq",
           "busy",
+          "archived",
           "location",
           "server_now"
         ],
@@ -2857,6 +3065,54 @@
           "currency"
         ],
         "title": "MoneyIn",
+        "type": "object"
+      },
+      "NameSearchResult": {
+        "properties": {
+          "closest": {
+            "title": "Closest",
+            "type": "boolean"
+          },
+          "did_you_mean": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Did You Mean",
+            "type": "array"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/MedicineGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationSummary"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "upcoming_days": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Upcoming Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "groups",
+          "closest",
+          "did_you_mean",
+          "location",
+          "upcoming_days",
+          "server_now"
+        ],
+        "title": "NameSearchResult",
         "type": "object"
       },
       "NewWatch": {
@@ -3713,6 +3969,25 @@
         "title": "PinIn",
         "type": "object"
       },
+      "Place": {
+        "description": "A town or a neighbourhood of our own list of places (docs/04 R-S2).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Place",
+        "type": "object"
+      },
       "PrivateItem": {
         "properties": {
           "batch": {
@@ -3933,6 +4208,7 @@
       },
       "ProfileChange": {
         "additionalProperties": false,
+        "description": "Only what is sent changes. The three name parts are sent together; so are the\ndistrict and the town, because a town belongs to its district.",
         "properties": {
           "alternatives_ok_default": {
             "anyOf": [
@@ -3944,6 +4220,18 @@
               }
             ],
             "title": "Alternatives Ok Default"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
           },
           "district_id": {
             "anyOf": [
@@ -3957,6 +4245,55 @@
               }
             ],
             "title": "District Id"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "home_area_id": {
+            "anyOf": [
+              {
+                "maximum": 32767.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Area Id"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
           },
           "phone": {
             "anyOf": [
@@ -4069,11 +4406,23 @@
             "title": "Accept Terms",
             "type": "boolean"
           },
+          "birth_date": {
+            "format": "date",
+            "title": "Birth Date",
+            "type": "string"
+          },
           "district_id": {
-            "maximum": 32767.0,
-            "minimum": 1.0,
-            "title": "District Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "maximum": 32767.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Id"
           },
           "email": {
             "maxLength": 320,
@@ -4081,11 +4430,52 @@
             "title": "Email",
             "type": "string"
           },
-          "full_name": {
-            "maxLength": 80,
-            "minLength": 2,
-            "title": "Full Name",
+          "first_name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "First Name",
             "type": "string"
+          },
+          "home_area_id": {
+            "anyOf": [
+              {
+                "maximum": 32767.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Area Id"
+          },
+          "home_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PinIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Last Name",
+            "type": "string"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
           },
           "password": {
             "maxLength": 200,
@@ -4109,8 +4499,9 @@
         "required": [
           "email",
           "password",
-          "full_name",
-          "district_id",
+          "first_name",
+          "last_name",
+          "birth_date",
           "accept_terms"
         ],
         "title": "RegisterClient",
@@ -4838,6 +5229,96 @@
         "title": "Resolve",
         "type": "object"
       },
+      "SearchByName": {
+        "additionalProperties": false,
+        "description": "A search by a typed name: every medicine it stands for, with its boxes in stock.\nA POST for the same reason as `SearchListings`: the location travels in the body.",
+        "properties": {
+          "days_of_use": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Of Use"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_foot": {
+            "default": false,
+            "title": "On Foot",
+            "type": "boolean"
+          },
+          "open_now": {
+            "default": false,
+            "title": "Open Now",
+            "type": "boolean"
+          },
+          "per_medicine": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Per Medicine",
+            "type": "integer"
+          },
+          "pickup_day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Day"
+          },
+          "q": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "sort": {
+            "default": "best",
+            "enum": [
+              "best",
+              "nearest",
+              "cheapest",
+              "latest_expiry"
+            ],
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "SearchByName",
+        "type": "object"
+      },
       "SearchListings": {
         "additionalProperties": false,
         "description": "A search. **It is a POST so that the client's location travels in the body**, never\nin an address that a browser's history or a server's log keeps.",
@@ -4892,6 +5373,11 @@
           "on_foot": {
             "default": false,
             "title": "On Foot",
+            "type": "boolean"
+          },
+          "open_now": {
+            "default": false,
+            "title": "Open Now",
             "type": "boolean"
           },
           "pickup_day": {
@@ -4999,6 +5485,40 @@
           "server_now"
         ],
         "title": "SearchResult",
+        "type": "object"
+      },
+      "Searched": {
+        "additionalProperties": false,
+        "description": "A name the client searched, to keep in their list of last searches.",
+        "properties": {
+          "q": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "Searched",
+        "type": "object"
+      },
+      "Searches": {
+        "description": "The client's last searches, the newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Searches",
         "type": "object"
       },
       "SelectableItem": {
@@ -9148,6 +9668,56 @@
         ]
       }
     },
+    "/api/v1/conversations/chats": {
+      "get": {
+        "description": "The client's own chats, the newest first: the one they write in now and the\nearlier ones, which are kept 30 days (D9). Reading one is `GET …/messages`.",
+        "operationId": "list_chats",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Chats",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
     "/api/v1/conversations/new-chat": {
       "post": {
         "description": "Starts a fresh chat. The old one is archived, and kept 30 days (R-RET).",
@@ -9606,6 +10176,66 @@
         ]
       }
     },
+    "/api/v1/listings/search-by-name": {
+      "post": {
+        "description": "Everything in stock for a typed name, grouped by medicine (CS-6).\n\n\"panadol\" answers with every Panadol a pharmacy lists, each under its own name,\nstrength and form; a misspelled name answers with the closest one and says so.\n**Still only what was typed** (R-S4): a medicine is here because its name, or what it\ncontains, matches the words, never because it could replace another one.",
+        "operationId": "search_by_name",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchByName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NameSearchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search By Name",
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/api/v1/listings/{listing_id}/view": {
       "post": {
         "description": "One box and its pharmacy, for their own page (CS-7). A box that stopped being\nvisible answers `NOT_FOUND`.",
@@ -9673,6 +10303,161 @@
         "summary": "View Listing",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/me/home-place": {
+      "delete": {
+        "operationId": "forget_home_place",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forget Home Place",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "get": {
+        "description": "The place the caller saved, so their own map can show it. It is sent to nobody\nelse, and never in an address.",
+        "operationId": "read_home_place",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomePlace"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Home Place",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "put": {
+        "description": "Saves or moves the caller's home place (CS-13). Rounded before it is stored; a new\nplace can start a paid routing call, so it counts for the hourly limit (N-47).",
+        "operationId": "save_home_place",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Home Place",
+        "tags": [
+          "accounts"
         ]
       }
     },
@@ -9780,6 +10565,162 @@
         "summary": "Change Profile",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/api/v1/me/searches": {
+      "delete": {
+        "description": "[Clear]: the caller's whole list is deleted.",
+        "operationId": "clear_searches",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Searches"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Searches",
+        "tags": [
+          "search"
+        ]
+      },
+      "get": {
+        "description": "The caller's last searches, the newest first (CS-6). Nobody else reads them.",
+        "operationId": "last_searches",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Searches"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Last Searches",
+        "tags": [
+          "search"
+        ]
+      },
+      "post": {
+        "description": "Keeps a name the client searched. The page sends it when a search led somewhere (a\nresult was opened, or Enter was pressed), not for every letter typed. A name that is\nnot a medicine's name in shape is quietly left out.",
+        "operationId": "keep_a_search",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Searched"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Searches"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep A Search",
+        "tags": [
+          "search"
         ]
       }
     },
@@ -11414,6 +12355,55 @@
         "summary": "Mark Picked Up",
         "tags": [
           "pharmacy"
+        ]
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "description": "The towns and neighbourhoods of a district, from our own list of places: what a\nclient chooses a home town from. Public, like the list of districts.\n\nOnly the places whose name is written in Latin letters: the map gives some villages a\nname in Arabic script only, and one list in two alphabets reads as a mistake (the\nowner, 2026-11-18). Those places can still be named to the assistant.",
+        "operationId": "places_of_a_district",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "district_id",
+            "required": true,
+            "schema": {
+              "maximum": 32767,
+              "minimum": 1,
+              "title": "District Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Place"
+                  },
+                  "title": "Response Places Of A District",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Places Of A District",
+        "tags": [
+          "accounts"
         ]
       }
     },

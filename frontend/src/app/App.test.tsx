@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { strings } from '../strings/en'
 import {
@@ -18,6 +18,15 @@ import {
 import { AppRoutes } from './App'
 
 const none = { items: [], next_cursor: null, server_now: CONFIG.server_now }
+
+// The real map needs a browser that draws. Here it is a button that puts the pin.
+vi.mock('../features/pharmacy/PinMap', () => ({
+  default: ({ onChange }: { onChange: (pin: { lat: number; lon: number }) => void }) => (
+    <button type="button" onClick={() => onChange({ lat: 33.8959, lon: 35.4828 })}>
+      put the pin
+    </button>
+  ),
+}))
 
 describe('Who sees what', () => {
   it('shows the welcome page to a visitor, with no stock on it', async () => {
@@ -102,17 +111,28 @@ describe('Signing up and logging in', () => {
   it('creates an account and says to check the email', async () => {
     const api = pretendApi({
       'GET /api/v1/districts': DISTRICTS,
+      'GET /api/v1/places': [
+        { id: 40, name: 'Antelias' },
+        { id: 41, name: 'Jdeideh' },
+      ],
       'POST /api/v1/auth/register/client': answer(202, { message: 'ok' }),
     })
     const s = strings.signUp
     renderApp(<AppRoutes />, { path: '/signup' })
     const user = userEvent.setup()
 
-    await user.type(await screen.findByLabelText(s.fullName), 'Nour Khoury')
+    await user.type(await screen.findByLabelText(s.firstName), 'Nour')
+    await user.type(screen.getByLabelText(s.lastName), 'Khoury')
+    await user.type(screen.getByLabelText(s.birthDate), '1990-05-17')
     await user.type(screen.getByLabelText(s.email), 'nour@example.com')
-    await user.type(screen.getByLabelText(s.password), 'a long enough passphrase')
-    await screen.findByRole('option', { name: 'Matn' })
+    await user.type(screen.getByLabelText(s.password), 'A long enough passphrase, 1')
+    // Where the client lives, by area: three lists that follow each other.
+    await user.click(screen.getByRole('radio', { name: strings.where.area }))
+    await screen.findByRole('option', { name: 'Mount Lebanon' })
+    await user.selectOptions(screen.getByLabelText(s.governorate), 'Mount Lebanon')
     await user.selectOptions(screen.getByLabelText(s.district), 'Matn')
+    await screen.findByRole('option', { name: 'Antelias' })
+    await user.selectOptions(screen.getByLabelText(s.town), 'Antelias')
     await user.click(screen.getByLabelText(s.terms))
     await user.click(screen.getByRole('button', { name: s.submit }))
 
@@ -120,12 +140,62 @@ describe('Signing up and logging in', () => {
     expect(screen.getByText(strings.checkEmail.body('nour@example.com'))).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/auth/register/client')[0].body).toEqual({
       email: 'nour@example.com',
-      password: 'a long enough passphrase',
-      full_name: 'Nour Khoury',
+      password: 'A long enough passphrase, 1',
+      first_name: 'Nour',
+      middle_name: null,
+      last_name: 'Khoury',
+      birth_date: '1990-05-17',
       phone: null,
       district_id: 2,
+      home_area_id: 40,
       accept_terms: true,
     })
+    expect(api.sent('GET', '/api/v1/places')[0].path).toContain('district_id=2')
+  })
+
+  it('takes a place on the map instead of an area', async () => {
+    const api = pretendApi({
+      'GET /api/v1/districts': DISTRICTS,
+      'POST /api/v1/auth/register/client': answer(202, { message: 'ok' }),
+    })
+    const s = strings.signUp
+    renderApp(<AppRoutes />, { path: '/signup' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.firstName), 'Nour')
+    await user.type(screen.getByLabelText(s.lastName), 'Khoury')
+    await user.type(screen.getByLabelText(s.birthDate), '1990-05-17')
+    await user.type(screen.getByLabelText(s.email), 'nour@example.com')
+    await user.type(screen.getByLabelText(s.password), 'A long enough passphrase, 1')
+    // The map is the first way offered: no governorate, district or town to fill.
+    expect(screen.queryByLabelText(s.governorate)).not.toBeInTheDocument()
+    // The map itself is not downloaded until the client asks for it (docs/10 §4.3).
+    expect(screen.queryByRole('button', { name: 'put the pin' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: strings.where.openMap }))
+    await user.click(await screen.findByRole('button', { name: 'put the pin' }))
+    await user.click(screen.getByLabelText(s.terms))
+    await user.click(screen.getByRole('button', { name: s.submit }))
+
+    expect(await screen.findByRole('heading', { name: strings.checkEmail.title })).toBeInTheDocument()
+    const sent = api.sent('POST', '/api/v1/auth/register/client')[0].body as Record<string, unknown>
+    expect(sent.home_place).toEqual({ lat: 33.8959, lon: 35.4828 })
+    expect('district_id' in sent).toBe(false)
+    // The place is in the body of a request, never in an address.
+    expect(api.calls.every((call) => !/lat=|lon=/.test(call.path))).toBe(true)
+  })
+
+  it('ticks each part of the password rule as it is typed', async () => {
+    pretendApi({ 'GET /api/v1/districts': DISTRICTS })
+    const rules = strings.password.rules
+    renderApp(<AppRoutes />, { path: '/signup' })
+    const user = userEvent.setup()
+    const met = (rule: string) => screen.getByText(rule).closest('li')?.getAttribute('data-met')
+
+    await user.type(await screen.findByLabelText(strings.signUp.password), 'abc')
+    expect([met(rules.small), met(rules.length), met(rules.capital)]).toEqual(['true', 'false', 'false'])
+
+    await user.type(screen.getByLabelText(strings.signUp.password), 'DEFGH12345!')
+    for (const rule of Object.values(rules)) expect(met(rule)).toBe('true')
   })
 
   it('says what is missing next to each field, and sends nothing', async () => {
@@ -135,9 +205,11 @@ describe('Signing up and logging in', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: s.submit }))
 
-    for (const problem of [s.nameProblem, s.emailProblem, s.districtProblem, s.termsProblem]) {
+    for (const problem of [s.birthProblem, s.emailProblem, strings.where.problem, s.termsProblem]) {
       expect(screen.getByText(problem)).toBeInTheDocument()
     }
+    // The first and the last name each say so.
+    expect(screen.getAllByText(s.partProblem)).toHaveLength(2)
     expect(api.sent('POST', '/api/v1/auth/register/client')).toEqual([])
     expect(await accessibilityProblems(container)).toEqual([])
   })

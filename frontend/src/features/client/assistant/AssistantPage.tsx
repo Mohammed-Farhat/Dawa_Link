@@ -1,3 +1,4 @@
+import { Modal } from '@mantine/core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -5,9 +6,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { type ChatEvent, sendMessage } from '../../../api/chatStream'
 import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/client'
 import { useSession } from '../../../api/session'
-import { BackIcon, PinIcon, PlusIcon, SendIcon } from '../../../components/icons'
-import { Banner, Screen } from '../../../components/layout'
-import { beirutHour, dayAndClock } from '../../../format'
+import { BackIcon, HistoryIcon, PinIcon, PlusIcon, SendIcon } from '../../../components/icons'
+import { Banner, Screen, Shell } from '../../../components/layout'
+import { useWide } from '../../../components/wide'
+import { beirutHour, dayAndClock, dayWord } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { usePublicConfig } from '../data'
 import { UnverifiedBanner } from '../HomePage'
@@ -31,18 +33,24 @@ function wait(ms: number) {
 function locationLabel(location: Schemas['LocationSummary']): string | null {
   if (location.source === 'none') return null
   if (location.source === 'shared') return s.location.yours
+  if (location.source === 'place') return s.location.savedPlace
   if (location.source === 'profile' && location.label) return s.location.home(location.label)
   return location.label ?? null
 }
 
 /** CS-9: the assistant. It needs a confirmed email (R-AU5).
  *
- * `embedded`: the same assistant beside a page on a wide screen. It then has no back
- * button and no page title of its own, and its waiting states are plain lines: a screen
- * inside the panel would bring a second menu, and a panel of its own. */
-export function AssistantPage({ embedded = false }: { embedded?: boolean }) {
+ * The assistant has a page of its own, opened from [Ask DawaLink] (the owner, 2026-11-18,
+ * BLD-D42: no panel beside the other pages). On it the client also finds their earlier
+ * chats (D9: kept 30 days): a list beside the conversation on a computer, behind a
+ * button on a phone. An earlier chat is read, never continued. */
+export function AssistantPage() {
   const { me } = useSession()
-  const Frame = embedded ? Plain : Screen
+  const wide = useWide()
+  const Frame = Screen
+  // The earlier chat being read, or null for the chat the client writes in now.
+  const [reading, setReading] = useState<string | null>(null)
+  const [listOpen, setListOpen] = useState(false)
   const verified = Boolean(me?.email_verified)
   const chat = useQuery({
     queryKey: ['active-chat'],
@@ -77,17 +85,101 @@ export function AssistantPage({ embedded = false }: { embedded?: boolean }) {
       </Frame>
     )
   }
-  return (
-    <Conversation
-      key={chat.data.conversation_id}
-      conversationId={chat.data.conversation_id}
-      embedded={embedded}
+  const current = chat.data.conversation_id
+  const shown = reading ?? current
+  const list = (
+    <ChatList
+      current={current}
+      shown={shown}
+      onOpen={(id) => {
+        setReading(id === current ? null : id)
+        setListOpen(false)
+      }}
     />
+  )
+  const conversation = (
+    <Conversation
+      key={shown}
+      conversationId={shown}
+      framed={wide}
+      earlier={reading !== null ? { onBack: () => setReading(null) } : undefined}
+      onNewChat={() => setReading(null)}
+      tools={
+        wide ? null : (
+          <button
+            type="button"
+            className="chat__tool"
+            aria-label={s.history}
+            onClick={() => setListOpen(true)}
+          >
+            <HistoryIcon small />
+          </button>
+        )
+      }
+    />
+  )
+  if (wide) {
+    return (
+      <Shell>
+        <aside className="wide__chats" aria-label={s.chats}>
+          {list}
+        </aside>
+        <div className="wide__chat">{conversation}</div>
+      </Shell>
+    )
+  }
+  return (
+    <>
+      {conversation}
+      <Modal opened={listOpen} onClose={() => setListOpen(false)} title={s.chats} centered radius="xl">
+        {list}
+      </Modal>
+    </>
   )
 }
 
-function Plain({ children }: { children: ReactNode }) {
-  return <div className="wide__note">{children}</div>
+/** The client's chats, the newest first: the one they write in, then the earlier ones. */
+function ChatList({
+  current,
+  shown,
+  onOpen,
+}: {
+  current: string
+  shown: string
+  onOpen: (conversationId: string) => void
+}) {
+  const chats = useQuery({
+    queryKey: ['chats', current],
+    queryFn: () => unwrap(api.GET('/api/v1/conversations/chats')),
+  })
+  const items = chats.data?.items ?? []
+  return (
+    <>
+      <h2 className="section-title">{s.chats}</h2>
+      <ul className="chat-list">
+        {items.map((chat) => (
+          <li key={chat.conversation_id}>
+            <button
+              type="button"
+              className="chat-list__item"
+              aria-current={chat.conversation_id === shown ? 'true' : undefined}
+              onClick={() => onOpen(chat.conversation_id)}
+            >
+              <span className="chat-list__title" dir="auto">
+                {chat.title ?? s.untitled}
+              </span>
+              <span className="hint">
+                {chat.active
+                  ? s.current
+                  : dayWord(chat.last_activity_at, chats.data?.server_now ?? chat.last_activity_at)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <span className="hint">{s.chatsHint}</span>
+    </>
+  )
 }
 
 /**
@@ -116,14 +208,24 @@ export type ThreadFrame = {
 export function Conversation({
   conversationId,
   thread,
-  embedded = false,
+  framed = false,
+  earlier,
+  onNewChat,
+  tools,
 }: {
   conversationId: string
   thread?: ThreadFrame
-  /** Beside a page on a wide screen: no back button, and the page keeps the one title. */
-  embedded?: boolean
+  /** Under the top bar of a computer: the bar is the way back. */
+  framed?: boolean
+  /** An earlier chat: it is read, and this is the way back to the current one. */
+  earlier?: { onBack: () => void }
+  onNewChat?: () => void
+  /** More buttons for the header: the list of chats, on a phone. */
+  tools?: ReactNode
 }) {
   const queryClient = useQueryClient()
+  // The chat's own page on a phone.
+  const compact = !thread && !framed
   const navigate = useNavigate()
   const config = usePublicConfig()
   const pollMs = (config.data?.poll_every_s ?? 3) * 1000
@@ -244,6 +346,8 @@ export function Conversation({
       await page.refetch()
       setPending(null)
       setProgress(null)
+      // The list of chats names a chat by its first message.
+      if (!thread) void queryClient.invalidateQueries({ queryKey: ['chats'] })
     }
   }
 
@@ -282,36 +386,37 @@ export function Conversation({
 
   async function startNewChat() {
     const fresh = await unwrap(api.POST('/api/v1/conversations/new-chat')).catch(() => null)
-    if (fresh) queryClient.setQueryData(['active-chat'], fresh)
+    if (!fresh) return
+    queryClient.setQueryData(['active-chat'], fresh)
+    onNewChat?.()
   }
 
   return (
     <div className="chat">
       <header className="chat__header">
-        {!embedded && (
+        {!(framed && !thread) && (
           <Link to={thread?.backTo ?? '/'} className="round-button" aria-label={strings.common.back}>
             <BackIcon />
           </Link>
         )}
-        <span className="chat__mark" aria-hidden="true">
-          D
-        </span>
+        {/* On a phone the chat's header also holds the list of chats and [New chat]: the
+            mark and the second line give them the room. */}
+        {!compact && (
+          <span className="chat__mark" aria-hidden="true">
+            D
+          </span>
+        )}
         <div className="chat__names">
-          {embedded ? (
-            <h2 className="chat__title">{s.title}</h2>
-          ) : (
-            <h1 className="chat__title">{thread?.title ?? s.title}</h1>
+          <h1 className="chat__title">{thread?.title ?? s.title}</h1>
+          {!compact && (
+            <span className="chat__subtitle">{thread?.subtitle ?? s.subtitle}</span>
           )}
-          <span className="chat__subtitle">{thread?.subtitle ?? s.subtitle}</span>
         </div>
+        {!thread && tools}
         {!thread && (
-          <button
-            type="button"
-            className="round-button round-button--grey"
-            aria-label={s.newChat}
-            onClick={() => void startNewChat()}
-          >
+          <button type="button" className="chat__new" onClick={() => void startNewChat()}>
             <PlusIcon small />
+            {s.newChat}
           </button>
         )}
       </header>
@@ -319,7 +424,7 @@ export function Conversation({
       {/* Always visible, and it can't be dismissed (UI-D14). */}
       <div className="chat__notice">
         <span>{s.aiNotice}</span>
-        {page.data && !thread && (
+        {page.data && !thread && !earlier && (
           <button type="button" className="chat__location" onClick={() => setChoosingPlace(true)}>
             <PinIcon small />
             {s.location.button(locationLabel(page.data.location))}
@@ -337,7 +442,7 @@ export function Conversation({
         {night && config.data && <Banner tone="grey">{strings.banner.night(config.data.request_hours_start)}</Banner>}
         {page.isError && <Banner tone="amber">{strings.banner.offline}</Banner>}
         {thread?.above}
-        {page.isSuccess && messages.length === 0 && pending === null && !thread && (
+        {page.isSuccess && messages.length === 0 && pending === null && !thread && !earlier && (
           <div className="empty">
             <span>{s.empty}</span>
             <div className="chips">
@@ -366,7 +471,7 @@ export function Conversation({
         )}
         {working && <div className="progress-line">{progress ?? s.working}</div>}
 
-        {!working && last?.author === 'agent' && last.quick_replies.length > 0 && (
+        {!working && !earlier && last?.author === 'agent' && last.quick_replies.length > 0 && (
           <div className="chips" role="group" aria-label={s.quickReplies}>
             {last.quick_replies.map((chip) => (
               <button key={chip} type="button" className="chip" dir="auto" onClick={() => void send(chip)}>
@@ -383,7 +488,20 @@ export function Conversation({
         <div ref={end} />
       </div>
 
-      <form className="chat__form" onSubmit={submit} hidden={thread ? !thread.canWrite : false}>
+      {/* An earlier chat is read: where the box to write in would be, it says so. */}
+      {earlier && (
+        <div className="chat__form chat__closed" role="status">
+          <span>{s.earlier}</span>
+          <button type="button" className="chat__new" onClick={earlier.onBack}>
+            {s.backToCurrent}
+          </button>
+        </div>
+      )}
+      <form
+        className="chat__form"
+        onSubmit={submit}
+        hidden={thread ? !thread.canWrite : Boolean(earlier) || Boolean(page.data?.archived)}
+      >
         <label htmlFor="chat-message" className="sr-only">
           {s.messageLabel}
         </label>

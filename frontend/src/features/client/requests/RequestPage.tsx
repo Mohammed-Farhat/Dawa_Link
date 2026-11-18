@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../../api/client'
-import { Banner } from '../../../components/layout'
+import { Banner, Screen, Shell } from '../../../components/layout'
+import { useWide } from '../../../components/wide'
 import { dayAndClock } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { Conversation } from '../assistant/AssistantPage'
@@ -45,6 +46,7 @@ const TONE: Record<Item['state'], string> = {
  * for up to six hours, and what it does must appear without a reload.
  */
 export function RequestPage() {
+  const wide = useWide()
   const { id = '' } = useParams()
   const found = useQuery({
     queryKey: ['request', id],
@@ -56,26 +58,26 @@ export function RequestPage() {
 
   if (found.isError) {
     return (
-      <main className="screen screen--plain">
+      <Screen plain narrow>
         <Banner tone="red" alert>
           {r.notFound}
         </Banner>
-        <Link to="/" className="pill-button pill-button--grey">
+        <Link to="/" className="pill-button pill-button--grey" style={{ alignSelf: 'flex-start' }}>
           {strings.notFound.back}
         </Link>
-      </main>
+      </Screen>
     )
   }
   if (!found.data) {
     return (
-      <main className="screen screen--plain">
+      <Screen plain narrow>
         <p className="soft">{strings.common.loading}</p>
-      </main>
+      </Screen>
     )
   }
   const request = found.data
   if (!request.conversation_id) return <Tracker request={request} />
-  return (
+  const thread = (
     <Conversation
       conversationId={request.conversation_id}
       thread={{
@@ -89,6 +91,12 @@ export function RequestPage() {
         canWrite: request.state === 'OPEN',
       }}
     />
+  )
+  if (!wide) return thread
+  return (
+    <Shell>
+      <div className="wide__chat">{thread}</div>
+    </Shell>
   )
 }
 

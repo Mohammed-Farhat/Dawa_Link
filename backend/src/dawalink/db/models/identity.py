@@ -1,12 +1,13 @@
 """Users, logins, districts and pharmacies (docs/05 §3.1)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Date,
     Index,
     LargeBinary,
     Numeric,
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from dawalink.db.base import Base
 from dawalink.db.columns import (
+    BigKey,
     CreatedAt,
     Moment,
     UpdatedAt,
@@ -99,6 +101,7 @@ class ClientProfile(Base):
     __table_args__ = (
         values_check("status", ClientStatus),
         check("paused_has_an_end", "status <> 'PAUSED' OR paused_until IS NOT NULL"),
+        check("home_place_is_whole", "(home_lat IS NULL) = (home_lon IS NULL)"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"), primary_key=True)
@@ -107,6 +110,35 @@ class ClientProfile(Base):
     district_id: Mapped[int | None] = mapped_column(SmallInteger, references("districts.id"))
     alternatives_ok_default: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     status_reason: Mapped[str | None] = mapped_column(Text)
+    # The name in parts (BLD-D40). `users.full_name` is these in one line, written by the
+    # one function that changes a client's name (services/clients.py).
+    first_name: Mapped[str | None] = mapped_column(Text)
+    middle_name: Mapped[str | None] = mapped_column(Text)
+    last_name: Mapped[str | None] = mapped_column(Text)
+    # No rule reads it, and it is never sent to the LLM, a pharmacy or an admin.
+    birth_date: Mapped[date | None] = mapped_column(Date)
+    # The home town, from our own list of places; always inside `district_id`.
+    home_area_id: Mapped[int | None] = mapped_column(SmallInteger, references("areas.id"))
+    # A place the client put on a map, rounded to about 100 m like every location we
+    # keep (N-43). Searches and the agent's tools start from it; it never leaves code.
+    home_lat: Mapped[Decimal | None] = mapped_column(Numeric(7, 3))
+    home_lon: Mapped[Decimal | None] = mapped_column(Numeric(7, 3))
+
+
+class SearchHistory(Base):
+    """What a client searched lately, to search it again in one tap (BLD-D42). Read only
+    by its client; purged after 30 days."""
+
+    __tablename__ = "search_history"
+    __table_args__ = (
+        Index("ix_search_history_client", "client_id", "searched_at"),
+        check("query_not_empty", "length(query) BETWEEN 2 AND 60"),
+    )
+
+    id: Mapped[BigKey]
+    client_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"))
+    query: Mapped[str] = mapped_column(Text)
+    searched_at: Mapped[datetime] = mapped_column(Moment)
 
 
 class Session(Base):

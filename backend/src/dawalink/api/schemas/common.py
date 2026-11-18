@@ -57,6 +57,7 @@ Lbp = Annotated[int, Field(ge=0, le=MAX_LBP)]
 # A district's number as a form sends it. The range is the column's own: a larger number
 # used to reach the database and come back as a server error (found on 2026-11-16).
 DistrictId = Annotated[int, Field(ge=1, le=32_767)]
+AreaId = Annotated[int, Field(ge=1, le=32_767)]
 
 
 class Message(Out):

@@ -109,7 +109,12 @@ class Scene:
                 request_id=row.request_id,
                 state=CaseState(),
                 routing=self.routing,
-                clean=lambda text: redact(text, Identity(**PERSON)).text,
+                clean=lambda text: (
+                    redact(
+                        text,
+                        Identity(PERSON["full_name"], PERSON["email"], PERSON["phone"]),
+                    ).text
+                ),
                 key=f"{conversation_id}:test",
             )
         return self.turns[conversation_id]

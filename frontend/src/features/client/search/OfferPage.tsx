@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/client'
 import { BackIcon, MapIcon, PhoneIcon, ShieldIcon } from '../../../components/icons'
-import { Banner } from '../../../components/layout'
+import { Banner, Screen } from '../../../components/layout'
 import { calendarDate, dayWord, directionsUrl, lbp, plainAmount } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { placeBody, useSearchChoices } from './choices'
@@ -39,19 +39,19 @@ export function OfferPage() {
 
   if (found.isError) {
     return (
-      <main className="screen screen--plain">
+      <Screen plain narrow>
         <Banner tone="amber">{o.gone}</Banner>
         <Link to="/search" className="pill-button pill-button--grey">
           {o.backToSearch}
         </Link>
-      </main>
+      </Screen>
     )
   }
   if (!found.data) {
     return (
-      <main className="screen screen--plain">
+      <Screen plain narrow>
         <p className="soft">{strings.common.loading}</p>
-      </main>
+      </Screen>
     )
   }
 
@@ -59,9 +59,11 @@ export function OfferPage() {
   const { pharmacy, product } = listing
   const canReserve = listing.pickup_days_allowed.length > 0
   return (
-    <main className="screen screen--plain" style={{ paddingBottom: 110 }}>
+    <Screen plain narrow>
       <Link
-        to={`/search?product=${product.id}`}
+        // Back to what the client was looking at: the results of the name they typed, or
+        // this medicine's own page.
+        to={choices.name.trim().length >= 2 ? '/search' : `/search?product=${product.id}`}
         className="round-button"
         aria-label={strings.common.back}
       >
@@ -125,6 +127,7 @@ export function OfferPage() {
         <span className="hint">{o.holds(pharmacy.pickup_days)}</span>
       </section>
 
+      <div className="pinned-space" aria-hidden="true" />
       <div className="pinned">
         <button type="button" className="pill-button pill-button--wide" onClick={() => setReserving(true)}>
           {o.reserve}
@@ -134,7 +137,7 @@ export function OfferPage() {
       <Modal opened={reserving} onClose={() => setReserving(false)} title={r.title} centered radius="xl">
         <ReserveSheet listing={listing} now={now} canReserve={canReserve} />
       </Modal>
-    </main>
+    </Screen>
   )
 }
 

@@ -32,7 +32,10 @@ def _password() -> str:
     given = os.environ.get("ADMIN_PASSWORD")
     if given:
         return given
-    first = getpass.getpass("Password (10 characters or more): ")
+    first = getpass.getpass(
+        "Password (10 characters or more, with a capital letter, a small letter, "
+        "a number and a symbol): "
+    )
     if first != getpass.getpass("The same password again: "):
         raise SystemExit("The two passwords are different. Nothing was created.")
     return first

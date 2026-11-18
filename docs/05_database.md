@@ -1,6 +1,6 @@
 # DawaLink: Database Design
 
-**Version:** v3.9 · **Date:** 2026-11-17
+**Version:** v3.11 · **Date:** 2026-11-18
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
 **Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
@@ -24,7 +24,7 @@
 
 ## In short
 
-- **35 tables in 7 areas:**
+- **36 tables in 7 areas:**
   - identity;
   - catalog;
   - inventory;
@@ -142,6 +142,12 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | district_id | smallint | FK districts |
 | alternatives_ok_default | boolean | default false. "Tell me about other brands" (R-C10) |
 | status_reason | text | admin reason for suspend or lift |
+| first_name, middle_name, last_name | text | The name in parts (BLD-D40). `users.full_name` is the same name in one line, written by the one function that changes a client's name |
+| birth_date | date | Read by no rule; never sent to the LLM, a pharmacy or an admin |
+| home_area_id | smallint | FK areas: the home town, always inside `district_id` (checked by the service) |
+| home_lat, home_lon | numeric(7,3) | A place the client saved on a map, rounded to about 100 m. `CHECK ((home_lat IS NULL) = (home_lon IS NULL))` |
+
+**`search_history`** (BLD-D42): id bigint PK · client_id FK users · `query` text, `CHECK (length(query) BETWEEN 2 AND 60)` · searched_at (the app clock). Index (client_id, searched_at). A client's last searches, to search one again in a tap: read only by its client, never by the agent, a pharmacy or an admin's screen. The service keeps a name only if the catalog knows a medicine by it, so nothing else a client types in the box is stored. The same name again replaces its row; 20 rows per client at most (`04` N-53).
 
 **`sessions`** (`04` R-AU3): id uuid PK · user_id FK · `token_hash` bytea U (the browser holds only the random token) · created_at · expires_at (7 days; admins 12 h) · last_seen_at · revoked_at.
 - Index `(user_id) WHERE revoked_at IS NULL`, so logout, a password change or a suspension can revoke all of a user's sessions at once.
@@ -568,7 +574,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
 | Email | The address is resolved at send time, not copied into the outbox |
 | Secrets | Password hashes (argon2id), session and token hashes, and the admins' TOTP secrets encrypted with a key from Secrets Manager. No plain-text secrets in tables. |
-| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours and claim skips.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims. **Since 2026-11-17 (the owner's Q49)** it also deletes a pharmacy registration whose email was never confirmed: for that it may delete rows of `users`, `pharmacies`, `pharmacy_hours` and `email_outbox`, and read **only the columns that find such a registration**, never an email, a name, a phone, a password hash or a licence. A client, or a pharmacy with stock or reservations, can't be deleted by it: the rows that hang on them are in tables it may not touch. Nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
+| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours, claim skips and a client's own search history.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims. **Since 2026-11-17 (the owner's Q49)** it also deletes a pharmacy registration whose email was never confirmed: for that it may delete rows of `users`, `pharmacies`, `pharmacy_hours` and `email_outbox`, and read **only the columns that find such a registration**, never an email, a name, a phone, a password hash or a licence. A client, or a pharmacy with stock or reservations, can't be deleted by it: the rows that hang on them are in tables it may not touch. Nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
 | At rest / in transit | RDS encryption at rest; TLS required for connections; credentials in Secrets Manager |
 
 ---
@@ -584,6 +590,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Sessions and verification tokens | Deleted after expiry or revocation |
 | A pharmacy registration whose email was never confirmed | Deleted with its login once it is older than 24 real hours and no confirmation link is still good or still waiting to be sent (the owner, 2026-11-17, Q49) |
 | Client location | Deleted with its conversation, request or claim |
+| `search_history` | Rows older than 30 days (N-53); a client's [Clear] deletes theirs at once |
 | `travel_time_cache` | Rows older than 24 h (N-43) |
 | Audit events | 1 year (retention role) |
 | Upload staging rows | Deleted at apply or discard (inline) |
@@ -696,7 +703,7 @@ The schema is the first migration, `backend/migrations/versions/20261112_1816_in
 | Change | Why |
 |---|---|
 | `claims.source` (`search`, `assistant` or `request`) | An offer's card must be posted where the need was created: the chat, the request's thread, or nowhere for a watch made from the search page. The claim is the only row that knows. |
-| `orders.reminder_sent_at`, with an index on the reservations still waiting for theirs | The pickup reminder (N-8) is sent once. The clock check finds what is due from the row, as for every other deadline (R-T10). |
+| `orders.reminder_sent_at`; since the seventh migration `orders.next_reminder_at`, with an index on the reservations that still have a reminder due | The pickup reminders (N-8). The next moment is on the row, and the clock check finds what is due from it, as for every other deadline (R-T10). `reminder_sent_at` is the last one sent. |
 | A unique index: one OPEN early-release request per claim | Two agent turns, or one turn retried, can't ask the same pharmacies twice for one need (R-AG6). |
 
 **How the services use the database** (`backend/src/dawalink/services/`):
@@ -749,3 +756,11 @@ A request copies the point and its source; its thread also copies `loc_area_id`.
 **Tested:** the two new rules (`tests/db/test_more_constraints.py`); the areas file (`tests/db/test_seed_and_prepare.py`): every district can be named as a whole from the same point as picking it, every centre lies within 6 km (Beirut) or 25 km of its district's reference point, and no two hand-written areas are written alike. Since BLD-D15 also the generated file: every place is in Lebanon and in a district we know, its names are plain letters, its ids start at 1000, the file carries the map's credit, and across both files a name means one place inside a district. The join itself is tested with invented places (`tests/unit/test_osm_places.py`); the test database holds the hand-written areas only, so no test depends on what the map says today.
 
 **Slice 7a (2026-11-16): no table changed.** Logins use `users` (`failed_logins`, `locked_until`, `totp_secret`, `totp_last_step`, `signup_ip_hash`), `sessions` and `email_verification_tokens` as designed. Their times are real time, not the app clock's (`04` R-T11): they are compared with `created_at` columns, which are real time too (DB-D6).
+
+**The sixth migration (2026-11-18, decision log BLD-D40):** `client_profiles` gets `first_name`, `middle_name`, `last_name`, `birth_date`, `home_area_id` (FK `areas`) and `home_lat` / `home_lon` with the check `home_place_is_whole`. Existing clients get their one name split at its first space. Going back drops the columns. No table is added (35). The clean-up's database login reads none of the new columns (§7).
+
+**Tested:** the new check (`tests/db/test_constraints.py`); the profile's rules through the API (`tests/api/test_client_profile.py`).
+
+**The seventh migration (2026-11-18, decision log BLD-D42):** `orders` gets `next_reminder_at`, and the index of reservations waiting for a reminder is now on it; the reservations open at that moment get one last reminder, 2 hours before their deadline. A new table, `search_history` (§3.1), the 36th; the app's login may delete its rows (a client clears their own list), and the clean-up's login deletes the old ones. `client_profiles.district_id` was already optional: a client who gives only a place on the map has none. Going back drops the column and the table.
+
+**Tested:** the table's check and the 36 tables (`tests/db/test_constraints.py`, `tests/db/test_schema.py`); the reminders' moments (`tests/unit/domain/test_reminders.py`, `tests/services/test_clock_check.py`); the last searches through the API, the purge included (`tests/api/test_search_by_name.py`).

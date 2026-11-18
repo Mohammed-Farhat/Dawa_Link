@@ -4,6 +4,8 @@ import { type FormEvent, useState } from 'react'
 import { api, ApiFailure, unwrap } from '../api/client'
 import { errorMessage, strings } from '../strings/en'
 import { Banner } from './layout'
+import { passwordGaps } from './passwordRule'
+import { PasswordRules } from './PasswordRules'
 
 const s = strings.password
 
@@ -15,7 +17,7 @@ export function ChangePassword() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!current || next.length < 10) {
+    if (!current || passwordGaps(next).length > 0) {
       setState('WEAK_PASSWORD')
       return
     }
@@ -54,6 +56,7 @@ export function ChangePassword() {
         onChange={(event) => setNext(event.currentTarget.value)}
         error={state === 'WEAK_PASSWORD' && errorMessage('WEAK_PASSWORD')}
       />
+      <PasswordRules password={next} />
       <div role="status" aria-live="polite">
         {state === 'done' && <Banner tone="green">{s.done}</Banner>}
         {refused && state !== 'INVALID_CREDENTIALS' && state !== 'WEAK_PASSWORD' && (

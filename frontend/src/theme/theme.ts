@@ -84,6 +84,10 @@ export const theme = createTheme({
   defaultRadius: 'lg',
   radius: { xs: '8px', sm: '12px', md: '16px', lg: '20px', xl: '28px' },
   fontSizes: { xs: '13px', sm: '14px', md: '17px', lg: '18px', xl: '22px' },
+  components: {
+    // A dialog's close button is an icon alone: it gets a name for a screen reader.
+    Modal: { defaultProps: { closeButtonProps: { 'aria-label': 'Close' } } },
+  },
 })
 
 export const pageBackground = ink[0]

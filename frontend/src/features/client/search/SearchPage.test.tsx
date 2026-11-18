@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
@@ -55,13 +55,29 @@ function result(items: (typeof LISTING)[], more: object = {}) {
   }
 }
 
+/** What a typed name finds: a medicine in stock, with its boxes. */
+function byName(more: object = {}) {
+  return {
+    groups: [{ product: PRODUCT, by_ingredient: false, items: [LISTING], total_found: 4, no_match: null }],
+    closest: false,
+    did_you_mean: [],
+    location: { source: 'profile', label: 'Beirut' },
+    upcoming_days: ['2026-11-16', '2026-11-17', '2026-11-18'],
+    server_now: CONFIG.server_now,
+    ...more,
+  }
+}
+
 function searchApi(more: Record<string, unknown> = {}) {
   loggedIn()
   return pretendApi({
     'GET /api/v1/auth/me': CLIENT,
     'GET /api/v1/districts': DISTRICTS,
     'GET /api/v1/config/public': CONFIG,
-    'GET /api/v1/catalog/products': { items: [PRODUCT], did_you_mean: [] },
+    'POST /api/v1/listings/search-by-name': byName(),
+    'GET /api/v1/me/searches': { items: [] },
+    'POST /api/v1/me/searches': (call: { body: unknown }) => ({ items: [(call.body as { q: string }).q] }),
+    'DELETE /api/v1/me/searches': { items: [] },
     'POST /api/v1/listings/search': result([LISTING]),
     [`POST /api/v1/listings/${LISTING_ID}/view`]: {
       listing: LISTING,
@@ -79,31 +95,134 @@ describe('Searching without the assistant', () => {
     const { container } = renderApp(<AppRoutes />, { path: '/search' })
     const user = userEvent.setup()
 
+    // Typing is enough: the boxes in stock show at once, under the medicine's own name.
     await user.type(await screen.findByLabelText(s.label), 'augmentin')
-    await user.click(await screen.findByRole('button', { name: /AUGMENTIN 1G/ }))
 
-    const row = await screen.findByRole('link', { name: /Hamra Pharmacy/ })
+    const group = await screen.findByRole('region', { name: PRODUCT.name })
+    const row = within(group).getByRole('link', { name: /Hamra Pharmacy/ })
     expect(row).toHaveAttribute('href', `/listings/${LISTING_ID}`)
     expect(row).toHaveTextContent('600,000 LBP')
     expect(row).toHaveTextContent('Save 400,000')
     expect(row).toHaveTextContent('21 min walk · 4 min by car')
     expect(row).toHaveTextContent('5+ left')
-    expect(screen.getByText(s.prescription)).toBeInTheDocument()
-    expect(api.sent('GET', '/api/v1/catalog/products')[0].path).toContain('q=augmentin')
+    expect(within(group).getByText(s.prescription)).toBeInTheDocument()
+    // The name travels in a body, like the place: never in an address.
+    expect(api.sent('POST', '/api/v1/listings/search-by-name').at(-1)?.body).toMatchObject({
+      q: 'augmentin',
+      location: null,
+    })
     expect(await accessibilityProblems(container)).toEqual([])
+
+    // One medicine's own page lists every pharmacy that has it.
+    await user.click(within(group).getByRole('button', { name: s.seeAll(4) }))
+    expect(await screen.findByRole('heading', { level: 1, name: PRODUCT.name })).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/listings/search').at(-1)?.body).toMatchObject({ product_id: PRODUCT.id })
   })
 
-  it('sends the days of use and the pickup day the client chose', async () => {
+  it('searches what is in stock from the first letter typed', async () => {
     const api = searchApi()
-    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+    renderApp(<AppRoutes />, { path: '/search' })
+
+    await userEvent.type(await screen.findByLabelText(s.label), 'a')
+
+    expect(await screen.findByRole('region', { name: PRODUCT.name })).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/listings/search-by-name').at(-1)?.body).toMatchObject({ q: 'a' })
+  })
+
+  it("shows the client's last searches while nothing is typed, and clears them", async () => {
+    const api = searchApi({ 'GET /api/v1/me/searches': { items: ['augmentin', 'concor 5'] } })
+    renderApp(<AppRoutes />, { path: '/search' })
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole('button', { name: s.days(12) }))
-    await user.click(screen.getByRole('button', { name: strings.common.tomorrow }))
+    const last = await screen.findByRole('region', { name: s.lastSearches })
+    await user.click(within(last).getByRole('button', { name: 'concor 5' }))
+    expect(screen.getByLabelText(s.label)).toHaveValue('concor 5')
+
+    await user.clear(screen.getByLabelText(s.label))
+    await user.click(await screen.findByRole('button', { name: s.clearSearches }))
+    await waitFor(() => expect(api.sent('DELETE', '/api/v1/me/searches')).toHaveLength(1))
+    expect(screen.queryByRole('region', { name: s.lastSearches })).not.toBeInTheDocument()
+  })
+
+  it('keeps a name in the last searches when it led to an offer, not for every letter', async () => {
+    const api = searchApi()
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.label), 'augmentin')
+    await screen.findByRole('region', { name: PRODUCT.name })
+    expect(api.sent('POST', '/api/v1/me/searches')).toEqual([])
+
+    await user.click(screen.getByRole('link', { name: /Hamra Pharmacy/ }))
+    await waitFor(() =>
+      expect(api.sent('POST', '/api/v1/me/searches').map((call) => call.body)).toEqual([{ q: 'augmentin' }]),
+    )
+  })
+
+  it('shows the results first on a phone, with the filters folded behind one button', async () => {
+    searchApi()
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.label), 'augmentin')
+    await screen.findByRole('region', { name: PRODUCT.name })
+
+    const fold = screen.getByRole('button', { name: new RegExp(s.filters) })
+    expect(fold).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByLabelText(s.maxPrice)).not.toBeInTheDocument()
+    await user.click(fold)
+    expect(screen.getByLabelText(s.maxPrice)).toBeInTheDocument()
+    // The days of use and the pickup day are asked when a box is reserved, not here.
+    expect(screen.queryByRole('button', { name: s.days(12) })).not.toBeInTheDocument()
+  })
+
+  it('keeps the typed name while an offer is opened, and comes back to its results', async () => {
+    searchApi()
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.label), 'augmentin')
+    await user.click(await screen.findByRole('link', { name: /Hamra Pharmacy/ }))
+    await screen.findByRole('button', { name: strings.offer.reserve })
+    await user.click(screen.getByRole('link', { name: strings.common.back }))
+
+    expect(await screen.findByLabelText(s.label)).toHaveValue('augmentin')
+    expect(await screen.findByRole('region', { name: PRODUCT.name })).toBeInTheDocument()
+  })
+
+  it('says when a name is only the closest one, and offers the others', async () => {
+    searchApi({
+      'POST /api/v1/listings/search-by-name': byName({ closest: true, did_you_mean: ['AUGMEX'] }),
+    })
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.label), 'ogmentn')
+
+    expect(await screen.findByText(s.closest('ogmentn'))).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'AUGMEX' }))
+    expect(screen.getByLabelText(s.label)).toHaveValue('AUGMEX')
+  })
+
+  it('sends the filters the client chose: a price limit, open now, the order', async () => {
+    const api = searchApi()
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(s.label), 'augmentin')
+    await user.click(await screen.findByRole('button', { name: new RegExp(s.filters) }))
+    await user.type(screen.getByLabelText(s.maxPrice), '500000')
+    await user.click(screen.getByLabelText(s.openNow))
+    await user.selectOptions(screen.getByLabelText(s.sort), s.sorts.cheapest)
 
     await waitFor(() => {
-      const last = api.sent('POST', '/api/v1/listings/search').at(-1)
-      expect(last?.body).toMatchObject({ days_of_use: 12, pickup_day: '2026-11-17', location: null })
+      expect(api.sent('POST', '/api/v1/listings/search-by-name').at(-1)?.body).toMatchObject({
+        max_price: { amount: '500000', currency: 'LBP' },
+        open_now: true,
+        sort: 'cheapest',
+        days_of_use: null,
+        pickup_day: null,
+      })
     })
   })
 
@@ -112,6 +231,7 @@ describe('Searching without the assistant', () => {
     renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
     const user = userEvent.setup()
 
+    await user.click(await screen.findByRole('button', { name: new RegExp(s.filters) }))
     await user.click(await screen.findByRole('button', { name: new RegExp(s.near) }))
     await user.selectOptions(await screen.findByLabelText(strings.chat.location.orDistrict), 'Matn')
     await user.click(screen.getByRole('button', { name: strings.chat.location.useDistrict }))
@@ -124,55 +244,55 @@ describe('Searching without the assistant', () => {
     expect(api.calls.every((call) => !/lat=|lon=|district/.test(call.path.split('?')[1] ?? ''))).toBe(true)
   })
 
-  it('says why nothing fits, and opens the chat with the medicine named', async () => {
+  it('opens the chat with the medicine named when no pharmacy has it', async () => {
     searchApi({
-      'POST /api/v1/listings/search': result([], {
-        no_match: { latest_expiry: '2026-11-28', latest_pickup_day: '2026-11-17' },
-      }),
+      'POST /api/v1/listings/search': result([]),
       'GET /api/v1/conversations/active-chat': { conversation_id: CHAT_ID, kind: 'chat' },
       [`GET /api/v1/conversations/${CHAT_ID}/messages`]: page([]),
+      'GET /api/v1/conversations/chats': { items: [], server_now: CONFIG.server_now },
     })
     renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole('button', { name: s.days(30) }))
-    expect(await screen.findByText(s.tooEarly(30, '28 Nov 2026'))).toBeInTheDocument()
+    expect(await screen.findByText(s.empty(PRODUCT.name))).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: s.askToFind }))
 
-    // The sentence is typed, not sent: the client presses send themselves (BLD-D30).
-    expect(await screen.findByLabelText(strings.chat.messageLabel)).toHaveValue(
-      s.askDraft('AUGMENTIN 1G'),
-    )
+    expect(await screen.findByLabelText(strings.chat.messageLabel)).toHaveValue(s.askDraft(PRODUCT.name))
   })
 
-  it('carries the choices from the search to the offer the client opens', async () => {
+  it('carries the place from the search to the offer the client opens', async () => {
     const api = searchApi()
     renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole('button', { name: s.days(12) }))
+    await user.click(await screen.findByRole('button', { name: new RegExp(s.filters) }))
     await user.click(await screen.findByRole('button', { name: new RegExp(s.near) }))
     await user.selectOptions(await screen.findByLabelText(strings.chat.location.orDistrict), 'Matn')
     await user.click(screen.getByRole('button', { name: strings.chat.location.useDistrict }))
     await user.click(await screen.findByRole('link', { name: /Hamra Pharmacy/ }))
 
     await screen.findByRole('button', { name: strings.offer.reserve })
-    // The offer is read for the same place and the same days: nothing is asked twice.
+    // The offer is read for the same place: nothing is asked twice. The days of use are
+    // asked in the reserve sheet.
     expect(api.sent('POST', `/api/v1/listings/${LISTING_ID}/view`).at(-1)?.body).toEqual({
       location: { district_id: 2 },
-      days_of_use: 12,
+      days_of_use: null,
     })
   })
 
-  it('offers close names when nothing is called that', async () => {
-    searchApi({ 'GET /api/v1/catalog/products': { items: [], did_you_mean: ['AUGMENTIN 1G'] } })
+  it('says so when no pharmacy has the name, and offers close names', async () => {
+    searchApi({
+      'POST /api/v1/listings/search-by-name': byName({ groups: [], did_you_mean: ['AUGMENTIN 1G'] }),
+    })
     renderApp(<AppRoutes />, { path: '/search' })
 
     await userEvent.type(await screen.findByLabelText(s.label), 'ogmntn')
 
     expect(await screen.findByRole('button', { name: 'AUGMENTIN 1G' })).toBeInTheDocument()
-    expect(screen.getByText(s.nothingNamed('ogmntn'))).toBeInTheDocument()
+    expect(screen.getByText(s.nothingInStock('ogmntn'))).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.askToFind })).toBeInTheDocument()
   })
+
 })
 
 describe('Reserving from an offer', () => {

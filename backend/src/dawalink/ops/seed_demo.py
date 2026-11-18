@@ -171,8 +171,15 @@ def seed_demo(connection: Connection, *, seed: int, now: datetime) -> SeedResult
                 "email_verified_at": now,
             }
         )
+        first_name, _, last_name = CLIENT_NAMES[index - 1].partition(" ")
         profiles.append(
-            {"user_id": user_id, "status": "ACTIVE", "district_id": districts[district][0]}
+            {
+                "user_id": user_id,
+                "status": "ACTIVE",
+                "district_id": districts[district][0],
+                "first_name": first_name,
+                "last_name": last_name or None,
+            }
         )
 
     connection.execute(insert(User), users)

@@ -3,7 +3,7 @@
 import re
 from typing import Annotated, cast
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import select
 
 from dawalink.agent.turn import Agent
@@ -23,9 +23,12 @@ from dawalink.api.limits import Limiter
 from dawalink.api.schemas.accounts import (
     ChangePassword,
     DiscountTier,
+    HomePlace,
     LoggedIn,
     Login,
     Me,
+    PinIn,
+    Place,
     ProfileChange,
     PublicConfig,
     RegisterClient,
@@ -34,7 +37,7 @@ from dawalink.api.schemas.accounts import (
 )
 from dawalink.api.schemas.common import District as DistrictOut
 from dawalink.api.schemas.common import Message
-from dawalink.db.models import CatalogImport, ClientProfile, District, PricingTier, User
+from dawalink.db.models import Area, CatalogImport, ClientProfile, District, PricingTier, User
 from dawalink.domain.numbers import (
     MAX_MESSAGE_CHARS,
     OFFER_VALIDITY,
@@ -43,7 +46,7 @@ from dawalink.domain.numbers import (
     REQUEST_HOURS_START,
     SEARCH_WINDOW,
 )
-from dawalink.services import auth, pharmacy_profile
+from dawalink.services import auth, clients, pharmacy_profile
 from dawalink.services.errors import Code, ServiceError
 
 router = APIRouter(tags=["accounts"])
@@ -91,6 +94,26 @@ def districts(work: DoWork) -> list[DistrictOut]:
         return [present.district(row) for row in rows]
 
 
+@router.get("/places")
+def places_of_a_district(
+    district_id: Annotated[int, Query(ge=1, le=32_767)], work: DoWork
+) -> list[Place]:
+    """The towns and neighbourhoods of a district, from our own list of places: what a
+    client chooses a home town from. Public, like the list of districts.
+
+    Only the places whose name is written in Latin letters: the map gives some villages a
+    name in Arabic script only, and one list in two alphabets reads as a mistake (the
+    owner, 2026-11-18). Those places can still be named to the assistant.
+    """
+    with work.tx() as tx:
+        rows = tx.session.execute(
+            select(Area)
+            .where(Area.district_id == district_id, Area.whole_district.is_(False))
+            .order_by(Area.name, Area.id)
+        ).scalars()
+        return [Place(id=row.id, name=row.name) for row in rows if row.name.isascii()]
+
+
 @router.post("/auth/register/client", status_code=202)
 def register_client(
     body: RegisterClient, request: Request, work: DoWork, settings: TheSettings
@@ -105,9 +128,14 @@ def register_client(
             tx,
             email=body.email,
             password=body.password,
-            full_name=body.full_name,
+            first_name=body.first_name,
+            middle_name=body.middle_name,
+            last_name=body.last_name,
+            birth_date=body.birth_date,
             phone=phone,
             district_id=body.district_id,
+            home_area_id=body.home_area_id,
+            home_place=(body.home_place.lat, body.home_place.lon) if body.home_place else None,
             signup_address=address,
         )
     _count_the_sign_up(request, address)
@@ -282,11 +310,62 @@ def change_profile(body: ProfileChange, caller: AsClient, work: DoWork) -> Me:
         profile = tx.session.get_one(ClientProfile, caller.user_id)
         if "phone" in sent:
             user.phone = _a_phone_or_nothing(body.phone)
+        if sent & {"first_name", "middle_name", "last_name"}:
+            clients.set_name(
+                tx,
+                profile,
+                first=body.first_name or "",
+                middle=body.middle_name,
+                last=body.last_name or "",
+            )
+        if "birth_date" in sent and body.birth_date is not None:
+            clients.set_birth_date(tx, profile, body.birth_date)
         if "district_id" in sent and body.district_id is not None:
-            if tx.session.get(District, body.district_id) is None:
-                raise ServiceError(Code.VALIDATION_ERROR, "Unknown district.", field="district_id")
-            profile.district_id = body.district_id
+            # A town belongs to its district: changing the district without naming a
+            # town of it leaves no town.
+            clients.set_home(tx, profile, district_id=body.district_id, area_id=body.home_area_id)
+        elif "home_area_id" in sent and profile.district_id is not None:
+            clients.set_home(
+                tx, profile, district_id=profile.district_id, area_id=body.home_area_id
+            )
         if "alternatives_ok_default" in sent and body.alternatives_ok_default is not None:
             profile.alternatives_ok_default = body.alternatives_ok_default
         tx.session.flush()
         return present.me(tx, user)
+
+
+@router.get("/me/home-place")
+def read_home_place(caller: AsClient, work: DoWork) -> HomePlace:
+    """The place the caller saved, so their own map can show it. It is sent to nobody
+    else, and never in an address."""
+    with work.tx() as tx:
+        profile = tx.session.get_one(ClientProfile, caller.user_id)
+        if profile.home_lat is None or profile.home_lon is None:
+            raise ServiceError(Code.NOT_FOUND, "No place is saved.")
+        return HomePlace(lat=float(profile.home_lat), lon=float(profile.home_lon))
+
+
+@router.put("/me/home-place")
+def save_home_place(body: PinIn, caller: AsClient, work: DoWork, request: Request) -> Me:
+    """Saves or moves the caller's home place (CS-13). Rounded before it is stored; a new
+    place can start a paid routing call, so it counts for the hourly limit (N-47)."""
+    # A point that can't be a place is refused before it is counted: a mistake must not
+    # cost one of the hour's tries.
+    clients.check_place(body.lat, body.lon)
+    wait_s = cast(Limiter, request.app.state.locations_per_client).wait_s(caller.user_id)
+    if wait_s:
+        raise ApiError(ErrorCode.RATE_LIMITED, details={"retry_after_s": wait_s})
+    with work.tx() as tx:
+        profile = tx.session.get_one(ClientProfile, caller.user_id)
+        clients.set_home_place(tx, profile, body.lat, body.lon)
+        tx.session.flush()
+        return present.me(tx, tx.session.get_one(User, caller.user_id))
+
+
+@router.delete("/me/home-place")
+def forget_home_place(caller: AsClient, work: DoWork) -> Me:
+    with work.tx() as tx:
+        profile = tx.session.get_one(ClientProfile, caller.user_id)
+        clients.clear_home_place(profile)
+        tx.session.flush()
+        return present.me(tx, tx.session.get_one(User, caller.user_id))

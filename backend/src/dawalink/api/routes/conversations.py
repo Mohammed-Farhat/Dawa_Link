@@ -20,6 +20,8 @@ from dawalink.api.errors import ApiError, ErrorCode, request_id_of
 from dawalink.api.limits import Limiter
 from dawalink.api.schemas.admin import AnswerReported, ReportAnswer
 from dawalink.api.schemas.chat import (
+    Chats,
+    ChatSummary,
     ConversationRef,
     ExecuteProposal,
     ExecuteResult,
@@ -67,6 +69,35 @@ def new_chat(caller: AsClient, work: DoWork) -> ConversationRef:
         conversations.archive_chats(tx, caller.user_id)
         chat = conversations.active_chat(tx, caller.user_id)
         return ConversationRef(conversation_id=chat.id, kind="chat")
+
+
+TITLE_CHARS = 60
+
+
+@router.get("/conversations/chats")
+def list_chats(caller: AsClient, work: DoWork) -> Chats:
+    """The client's own chats, the newest first: the one they write in now and the
+    earlier ones, which are kept 30 days (D9). Reading one is `GET …/messages`."""
+    with work.tx() as tx:
+        _may_use_the_assistant(tx, caller.user_id)
+        return Chats(
+            items=[
+                ChatSummary(
+                    conversation_id=chat.id,
+                    active=chat.active,
+                    started_at=chat.started_at,
+                    last_activity_at=chat.last_activity_at,
+                    title=(
+                        chat.first_words[:TITLE_CHARS].strip()
+                        + ("…" if len(chat.first_words) > TITLE_CHARS else "")
+                        if chat.first_words
+                        else None
+                    ),
+                )
+                for chat in conversations.chats(tx, caller.user_id)
+            ],
+            server_now=tx.now,
+        )
 
 
 @router.put("/conversations/{conversation_id}/location", status_code=204)
@@ -136,6 +167,7 @@ def read_messages(
             messages=present.messages(tx, rows),
             last_seq=conversations.last_seq(tx, conversation_id),
             busy=conversations.is_busy(tx, conversation),
+            archived=conversation.status == "ARCHIVED",
             location=present.location_summary(tx, conversation),
             server_now=tx.now,
         )
@@ -218,6 +250,12 @@ def send_message(
         _may_use_the_assistant(tx, caller.user_id)
         conversation = conversations.own(tx, caller.user_id, conversation_id)
         in_chat = conversation.kind == "chat"
+        if in_chat and conversation.status == "ARCHIVED":
+            # An earlier chat is read, never continued: the agent's memory is the chat
+            # the client writes in now (D9).
+            raise ServiceError(
+                Code.VALIDATION_ERROR, "This chat is closed. Start a new chat to write again."
+            )
         if in_chat:
             if (
                 agent is None

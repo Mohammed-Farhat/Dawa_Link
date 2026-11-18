@@ -115,6 +115,7 @@ export function LocationSheet({
                 // Around the district chosen above, if one is; otherwise Beirut.
                 center={chosen ? { lat: chosen.lat, lon: chosen.lon } : START}
                 onChange={setPin}
+                label={s.mapLabel}
               />
             </Suspense>
             <button

@@ -13,8 +13,10 @@ from tests.conftest import UNREACHABLE_DATABASE, logged, make_settings
 from tests.services.conftest import world  # noqa: F401  (the fixture)
 
 NEW = {
-    "password": "a long enough passphrase",
-    "full_name": "Nour Khoury",
+    "password": "A long enough passphrase, 1",
+    "first_name": "Nour",
+    "last_name": "Khoury",
+    "birth_date": "1990-05-17",
     "district_id": 1,
     "accept_terms": True,
 }

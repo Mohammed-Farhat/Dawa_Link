@@ -5,7 +5,6 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 
 import { useSession } from '../api/session'
 import { SessionProvider } from '../api/SessionProvider'
-import { SidePanelContext } from '../components/wide'
 import { CheckEmailPage, LoginPage, SignUpPage, VerifyEmailPage } from '../features/client/AccountPages'
 import { AssistantPage } from '../features/client/assistant/AssistantPage'
 import { HomePage } from '../features/client/HomePage'
@@ -70,10 +69,7 @@ function ForClients({ children }: { children: ReactNode }) {
   if (me.role === 'pharmacist') return <Navigate to="/pharmacy" replace />
   if (me.role === 'admin') return <Navigate to="/admin" replace />
   return (
-    <SearchChoicesProvider>
-      {/* Beside a page on a wide screen: the assistant (docs/11 §3.1). */}
-      <SidePanelContext.Provider value={<AssistantPage embedded />}>{children}</SidePanelContext.Provider>
-    </SearchChoicesProvider>
+    <SearchChoicesProvider>{children}</SearchChoicesProvider>
   )
 }
 

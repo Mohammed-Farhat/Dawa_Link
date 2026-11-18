@@ -1,5 +1,7 @@
 """The guards, table by table (docs/07 §7, §11; INV-10, INV-24; docs/09 FA-6, FA-7, FA-11)."""
 
+from datetime import date
+
 import pytest
 
 from dawalink.agent.guards.clinical import clinical_reasons
@@ -211,3 +213,27 @@ class TestPlainText:
     )
     def test_the_script_of_a_text(self, text: str, script: str | None) -> None:
         assert script_of(text) == script
+
+
+class TestTheClientsOwnDateOfBirth:
+    """INV-10, decision log BLD-D40: the date of birth in the profile never reaches the
+    model, however the client writes it. Any other date is left alone."""
+
+    BORN = Identity(
+        full_name="Rami Haddad", email="rami.haddad@example.test", birth_date=date(1990, 5, 7)
+    )
+
+    @pytest.mark.parametrize(
+        "written",
+        ["07/05/1990", "7-5-1990", "1990-05-07", "7 May 1990", "May 7th, 1990", "07.05.1990"],
+    )
+    def test_it_is_removed_however_it_is_written(self, written: str) -> None:
+        cleaned = redact(f"I was born on {written} and I need Concor", self.BORN)
+
+        assert cleaned.text == "I was born on [date of birth] and I need Concor"
+        assert cleaned.count == 1
+
+    def test_another_date_is_what_the_chat_is_about(self) -> None:
+        text = "I can come on 07/05/2026, or on 8 May 1990 Street"
+
+        assert redact(text, self.BORN).text == text

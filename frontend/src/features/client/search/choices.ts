@@ -12,6 +12,9 @@ export type Place =
   | { kind: 'district'; id: number; name: string }
 
 export type SearchChoices = {
+  /** What the client typed in the search box: kept while they open an offer and come
+   * back. Never in an address. */
+  name: string
   place: Place
   /** null: "not sure". The page then warns with the expiry date instead of promising. */
   daysOfUse: number | null
@@ -20,6 +23,8 @@ export type SearchChoices = {
   sort: 'best' | 'nearest' | 'cheapest' | 'latest_expiry'
   /** The most the client wants to pay for a pack, in LBP. null: no limit. */
   maxPriceLbp: number | null
+  /** Only pharmacies that are open at this moment. */
+  openNow: boolean
 }
 
 export type ChoicesStore = SearchChoices & { set: (change: Partial<SearchChoices>) => void }

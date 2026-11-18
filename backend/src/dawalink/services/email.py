@@ -33,7 +33,7 @@ SUBJECTS: dict[str, str] = {
     "CN-18": "You already have a DawaLink account",
     "CN-3": "Reserved: {order_ref}",
     "CN-5": "Not available: {order_ref}",
-    "CN-6": "Reminder: pick up {order_ref} today",
+    "CN-6": "Reminder: {order_ref} is reserved for you",
     "CN-7": "Your reservation {order_ref} has expired",
     "CN-8": "Your reservations are paused",
     "CN-9": "A pharmacy can release {product} for you",

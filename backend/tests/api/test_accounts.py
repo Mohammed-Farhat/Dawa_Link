@@ -18,7 +18,9 @@ from tests.api.conftest import PASSWORD, Api, code_of
 NEW = {
     "email": "nour@example.com",
     "password": PASSWORD,
-    "full_name": "Nour Khoury",
+    "first_name": "Nour",
+    "last_name": "Khoury",
+    "birth_date": "1990-05-17",
     "district_id": 1,
     "accept_terms": True,
 }
@@ -59,7 +61,7 @@ class TestRegistration:
         first = http.post("/api/v1/auth/register/client", json=NEW)
         api.emails()
 
-        again = http.post("/api/v1/auth/register/client", json=NEW | {"full_name": "Someone"})
+        again = http.post("/api/v1/auth/register/client", json=NEW | {"first_name": "Someone"})
         third = http.post("/api/v1/auth/register/client", json=NEW)
 
         assert (again.status_code, again.json()) == (first.status_code, first.json())
@@ -69,11 +71,36 @@ class TestRegistration:
             "You already have a DawaLink account"
         ]
 
-    @pytest.mark.parametrize("password", ["short", "PASSWORD123", "qwertyuiop"])
-    def test_a_weak_password_is_refused(self, api: Api, password: str) -> None:
+    @pytest.mark.parametrize(
+        ("password", "missing"),
+        [
+            ("Sh0rt!", ["length"]),
+            ("no capital here 1!", ["capital"]),
+            ("NO SMALL LETTER 1!", ["small"]),
+            ("No number in it!", ["number"]),
+            ("No symbol in it 1", ["symbol"]),
+            ("qwertyuiop", ["capital", "number", "symbol"]),
+        ],
+    )
+    def test_a_weak_password_is_refused_and_told_what_it_lacks(
+        self, api: Api, password: str, missing: list[str]
+    ) -> None:
+        """R-AU1: 10 characters or more, with a capital letter, a small letter, a number
+        and a symbol."""
         answer = api.http().post("/api/v1/auth/register/client", json=NEW | {"password": password})
 
         assert (answer.status_code, code_of(answer)) == (422, "WEAK_PASSWORD")
+        assert answer.json()["error"]["details"]["missing"] == missing
+
+    def test_a_common_word_with_numbers_and_symbols_around_it_is_refused(self, api: Api) -> None:
+        assert not auth.password_gaps("Password123!")
+        answer = api.http().post(
+            "/api/v1/auth/register/client", json=NEW | {"password": "Password123!"}
+        )
+
+        # It holds every part of the rule, and is still "password" with decoration.
+        assert (answer.status_code, code_of(answer)) == (422, "WEAK_PASSWORD")
+        assert answer.json()["error"]["details"]["missing"] == ["uncommon"]
 
     def test_the_terms_must_be_accepted_and_the_district_must_exist(self, api: Api) -> None:
         http = api.http()
@@ -516,12 +543,12 @@ class TestProfileAndPassword:
 
         wrong = http.post(
             "/api/v1/auth/password",
-            json={"current_password": "not it", "new_password": "another long passphrase"},
+            json={"current_password": "not it", "new_password": "Another long passphrase, 2"},
             headers=here,
         )
         done = http.post(
             "/api/v1/auth/password",
-            json={"current_password": PASSWORD, "new_password": "another long passphrase"},
+            json={"current_password": PASSWORD, "new_password": "Another long passphrase, 2"},
             headers=here,
         )
 
@@ -529,7 +556,7 @@ class TestProfileAndPassword:
         assert done.status_code == 204
         assert http.get("/api/v1/auth/me", headers=here).status_code == 200
         assert http.get("/api/v1/auth/me", headers=elsewhere).status_code == 401
-        login = {"email": "rami@example.com", "password": "another long passphrase"}
+        login = {"email": "rami@example.com", "password": "Another long passphrase, 2"}
         assert http.post("/api/v1/auth/login", json=login).status_code == 200
 
 

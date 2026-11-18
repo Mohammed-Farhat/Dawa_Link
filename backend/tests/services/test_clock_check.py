@@ -165,21 +165,58 @@ class TestThePause:
 
 
 class TestPickupReminder:
-    def test_it_is_sent_once_four_hours_before_the_deadline(self, world: World) -> None:
-        """N-8: the deadline is 21:00, so the reminder goes out from 17:00."""
+    def test_a_same_day_reservation_is_reminded_once_two_hours_before_closing(
+        self, world: World
+    ) -> None:
+        """N-8 (the owner, 2026-11-18). Reserved at 10:00 for a deadline at 21:00: under
+        12 hours, so the one reminder is the last one, at 19:00. Nothing comes right
+        after reserving."""
         client = world.make.client()
         order = reserve(world, client, key="a")
         tasks = world.clock_tasks()
+        assert order_row(world, order).next_reminder_at == NOW + timedelta(hours=9)
 
-        world.later(hours=6, minutes=59)
+        at_once = tasks.send_pickup_reminders()
+        world.later(hours=8, minutes=59)
         too_early = tasks.send_pickup_reminders()
         world.later(minutes=1)
         sent = tasks.send_pickup_reminders()
         again = tasks.send_pickup_reminders()
 
-        assert (too_early, sent, again) == (0, 1, 0)
+        assert (at_once, too_early, sent, again) == (0, 0, 1, 0)
         assert world.notifications(client) == ["CN-3", "CN-6"]
-        assert order_row(world, order).reminder_sent_at == NOW + timedelta(hours=7)
+        row = order_row(world, order)
+        assert (row.reminder_sent_at, row.next_reminder_at) == (NOW + timedelta(hours=9), None)
+
+    def test_a_reservation_for_a_later_day_is_reminded_every_12_hours(self, world: World) -> None:
+        """The deadline is the pharmacy's closing time two days on, 59 hours after
+        reserving: reminders after 12, 24, 36 and 48 hours, and a last one 2 hours before
+        the deadline."""
+        client = world.make.client()
+        pharmacy = world.make.pharmacy(pickup_days=3)
+        item = world.make.item(pharmacy_id=pharmacy, days_left=60)
+        tx = world.tx()
+        (order,) = orders.reserve(
+            tx,
+            client_id=client,
+            lines=[ReserveLine(item, 1, expected_price_lbp=600_000)],
+            pickup_day=tx.today + timedelta(days=2),
+            source=OrderSource.SEARCH,
+            idempotency_key="later",
+        )
+        world.settle(tx)
+        tasks = world.clock_tasks()
+        deadline = order_row(world, order.id).deadline
+        assert deadline == NOW + timedelta(hours=59)
+
+        sent_after = []
+        for hour in range(1, 60):
+            world.later(hours=1)
+            if tasks.send_pickup_reminders():
+                sent_after.append(hour)
+
+        assert sent_after == [12, 24, 36, 48, 57]
+        assert world.notifications(client).count("CN-6") == 5
 
     def test_nothing_is_sent_for_a_reservation_that_ended(self, world: World) -> None:
         client = world.make.client()
@@ -187,9 +224,11 @@ class TestPickupReminder:
         tx = world.tx()
         orders.cancel_by_client(tx, client, order)
         world.settle(tx)
-        world.later(hours=8)
+        # Past the moment its reminder was due (9 hours after reserving, see above).
+        world.later(hours=10)
 
         assert world.clock_tasks().send_pickup_reminders() == 0
+        assert "CN-6" not in world.notifications(client)
 
 
 class TestTheWorkerLoop:
