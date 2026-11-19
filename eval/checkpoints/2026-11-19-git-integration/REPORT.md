@@ -55,3 +55,22 @@ with no force. Main's remote ref must remain 28cf4f1 at verification. The merge
 commit contains these checks and the unchanged upstream changes; its ID and remote
 verification are reported to the user after pushing. The original handoff stays
 untracked. No billing hold is released by committing the ledger.
+
+## Publication result
+
+Merge commit: `a83f039`. `git push --set-upstream origin test/agent-evaluation`
+exited 128 with GitHub HTTP 403, permission denied to `ajkanaan`. The authenticated
+account's API permission flags confirm `pull: true`, `push: false`; this is repository
+access, not a merge conflict or main-branch protection rejection. No retry was made
+after that permission check. No credential or account configuration was changed.
+
+`git ls-remote origin refs/heads/test/agent-evaluation refs/heads/main` returned only
+main at `28cf4f1d3f8412eff3ee7a10ffb9eb40102f1313`. Nothing was pushed; main is
+unchanged and the remote test branch does not exist. All requested code/evidence
+is committed locally, ready to publish once Mohammed grants `ajkanaan` Write access.
+The already-authorized push can resume after checking for any newer main commits.
+
+The pre-push evidence seal is preserved. Only this report and PROGRESS.md changed
+after sealing, to record the real publication outcome; executed results remain
+unchanged. A separate publication-status.json records the permission check and
+updated documentation hashes.

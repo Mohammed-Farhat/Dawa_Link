@@ -89,6 +89,9 @@ behavior. Combined validation and publication status are recorded in
 [`2026-11-19-git-integration`](../eval/checkpoints/2026-11-19-git-integration/REPORT.md).
 Combined checks passed: backend 2,103 tests, frontend 190 tests, strict mypy
 335 files, lint/format/build and the free gate (133/241, zero no-shows/expiry failures).
+Merge saved as `a83f039`. Push was rejected with HTTP 403; GitHub confirms
+`ajkanaan` has read but no write access. Remote main is unchanged; no remote test
+branch was created. Publication waits for the owner to grant Write access.
 Real keys, local environment files and the untracked handoff are excluded. No paid
 evaluations, architecture changes or deployment are part of this integration.
 

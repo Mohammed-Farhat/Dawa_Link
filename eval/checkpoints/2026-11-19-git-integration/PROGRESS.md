@@ -26,3 +26,17 @@ state; final response records exact pushed SHA. Main must not be updated. The
 original 1e17db0 agent remains in history/source archives; upstream agent changes
 are retained, so historical measurements must not be claimed for the merged code.
 No paid evaluations or architecture experiments authorized by this Git task.
+
+## Publication result
+
+Merge committed as a83f039; all combined checks passed. Branch push attempted once
+and rejected with HTTP 403: permission denied to ajkanaan. GitHub API confirms
+ajkanaan has pull=true, push=false. Remote main remains 28cf4f1; no remote test
+branch was created. Do not retry until repository access changes. Local commits
+and all work are preserved; only the original handoff remains untracked.
+
+External next step: Mohammed grants ajkanaan Write access. Then fetch/check for new
+main changes and normally push test/agent-evaluation; never force or push main.
+No further user authorization is needed for this already-authorized branch push.
+REPORT.md/this progress file were updated after the pre-push evidence seal; the
+original evidence-hashes.json remains the pre-push snapshot, not overwritten.
