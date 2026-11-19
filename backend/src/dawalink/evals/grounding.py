@@ -8,15 +8,17 @@ that no tool answer of the turn holds was made up.
 added up itself is reported too. What it reports is read by hand.
 """
 
+import json
 import re
 from collections.abc import Sequence
+from decimal import Decimal
 
 # A number as a price is written: digits, with "," or "." between them ("600,000", "6.70").
 _AMOUNT = r"\d+(?:[.,]\d+)*"
 # A number and a currency after it ("600,000 LBP", "6.70 USD"), or a dollar sign before or
 # after it ("$6.70", "3.68$").
 PRICE = re.compile(
-    rf"({_AMOUNT})\s*(?:LBP|L\.?L\.?|ل\.?ل\.?|ليرة|USD|dollars?|\$)|\$\s*({_AMOUNT})",
+    rf"({_AMOUNT})\s*(?:LBP|L\.?L\.?|ل\.?ل\.?|ليرة|USD|dollars?|دولار|\$)|\$\s*({_AMOUNT})",
     re.IGNORECASE,
 )
 # "Hamra Pharmacy", "Beirut Pharmacy 2": the capitalised words before the word. In a
@@ -99,12 +101,110 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
     """
     reply = _plain(reply)
     heard = _plain(" ".join(answers)).lower()
-    known_numbers = _numbers_in(heard) | _numbers_in(_plain(" ".join(client_said)))
-    prices = [
-        match.group(0).strip()
-        for match in PRICE.finditer(reply)
-        if _digits(match.group(1) or match.group(2)) not in known_numbers
-    ]
+
+    def money(amount: str, currency: str) -> tuple[Decimal, str]:
+        # Three trailing digits are a thousands group; one/two are decimals.
+        parts = re.split(r"[.,]", amount)
+        number = "".join(parts)
+        if len(parts) > 1 and len(parts[-1]) in (1, 2):
+            number = "".join(parts[:-1]) + "." + parts[-1]
+        return Decimal(number), currency
+
+    def currencies(text: str) -> set[tuple[Decimal, str]]:
+        return {
+            money(
+                m.group(1) or m.group(2),
+                "USD" if re.search(r"\$|USD|dollar|دولار", m.group(), re.I) else "LBP",
+            )
+            for m in PRICE.finditer(_plain(text))
+        }
+
+    facts: list[tuple[set[tuple[Decimal, str]], str, str]] = []
+
+    def prices_in(value: object, product: str = "", pharmacy: str = "") -> set[tuple[Decimal, str]]:
+        if isinstance(value, dict):
+            named = value.get("product") or value.get("product_name")
+            if isinstance(named, dict):
+                named = named.get("name")
+            if not named and ("strength" in value or "pack" in value):
+                named = value.get("name")
+            product = str(named) if isinstance(named, str) else product
+            shop = value.get("pharmacy") or value.get("pharmacy_name")
+            if isinstance(shop, dict):
+                shop = shop.get("name")
+            pharmacy = str(shop) if isinstance(shop, str) else pharmacy
+            # The guarded proposal tools return Preview(title, lines), rather than
+            # FindOptions' structured option rows. Keep those price associations too.
+            title, lines = value.get("title"), value.get("lines")
+            if isinstance(title, str) and isinstance(lines, list):
+                if " at " in title:
+                    product, _, pharmacy = title.rpartition(" at ")
+                elif group := re.fullmatch(r"(.+) · \d+ medicines?", title):
+                    pharmacy = group.group(1)
+                for line in lines:
+                    if not isinstance(line, str):
+                        continue
+                    item = re.match(r"(.+) x \d+: (.+)", line)
+                    facts.append((currencies(line), item.group(1) if item else product, pharmacy))
+            own: set[tuple[Decimal, str]] = set()
+            nested: set[tuple[Decimal, str]] = set()
+            for key, part in value.items():
+                if isinstance(part, dict | list):
+                    nested |= prices_in(part, product, pharmacy)
+                else:
+                    own |= currencies(str(part))
+                    if isinstance(part, int | float) and re.search(r"price|total|cost", key):
+                        currency = "USD" if "usd" in key else "LBP" if "lbp" in key else None
+                        if currency:
+                            own.add((Decimal(str(part)), currency))
+            if own:
+                facts.append((own, product, pharmacy))
+            return own | nested
+        if isinstance(value, list):
+            return set().union(*(prices_in(v, product, pharmacy) for v in value))
+        return currencies(str(value))
+
+    known_numbers: set[tuple[Decimal, str]] = set()
+    for answer in answers:
+        try:
+            known_numbers.update(prices_in(json.loads(answer)))
+        except (ValueError, TypeError):
+            known_numbers.update(prices_in(answer))
+    budgets = currencies(" ".join(client_said))
+    known_numbers |= budgets
+
+    def supported(match: re.Match[str]) -> bool:
+        price = next(iter(currencies(match.group())))
+        if price not in known_numbers:
+            return False
+        # Associate a price with the nearest named entities in its sentence/bullet.
+        start = max(reply.rfind("\n", 0, match.start()), reply.rfind(". ", 0, match.start())) + 1
+        end = reply.find("\n", match.end())
+        sentence_end = reply.find(". ", match.end())
+        if sentence_end >= 0 and (end < 0 or sentence_end < end):
+            end = sentence_end
+        clause = reply[start : end if end >= 0 else len(reply)].lower()
+        offset = match.start() - start
+
+        def nearest(names: set[str]) -> str:
+            positions = [(clause.rfind(n.lower(), 0, offset), n) for n in names if n]
+            before = [(pos, n) for pos, n in positions if pos >= 0]
+            if before:
+                return max(before)[1]
+            after = [(clause.find(n.lower(), offset), n) for n in names if n]
+            found = [(pos, n) for pos, n in after if pos >= 0]
+            return min(found)[1] if found else ""
+
+        product = nearest({p for _, p, _ in facts})
+        pharmacy = nearest({p for _, _, p in facts})
+        if not product and not pharmacy:
+            return True  # Unattributed money still needs manual factuality review.
+        return any(
+            price in prices and (not product or p == product) and (not pharmacy or shop == pharmacy)
+            for prices, p, shop in facts
+        ) or (price in budgets and bool(re.search(r"budget|limit|within|ميزاني", clause)))
+
+    prices = [match.group(0).strip() for match in PRICE.finditer(reply) if not supported(match)]
     return prices + _pharmacies_nobody_named(reply, heard)
 
 

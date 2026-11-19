@@ -15,6 +15,7 @@ prices). Nothing here is personal, and no coordinate is written: a trace holds w
 model saw, and the model never sees one (INV-24).
 """
 
+import hashlib
 import json
 import uuid
 from dataclasses import asdict
@@ -28,11 +29,24 @@ from sqlalchemy import select
 
 from dawalink.agent.prompts import PROMPT_VERSION
 from dawalink.agent.tracing import TurnTrace
-from dawalink.db.models import ChatMessage, Conversation, Proposal
+from dawalink.db.models import ChatMessage, Conversation, InventoryItem, Proposal
 from dawalink.sim.engine import Sim
 from dawalink.sim.params import Params
 
 RESULTS = Path("../eval/results")
+
+
+def write_artifacts(folder: Path, contents: dict[str, str]) -> None:
+    """Refuse existing outputs before writing anything, including legacy entrypoints."""
+    folder.mkdir(parents=True, exist_ok=True)
+    for name in contents:
+        if Path(name).name != name:
+            raise ValueError("an artifact must be a filename")
+        if (folder / name).exists():
+            raise FileExistsError(folder / name)
+    for name, content in contents.items():
+        with (folder / name).open("x", encoding="utf-8") as stream:
+            stream.write(content)
 
 
 def _plain(value: Any) -> Any:
@@ -50,10 +64,50 @@ def _line(row: Any) -> str:
     return json.dumps(row, default=_plain, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
+def initial_inputs(sim: Sim) -> dict[str, Any]:
+    """Hash the actual world before play, including stock and scheduled external events.
+
+    Coordinates are hashed in memory, never written. Reaction-time assumptions are
+    included, so changing client timing cannot masquerade as an architecture effect.
+    """
+
+    def digest(value: Any) -> str:
+        encoded = json.dumps(value, default=_plain, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(encoded.encode()).hexdigest()
+
+    columns = (
+        InventoryItem.id,
+        InventoryItem.pharmacy_id,
+        InventoryItem.product_id,
+        InventoryItem.batch,
+        InventoryItem.expiry_date,
+        InventoryItem.qty_on_hand,
+        InventoryItem.qty_reserved,
+        InventoryItem.splittable,
+        InventoryItem.listing_control,
+        InventoryItem.price_override_lbp,
+    )
+    with sim.tx() as tx:
+        stock = [
+            list(row) for row in tx.session.execute(select(*columns).order_by(InventoryItem.id))
+        ]
+    return {
+        "seed": sim.seed,
+        "starts_at": sim.clock.now().isoformat(),
+        "params": asdict(sim.params),
+        "world_sha256": digest(asdict(sim.world)),
+        "stock_sha256": digest(stock),
+        "scenario_sha256": digest(asdict(sim.scenario)),
+        "stock_rows": len(stock),
+        "needs": len(sim.scenario.needs),
+        "arrivals": len(sim.scenario.arrivals),
+    }
+
+
 def folder_for(contender: str, model: str | None, seed: int, params: Params, *, on: date) -> Path:
     """`2026-11-15_agent_claude-haiku-5-5_prompt-v1.5_seed1_n10`: what ran, on what, when."""
     with_a_model = [model, f"prompt-{PROMPT_VERSION}"] if model else []
-    parts = [on.isoformat(), contender, *with_a_model, f"seed{seed}"]
+    parts = [on.isoformat(), contender, *with_a_model, f"seed{seed}", uuid.uuid4().hex[:12]]
     return RESULTS / "_".join([*parts, f"n{params.requests}"])
 
 
@@ -63,7 +117,7 @@ class FileTracer:
     def __init__(self, folder: Path) -> None:
         folder.mkdir(parents=True, exist_ok=True)
         self.path = folder / "turns.jsonl"
-        self.path.write_text("", encoding="utf-8")
+        self.path.open("x", encoding="utf-8").close()
 
     def new_trace_id(self) -> str:
         return uuid.uuid4().hex
@@ -150,11 +204,12 @@ def write(
         "simulated_client": "answers questions",
         "params": asdict(params),
     }
-    (folder / "config.json").write_text(
-        json.dumps(config, default=_plain, indent=2) + "\n", encoding="utf-8"
+    write_artifacts(
+        folder,
+        {
+            "config.json": json.dumps(config, default=_plain, indent=2) + "\n",
+            "summary.json": json.dumps(summary | more, default=_plain, indent=2) + "\n",
+            "needs.jsonl": "".join(_line(need) for need in needs),
+            "threads.jsonl": "".join(_line(row) for row in said),
+        },
     )
-    (folder / "summary.json").write_text(
-        json.dumps(summary | more, default=_plain, indent=2) + "\n", encoding="utf-8"
-    )
-    (folder / "needs.jsonl").write_text("".join(_line(need) for need in needs), encoding="utf-8")
-    (folder / "threads.jsonl").write_text("".join(_line(row) for row in said), encoding="utf-8")

@@ -80,3 +80,37 @@ def test_arabic_digits_are_the_same_numbers() -> None:
 
 def test_the_pharmacy_as_a_word_is_no_name() -> None:
     assert invented("The Pharmacy closes at five. This Pharmacy is the nearest.", [ANSWER]) == []
+
+
+def test_prices_keep_currency_and_decimal_value() -> None:
+    assert invented("It costs $20.", ['{"price_lbp":20}']) == ["$20"]
+    assert invented("It costs $670.", ['{"price":"$6.70"}']) == ["$670"]
+    assert invented("It costs $6.70.", ['{"price":"6.7 USD"}']) == []
+    assert invented("It costs $20.", [], client_said=["20 boxes"]) == ["$20"]
+
+
+def test_prices_belong_to_the_named_product_and_pharmacy() -> None:
+    facts = [
+        '{"options":[{"product":"Concor","pharmacy":"Hamra Pharmacy","price":"$5"},'
+        '{"product":"Aspirin","pharmacy":"Hamra Pharmacy","price":"$8"},'
+        '{"product":"Concor","pharmacy":"Verdun Pharmacy","price":"$8"}]}'
+    ]
+    assert invented("Concor at Hamra Pharmacy costs $5.", facts) == []
+    assert invented("Concor at Hamra Pharmacy costs $8.", facts) == ["$8"]
+    assert invented("For $8 get Concor at Hamra Pharmacy.", facts) == ["$8"]
+    assert invented("Aspirin at Verdun Pharmacy costs $8.", facts) == ["$8"]
+
+
+def test_actual_tool_shapes_keep_option_and_proposal_price_associations() -> None:
+    options = '{"options":[{"product":"Concor","pharmacy":{"name":"Hamra Pharmacy"},"price":"$5"}]}'
+    proposal = '{"preview":{"title":"Aspirin at Hamra Pharmacy","lines":["At the counter: $8"]}}'
+    plan = (
+        '{"preview":{"title":"Verdun Pharmacy · 2 medicines","lines":'
+        '["Concor x 1: $6","Aspirin x 1: $9","Total at the counter: $15"]}}'
+    )
+    facts = [options, proposal, plan]
+    assert invented("Concor at Hamra Pharmacy costs $5.", facts) == []
+    assert invented("Concor at Hamra Pharmacy costs $8.", facts) == ["$8"]
+    assert invented("Aspirin at Hamra Pharmacy costs $8.", facts) == []
+    assert invented("Aspirin at Verdun Pharmacy costs $9.", facts) == []
+    assert invented("Aspirin at Verdun Pharmacy costs $6.", facts) == ["$6"]

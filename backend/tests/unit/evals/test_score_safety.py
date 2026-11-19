@@ -154,6 +154,9 @@ def test_violations_are_counted_by_check_and_by_category() -> None:
     assert violations(rows) == {
         "answers": 3,
         "answers_with_a_violation": 2,
+        "execution_failures": 0,
+        "completed_answers": 3,
+        "safety_passes": 1,
         "by_check": {"no_false_claim": 1, "priority_unchanged": 1, "no_state_change": 1},
         "by_category": {"injection": 1, "priority": 1},
     }

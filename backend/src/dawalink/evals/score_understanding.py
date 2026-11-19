@@ -92,6 +92,8 @@ class Seen:
     seconds: float = 0.0
     cost_usd: float = 0.0
     model_calls: int = 0
+    card_items: Sequence[Mapping[str, Any]] = ()
+    card_groups: Sequence[Sequence[Mapping[str, Any]]] = ()  # one executable choice/plan
 
 
 def seen_in(turn: Mapping[str, Any], cards: Sequence[str] = ()) -> Seen:
@@ -201,6 +203,8 @@ def together(turns: Sequence[Seen]) -> Seen:
         reply="\n".join(turn.reply for turn in turns),
         tools=[tool for turn in turns for tool in turn.tools],
         cards=last.cards,
+        card_items=last.card_items,
+        card_groups=last.card_groups,
         notes=notes,
         outcome=last.outcome,
         seconds=round(sum(turn.seconds for turn in turns), 3),
@@ -377,7 +381,15 @@ def score(
         next((a for a in asked if a.product_id in {str(p) for p in accepted}), None)
         for accepted in products
     ]
-    searched_all = bool(gold.items) and all(right)
+    allowed = {str(p) for group in products for p in group}
+    # A correct earlier lookup cannot excuse a later wrong reservation proposal.
+    proposed = [
+        str(t.arguments["product_id"])
+        for t in seen.tools
+        if t.name in PROPOSES and t.ok and "product_id" in t.arguments
+    ]
+    proposed.extend(str(item.get("product_id")) for item in seen.card_items)
+    searched_all = bool(gold.items) and all(right) and all(p in allowed for p in proposed)
     result: dict[str, bool | None] = dict.fromkeys(CHECKS)
 
     if gold.items and not gold.must_ask:
@@ -385,11 +397,45 @@ def score(
         if len(gold.items) > 1:
             result["every_item"] = searched_all
         if searched_all:
-            result["quantity"] = all(
+            understood = all(
                 found.qty == item.qty
                 for found, item in zip(right, gold.items, strict=True)
                 if found
             )
+            result["quantity_understood"] = understood
+            # Alternative offers are choices, not additional boxes to buy together.
+            groups = seen.card_groups or [[item] for item in seen.card_items]
+            if groups:
+                totals = [
+                    [
+                        sum(
+                            item["qty"] if type(item.get("qty")) is int else 0
+                            for item in group
+                            if str(item.get("product_id")) in accepted
+                        )
+                        for accepted in products
+                    ]
+                    for group in groups
+                ]
+                valid = (
+                    all(groups)
+                    and all(
+                        type(item.get("qty")) is int and item["qty"] > 0
+                        for group in groups
+                        for item in group
+                    )
+                    and all(
+                        got <= wanted.qty
+                        for total in totals
+                        for got, wanted in zip(total, gold.items, strict=True)
+                    )
+                )
+                result["proposal_quantity"] = valid
+                result["proposal_complete"] = valid and all(
+                    all(got == wanted.qty for got, wanted in zip(total, gold.items, strict=True))
+                    for total in totals
+                )
+            result["quantity"] = understood and result["proposal_quantity"] is not False
     if gold.budget is not None:
         result["budget"] = _same_money(seen.notes.get("budget"), gold.budget, lbp_per_usd) or any(
             _same_money(a.max_price, gold.budget, lbp_per_usd) for a in asked
@@ -411,7 +457,18 @@ def score(
         )
 
     if gold.must_ask:
-        result["asks_when_it_must"] = asked_a_question(one)
+        clarifications = {
+            "strength": r"strength|mg|milligram|عيار|تركيز|3iyar",
+            "form": r"form|tablet|syrup|capsule|شراب|حبوب|sharab",
+            "which_product": r"which|name|medicine|اسم|دواء|shu|ism",
+            "quantity": r"how many|quantity|boxes|packs|كم|قديش|kam|adde",
+            "which_order": r"order|reservation|number|طلب|حجز|رقم|ra2m",
+        }
+        questions = " ".join(s for s in _SENTENCE.findall(one.reply) if QUESTION.search(s))
+        result["asks_when_it_must"] = asked_a_question(one) and all(
+            re.search(clarifications[field], questions, re.IGNORECASE) is not None
+            for field in gold.must_ask
+        )
     elif proposes(gold):
         missing = missing_in(gold)
         if missing:
@@ -465,6 +522,9 @@ CHECKS: Mapping[str, bool] = {
     "product": True,
     "every_item": True,
     "quantity": True,
+    "quantity_understood": True,
+    "proposal_quantity": True,
+    "proposal_complete": True,
     "budget": True,
     "days_of_use": True,
     "pickup_day": True,

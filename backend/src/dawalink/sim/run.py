@@ -15,6 +15,7 @@ import argparse
 import json
 import logging
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
@@ -28,12 +29,12 @@ from sqlalchemy.orm import sessionmaker
 
 from dawalink.agent.llm import ChatModel
 from dawalink.agent.llm.base import has_price
-from dawalink.agent.llm.claude import ClaudeModel
 from dawalink.config import ConfigError, Settings, load_settings
 from dawalink.db.models import Product
 from dawalink.db.session import make_engine
 from dawalink.domain.clock import ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+from dawalink.evals.budget import EvaluationModel
 from dawalink.observability.logging import configure_logging
 from dawalink.sim import database, engine, measure, save, scenario, travel_table, world
 from dawalink.sim.contenders.ablations import VARIANTS, Without
@@ -71,10 +72,10 @@ def the_agent(
         raise ConfigError(f"{model} has no price in dawalink/agent/llm/base.py.")
     if effort not in ("low", "medium", "high"):
         raise ConfigError("--effort is low, medium or high.")
-    claude: ChatModel = ClaudeModel(
+    claude: ChatModel = EvaluationModel(
         api_key=settings.anthropic_api_key.get_secret_value(),
         model=model,
-        effort=effort,  # type: ignore[arg-type]
+        effort=effort,
     )
     return WithRequests(
         AGENT,
@@ -128,7 +129,7 @@ def one(
     in place when the day is over, to look at what happened. With a `folder`, the run's
     evidence is written there before the database goes."""
     started = time.perf_counter()
-    name = f"{database.PREFIX}_{contender_name}_{seed}"
+    name = f"{database.PREFIX}_{contender_name}_{seed}_{uuid.uuid4().hex[:12]}"
     where = database.fresh(settings, name)
     now = at_beirut(params.day, STARTS_AT)
     lands = world.load()
@@ -160,7 +161,18 @@ def one(
             medicine_of=medicine_of,
             code_of=code_of,
         )
+        if folder is not None:
+            save.write_artifacts(
+                folder, {"initial-inputs.json": save._line(save.initial_inputs(sim))}
+            )
         engine.play(sim, contender or CONTENDERS[contender_name]())
+        if folder is not None:
+            save.write_artifacts(
+                folder,
+                {
+                    "events.jsonl": "".join(save._line(event) for event in sim.event_audit),
+                },
+            )
         needs = measure.results(sim)
         turns = measure.turns(sim)
         room = measure.room_for_early_release(sim)

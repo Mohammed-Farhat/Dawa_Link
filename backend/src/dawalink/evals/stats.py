@@ -70,3 +70,24 @@ def difference(
         results.append(_share(first, of, picks) - _share(second, of, picks))
     value = _share(first, of, everyone) - _share(second, of, everyone)
     return Estimate(value, *_interval(results))
+
+
+def clustered_difference(
+    first: Sequence[float],
+    second: Sequence[float],
+    of: Sequence[float],
+    seeds: Sequence[int],
+    *,
+    draws: int = DRAWS,
+) -> Estimate:
+    """Paired bootstrap of whole seeds, preserving within-world competition."""
+    if not (len(first) == len(second) == len(of) == len(seeds)) or not of:
+        raise ValueError("the two contenders must have served the same seeded cases")
+    groups = {seed: [i for i, value in enumerate(seeds) if value == seed] for seed in seeds}
+    numbers = random.Random(SEED)
+    results = []
+    for _ in range(draws):
+        picks = [i for seed in numbers.choices(sorted(groups), k=len(groups)) for i in groups[seed]]
+        results.append(_share(first, of, picks) - _share(second, of, picks))
+    everyone = range(len(of))
+    return Estimate(_share(first, of, everyone) - _share(second, of, everyone), *_interval(results))
