@@ -88,6 +88,18 @@ function clientApi(more: Record<string, unknown> = {}) {
   })
 }
 
+describe('Logging out from the profile', () => {
+  it.each([204, 503])('clears authentication and leaves the profile after status %i without refreshing', async (status) => {
+    clientApi({ 'POST /api/v1/auth/logout': answer(status) })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const button = await screen.findByRole('button', { name: 'Log out' })
+    await userEvent.setup().click(button)
+    expect(await screen.findByRole('heading', { name: strings.login.title })).toBeInTheDocument()
+    expect(window.localStorage.getItem('dawalink.token')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
+  })
+})
+
 describe('[Notify me] on a search that found nothing (CS-6)', () => {
   it('starts a 6-hour watch with a price limit, from where the search looked', async () => {
     const api = clientApi({ 'POST /api/v1/watches': answer(201, WATCH) })

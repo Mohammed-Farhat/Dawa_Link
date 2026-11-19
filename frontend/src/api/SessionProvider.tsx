@@ -40,9 +40,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.POST('/api/v1/auth/logout').catch(() => undefined)
     clearToken()
-    // Nothing of the previous user stays on the screen or in memory.
-    queryClient.clear()
+    await queryClient.cancelQueries()
+    // Keep the mounted session observer attached while forgetting the user.
     queryClient.setQueryData(ME, null)
+    queryClient.removeQueries({ predicate: (entry) => entry.queryKey[0] !== ME[0] })
   }, [queryClient])
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ME })
