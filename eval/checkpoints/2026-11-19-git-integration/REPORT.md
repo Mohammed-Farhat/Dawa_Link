@@ -1,5 +1,11 @@
 # Evaluation branch integration — 19 November 2026
 
+Publication follow-up: collaborator access was granted (push=true), and the normal
+push of test/agent-evaluation succeeded. Remote verification returned
+25be69889a7cb55dbd6ea36e2a3d035b3d3cdc48 for the test branch and unchanged
+28cf4f1d3f8412eff3ee7a10ffb9eb40102f1313 for main. The 403 recorded below is
+historical and resolved. This documentation follow-up adds no source changes.
+
 User authorized committing the completed work, merging current main into
 `test/agent-evaluation`, and pushing only that branch. Main itself stays unchanged.
 No paid evaluation, architecture experiment or deployment is part of this task.

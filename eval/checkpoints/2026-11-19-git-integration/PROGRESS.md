@@ -1,5 +1,10 @@
 # Git integration checkpoint
 
+Latest publication update: access granted; GitHub reports push=true. A normal push
+of test/agent-evaluation succeeded and remote SHA 25be69889a7cb55dbd6ea36e2a3d035b3d3cdc48
+was verified. Main remained 28cf4f1. The previous 403 below is historical/resolved.
+This follow-up records publication success; no source changed or tests repeated.
+
 User authorized committing/pushing the completed reconciliation work and updating
 it against teammates' main changes. Work remains on test/agent-evaluation. Remote
 main fetched at 28cf4f1 (six commits after original reference 1e17db0).
