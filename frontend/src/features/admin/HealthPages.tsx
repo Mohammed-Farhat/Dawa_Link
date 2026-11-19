@@ -1,17 +1,13 @@
 import { TextInput } from '@mantine/core'
-import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
-import { api, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
 import { lbp } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
-import { codeOf, useAdminHealth, useCatalog, useCatalogImports, useFlags, when } from './data'
+import { codeOf, useAdminHealth, useCatalog, useCatalogImports } from './data'
 
 const s = strings.admin
 const h = s.health
-const f = s.flags
 const k = s.catalog
 
 type Numbers = Record<string, unknown>
@@ -150,126 +146,6 @@ export function HealthPage() {
           />
         </div>
       </div>
-    </main>
-  )
-}
-
-/** AS-7: what code flagged for a person to look at. A flag holds counts, never a message. */
-export function FlagsPage() {
-  const queryClient = useQueryClient()
-  const found = useFlags()
-  const [reason, setReason] = useState('')
-  const [said, setSaid] = useState<{ tone: 'green' | 'red' | 'amber'; text: string } | null>(null)
-  const [busy, setBusy] = useState(false)
-  const items = found.data?.items ?? []
-
-  async function act(call: () => Promise<Schemas['AbuseFlagRow']>) {
-    setSaid(null)
-    setBusy(true)
-    try {
-      await call()
-      setSaid({ tone: 'green', text: f.done })
-      setReason('')
-    } catch (error) {
-      const code = codeOf(error)
-      setSaid({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
-    } finally {
-      setBusy(false)
-      void queryClient.invalidateQueries({ queryKey: ['admin'] })
-    }
-  }
-
-  const off = busy || !reason.trim()
-  return (
-    <main className="portal__main">
-      <div>
-        <h1 className="page-title">{f.title}</h1>
-        <span className="soft">{f.intro}</span>
-      </div>
-      <div role="status" aria-live="polite">
-        {said && <Banner tone={said.tone}>{said.text}</Banner>}
-      </div>
-      {found.isSuccess && items.length === 0 && <div className="empty">{f.none}</div>}
-      {items.length > 0 && (
-        <TextInput
-          label={s.reason}
-          description={s.reasonHint}
-          size="md"
-          maxLength={300}
-          value={reason}
-          onChange={(event) => setReason(event.currentTarget.value)}
-        />
-      )}
-      {items.map((flag) => {
-        const path = { flag_id: flag.id }
-        const subject =
-          flag.subject_type === 'client' ? `/admin/clients/${flag.subject_id}` : `/admin/pharmacies/${flag.subject_id}`
-        return (
-          <article key={flag.id} className="row-card" aria-label={f.rules[flag.rule as keyof typeof f.rules] ?? flag.rule}>
-            <div className="row-card__top">
-              <h2 className="card__title" style={{ margin: 0 }}>
-                {f.rules[flag.rule as keyof typeof f.rules] ?? flag.rule}
-              </h2>
-              <span className={`status-pill status-pill--${flag.severity === 'high' ? 'red' : 'grey'}`}>
-                {f.severity[flag.severity]}
-              </span>
-            </div>
-            <span className="soft" style={{ fontSize: 15 }}>
-              {f.raised(when(flag.created_at))} ·{' '}
-              {Object.entries(flag.evidence)
-                .filter(([, value]) => typeof value === 'number')
-                .map(([key, value]) => `${f.evidence[key as keyof typeof f.evidence] ?? key}: ${String(value)}`)
-                .join(' · ')}
-            </span>
-            <Link to={subject} className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
-              {flag.subject_type === 'client' ? f.openClient : f.openPharmacy}
-            </Link>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button
-                type="button"
-                className="pill-button pill-button--grey"
-                disabled={off}
-                onClick={() =>
-                  void act(() =>
-                    unwrap(api.POST('/api/v1/admin/abuse-flags/{flag_id}/dismiss', { params: { path }, body: { reason } })),
-                  )
-                }
-              >
-                {f.dismiss}
-              </button>
-              <button
-                type="button"
-                className="pill-button pill-button--grey"
-                disabled={off}
-                onClick={() =>
-                  void act(() =>
-                    unwrap(
-                      api.POST('/api/v1/admin/abuse-flags/{flag_id}/act', { params: { path }, body: { action: 'warn', reason } }),
-                    ),
-                  )
-                }
-              >
-                {f.warn}
-              </button>
-              <button
-                type="button"
-                className="pill-button pill-button--danger"
-                disabled={off}
-                onClick={() =>
-                  void act(() =>
-                    unwrap(
-                      api.POST('/api/v1/admin/abuse-flags/{flag_id}/act', { params: { path }, body: { action: 'suspend', reason } }),
-                    ),
-                  )
-                }
-              >
-                {f.suspend}
-              </button>
-            </div>
-            <p className="hint">{f.warnHint}</p>
-          </article>
-        )
-      })}
     </main>
   )
 }

@@ -4,26 +4,6 @@
  */
 
 export interface paths {
-    "/api/v1/admin/abuse-flags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Abuse Flags
-         * @description The high ones first. A flag holds counts and IDs, never a message.
-         */
-        get: operations["list_abuse_flags"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/abuse-flags/{flag_id}/act": {
         parameters: {
             query?: never;
@@ -128,7 +108,8 @@ export interface paths {
         put?: never;
         /**
          * Confirm Answer Report
-         * @description [Confirmed], filed under a category; `add_to_regression` puts it in the export.
+         * @description [Real problem]: the report is confirmed and joins the regression cases the
+         *     export gives (A-D6). A category may be sent; the console sends none.
          */
         post: operations["confirm_answer_report"];
         delete?: never;
@@ -226,7 +207,9 @@ export interface paths {
         /**
          * List Clients
          * @description Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the
-         *     client of an order number or a request number.
+         *     client of an order number or a request number. `having` keeps the clients with a
+         *     reservation going, who picked an order up, with an open request, or who need a look
+         *     (a contested no-show or an open flag).
          */
         get: operations["list_clients"];
         put?: never;
@@ -244,7 +227,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Look At Client */
+        /**
+         * Look At Client
+         * @description One client by their ID: the counts, their last reservations and requests with
+         *     how each ended, what they contest, and the flags about them. **Still no name:** that
+         *     is the audited `/contact` below.
+         */
         get: operations["look_at_client"];
         put?: never;
         post?: never;
@@ -423,9 +411,9 @@ export interface paths {
         /**
          * Reply To Escalation
          * @description The client reads the reply in their conversation, signed "DawaLink team", and is
-         *     notified (CN-14). The client's own name, email and phone, and anything that looks
-         *     like an email or a phone number, are removed before it is stored, as for every
-         *     message. **It changes no order and no priority** (R-PRI4).
+         *     notified (CN-14). It is stored as typed (a person may have to give a phone number),
+         *     and cleaned where the model or an export reads it. A first reply marks the
+         *     escalation as being handled. **It changes no order and no priority** (R-PRI4).
          */
         post: operations["reply_to_escalation"];
         delete?: never;
@@ -443,25 +431,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resolve Escalation */
+        /**
+         * Resolve Escalation
+         * @description [Close this case]. A note of what was done may go with it; none is asked for.
+         */
         post: operations["resolve_escalation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/escalations/{escalation_id}/take": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Take Escalation */
-        post: operations["take_escalation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2024,13 +1998,6 @@ export interface components {
              */
             subject_type: "client" | "pharmacy";
         };
-        /** AbuseFlags */
-        AbuseFlags: {
-            /** Items */
-            items: components["schemas"]["AbuseFlagRow"][];
-            /** Next Cursor */
-            next_cursor: string | null;
-        };
         /** AcceptAsk */
         AcceptAsk: {
             /** Price Lbp */
@@ -2068,11 +2035,20 @@ export interface components {
             /** Qty */
             qty: number;
         };
-        /** AdminClient */
+        /**
+         * AdminClient
+         * @description A client's page: what they have going, by an ID. The name is not here.
+         */
         AdminClient: {
             client: components["schemas"]["AdminClientRow"];
             /** Contested */
             contested: components["schemas"]["ContestedReservation"][];
+            /** Flags */
+            flags: components["schemas"]["AbuseFlagRow"][];
+            /** Requests */
+            requests: components["schemas"]["ClientRequest"][];
+            /** Reservations */
+            reservations: components["schemas"]["ClientReservation"][];
         };
         /**
          * AdminClientRow
@@ -2083,6 +2059,8 @@ export interface components {
             contested: number;
             /** District */
             district: string | null;
+            /** Flags Open */
+            flags_open: number;
             /**
              * Id
              * Format: uuid
@@ -2096,6 +2074,8 @@ export interface components {
             open_requests: number;
             /** Paused Until */
             paused_until: string | null;
+            /** Picked Up */
+            picked_up: number;
             /**
              * Status
              * @enum {string}
@@ -2308,6 +2288,8 @@ export interface components {
         };
         /** AnswerReportRow */
         AnswerReportRow: {
+            /** Asked */
+            asked: string | null;
             /** Category */
             category: string | null;
             /** Comment */
@@ -2609,6 +2591,65 @@ export interface components {
             /** Phone */
             phone: string | null;
         };
+        /**
+         * ClientRequest
+         * @description One sourcing request of a client, as their page lists it.
+         */
+        ClientRequest: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Medicines */
+            medicines: number;
+            /** Outcome */
+            outcome: string | null;
+            /** Ref */
+            ref: string;
+            /** Secured */
+            secured: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "OPEN" | "CLOSED";
+        };
+        /**
+         * ClientReservation
+         * @description One reservation of a client, as their page lists it.
+         */
+        ClientReservation: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Counts As No Show */
+            counts_as_no_show: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline */
+            deadline: string | null;
+            /** Pharmacy */
+            pharmacy: string;
+            /** Product */
+            product: string;
+            /** Ref */
+            ref: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "OFFERED" | "RESERVED" | "PICKED_UP" | "NOT_AVAILABLE" | "EXPIRED_NO_SHOW" | "CANCELLED_BY_CLIENT" | "CANCELLED_BY_SYSTEM";
+            /** Units */
+            units: number;
+        };
         /** ClientState */
         ClientState: {
             /** Alternatives Ok Default */
@@ -2641,15 +2682,20 @@ export interface components {
              */
             status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED";
         };
-        /** ConfirmReport */
+        /**
+         * ConfirmReport
+         * @description [Real problem]. The console sends nothing with it: a confirmed report is a
+         *     regression case, filed under "other" unless a category is given.
+         */
         ConfirmReport: {
             /**
              * Add To Regression
-             * @default false
+             * @default true
              */
             add_to_regression: boolean;
             /**
              * Category
+             * @default other
              * @enum {string}
              */
             category: "understanding" | "decision" | "safety" | "language" | "other";
@@ -2812,11 +2858,11 @@ export interface components {
         };
         /** EscalationDetail */
         EscalationDetail: {
+            /** Contested */
+            contested: components["schemas"]["ContestedReservation"][];
             escalation: components["schemas"]["EscalationRow"];
             /** Thread */
             thread: components["schemas"]["ThreadMessage"][];
-            /** Trace Ids */
-            trace_ids: string[];
         };
         /**
          * EscalationNote
@@ -4425,41 +4471,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_abuse_flags: {
-        parameters: {
-            query?: {
-                state?: ("OPEN" | "DISMISSED" | "ACTIONED") | null;
-                cursor?: number;
-                limit?: number;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AbuseFlags"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     act_on_abuse_flag: {
         parameters: {
             query?: never;
@@ -4811,6 +4822,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED") | null;
+                having?: ("reservation" | "picked_up" | "request" | "look") | null;
                 ref?: string;
                 cursor?: number;
                 limit?: number;
@@ -5207,39 +5219,6 @@ export interface operations {
                 "application/json": components["schemas"]["Resolve"];
             };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EscalationDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    take_escalation: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                escalation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

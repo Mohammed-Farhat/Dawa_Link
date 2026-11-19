@@ -4,7 +4,9 @@ An escalation gives nobody any power over who gets stock: a person can reply and
 and that is all (R-PRI4). A client has one open escalation at a time; a second one is
 added to it.
 
-The admin's side is here too: take it, reply, resolve. **A reply is a message in the
+The admin's side is here too: reply, then close. A first reply says by itself that
+someone is on it (OPEN → IN_PROGRESS); there is no separate "I take it" (the owner,
+2026-11-19). **A reply is a message in the
 client's conversation**, signed "DawaLink team", stored as the admin typed it. It never
 starts an agent turn: the agent reads it, cleaned of personal details, as part of the
 conversation the next time the client writes.
@@ -241,25 +243,6 @@ def _still_open(escalation: Escalation) -> None:
         raise ServiceError(Code.CHANGED_SINCE, "This escalation is already resolved.")
 
 
-def take(tx: Tx, admin_id: uuid.UUID, escalation_id: uuid.UUID) -> Escalation:
-    """OPEN → IN_PROGRESS: an admin is on it. Taking it twice changes nothing."""
-    escalation = _locked(tx, escalation_id)
-    _still_open(escalation)
-    if escalation.state == EscalationState.OPEN.value:
-        escalation.state = EscalationState.IN_PROGRESS.value
-        audit.record(
-            tx,
-            Actor.ADMIN,
-            "escalation.take",
-            "escalation",
-            escalation.id,
-            actor_id=admin_id,
-            before={"state": EscalationState.OPEN.value},
-            after={"state": escalation.state},
-        )
-    return escalation
-
-
 def _where_to_answer(tx: Tx, escalation: Escalation) -> Conversation:
     """The conversation the client will read the reply in, locked.
 
@@ -334,11 +317,10 @@ def reply(tx: Tx, admin_id: uuid.UUID, escalation_id: uuid.UUID, *, text: str) -
 
 
 def resolve(tx: Tx, admin_id: uuid.UUID, escalation_id: uuid.UUID, *, note: str) -> Escalation:
-    """→ RESOLVED, with the admin's note of what was done. The client may be escalated
-    again afterwards: that opens a new one."""
+    """→ RESOLVED: the case is closed. A note of what was done may go with it; the
+    replies already say most of it, so it is not asked for (the owner, 2026-11-19).
+    The client may be escalated again afterwards: that opens a new one."""
     note = note.strip()
-    if not note:
-        raise ServiceError(Code.REASON_REQUIRED, "Say what was done, in a few words.")
     if len(note) > MAX_NOTE:
         raise ServiceError(
             Code.VALIDATION_ERROR, "A note has 500 characters at most.", field="note"
@@ -347,7 +329,7 @@ def resolve(tx: Tx, admin_id: uuid.UUID, escalation_id: uuid.UUID, *, note: str)
     _still_open(escalation)
     before = escalation.state
     escalation.state = EscalationState.RESOLVED.value
-    escalation.resolution_note = note
+    escalation.resolution_note = note or None
     escalation.resolved_by, escalation.resolved_at = admin_id, tx.now
     audit.record(
         tx,

@@ -78,34 +78,6 @@
         "title": "AbuseFlagRow",
         "type": "object"
       },
-      "AbuseFlags": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/AbuseFlagRow"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Cursor"
-          }
-        },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
-        "title": "AbuseFlags",
-        "type": "object"
-      },
       "AcceptAsk": {
         "additionalProperties": false,
         "properties": {
@@ -191,6 +163,7 @@
         "type": "object"
       },
       "AdminClient": {
+        "description": "A client's page: what they have going, by an ID. The name is not here.",
         "properties": {
           "client": {
             "$ref": "#/components/schemas/AdminClientRow"
@@ -201,11 +174,35 @@
             },
             "title": "Contested",
             "type": "array"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/AbuseFlagRow"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/ClientRequest"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "reservations": {
+            "items": {
+              "$ref": "#/components/schemas/ClientReservation"
+            },
+            "title": "Reservations",
+            "type": "array"
           }
         },
         "required": [
           "client",
-          "contested"
+          "reservations",
+          "requests",
+          "contested",
+          "flags"
         ],
         "title": "AdminClient",
         "type": "object"
@@ -227,6 +224,10 @@
               }
             ],
             "title": "District"
+          },
+          "flags_open": {
+            "title": "Flags Open",
+            "type": "integer"
           },
           "id": {
             "format": "uuid",
@@ -257,6 +258,10 @@
             ],
             "title": "Paused Until"
           },
+          "picked_up": {
+            "title": "Picked Up",
+            "type": "integer"
+          },
           "status": {
             "enum": [
               "UNVERIFIED",
@@ -274,9 +279,11 @@
           "paused_until",
           "district",
           "open_orders",
+          "picked_up",
           "no_shows",
           "open_requests",
-          "contested"
+          "contested",
+          "flags_open"
         ],
         "title": "AdminClientRow",
         "type": "object"
@@ -851,6 +858,17 @@
       },
       "AnswerReportRow": {
         "properties": {
+          "asked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asked"
+          },
           "category": {
             "anyOf": [
               {
@@ -913,6 +931,7 @@
           "category",
           "in_regression",
           "reply",
+          "asked",
           "created_at"
         ],
         "title": "AnswerReportRow",
@@ -1649,6 +1668,143 @@
         "title": "ClientContact",
         "type": "object"
       },
+      "ClientRequest": {
+        "description": "One sourcing request of a client, as their page lists it.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "medicines": {
+            "title": "Medicines",
+            "type": "integer"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "secured": {
+            "title": "Secured",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "CLOSED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "state",
+          "outcome",
+          "medicines",
+          "secured",
+          "created_at",
+          "ends_at"
+        ],
+        "title": "ClientRequest",
+        "type": "object"
+      },
+      "ClientReservation": {
+        "description": "One reservation of a client, as their page lists it.",
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "counts_as_no_show": {
+            "title": "Counts As No Show",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "pharmacy": {
+            "title": "Pharmacy",
+            "type": "string"
+          },
+          "product": {
+            "title": "Product",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OFFERED",
+              "RESERVED",
+              "PICKED_UP",
+              "NOT_AVAILABLE",
+              "EXPIRED_NO_SHOW",
+              "CANCELLED_BY_CLIENT",
+              "CANCELLED_BY_SYSTEM"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "units": {
+            "title": "Units",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ref",
+          "product",
+          "pharmacy",
+          "state",
+          "units",
+          "created_at",
+          "deadline",
+          "closed_at",
+          "counts_as_no_show"
+        ],
+        "title": "ClientReservation",
+        "type": "object"
+      },
       "ClientState": {
         "properties": {
           "alternatives_ok_default": {
@@ -1784,13 +1940,15 @@
       },
       "ConfirmReport": {
         "additionalProperties": false,
+        "description": "[Real problem]. The console sends nothing with it: a confirmed report is a\nregression case, filed under \"other\" unless a category is given.",
         "properties": {
           "add_to_regression": {
-            "default": false,
+            "default": true,
             "title": "Add To Regression",
             "type": "boolean"
           },
           "category": {
+            "default": "other",
             "enum": [
               "understanding",
               "decision",
@@ -1802,9 +1960,6 @@
             "type": "string"
           }
         },
-        "required": [
-          "category"
-        ],
         "title": "ConfirmReport",
         "type": "object"
       },
@@ -2145,6 +2300,13 @@
       },
       "EscalationDetail": {
         "properties": {
+          "contested": {
+            "items": {
+              "$ref": "#/components/schemas/ContestedReservation"
+            },
+            "title": "Contested",
+            "type": "array"
+          },
           "escalation": {
             "$ref": "#/components/schemas/EscalationRow"
           },
@@ -2154,19 +2316,12 @@
             },
             "title": "Thread",
             "type": "array"
-          },
-          "trace_ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Trace Ids",
-            "type": "array"
           }
         },
         "required": [
           "escalation",
           "thread",
-          "trace_ids"
+          "contested"
         ],
         "title": "EscalationDetail",
         "type": "object"
@@ -6580,102 +6735,6 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/v1/admin/abuse-flags": {
-      "get": {
-        "description": "The high ones first. A flag holds counts and IDs, never a message.",
-        "operationId": "list_abuse_flags",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "state",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "OPEN",
-                    "DISMISSED",
-                    "ACTIONED"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": "OPEN",
-              "title": "State"
-            }
-          },
-          {
-            "in": "query",
-            "name": "cursor",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "maximum": 1000000,
-              "minimum": 0,
-              "title": "Cursor",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 50,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AbuseFlags"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "List Abuse Flags",
-        "tags": [
-          "admin"
-        ]
-      }
-    },
     "/api/v1/admin/abuse-flags/{flag_id}/act": {
       "post": {
         "description": "`warn` records that the account's owner was warned; `suspend` suspends the\naccount, with everything a suspension does.",
@@ -7021,7 +7080,7 @@
     },
     "/api/v1/admin/answer-reports/{report_id}/confirm": {
       "post": {
-        "description": "[Confirmed], filed under a category; `add_to_regression` puts it in the export.",
+        "description": "[Real problem]: the report is confirmed and joins the regression cases the\nexport gives (A-D6). A category may be sent; the console sends none.",
         "operationId": "confirm_answer_report",
         "parameters": [
           {
@@ -7432,7 +7491,7 @@
     },
     "/api/v1/admin/clients": {
       "get": {
-        "description": "Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the\nclient of an order number or a request number.",
+        "description": "Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the\nclient of an order number or a request number. `having` keeps the clients with a\nreservation going, who picked an order up, with an open request, or who need a look\n(a contested no-show or an open flag).",
         "operationId": "list_clients",
         "parameters": [
           {
@@ -7455,6 +7514,28 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "having",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "reservation",
+                    "picked_up",
+                    "request",
+                    "look"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Having"
             }
           },
           {
@@ -7539,6 +7620,7 @@
     },
     "/api/v1/admin/clients/{client_id}": {
       "get": {
+        "description": "One client by their ID: the counts, their last reservations and requests with\nhow each ended, what they contest, and the flags about them. **Still no name:** that\nis the audited `/contact` below.",
         "operationId": "look_at_client",
         "parameters": [
           {
@@ -8130,7 +8212,7 @@
     },
     "/api/v1/admin/escalations/{escalation_id}/reply": {
       "post": {
-        "description": "The client reads the reply in their conversation, signed \"DawaLink team\", and is\nnotified (CN-14). The client's own name, email and phone, and anything that looks\nlike an email or a phone number, are removed before it is stored, as for every\nmessage. **It changes no order and no priority** (R-PRI4).",
+        "description": "The client reads the reply in their conversation, signed \"DawaLink team\", and is\nnotified (CN-14). It is stored as typed (a person may have to give a phone number),\nand cleaned where the model or an export reads it. A first reply marks the\nescalation as being handled. **It changes no order and no priority** (R-PRI4).",
         "operationId": "reply_to_escalation",
         "parameters": [
           {
@@ -8200,6 +8282,7 @@
     },
     "/api/v1/admin/escalations/{escalation_id}/resolve": {
       "post": {
+        "description": "[Close this case]. A note of what was done may go with it; none is asked for.",
         "operationId": "resolve_escalation",
         "parameters": [
           {
@@ -8262,65 +8345,6 @@
           }
         },
         "summary": "Resolve Escalation",
-        "tags": [
-          "admin"
-        ]
-      }
-    },
-    "/api/v1/admin/escalations/{escalation_id}/take": {
-      "post": {
-        "operationId": "take_escalation",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "escalation_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Escalation Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EscalationDetail"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Take Escalation",
         "tags": [
           "admin"
         ]

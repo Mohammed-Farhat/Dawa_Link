@@ -239,6 +239,118 @@ class TestClients:
             for private in ("Rana", "Khoury", "rana@example.com", "70123456", "Someone"):
                 assert private not in answer.text
 
+    def test_a_clients_page_lists_what_they_reserved_and_how_each_ended(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """The owner, 2026-11-19: "to know each client what he has". By an ID: the name
+        stays behind the audited view."""
+        http = api.http()
+        login = api.token(shop.client)
+        counter = "/api/v1/pharmacy/reservations"
+        collected = shop.reserve(qty=2)
+        http.post(f"{counter}/{collected.id}/picked-up", json={}, headers=shop.pharmacist)
+        cancelled = shop.reserve()
+        http.post(f"/api/v1/reservations/{cancelled.id}/cancel", headers=login)
+        waiting = shop.reserve()
+
+        detail = http.get(f"{ADMIN}/clients/{shop.client}", headers=admin)
+
+        shown = detail.json()
+        assert {row["ref"]: (row["state"], row["units"]) for row in shown["reservations"]} == {
+            collected.ref: ("PICKED_UP", 2),
+            cancelled.ref: ("CANCELLED_BY_CLIENT", 1),
+            waiting.ref: ("RESERVED", 1),
+        }
+        assert {(row["product"], row["pharmacy"]) for row in shown["reservations"]} == {
+            ("AUGMENTIN 1G", "Hamra Pharmacy")
+        }
+        (still_open,) = [row for row in shown["reservations"] if row["state"] == "RESERVED"]
+        assert still_open["deadline"] is not None
+        assert (shown["client"]["open_orders"], shown["client"]["picked_up"]) == (1, 1)
+        for private in ("Rana", "Khoury", "rana@example.com", "70123456"):
+            assert private not in detail.text
+
+    def test_a_clients_page_lists_their_requests_the_open_ones_first(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        http = api.http()
+        make = api.world.make
+        closed = make.request(
+            client_id=shop.client,
+            state="CLOSED",
+            outcome="UNFULFILLED",
+            closed_at=api.world.clock.now(),
+            created_at=api.world.clock.now() - timedelta(days=1),
+        )
+        opened = make.request(client_id=shop.client)
+        # A medicine is "secured" when a reservation holds all its units (INV-18).
+        reserved = shop.reserve()
+        secured = make.request_item(
+            opened, product_id=shop.product, state="SECURED", qty_secured=1, position=1
+        )
+        with api.world.as_owner():
+            api.world.connection.exec_driver_sql(
+                "UPDATE orders SET request_item_id = %s, source = 'request' WHERE id = %s",
+                (secured, reserved.id),
+            )
+        other = make.product(moph_name="CONCOR 5MG", search_name="concor 5mg")
+        make.request_item(opened, product_id=other, position=2)
+        refs = {row.id: row.ref for row in api.world.all("SELECT id, ref FROM sourcing_requests")}
+
+        shown = http.get(f"{ADMIN}/clients/{shop.client}", headers=admin).json()
+
+        assert [
+            (row["ref"], row["state"], row["outcome"], row["medicines"], row["secured"])
+            for row in shown["requests"]
+        ] == [
+            (refs[opened], "OPEN", None, 2, 1),
+            (refs[closed], "CLOSED", "UNFULFILLED", 0, 0),
+        ]
+        assert shown["client"]["open_requests"] == 1
+
+    def test_the_list_keeps_who_has_something_going_or_needs_a_look(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        http = api.http()
+        make = api.world.make
+        shop.reserve()
+        asking = api.client()
+        make.request(client_id=asking)
+        flagged = api.client()
+        with api.world.as_owner():
+            api.world.connection.exec_driver_sql(
+                "INSERT INTO abuse_flags (subject_type, subject_id, rule, severity, evidence) "
+                "VALUES ('client', %s, 'guardrail_repeat', 'low', %s::jsonb)",
+                (flagged, '{"triggers_24h": 3}'),
+            )
+        api.client()  # someone with nothing going
+        collected = shop.reserve()
+        http.post(
+            f"/api/v1/pharmacy/reservations/{collected.id}/picked-up",
+            json={},
+            headers=shop.pharmacist,
+        )
+
+        def ids(having: str) -> list[str]:
+            answer = http.get(f"{ADMIN}/clients?having={having}", headers=admin)
+            return [row["id"] for row in answer.json()["items"]]
+
+        everyone = http.get(f"{ADMIN}/clients", headers=admin).json()["items"]
+        unknown = http.get(f"{ADMIN}/clients?having=everything", headers=admin)
+
+        assert ids("reservation") == [str(shop.client)]
+        # "Who picked up the order" (the owner): the same client, by what they collected.
+        assert ids("picked_up") == [str(shop.client)]
+        assert ids("request") == [str(asking)]
+        assert ids("look") == [str(flagged)]
+        # Who needs a look is first in the whole list too.
+        assert (len(everyone), everyone[0]["id"], everyone[0]["flags_open"]) == (
+            4,
+            str(flagged),
+            1,
+        )
+        assert unknown.status_code == 422
+
     def test_contact_details_are_read_one_audited_view_at_a_time(
         self, api: Api, shop: Shop, admin: dict[str, str]
     ) -> None:
@@ -432,6 +544,15 @@ class TestContestingANoShow:
         assert [(row["ref"], row["pharmacy"]) for row in detail["contested"]] == [
             (missed.ref, "Hamra Pharmacy")
         ]
+        # The case itself says what it is about, in words an admin can act on, and
+        # carries the reservation to clear: no hunt through the client's page.
+        assert "never pressed [Picked up]" in escalation["summary"]
+        case = http.get(f"{ADMIN}/escalations/{escalation['id']}", headers=admin).json()
+        assert [(row["id"], row["ref"]) for row in case["contested"]] == [
+            (str(missed.id), missed.ref)
+        ]
+        # A contest comes from a button, not from a chat: there is no chat to show.
+        assert case["thread"] == []
 
     def test_a_reservation_that_is_not_a_counted_no_show_cannot_be_contested(
         self, api: Api, shop: Shop
@@ -473,6 +594,13 @@ class TestContestingANoShow:
         assert (twice.status_code, code_of(twice)) == (409, "NOT_CONTESTABLE")
         # The reservation itself is still what it was: expired (INV-4).
         assert shop.state_of(second.id) == "EXPIRED_NO_SHOW"
+        # On the client's page it is still a missed pickup, one that no longer counts.
+        listed = {row["ref"]: row for row in cleared.json()["reservations"]}
+        assert (listed[second.ref]["state"], listed[second.ref]["counts_as_no_show"]) == (
+            "EXPIRED_NO_SHOW",
+            False,
+        )
+        assert listed[first.ref]["counts_as_no_show"] is True
         assert "order.no_show_cleared" in api.world.audit_actions(second.id)
 
 
@@ -483,8 +611,11 @@ class TestAbuseFlags:
         http = api.http()
         shop.no_show()
         shop.no_show()
+        page = f"{ADMIN}/clients/{shop.client}"
 
-        (flag,) = http.get(f"{ADMIN}/abuse-flags", headers=admin).json()["items"]
+        # A flag is read on the page of the client it is about: there is no list of flags.
+        (flag,) = http.get(page, headers=admin).json()["flags"]
+        no_list = http.get(f"{ADMIN}/abuse-flags", headers=admin)
         no_reason = http.post(f"{ADMIN}/abuse-flags/{flag['id']}/dismiss", json={}, headers=admin)
         warned = http.post(
             f"{ADMIN}/abuse-flags/{flag['id']}/act",
@@ -504,7 +635,9 @@ class TestAbuseFlags:
         assert (no_reason.status_code, code_of(no_reason)) == (422, "REASON_REQUIRED")
         assert (warned.json()["state"], warned.json()["action"]) == ("ACTIONED", "warn")
         assert (twice.status_code, code_of(twice)) == (409, "CHANGED_SINCE")
-        assert http.get(f"{ADMIN}/abuse-flags", headers=admin).json()["items"] == []
+        assert no_list.status_code in (404, 405)
+        after = http.get(page, headers=admin).json()
+        assert (after["flags"], after["client"]["flags_open"]) == ([], 0)
 
     def test_suspending_from_a_flag_is_a_real_suspension(
         self, api: Api, shop: Shop, admin: dict[str, str]
@@ -517,7 +650,7 @@ class TestAbuseFlags:
                 (shop.client, '{"triggers_24h": 3}'),
             )
         reserved = shop.reserve()
-        (flag,) = http.get(f"{ADMIN}/abuse-flags", headers=admin).json()["items"]
+        (flag,) = http.get(f"{ADMIN}/clients/{shop.client}", headers=admin).json()["flags"]
         before = http.get(f"{ADMIN}/overview", headers=admin).json()
 
         acted = http.post(

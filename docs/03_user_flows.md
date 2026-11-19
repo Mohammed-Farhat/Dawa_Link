@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.21 · **Date:** 2026-11-19
+**Version:** v4.22 · **Date:** 2026-11-19
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.22 (the owner's findings on the admin's side, 2026-11-19, decision log BLD-D45):** the admin's console made simpler: a client's page lists their reservations and requests (AS-5); an escalation is what the client needs, the chat, one reply box and [Close this case] (AS-6); a flag is on its client's page (AS-7); reported answers are one list with two buttons (AS-8). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -612,37 +612,46 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 - **A pharmacy that moved** is counted on the Pharmacies tab and marked "Pin to check": the admin looks at the map and presses **[The pin is right]**, or drags the pin and saves the correction.
 
 #### AS-5 Clients
-- Status (active, paused, suspended), reservations, no-shows, open requests.
-- [Lift pause] / [Suspend] / [Reinstate] (reason). Suspending ends the client's sessions at once.
-- **[Clear no-show]** on a contested reservation (reason; audited; `04` R-N3).
-- Viewing contact details is audited, and limited to 30 clients per hour per admin (`04` N-47).
-- **As built:** the list shows a status and counts (open reservations, no-shows in 30 days, open requests), **never a name**; an order or request number finds its client; a client is reached from an escalation by an ID. The name, email and phone are behind [Show the name, email and phone].
+- **The list:** each client by an ID, with a status (active, paused, suspended) and what they have going: open reservations, how many they picked up, open requests, missed pickups in 30 days. **Never a name.** An order or request number finds its client. Filters: with a reservation · picked up an order · with an open request · **needs a look** (a contested missed pickup, or a flag). Who needs a look is first, and counted on the Clients tab.
+- **A client's page** (the owner, 2026-11-19: "to know each client what he has"):
+  - their last 30 reservations, newest first: order number, medicine, pharmacy, and how each ended (to pick up, with its deadline · picked up · cancelled · missed pickup · not available at the pharmacy);
+  - their last 10 requests, the open ones first: "searching until…" or how it closed, and how many of its medicines are reserved;
+  - only when there is one: a missed pickup they contest, with **[Clear this missed pickup]** (`04` R-N3), and a flag about them (AS-7).
+- [Lift the pause] / [Suspend] / [Reinstate]. Suspending ends the client's sessions at once. **Each action asks for its reason where its button is.**
+- The name, email and phone are behind [Show the name, email and phone]: each look is audited, 30 clients per hour per admin (`04` N-47).
 
 #### AS-6 Escalations
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ ESC-81 · emergency_claim · Request Q-6BN2RA · opened 20 min ago  │
-│ Agent summary: "Client says the need is urgent; Glucophage   │
-│ 850 ×1 still missing; 2 pharmacies declined; 2 h left."      │
-│ Conversation (redacted) [Show] · Trace [Open in Langfuse]    │
-│ Reply: [ text ≤ 500 chars ]  [ Send ]  [ Resolve with note ] │
+│ Asked for a person · New · opened Thu 19 Nov 09:17            │
+│ Client 7c41e9b2 (open the client's page)                      │
+│ What the client needs                                         │
+│   "The client asked to talk to a person: no pharmacy has     │
+│    their medicine listed."                                    │
+│ The chat  (when there is one)                                 │
+│ Write to the client: [ text ≤ 500 chars ]  [ Send ]           │
+│ Note (optional): [            ]  [ Close this case ]          │
 └──────────────────────────────────────────────────────────────┘
 ```
-- **Reasons:** client asked for a human · **emergency claim** · can't resolve · window ending · suspicious · complaint.
-- **Priority can't be changed here or anywhere** (`04` R-PRI4). For an emergency claim, the admin replies with human help (e.g. point to emergency services, or suggest calling pharmacies directly).
+- **What an escalation is:** a client who needs a person. It opens when the assistant hands a case over (the client asked for a human · **emergency claim** · it can't resolve · the search time is ending · suspicious), or when a client presses [I picked it up] on a missed pickup (a **complaint**).
+- **The page is four things** (the owner, 2026-11-19, BLD-D45): what the client needs, the chat if there is one, one box to write to the client, one button to close the case. There is no "I take it": a first reply marks the case "Answered". The note on closing is optional, and the client never sees it.
+- **A contested missed pickup** shows its reservation on the case itself (order number, medicine, pharmacy) with **[Clear the missed pickup]**: the admin calls the pharmacy, and clears it if the client did collect it. Such a case comes from a button, so it has no chat: the page says "No chat goes with this case".
+- **Priority can't be changed here or anywhere** (`04` R-PRI4). The page says so on an emergency claim, where the temptation is: the admin replies with human help (e.g. point to emergency services, or suggest calling pharmacies directly).
 - The reply appears as "DawaLink team" (CN-14), in the conversation the client has open now, **exactly as the admin wrote it**: a phone number is allowed when the situation needs one (the owner, 2026-11-16, Q46). The assistant never sees a name, a phone number or an email from it. The email that announces it is a template without the reply's text.
-- **An admin reads a chat only here and in a reported answer** (A-D4), as it was stored: the client's and the assistant's messages without personal details, the team's own replies as typed. There is no list of conversations.
+- **An admin reads a chat only here** (A-D4), as it was stored: the client's and the assistant's messages without personal details, the team's own replies as typed. There is no list of conversations. (A reported answer shows the reply and the one message it answered.)
 - A new escalation for a client who already has one open is added to it.
 
 #### AS-7 Abuse flags (reduced)
 - No-show pause.
 - Repeated injection or cross-user attempts (high at ≥ 3 in 24 h).
 
+**A flag is shown on the page of the client it is about** (the owner's finding of 2026-11-19: its link led to a page that said nothing of it). There is no page of flags: the client is counted on the Clients tab, marked "Flagged" and listed first.
+
 Actions: dismiss · note a warning · suspend, each with a reason. "Note a warning" (the owner, 2026-11-17, Q52: it was "Warn"; the screen says that DawaLink sends nothing) records that the account's owner was warned (in a reply to their escalation, or outside DawaLink); "suspend" is a real suspension. A flag shows counts, never a message.
 
 #### AS-8 Reported answers
-- 👎 reports with the reply, reason, redacted context and trace.
-- [Not a problem] · [Confirmed] + category (understanding · decision · safety · language · other) → **[Add to regression tests]**. [Download the regression cases] gives them as one JSON file for the team to copy into the repo.
+- **One list** (the owner, 2026-11-19, BLD-D45): each 👎 with the client's reason and comment, the client's message, and the assistant's reply to it.
+- Two buttons: **[Real problem]** · **[Not a problem]**. A real problem is kept as a regression case; nothing to file, nothing to download on the screen. The team takes the cases from the API when it writes the regression tests (A-D6).
 
 #### AS-9 Catalog (read-only)
 - Search products, flags (prescription, controlled), equivalence groups, source file and date.

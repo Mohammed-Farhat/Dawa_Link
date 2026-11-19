@@ -518,15 +518,16 @@ class TestEscalations:
         # Where a reply went is not one of the "added later" escalations.
         assert detail["escalation"]["notes"] == []
 
-    def test_take_resolve_and_what_a_resolved_escalation_refuses(
+    def test_a_reply_takes_it_and_what_a_closed_escalation_refuses(
         self, api: Api, admin: dict[str, str]
     ) -> None:
+        """There is no "I take it": the first reply says that someone is on it."""
         http = api.http()
         case = Case(api)
         base = f"{ADMIN}/escalations/{case.escalation}"
 
-        taken = http.post(f"{base}/take", headers=admin)
-        no_note = http.post(f"{base}/resolve", json={}, headers=admin)
+        no_take = http.post(f"{base}/take", headers=admin)
+        replied = http.post(f"{base}/reply", json={"text": "We are on it."}, headers=admin)
         resolved = http.post(
             f"{base}/resolve", json={"note": "Pointed to emergency services."}, headers=admin
         )
@@ -534,8 +535,8 @@ class TestEscalations:
         empty = http.post(f"{base}/reply", json={"text": "  "}, headers=admin)
         too_long = http.post(f"{base}/reply", json={"text": "x" * 501}, headers=admin)
 
-        assert taken.json()["escalation"]["state"] == "IN_PROGRESS"
-        assert (no_note.status_code, code_of(no_note)) == (422, "REASON_REQUIRED")
+        assert no_take.status_code == 404
+        assert replied.json()["escalation"]["state"] == "IN_PROGRESS"
         assert resolved.json()["escalation"]["state"] == "RESOLVED"
         assert resolved.json()["escalation"]["resolution_note"] == "Pointed to emergency services."
         assert (late_reply.status_code, code_of(late_reply)) == (409, "CHANGED_SINCE")
@@ -543,9 +544,33 @@ class TestEscalations:
         assert http.get(f"{ADMIN}/escalations", headers=admin).json()["items"] == []
         assert api.world.audit_actions(case.escalation) == [
             "escalation.open",
-            "escalation.take",
+            "escalation.reply",
             "escalation.resolve",
         ]
+
+    def test_a_case_is_closed_without_a_note_or_a_reply(
+        self, api: Api, admin: dict[str, str]
+    ) -> None:
+        """[Close this case] asks for nothing: the note is there for who wants one."""
+        http = api.http()
+        case = Case(api)
+        base = f"{ADMIN}/escalations/{case.escalation}"
+
+        closed = http.post(f"{base}/resolve", json={}, headers=admin)
+        too_long = http.post(
+            f"{ADMIN}/escalations/{Case(api).escalation}/resolve",
+            json={"note": "x" * 501},
+            headers=admin,
+        )
+
+        shown = closed.json()
+        assert (shown["escalation"]["state"], shown["escalation"]["resolution_note"]) == (
+            "RESOLVED",
+            None,
+        )
+        # What the page no longer carries: the tracing tool's IDs.
+        assert "trace_ids" not in shown
+        assert too_long.status_code == 422
 
 
 # --- Reported answers --------------------------------------------------------------------------
@@ -620,6 +645,36 @@ class TestAReportedAnswer:
             ("safety", "Take two tablets a day.")
         ]
         assert http.get(f"{ADMIN}/overview", headers=admin).json()["reports_new"] == 0
+
+    def test_the_list_alone_is_enough_to_judge_an_answer(
+        self, api: Api, admin: dict[str, str]
+    ) -> None:
+        """The console is one list with two buttons: each row carries the whole reply and
+        the client's message it answered, and [Real problem] sends nothing with it."""
+        http = api.http()
+        case = Case(api)
+        long_reply = ("Take two tablets a day. " * 20).strip()
+        seq = case.say("agent", long_reply)
+        made = http.post(
+            report_path(case, seq),
+            json={"reason": "unsafe", "comment": "It told me a dose."},
+            headers=case.login,
+        )
+        reports = f"{ADMIN}/answer-reports"
+
+        (row,) = http.get(reports, headers=admin).json()["items"]
+        confirmed = http.post(f"{reports}/{made.json()['id']}/confirm", json={}, headers=admin)
+        exported = http.get(f"{reports}/export", headers=admin).json()["cases"]
+
+        assert row["reply"] == long_reply
+        assert row["asked"] == "I need it today, it is urgent. Call me on [phone]."
+        assert (row["reason"], row["comment"]) == ("unsafe", "It told me a dose.")
+        assert confirmed.json()["report"] == confirmed.json()["report"] | {
+            "state": "CONFIRMED",
+            "category": "other",
+            "in_regression": True,
+        }
+        assert len(exported) == 1
 
     def test_a_team_reply_in_the_copy_is_cleaned(self, api: Api, admin: dict[str, str]) -> None:
         """A team reply is stored as typed. The copy kept with a report may be exported

@@ -7,9 +7,9 @@ import { AuditPage, ClockPage } from './AuditPages'
 import { ClientPage, ClientsPage } from './ClientsPages'
 import { useOverview } from './data'
 import { EscalationPage, EscalationsPage } from './EscalationsPages'
-import { CatalogPage, FlagsPage, HealthPage } from './HealthPages'
+import { CatalogPage, HealthPage } from './HealthPages'
 import { PharmaciesPage, PharmacyPage } from './PharmaciesPages'
-import { ReportPage, ReportsPage } from './ReportsPages'
+import { ReportsPage } from './ReportsPages'
 
 const s = strings.admin
 
@@ -18,8 +18,11 @@ const s = strings.admin
  * what waits behind it. Its code is loaded only for an admin.
  *
  * What an admin can do here is small on purpose: approve and correct pharmacies, answer
- * escalated clients, review reported answers, read the audit log. Nothing changes a
- * pharmacy's stock, a price, or who gets a box first.
+ * escalated clients, see what each client has going, review reported answers, read the
+ * audit log. Nothing changes a pharmacy's stock, a price, or who gets a box first.
+ *
+ * A flag has no page of its own: it is on the page of the client it is about, and the
+ * Clients tab counts who needs a look (the owner's findings, 2026-11-19).
  */
 export default function AdminPortal() {
   const { logout } = useSession()
@@ -45,10 +48,7 @@ export default function AdminPortal() {
             {s.count(s.tabs.reports, waits?.reports_new ?? 0)}
           </NavLink>
           <NavLink to="/admin/clients" className="bar__tab">
-            {s.count(s.tabs.clients, waits?.contests_waiting ?? 0)}
-          </NavLink>
-          <NavLink to="/admin/flags" className="bar__tab">
-            {s.count(s.tabs.flags, waits?.flags_open ?? 0)}
+            {s.count(s.tabs.clients, (waits?.contests_waiting ?? 0) + (waits?.flags_open ?? 0))}
           </NavLink>
           <NavLink to="/admin/health" className="bar__tab">
             {s.tabs.health}
@@ -76,10 +76,8 @@ export default function AdminPortal() {
           <Route path="escalations" element={<EscalationsPage />} />
           <Route path="escalations/:id" element={<EscalationPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="reports/:id" element={<ReportPage />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="clients/:id" element={<ClientPage />} />
-          <Route path="flags" element={<FlagsPage />} />
           <Route path="health" element={<HealthPage />} />
           <Route path="catalog" element={<CatalogPage />} />
           <Route path="audit" element={<AuditPage />} />

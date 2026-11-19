@@ -146,11 +146,11 @@ class EscalationNote(Out):
 
 class EscalationRow(Out):
     id: uuid.UUID
-    # An ID, never a name: it opens the client's page (status, counts, contests).
+    # An ID, never a name: it opens the client's page.
     client_id: uuid.UUID
     reason: EscalationReasonName
     state: EscalationStateName
-    # Written by the agent, with no personal details.
+    # Written by the agent, or by code for a contested no-show: no personal details.
     summary: str
     request_ref: str | None
     notes: list[EscalationNote]
@@ -175,12 +175,25 @@ class ThreadMessage(Out):
     created_at: datetime
 
 
+class ContestedReservation(Out):
+    """An expired reservation the client says they picked up (R-N3)."""
+
+    id: uuid.UUID
+    ref: str
+    product: str
+    pharmacy: str
+    expired_at: datetime | None
+    contested_at: datetime
+
+
 class EscalationDetail(Out):
     escalation: EscalationRow
+    # Empty when there is no chat to show: the case came from a button, not from a
+    # chat, or the chat was deleted after its 30 days.
     thread: list[ThreadMessage]
-    # The agent runs behind the thread's replies, newest first: what to look up in the
-    # tracing tool.
-    trace_ids: list[str]
+    # The no-shows this client contests and that still count: what a complaint about a
+    # missed pickup is about, with [Clear] beside it.
+    contested: list[ContestedReservation]
 
 
 class TeamReply(In):
@@ -240,8 +253,10 @@ class AnswerReportRow(Out):
     comment: str | None
     category: str | None
     in_regression: bool
-    # The start of the reported reply.
+    # The reported reply, whole, and the client's message it answered: enough to judge
+    # it from the list. Both without personal details, like every stored message.
     reply: str
+    asked: str | None
     created_at: datetime
 
 
@@ -259,8 +274,11 @@ class AnswerReportDetail(Out):
 
 
 class ConfirmReport(In):
-    category: ReportCategoryName
-    add_to_regression: bool = False
+    """[Real problem]. The console sends nothing with it: a confirmed report is a
+    regression case, filed under "other" unless a category is given."""
+
+    category: ReportCategoryName = "other"
+    add_to_regression: bool = True
 
 
 class RegressionCases(Out):
@@ -304,9 +322,11 @@ class AdminClientRow(Out):
     paused_until: datetime | None
     district: str | None
     open_orders: int
+    picked_up: int
     no_shows: int
     open_requests: int
     contested: int
+    flags_open: int
 
 
 class AdminClients(Out):
@@ -314,31 +334,40 @@ class AdminClients(Out):
     next_cursor: str | None
 
 
-class ContestedReservation(Out):
-    """An expired reservation the client says they picked up (R-N3)."""
+class ClientReservation(Out):
+    """One reservation of a client, as their page lists it."""
 
-    id: uuid.UUID
     ref: str
     product: str
     pharmacy: str
-    expired_at: datetime | None
-    contested_at: datetime
+    state: Literal[
+        "OFFERED",
+        "RESERVED",
+        "PICKED_UP",
+        "NOT_AVAILABLE",
+        "EXPIRED_NO_SHOW",
+        "CANCELLED_BY_CLIENT",
+        "CANCELLED_BY_SYSTEM",
+    ]
+    units: int
+    created_at: datetime
+    # Until when it can be collected, while it waits.
+    deadline: datetime | None
+    closed_at: datetime | None
+    # A missed pickup an admin cleared no longer counts (R-N3).
+    counts_as_no_show: bool
 
 
-class AdminClient(Out):
-    client: AdminClientRow
-    contested: list[ContestedReservation]
+class ClientRequest(Out):
+    """One sourcing request of a client, as their page lists it."""
 
-
-class ClientContact(Out):
-    """Read through one audited endpoint only (A-D3)."""
-
-    full_name: str
-    email: str
-    phone: str | None
-
-
-# --- Abuse flags (AS-7) -----------------------------------------------------------------------
+    ref: str
+    state: Literal["OPEN", "CLOSED"]
+    outcome: str | None
+    medicines: int
+    secured: int
+    created_at: datetime
+    ends_at: datetime
 
 
 class AbuseFlagRow(Out):
@@ -354,9 +383,26 @@ class AbuseFlagRow(Out):
     created_at: datetime
 
 
-class AbuseFlags(Out):
-    items: list[AbuseFlagRow]
-    next_cursor: str | None
+class AdminClient(Out):
+    """A client's page: what they have going, by an ID. The name is not here."""
+
+    client: AdminClientRow
+    reservations: list[ClientReservation]
+    requests: list[ClientRequest]
+    contested: list[ContestedReservation]
+    # Raised by code about this client, not handled yet (R-AB).
+    flags: list[AbuseFlagRow]
+
+
+class ClientContact(Out):
+    """Read through one audited endpoint only (A-D3)."""
+
+    full_name: str
+    email: str
+    phone: str | None
+
+
+# --- Abuse flags (AS-7) -----------------------------------------------------------------------
 
 
 class FlagAction(In):

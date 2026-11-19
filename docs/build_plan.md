@@ -1003,7 +1003,7 @@ Rounds 1 and 2 are pushed. The owner then went through the client's side once mo
 
 ---
 
-### After step 9: the owner tries the pharmacy's side (2026-11-19) 🔨
+### After step 9: the owner tries the pharmacy's side (2026-11-19) ✅
 
 Round 3 of the client's side is pushed. The owner registered a pharmacy, had it approved by his local admin, and uploaded a stock file. Three questions came from it, each asked back with an example (§5, Q63 to Q66; decision log BLD-D44).
 
@@ -1038,6 +1038,49 @@ Round 3 of the client's side is pushed. The owner registered a pharmacy, had it 
 - the eighth migration ran on the local database.
 
 **Not checked:** the pharmacy's Inventory table with the new states in the browser (the same words as Listings, tested in the website's tests); an ask for a box priced by the pharmacy itself, on the screen (the suggestion is tested); the admin's side.
+
+**Committed and pushed by the owner on 2026-11-19.**
+
+### After step 9: the owner tries the admin's side (2026-11-19) 🔨
+
+So that every page had something waiting, one example of each kind was added to the local database first (a pharmacy to approve, a pin to check, an escalation, a reported answer, a contested missed pickup). The owner then went through the console and wrote five findings, with screenshots, and one rule: **"Do not add a lot of stuff we do not need… we want to easily know the clients, who has open requests, who picked up the order, and a basic escalation when the user tells the agent to talk to us."**
+
+**Two of his confusions came from my examples, not from the feature,** and were said so: the client who "picked up" had picked nothing up (the example made a reservation expire and pressed the client's button), and the "asked for a person" case sat on a demo chat full of old trial messages. Both examples were made again to read like real cases.
+
+**His four answers** (§5, Q67 to Q70; decision log BLD-D45): a simpler escalation page; reported answers as one list; [I picked it up] kept and made clear; a client's page that lists what they have, still by an ID.
+
+**Built:**
+- **Escalations.** The page is what the client needs, the chat if there is one, one box to write to the client, and [Close this case] with an optional note. [I take it] is gone, with its endpoint: a first reply marks the case "Answered". A contested missed pickup shows its reservation on the case, with [Clear the missed pickup].
+- **Reported answers.** One list: the client's reason, their message, the assistant's reply, [Real problem] and [Not a problem]. The page of one report, the category, the model's details and the download are off the screen. A real problem still joins the regression cases, which the team takes from the API (A-D6).
+- **Clients.** Each row says what the client has going (open reservations, picked up, open requests, missed pickups). Filters: with a reservation, picked up an order, with an open request, needs a look. A client's page lists their last 30 reservations with how each ended and their last 10 requests.
+- **Flags.** No page of flags: a flag is on the page of the client it is about, with its three buttons. The Clients tab counts contested missed pickups and open flags together.
+- **Reasons.** An action that needs a reason asks for it where its button is (`ReasonedButton`), on the client's page and on an escalation.
+
+**Wrong on the screens, fixed without asking** (`09` FI-35, FI-36):
+- a contested missed pickup said "This conversation was deleted (30 days)": it never had one. The page now says "No chat goes with this case";
+- "The assistant's summary" stood over a case that code wrote: it is "What the client needs";
+- the line about priority was on every case: it is on an emergency claim only;
+- the tracing tool's IDs were on the page: gone, with the field of the API;
+- the block about contests was on every client's page, with its explanation and "Nothing is contested": it appears only when there is one;
+- a flag's link opened a page that said nothing of the flag;
+- "no-show" on the admin's screens is "missed pickup", the word the client reads.
+
+**Decided by me, and why:**
+- **A client stays an ID.** He asked what each client has, not who they are; a list of medicines beside a name is someone's health. The name is still one audited click away (`10` RR-23 says what that leaves).
+- **The export of regression cases stays in the API** though no button calls it: it is how a confirmed report becomes a test, which the course checklist counts (T-12).
+- **`take` is removed, not left unused.** SM-9 keeps its three states; a reply makes the same move.
+- **No new admin address:** the reservations are part of the client's page that existed, so the test "no admin address names an order" holds.
+
+**Checks:** the backend suite (2078 tests); the website's 188 tests; lint and types clean on both; the planner exact on the P-set and the no-AI policy unchanged at 133 (`before_commit`). No schema change, no migration, no prompt change.
+
+**Seen in the real app** (the local stack, as the owner's local admin):
+- the Clients list with its two rows of filters, the contested client and the flagged one first, "Clients (2)" on the tab and no Flags tab;
+- a client's page with reservations marked "Missed pickup", "Picked up" and "Cancelled by the client"; the flagged client's page with the flag and its three buttons; the contesting client's page with "Says they collected it";
+- the complaint's page: "The missed pickup" with its reservation and [Clear the missed pickup], then "No chat goes with this case";
+- the "asked for a person" page with its chat, the reply box and [Close this case];
+- Reported answers as one list, the reply under the client's message, with the two buttons.
+
+**Not checked:** a screen reader on the new pages (the `axe` checks pass in the website's tests); the console on a phone's width.
 
 ---
 
@@ -1224,6 +1267,10 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q64 | **When the agent asks for a held-back box, who sets the price?** The pharmacy types it, with DawaLink's discount suggested (recommended); or always DawaLink's discount. | **2026-11-19: the pharmacy types it.** Built. |
 | Q65 | **A stock file needs the Ministry's names.** Leave it; accept the Ministry's code alone; or let DawaLink learn each pharmacy's names. | **2026-11-19: "leave it for now".** A stated limitation; learned names are the planned answer. |
 | Q66 | **Show a full-date example in the template and the hint?** | **2026-11-19: "no its okay".** Unchanged. |
+| Q67 | **How should an escalation's page look?** A simpler page (recommended): what the client needs, the chat, one reply box, [Close this case]; or keep the layout and fix only the wrong texts. Asked with a drawing of each. | **2026-11-19: the simpler page.** Built (BLD-D45). |
+| Q68 | **What to do with "Reported answers"?** He found it useless. One simple list (recommended, it keeps the checklist's T-12); remove it everywhere; or leave it. | **2026-11-19: one simple list.** Built. |
+| Q69 | **Keep [I picked it up] on a missed pickup?** Keep it, made clear (recommended); or remove it. Explained first: only the pharmacy marks a pickup; the button marks nothing. | **2026-11-19: keep it, made clear.** Built. |
+| Q70 | **What does the Clients list show: an ID with the name one click away (recommended), or names in the list?** | **2026-11-19: neither as asked: "I meant that i want to know clients that have reservations, ordered and picked, like to know each client what he has".** Read as: what each client has, on their page and in the list's filters; no names were asked for, so a client stays an ID. Built. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
