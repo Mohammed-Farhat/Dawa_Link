@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.7 · **Date:** 2026-11-15
+**Version:** v1.12 · **Date:** 2026-11-19
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.7** (decision log BLD-D30): no request form and no cart; Home has the search and one tile, Ask DawaLink; a request starts from the agent's card in the chat. The CS-15 board of the canvas is history. **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.12** (the owner's findings on the admin's side, decision log BLD-D45): the admin's console as built (§3.3): its tabs, an action's reason asked where its button is, a block shown only when it has something to say. **v1.11** (decision log BLD-D44): the pharmacy's Settings has its listing rule; a box's card says "Not listed yet" with [List now]. **v1.10** (the owner's third findings of 2026-11-18, decision log BLD-D43): [Directions] opens Google Maps; on Home every reservation to pick up is the same ticket. **v1.9** (the owner's second findings of 2026-11-18, decision log BLD-D42): no assistant beside the page, it is a page of its own; Home shows what needs the client now and has no search box; the phone's menu has a Search tab; search shows the last searches and has filters for the order, the price and "open now"; where a client lives is a place on a map or an area. **v1.8** (the owner's findings of 2026-11-18, decision log BLD-D40): the client's portal has a real desktop layout (§3.1), search shows results as the name is typed, the assistant's page lists the earlier chats, a new password's rule is a checklist. **v1.7** (decision log BLD-D30): no request form and no cart; Home has the search and one tile, Ask DawaLink; a request starts from the agent's card in the chat. The CS-15 board of the canvas is history. **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -21,7 +21,7 @@
 
 ## In short
 
-- **Search first, not chat first.** The client's home opens with today's pickup and a search box. The assistant and sourcing requests are two equal entry points below it.
+- **Search first, not chat first.** Search is its own entry in the menu, on a phone and on a computer, next to the assistant's. The client's home shows what needs them now (BLD-D42; it opened with a search box until then).
 - **One look (v2):**
   - deep navy text, a friendly blue for actions, and **yellow kept for savings only**;
   - **one meaning per color:** blue = act or searching · green = ready or fits · amber = your tap needed · red = failed · yellow = what you save;
@@ -43,7 +43,7 @@
 
 | Principle | In practice |
 |---|---|
-| **Search first, agent one tap away** | Home: today's pickup → search box → "Ask DawaLink". Searching, reserving, picking up and cancelling never need the chat. *One thing does since BLD-D30 (the owner): a 6-hour sourcing request starts in the chat, because the agent is the one who works on it.* |
+| **Search first, agent one tap away** | The menu: Home · Search · Medicines · Ask · Me (BLD-D42). Home is what needs the client now; Search and "Ask DawaLink" are each one tap away, everywhere. Searching, reserving, picking up and cancelling never need the chat. *One thing does since BLD-D30 (the owner): a 6-hour sourcing request starts in the chat, because the agent is the one who works on it.* |
 | **Urgent by design** | What's due today sits at the top of Home. The order number is one tap away ("Show at the counter"). |
 | **Facts before words** | The same fact row, in the same order, on search results, agent cards, offers and plans |
 | **Savings first** | Every price shows what you save (public price − DawaLink price, computed live), in yellow |
@@ -52,7 +52,7 @@
 | **Plain words, never codes** | "Reserved: pick up by today 23:00", not `RESERVED`; "This box expires before your 12 days end", not `DOES_NOT_FIT` |
 | **Color is never the only signal** | Every status has a word or an icon as well (for color-blind users and bright sunlight) |
 | **Show what the agent did, never what it can't show** | The request timeline lists actions in plain words. It never names other clients or private stock. |
-| **Phones first for clients, desktops first for pharmacies and admins** | Client layouts start at 360 px. Pharmacy and admin screens use a top bar of pill tabs that wraps on phones. |
+| **Phones first for clients, desktops first for pharmacies and admins** | Client layouts start at 360 px, and on a computer they are a desktop layout of their own, not a phone's column (BLD-D40). Pharmacy and admin screens use a top bar of pill tabs that wraps on phones. |
 
 ---
 
@@ -95,17 +95,24 @@
 ## 3. Layout and navigation (v2)
 
 ### 3.1 Client portal (phone first)
-- **A floating pill menu** with four tabs: **Home · Medicines · Ask · Me**. The selected tab is a blue pill with its name.
-  - **Home:** today's pickup ticket, the search pill, and one tile, Ask DawaLink (BLD-D30); an open request shows as a line under it ("1 searching").
+- **A floating pill menu** with five tabs (the owner, 2026-11-18, BLD-D42; four until then): **Home · Search · Medicines · Ask · Me**. The selected tab is a blue pill with its name.
+  - **Home:** what needs the client now: the pickup ticket, the offers waiting for a tap, the open requests, the watches. No search box. With nothing waiting: one sentence and two links, [Search a medicine] and [Ask DawaLink].
+  - **Search:** the search of what is in stock (§5).
   - **Medicines** ("My medicines"): **one tracker per medicine**, from searching to ready to pick up, whether it came from a search, a request or a watch. It replaces separate lists of requests, reservations and watches.
   - **Ask:** the assistant, full screen (no menu, so the message box has room).
   - **Me:** account and settings.
-- **Detail pages** (search results, a pharmacy, a request, the ticket) open full screen with a round back button.
-- **Wider than 992 px:** a top bar instead of the floating menu, with the assistant as a side panel (`03` §1.2).
+- **Detail pages** (a pharmacy, a request, the ticket) open full screen with a round back button.
+- **Wider than 992 px: a desktop layout** (the owner, 2026-11-18, BLD-D40; it replaces "a phone's column with the assistant beside it"):
+  - **a top bar:** the brand, Home · Search · My medicines, **Ask DawaLink**, and the account's menu (Profile and settings, Notifications, Log out). No floating menu;
+  - **pages use the window's width:** cards in as many columns as fit, the search with its filters in a left column and the results beside them, the profile in two columns. A page that is one card or one form keeps a readable width;
+  - **the assistant is a page of its own, never beside another page** (the owner, BLD-D42; the side panel of BLD-D40 lasted a morning). "Ask DawaLink" in the top bar is a link to it. The client's chats are in a left column, the conversation in the middle. A request's thread is framed the same way;
+  - **the public pages** (welcome, sign up, log in): the form beside a navy panel that says what DawaLink is.
 - **Reserve:** a tall bottom sheet on phones (a centered dialog on desktop), with the total and [Reserve] pinned at the bottom.
 
 ### 3.2 Pharmacy portal (desktop first)
 - **A top bar with pill tabs:** Today · Reservations · Inventory · Listings · Early release · Settings. It wraps on phones, and every page works on a phone (P-D10).
+- **Listings** (BLD-D44): the pharmacy's rule in a line under the title, with a link to Settings. Each box's card has one state pill (Listed · Listed by you · Not listed yet · Paused · None left) and **one way out of that state**: [List now], [Back to my rule], or [Pause] / [Resume]. A box that waits says when clients will see it.
+- **Settings** has "When your boxes are listed": five choices as radio buttons (180, 90, 60 or 30 days left, or "Never: I list each box myself"), saved by its own button.
 - **Today** is the home (PS-3):
   - a big **order-number box for the counter**;
   - the found reservation, with large [Picked up] and [Not available] buttons;
@@ -115,6 +122,10 @@
 ### 3.3 Admin console (desktop)
 - A **dark navy top bar**, so nobody confuses the admin console with the pharmacy portal.
 - **Overview first:** what needs attention (escalations, approvals, reported answers, flags), then the agent's 7-day health with a simple chart (AS-2, AS-10).
+- **As built (2026-11-19, BLD-D45):** the tabs are Pharmacies · Escalations · Reported answers · Clients · Health · Catalog · Audit log (· Demo clock in demo mode), each with the number that waits behind it; there is no overview page and no page of flags. Three rules of the console's screens:
+  - **an action that needs a reason asks for it where its button is** (`ReasonedButton`): the button is always live, and pressing it opens "…: why?" with [Cancel]. Never a reason box elsewhere on the page with grey buttons;
+  - **a block is on the page only when it has something to say:** a contested missed pickup, a flag, the line about priority (on an emergency claim), the chat's note;
+  - **an admin's words are the client's words:** "missed pickup", not "no-show"; "close this case", not "resolve"; nothing of the tracing tool.
 
 ---
 
@@ -153,8 +164,8 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Board | `03` | What's on it, top to bottom |
 |---|---|---|
 | Welcome | CS-1 | Three example cards (a price with its saving, a ticket, a walking time) → "Your medicine, for less. Today." → 3 steps → "Sealed and in date. The pharmacist checks every box." → [Create a free account] [Log in] |
-| Home | CS-5 | Greeting → **dark "Pick up today" ticket** with [Show at the counter] → search pill with the location → one tile, Ask DawaLink, and the open request's line ("1 searching") (BLD-D30) → *(later: the savings tile)* |
-| Search results | CS-6 | Search field → **the medicine once** (name, ingredient, pack, prescription) with Pick up · For · Near choices → "4 pharmacies · all last 12 days" → **compact pharmacy rows**: walk or car time, closing time, price, **saving**, expiry, stock. *(Later: the List/Map switch.)* |
+| Home | CS-5 | Greeting → **one dark ticket per reservation to pick up**, each with its order number and [Show at the counter], the nearest deadline first (BLD-D43) → the offers waiting for a tap → the open requests with their progress → the watches. No search box (BLD-D42). Nothing waiting: one sentence and two links → *(later: the savings tile)* |
+| Search results | CS-6 | Search field; **empty: the last searches**, each a tap away, with [Clear] → typing: **one block per medicine in stock** (name, strength, form, prescription) with its three best boxes → a medicine's own page: **compact pharmacy rows**: walk or car time, closing time, price, **saving**, expiry, stock. **Filters** in a left column (folded behind one button on a phone): Sort by · Max price · Open now · Near. The days of use and the pickup day are asked in the reserve sheet (BLD-D42). *(Later: the List/Map switch.)* |
 | Pharmacy and offer | CS-7 | Map with the pin and your walking route → name, address, Open until, walk and car times → the offer: price, saving, fit, prescription, stock → opening hours, pickup time → [Reserve] pinned at the bottom |
 | Reserve | CS-8 | How many boxes → **the pickup day** (one big card per allowed day: "Today", "Tomorrow", "Thu 12 Nov"; 4 at most, `04` R-F3; with "Pick up by…" when a later day would be too late for the box) → **days of use as chips** (7 · 12 · 30 · Other · Not sure) → the fit result → prescription and "sealed and in date" lines → total + saving + [Reserve 2 boxes] pinned |
 | Pickup ticket | CS-10 | A dark screen: "Reserved" → **the order number, huge** → product → pick up by, amount, pharmacy → prescription reminder → [Directions] → cancel. *(Later: the reminder button.)* |
@@ -162,7 +173,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | ~~Find medicines for me~~ | CS-15 | **Removed (BLD-D30):** a request starts from the agent's request summary card in the chat ([Start sourcing]). The board on the canvas is history. |
 | Request tracker | CS-16 | A ring "2 of 3 reserved" + time left → each medicine with a 3-step bar → the offer (amber) with [Accept and reserve] → what DawaLink did. [Cancel request] lives in the ⋯ menu. |
 | My medicines | CS-10, CS-11, CS-16 | Active / History → one card per medicine: Ready (Show ticket) · Offer waiting (See the offer) · Watching (Stop) |
-| Me | CS-13 | Account → home area, tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
+| Me | CS-13 | Account → **where you live: "On the map" (with [Use my location]) or "By area"**, one of the two shown at a time (BLD-D42) → tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
 | Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → due today → the early-release ask → today in numbers. *(Later: Undo on [Picked up].)* |
 | Pharmacy · Inventory | PS-6 | 4 steps → summary tiles (ready, need fixing, new, set to 0) → "1 reserved box kept" → rows to fix with "Did you mean…?" → [Discard] [Apply 1,191 rows] |
 | Admin · Overview | AS-2, AS-10 | Navy bar → needs-attention tiles → the agent's 7 days (fulfilled, safety violations, turn time, cost per fulfilled request) with a daily chart → escalations |
@@ -286,9 +297,10 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
   - **"Pick on the map"** (BLD-D16): the client puts a pin where they are. It is the pharmacy's pin component, opened as a sheet from the location control, and its code and map pictures are loaded only when the client opens it (§10).
 
   Leaflet with OpenStreetMap tiles and the "© OpenStreetMap contributors" credit.
-- **[Directions]** opens OpenStreetMap's directions with **only the pharmacy's pin** as the destination. The client's location is never put in the link. This is a new outside link, added to `10` §4.3 (§13).
+- **[Directions]** opens **Google Maps** (the owner, 2026-11-18, BLD-D43; it was OpenStreetMap, which showed a destination and no start) with **only the pharmacy's pin** as the destination. The client's location is never put in the link: Google Maps fills "from" itself, from the client's own device, and on a phone the link opens the Maps app. The outside link is in `10` §4.3.
 - **"Use my location":** the browser's permission prompt appears **only after the client taps**, and first we say why: *"To show walking and driving times. We round your location and never send it to the AI."* If the client refuses, the profile's district is used (FI-18).
 - **"Pick on the map":** offered next to "Use my location" wherever the location is asked. The sheet shows the same privacy sentence and one button, **[Use this place]**. The map opens on the client's district, or on the last place they used. Nothing is sent until the client presses the button; the point is then rounded like any shared location.
+- **"Where you live"** (the sign-up form and the profile; BLD-D42): two tabs, **On the map** and **By area**, one shown at a time. "On the map" has two buttons, [Use my location] and [Pick on the map]. **The map is downloaded only after one of them is tapped** (its pictures come from OpenStreetMap's servers, `10` §4.3): opening the sign-up form or the profile never loads it. After [Use my location] the map shows where the pin was put, and the client can move it; under the map, "Put the pin at the centre of the map" is for a keyboard. A line says whether the place is set. In the profile, [Use my location] saves at once, and a saved place is said in words, with [Show it on the map].
 
 ---
 
@@ -334,7 +346,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | UI-D7 | **Language** | English UI labels; `dir="auto"` per message and on user input; Arabic font loaded on demand; every string in one file | Arabizi and Arabic chat work today; the Arabic UI (A8) becomes a translation later |
 | UI-D8 | **Accessibility** | WCAG 2.1 AA; `axe` in component tests; keyboard and screen-reader passes before the demo | Part of "secure, maintainable" software, and checkable evidence for graders |
 | UI-D9 | **Low-end phones** | Per-portal code splitting, maps only where needed, no images, polling only while visible; budgets of ≤ 250 KB start-up JS and Lighthouse ≥ 80 | Our clients include people on cheap phones and slow data |
-| UI-D10 | **Maps and location** | Maps only for the pin (registration, listing detail, admin approval); [Directions] hands off to OpenStreetMap with the pharmacy's pin only; the location prompt only after the tap, with the privacy sentence | Saves data, and keeps the location promise (never to the AI, never in a link) |
+| UI-D10 | **Maps and location** | Maps only for the pin (registration, listing detail, admin approval); [Directions] hands off to Google Maps (BLD-D43; OpenStreetMap until then) with the pharmacy's pin only; the location prompt only after the tap, with the privacy sentence | Saves data, and keeps the location promise (never to the AI, never in a link) |
 | UI-D11 | **Frontend structure and tests** | React + TS + Vite + Mantine, TanStack Query, OpenAPI-generated types, Vitest + Testing Library + `axe`, a few Playwright demo flows; screenshots with every frontend change | Types can't drift from the API; Python-only reviewers can check the UI from screenshots and tests |
 | UI-D12 | **The design canvas is the visual reference** | The build follows the canvas for look and layout. This document wins on rules. Screens not drawn reuse the same components. | One place to look; no need to draw every screen of `03` |
 

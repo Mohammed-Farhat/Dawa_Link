@@ -33,10 +33,23 @@ from dawalink.db.models import (
 )
 from dawalink.domain.clock import beirut
 from dawalink.domain.money import usd_approx
-from dawalink.domain.numbers import LOCATION_DECIMALS, NO_SHOW_WINDOW, NO_SHOWS_BEFORE_PAUSE
+from dawalink.domain.numbers import (
+    LOCATION_DECIMALS,
+    NO_SHOW_PAUSE,
+    NO_SHOW_WINDOW,
+    NO_SHOWS_BEFORE_PAUSE,
+)
 from dawalink.domain.orders import OrderState
 from dawalink.domain.vocabulary import MessageKind, ProposalKind, UserRole
-from dawalink.services import answer_reports, auth, email, pharmacies, proposals, search
+from dawalink.services import (
+    answer_reports,
+    auth,
+    clients,
+    email,
+    pharmacies,
+    proposals,
+    search,
+)
 from dawalink.services.catalog import ProductRef
 from dawalink.services.context import Tx
 
@@ -164,6 +177,7 @@ def me(tx: Tx, user: User) -> account_schemas.Me:
     if user.role == UserRole.CLIENT.value:
         profile = tx.session.get_one(ClientProfile, user.id)
         home = tx.session.get(District, profile.district_id) if profile.district_id else None
+        town = tx.session.get(Area, profile.home_area_id) if profile.home_area_id else None
         missed = tx.session.execute(
             select(func.count())
             .select_from(Order)
@@ -177,9 +191,19 @@ def me(tx: Tx, user: User) -> account_schemas.Me:
             status=profile.status,
             paused_until=profile.paused_until,
             district=district(home) if home else None,
+            home_area=(
+                account_schemas.Place(id=town.id, name=town.name) if town is not None else None
+            ),
+            home_place_saved=profile.home_lat is not None,
+            first_name=profile.first_name,
+            middle_name=profile.middle_name,
+            last_name=profile.last_name,
+            birth_date=profile.birth_date,
             alternatives_ok_default=profile.alternatives_ok_default,
             missed_pickups_30d=missed,
             missed_pickups_before_pause=NO_SHOWS_BEFORE_PAUSE,
+            missed_pickups_window_days=NO_SHOW_WINDOW.days,
+            missed_pickups_pause_days=NO_SHOW_PAUSE.days,
         )
     elif user.role == UserRole.PHARMACIST.value:
         own = auth.pharmacy_of(tx, user.id)
@@ -450,18 +474,19 @@ def messages(tx: Tx, rows: Sequence[ChatMessage]) -> list[chat_schemas.ChatMessa
     return shown
 
 
+def home_summary(home: clients.Home | None) -> chat_schemas.LocationSummary:
+    """A client's home as a starting place, in words (R-S2)."""
+    if home is None:
+        return chat_schemas.LocationSummary(source="none", label=None)
+    return chat_schemas.LocationSummary(
+        source="place" if home.kind == "place" else "profile", label=home.name
+    )
+
+
 def location_summary(tx: Tx, conversation: Conversation) -> chat_schemas.LocationSummary:
     """Where travel times are counted from, in words. Never the point itself (INV-24)."""
     if conversation.loc_lat is None:
-        profile = tx.session.get(ClientProfile, conversation.client_id)
-        home = (
-            tx.session.get(District, profile.district_id)
-            if profile and profile.district_id
-            else None
-        )
-        if home is None:
-            return chat_schemas.LocationSummary(source="none", label=None)
-        return chat_schemas.LocationSummary(source="profile", label=home.name)
+        return home_summary(clients.home(tx, conversation.client_id))
     if conversation.loc_area_id is not None:
         area = tx.session.get_one(Area, conversation.loc_area_id)
         return chat_schemas.LocationSummary(source="area", label=area.name)

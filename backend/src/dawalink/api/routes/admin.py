@@ -22,7 +22,6 @@ from dawalink.api.schemas.accounts import OpeningRange
 from dawalink.api.schemas.common import BeforeId, Pin, Skip
 from dawalink.db.models import (
     AbuseFlag,
-    AgentRun,
     AnswerReport,
     AuditEvent,
     ChatMessage,
@@ -32,7 +31,7 @@ from dawalink.db.models import (
 from dawalink.domain.accounts import ClientStatus, PharmacyStatus
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from dawalink.domain.state_machine import Actor
-from dawalink.domain.vocabulary import EscalationState, FlagState, ReportCategory, ReportState
+from dawalink.domain.vocabulary import EscalationState, ReportCategory, ReportState
 from dawalink.services import (
     abuse_flags,
     admin_clients,
@@ -53,7 +52,6 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 Cursor = Skip
 PageSize = Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)]
-REPLY_PREVIEW = 160
 
 
 def _next(offset: int, limit: int, got: int) -> str | None:
@@ -271,26 +269,75 @@ def _client_row(row: admin_clients.Listed) -> schemas.AdminClientRow:
         paused_until=row.paused_until,
         district=row.district,
         open_orders=row.open_orders,
+        picked_up=row.picked_up,
         no_shows=row.no_shows,
         open_requests=row.open_requests,
         contested=row.contested,
+        flags_open=row.flags_open,
+    )
+
+
+def _contested(tx: Tx, client_id: uuid.UUID) -> list[schemas.ContestedReservation]:
+    return [
+        schemas.ContestedReservation(
+            id=found.order.id,
+            ref=found.order.ref,
+            product=found.product,
+            pharmacy=found.pharmacy,
+            expired_at=found.order.closed_at,
+            contested_at=found.order.contested_at or tx.now,
+        )
+        for found in admin_clients.contested_orders(tx, client_id)
+    ]
+
+
+def _flag(row: AbuseFlag) -> schemas.AbuseFlagRow:
+    return schemas.AbuseFlagRow(
+        id=row.id,
+        subject_type=row.subject_type,
+        subject_id=row.subject_id,
+        rule=row.rule,
+        severity=row.severity,
+        evidence=row.evidence,
+        state=row.state,
+        action=row.action,
+        created_at=row.created_at,
     )
 
 
 def _client(tx: Tx, row: admin_clients.Listed) -> schemas.AdminClient:
     return schemas.AdminClient(
         client=_client_row(row),
-        contested=[
-            schemas.ContestedReservation(
-                id=found.order.id,
+        reservations=[
+            schemas.ClientReservation(
                 ref=found.order.ref,
                 product=found.product,
                 pharmacy=found.pharmacy,
-                expired_at=found.order.closed_at,
-                contested_at=found.order.contested_at or tx.now,
+                state=found.order.state,
+                units=found.order.qty_picked_up
+                if found.order.qty_picked_up is not None
+                else found.order.qty_requested,
+                created_at=found.order.created_at,
+                deadline=found.order.deadline,
+                closed_at=found.order.closed_at,
+                counts_as_no_show=found.order.counts_as_no_show,
             )
-            for found in admin_clients.contested_orders(tx, row.client_id)
+            for found in admin_clients.reservations(tx, row.client_id)
         ],
+        requests=[
+            schemas.ClientRequest(
+                ref=found.request.ref,
+                state=found.request.state,
+                outcome=found.request.outcome,
+                medicines=found.medicines,
+                secured=found.secured,
+                created_at=found.request.created_at,
+                ends_at=found.request.ends_at,
+            )
+            for found in admin_clients.requests_of(tx, row.client_id)
+        ],
+        contested=_contested(tx, row.client_id),
+        flags=[_flag(flag) for flag in abuse_flags.open_about(tx, row.client_id)],
     )
 
 
@@ -299,16 +346,20 @@ def list_clients(
     _caller: AsAdmin,
     work: DoWork,
     status: schemas.ClientStatusName | None = None,
+    having: Literal["reservation", "picked_up", "request", "look"] | None = None,
     ref: Annotated[str, Query(max_length=20)] = "",
     cursor: Cursor = 0,
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.AdminClients:
     """Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the
-    client of an order number or a request number."""
+    client of an order number or a request number. `having` keeps the clients with a
+    reservation going, who picked an order up, with an open request, or who need a look
+    (a contested no-show or an open flag)."""
     with work.tx() as tx:
         rows = admin_clients.listed(
             tx,
             status=ClientStatus(status) if status else None,
+            having=having,
             ref=ref,
             offset=cursor,
             limit=limit + 1,
@@ -321,6 +372,9 @@ def list_clients(
 
 @router.get("/clients/{client_id}")
 def look_at_client(client_id: uuid.UUID, _caller: AsAdmin, work: DoWork) -> schemas.AdminClient:
+    """One client by their ID: the counts, their last reservations and requests with
+    how each ended, what they contest, and the flags about them. **Still no name:** that
+    is the audited `/contact` below."""
     with work.tx() as tx:
         return _client(tx, admin_clients.one(tx, client_id))
 
@@ -389,37 +443,8 @@ def clear_no_show(
 # --- Abuse flags (AS-7) -----------------------------------------------------------------------
 
 
-def _flag(row: AbuseFlag) -> schemas.AbuseFlagRow:
-    return schemas.AbuseFlagRow(
-        id=row.id,
-        subject_type=row.subject_type,
-        subject_id=row.subject_id,
-        rule=row.rule,
-        severity=row.severity,
-        evidence=row.evidence,
-        state=row.state,
-        action=row.action,
-        created_at=row.created_at,
-    )
-
-
-@router.get("/abuse-flags")
-def list_abuse_flags(
-    _caller: AsAdmin,
-    work: DoWork,
-    state: Literal["OPEN", "DISMISSED", "ACTIONED"] | None = "OPEN",
-    cursor: Cursor = 0,
-    limit: PageSize = DEFAULT_PAGE_SIZE,
-) -> schemas.AbuseFlags:
-    """The high ones first. A flag holds counts and IDs, never a message."""
-    with work.tx() as tx:
-        rows = abuse_flags.listed(
-            tx, state=FlagState(state) if state else None, offset=cursor, limit=limit + 1
-        )
-        return schemas.AbuseFlags(
-            items=[_flag(row) for row in rows[:limit]],
-            next_cursor=_next(cursor, limit, len(rows)),
-        )
+# A flag is read on the page of the client it is about (`flags` of a client's page):
+# there is no list of flags on its own. A flag holds counts and IDs, never a message.
 
 
 @router.post("/abuse-flags/{flag_id}/dismiss")
@@ -557,15 +582,6 @@ def _card_kinds(tx: Tx, message: ChatMessage) -> list[str]:
 
 def _escalation_detail(tx: Tx, row: Escalation) -> schemas.EscalationDetail:
     thread = escalations.thread(tx, row)
-    run_ids = [message.agent_run_id for message in thread if message.agent_run_id]
-    traces: list[str] = []
-    if run_ids:
-        found = dict(
-            tx.session.execute(
-                select(AgentRun.id, AgentRun.langfuse_trace_id).where(AgentRun.id.in_(run_ids))
-            ).all()
-        )
-        traces = [trace for run_id in reversed(run_ids) if (trace := found.get(run_id))]
     return schemas.EscalationDetail(
         escalation=_escalation(tx, row),
         thread=[
@@ -578,7 +594,7 @@ def _escalation_detail(tx: Tx, row: Escalation) -> schemas.EscalationDetail:
             )
             for message in thread
         ],
-        trace_ids=list(dict.fromkeys(traces)),
+        contested=_contested(tx, row.client_id),
     )
 
 
@@ -615,22 +631,14 @@ def read_escalation(
         return _escalation_detail(tx, escalations.one(tx, escalation_id))
 
 
-@router.post("/escalations/{escalation_id}/take")
-def take_escalation(
-    escalation_id: uuid.UUID, caller: AsAdmin, work: DoWork
-) -> schemas.EscalationDetail:
-    with work.tx() as tx:
-        return _escalation_detail(tx, escalations.take(tx, caller.user_id, escalation_id))
-
-
 @router.post("/escalations/{escalation_id}/reply")
 def reply_to_escalation(
     escalation_id: uuid.UUID, body: schemas.TeamReply, caller: AsAdmin, work: DoWork
 ) -> schemas.EscalationDetail:
     """The client reads the reply in their conversation, signed "DawaLink team", and is
-    notified (CN-14). The client's own name, email and phone, and anything that looks
-    like an email or a phone number, are removed before it is stored, as for every
-    message. **It changes no order and no priority** (R-PRI4)."""
+    notified (CN-14). It is stored as typed (a person may have to give a phone number),
+    and cleaned where the model or an export reads it. A first reply marks the
+    escalation as being handled. **It changes no order and no priority** (R-PRI4)."""
     with work.tx() as tx:
         post_team_reply(tx, admin_id=caller.user_id, escalation_id=escalation_id, text=body.text)
         return _escalation_detail(tx, escalations.one(tx, escalation_id))
@@ -640,6 +648,7 @@ def reply_to_escalation(
 def resolve_escalation(
     escalation_id: uuid.UUID, body: schemas.Resolve, caller: AsAdmin, work: DoWork
 ) -> schemas.EscalationDetail:
+    """[Close this case]. A note of what was done may go with it; none is asked for."""
     with work.tx() as tx:
         escalation = escalations.one(tx, escalation_id)
         note = redact(body.note, identity_of(tx, escalation.client_id)).text
@@ -672,7 +681,8 @@ def _line(stored: Any) -> schemas.ReportedLine:
 
 def _report(row: AnswerReport) -> schemas.AnswerReportRow:
     reply = row.snapshot.get("reply") or {}
-    text = str(reply.get("text") or "")
+    before = [line for line in row.snapshot.get("context", []) if isinstance(line, dict)]
+    asked = [line.get("text") for line in before if line.get("author") == "client"]
     return schemas.AnswerReportRow(
         id=row.id,
         state=row.state,
@@ -680,7 +690,8 @@ def _report(row: AnswerReport) -> schemas.AnswerReportRow:
         comment=row.comment,
         category=row.category,
         in_regression=row.exported_at is not None,
-        reply=text if len(text) <= REPLY_PREVIEW else text[:REPLY_PREVIEW].rstrip() + "…",
+        reply=str(reply.get("text") or ""),
+        asked=str(asked[-1]) if asked and asked[-1] else None,
         created_at=row.created_at,
     )
 
@@ -764,7 +775,8 @@ def dismiss_answer_report(
 def confirm_answer_report(
     report_id: uuid.UUID, body: schemas.ConfirmReport, caller: AsAdmin, work: DoWork
 ) -> schemas.AnswerReportDetail:
-    """[Confirmed], filed under a category; `add_to_regression` puts it in the export."""
+    """[Real problem]: the report is confirmed and joins the regression cases the
+    export gives (A-D6). A category may be sent; the console sends none."""
     with work.tx() as tx:
         return _report_detail(
             answer_reports.confirm(

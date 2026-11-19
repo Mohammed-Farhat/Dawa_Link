@@ -1,8 +1,8 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.17 · **Date:** 2026-11-17
+**Version:** v4.22 · **Date:** 2026-11-19
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
-**Status:** ✅ validated by the team (2026-10-20). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
+**Status:** ✅ validated by the team (2026-10-20). **v4.22 (the owner's findings on the admin's side, 2026-11-19, decision log BLD-D45):** the admin's console made simpler: a client's page lists their reservations and requests (AS-5); an escalation is what the client needs, the chat, one reply box and [Close this case] (AS-6); a flag is on its client's page (AS-7); reported answers are one list with two buttons (AS-8). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
 **v4.2 applies the UI design** (`11`, decision log §U): the first tab is "Home", which holds the search; detail pages hide the bottom bar; the agent's alternatives are folded under "See N other options"; a stale zone label is removed.
 
@@ -76,8 +76,8 @@ flowchart TD
 ```
 
 **Navigation:**
-- **Mobile** bottom menu: **Home** (with the search) · **Medicines** (one tracker per medicine: requests, reservations and watches together) · **Ask** (the assistant) · **Me**. Detail pages (search results, a pharmacy, a reservation, a request) open full screen with a back button (`11` §3.1).
-- **Desktop:** a top bar, with the assistant as a side panel.
+- **Mobile** bottom menu (the owner, 2026-11-18, BLD-D42): **Home** (what needs the client now) · **Search** · **Medicines** (one tracker per medicine: requests, reservations and watches together) · **Ask** (the assistant) · **Me**. Detail pages (a pharmacy, a reservation, a request) open full screen with a back button (`11` §3.1).
+- **Desktop** (wider than 992 px; the owner, 2026-11-18, BLD-D40 and BLD-D42): a real desktop layout, not a phone's column. A top bar (Home · Search · My medicines, **Ask DawaLink**, the account's menu with [Log out]); pages use the window's width in columns. **The assistant is a page of its own,** opened from "Ask DawaLink": it lists the earlier chats beside the conversation. It is never beside another page (the side panel of BLD-D40 was removed the same day, BLD-D42) (`11` §3.1).
 
 ### 1.3 Screens
 
@@ -90,11 +90,12 @@ flowchart TD
 #### CS-2 Sign up
 | Field | Rules |
 |---|---|
-| Full name | 2–80 chars; **never sent to the LLM** |
+| First name, middle name (optional), last name | Letters of any alphabet, 40 at most each; **never sent to the LLM** (BLD-D40) |
+| Date of birth | A real past day. No rule reads it; never sent to the LLM, a pharmacy or an admin |
 | Email | Valid, unique |
-| Password | ≥ 10 chars; not a common password |
+| Password | ≥ 10 chars with a capital letter, a small letter, a number and a symbol; not a common password. The form ticks each part as it is typed (BLD-D40) |
 | Phone | Optional (for WhatsApp later) |
-| District | Dropdown; used for travel times when the client doesn't share their location (`04` R-S2) |
+| Where you live | **One of two ways** (the owner, 2026-11-18, BLD-D42), never both to fill: **a place on a map**, with [Use my location] to put the pin where the device is, **or** three lists that follow each other: governorate, district, town (the town is optional, from our own list of places, **names in Latin letters only**). Used for travel times when the client doesn't share their location (`04` R-S2). A client who gives only a place has no district stored: it is never guessed from the point |
 | Terms and privacy notice | Required |
 
 **After [Sign up]:** always "Check your email to continue", **whether or not the email already has an account**, so nobody can find out who uses DawaLink (`04` R-AU7). A new email gets the verification link (CN-1). An email that already has an account gets "You already have a DawaLink account: just log in" (CN-18).
@@ -112,46 +113,52 @@ flowchart TD
 - **Before verification: search only.** No assistant, requests, reservations or watches. A banner explains this.
 
 #### CS-5 Home
+**Home is what needs the client now** (the owner, 2026-11-18, BLD-D42). It has no search box: Search and Ask have their own entries in the menu.
 ```
 ┌──────────────────────────────────┐
-│ DawaLink                  🔔2  👤 │
+│ Good morning, Rami               │
+│ Your medicines today             │
 ├──────────────────────────────────┤
-│ 🔍 Search a medicine…            │
-│ 💬 Ask the Assistant →  (one medicine or several)
-│ My requests                      │
-│ ┌──────────────────────────────┐ │
-│ │ Q-6BN2RA · 3 medicines · until 15:30 │
-│ │ ✅2 reserved · ⏳1 asking pharmacies│
-│ └──────────────────────────────┘ │
-│ My reservations                  │
-│ │ Augmentin 1g ×1 · R-7K3Q2F · pick up by Tue 21:00 │
+│ ┌ PICK UP ───────────── R-7K3Q2F ┐│
+│ │ Pick up by Tue 21:00           ││
+│ │ Augmentin 1g ×1 · Hamra Pharmacy││
+│ │ [Show at the counter]          ││
+│ └────────────────────────────────┘│
+│ An offer waiting for your tap    │
+│ Q-6BN2RA · 2 of 3 found · until 15:30 │
+│ Concor 5 ×1 · watching until 16:00│
 ├──────────────────────────────────┤
-│ 🏠Home 💊Medicines 💬Ask 👤Me    │
+│ 🏠Home 🔍Search 💊Medicines 💬Ask 👤Me│
 └──────────────────────────────────┘
 ```
+- **In this order:** the reservations to pick up, the nearest deadline first, **each one the same ticket** (order number, deadline, medicine, pharmacy, [Show at the counter]; the owner, BLD-D43); the offers waiting for a tap; the open requests with their progress; what DawaLink watches for.
+- **Nothing waiting:** "Nothing is waiting for you", with two links: [Search a medicine] and [Ask DawaLink].
 - **Paused banner:** "Reservations paused until 20 Oct (2 missed pickups)."
 - **At night (outside 08:00–20:00):** "New requests and watches open at 08:00. Search and reserving work now."
 
 #### CS-6 Search results
-- Search box with catalog autocomplete and fuzzy matching ("Did you mean Augmentin?").
-- **Location:** [📍 Use my location], **[Pick on the map]** (the client puts a pin where they are: for a computer, or for a client who doesn't want to share the device's location; BLD-D16), or the profile's district. The same three choices appear wherever the location is asked: the search, the chat and a new request.
-- **Filters:** max price, **days of use** (optional) and the **pickup day** (optional: today, tomorrow or a later day). With a pickup day, only pharmacies that accept that day are shown, and the fit is counted from it (`04` R-F3, R-F6). Without one, each pharmacy is shown for its earliest day.
-- **Sort:** best match (lasts your days of use → nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
+- **A search of what is in stock** (the owner, 2026-11-18, BLD-D40 and BLD-D42). **From the first letter typed,** the page shows every medicine whose name fits **and that some pharmacy has in stock now**: no list to choose from first, and never a medicine nobody stocks. One or two letters match the start of a word of a name ("p" shows the Panadols, not Aspirin). Each medicine is a block under its own name, strength and form, with its three best boxes and "See all N pharmacies", which opens that medicine's own page (the layout below).
+- **A misspelled name** ("pandol", from three letters) shows the closest brand in stock, and the page says so first: "No medicine is written exactly 'pandol'. These are the closest names", with the other close names to tap.
+- **The last searches:** while the box is empty the page lists the client's last searches (8 at most), each a tap away, with [Clear]. A name is kept when the client presses Enter or opens a result, never for each letter, and only if it is a medicine's name: what the catalog doesn't know (a phone number, a sentence) is never stored. They are kept in the account, so they follow the client to another device; they are deleted after 30 days, or at once by [Clear].
+- **Nothing in stock under that name:** "No pharmacy has 'X' in stock right now", with **[Ask DawaLink to find it]**. The "Not in stock right now" block of BLD-D40 is gone (BLD-D42).
+- **Location:** [📍 Use my location], **[Pick on the map]** (the client puts a pin where they are: for a computer, or for a client who doesn't want to share the device's location; BLD-D16), or the profile's home. The same three choices appear wherever the location is asked: the search and the chat.
+- **Filters** (BLD-D42): the order, a **price limit**, **open now** (by the server's clock), and the place. On a phone they are folded behind one button that says what is chosen. **The days of use and the pickup day are not asked here:** they are asked in the reserve sheet (CS-8), where the page says whether the box lasts (`04` R-F1). Each pharmacy is shown for its earliest pickup day.
+- **Sort:** best match (nearest by travel time → price → expiry soonest), nearest, cheapest, latest expiry.
 - **Layout (`11` v1.1):** the medicine (product, pack, prescription notice) is shown once at the top, then one compact row per pharmacy, with what the client saves.
 - **Each pharmacy row:**
   - product and pack (in the header above);
   - pharmacy, area and **travel time** ("8 min by car · 20 min walk");
   - **price in LBP ≈ USD**, public price, discount %;
-  - expiry and days left, with ✓ "lasts your 12 days", or a ⚠ warning when days of use weren't given;
+  - the expiry date;
   - 📄 "Prescription needed";
   - availability (exact up to 5, then "5+");
   - [Reserve].
 - **Only what was searched:** search never shows another brand of the medicine (R-S4, BLD-D17). The assistant can show one, with "ask the pharmacist first".
-- **Empty results:** "No discounted stock for *Augmentin 1g* right now."
+- **Empty results on a medicine's own page:** "No discounted stock for *Augmentin 1g* right now."
   - **[Notify me]** → a mini-form (max price) → a **watch for the next 6 hours**;
   - **[Ask DawaLink to find it]** → **the chat opens with the medicine's name already typed** (BLD-D30). The agent asks its questions and offers the [Start sourcing] card; it then sources it, including asking open pharmacies for unlisted stock.
   - Outside 08:00–20:00, [Notify me] answers "DawaLink searches during the day. Please come back tomorrow from 08:00"; the chat says the same in a line at its top (as built, slice 7g: the buttons themselves stay as they are).
-- **Boxes exist but none fit:** "No match: the available boxes expire too early for 12 days of use (the latest expires 28 Oct)." + the same two buttons.
+- **A box that doesn't last the client's days** is said in the reserve sheet, when the client gives the days: "This box expires before your days of use end."
 
 #### CS-7 Listing detail
 - Product (ingredients, strength, form, pack, prescription notice).
@@ -196,6 +203,7 @@ flowchart TD
 | Pharmacy closed now | Allowed: "Pick up by closing time on their next open day: Tue 21:00." |
 
 #### CS-9 Assistant (chat)
+- **Earlier chats** (D9, BLD-D40): the assistant's page lists the client's chats, the newest first, each named by its first message. An earlier chat can be read, never written in. [New chat] is a button with its words. On a computer the list stands beside the conversation; on a phone it opens from a button.
 - **The AI notice is always visible** at the top of the chat: "You're chatting with an AI assistant, not a pharmacist." (UI-D14).
 - **Blocks the agent can show** (every card is produced by a tool; the agent chooses which):
 
@@ -246,7 +254,7 @@ In-app list (see §1.7), reached from **Me**, with the number of new ones. Each 
 - Name, email (verified), phone, change password.
 - Default district; "tell me about other brands by default".
 - "Missed pickups: 0 of 2".
-- **As built (slice 7g):** the phone, the home district and "tell me about other brands" are one small form; the name and the email are shown, not edited.
+- **As built (slice 7g, then BLD-D40 and BLD-D42 on 2026-11-18):** the client edits their name in parts, their date of birth and their phone; **where they live, one of two ways:** a place on the map, with [Use my location], which puts the pin where the device is and saves at once, **or** the governorate, the district and the town. Saving an area removes the saved place; and "tell me about other brands". The email is shown, not edited. "Missed pickups" says the rule in a sentence, with its numbers.
 - *(Account deletion postponed.)*
 
 #### CS-15 New sourcing request (removed)
@@ -297,9 +305,9 @@ In-app list (see §1.7), reached from **Me**, with the number of new ones. Each 
 | ID | Flow |
 |---|---|
 | CF-1 | Search → [Reserve] → CS-8 → **reserved at once** (in-app + email with the order number) → the client shows the number at the counter, brings the prescription if needed, and pays. |
-| CF-2 | Empty results → [Notify me] (a 6-hour watch) **or** [Ask DawaLink to find it] (the chat opens with the medicine named, BLD-D30). |
+| CF-2 | A name nobody stocks → [Ask DawaLink to find it] (the chat opens with the medicine named, BLD-D30). On a medicine's own page with no box: also [Notify me] (a 6-hour watch). |
 | CF-3 | The pharmacy marks the reservation **not available** → notification → [See other options] re-runs the search, excluding that pharmacy. **No agent turn** for search reservations (this keeps the baseline agent-free). |
-| CF-4 | No-show: reminder 4 h before the deadline → deadline passes → expired ("1 of 2") → a second miss in 30 days → 7-day pause. |
+| CF-4 | No-show: reminders (every 12 h, and 2 h before the deadline; N-8) → deadline passes → expired ("1 of 2") → a second miss in 30 days → 7-day pause. |
 
 ### 1.5 Assistant flows (AF)
 | ID | Situation | What happens |
@@ -352,7 +360,7 @@ In-app list (see §1.7), reached from **Me**, with the number of new ones. Each 
 | CN-1 | Verify your email | none | ✅ |
 | CN-3 | **Reserved** (order number, pharmacy, address, hours, pick up by, price, prescription notice) | ✅ | ✅ |
 | CN-5 | **Not available** (the pharmacy didn't have it) | ✅ | ✅ |
-| CN-6 | Pickup reminder (4 h before the deadline) | ✅ | ✅ |
+| CN-6 | Pickup reminder (every 12 h after reserving, and 2 h before the deadline; never in the first hour, never after a cancel; N-8) | ✅ | ✅ |
 | CN-7 | Expired (no-show), with [I picked it up] to contest | ✅ | ✅ |
 | CN-8 | Reservations paused | ✅ | ✅ |
 | CN-9 | Early-release offer (valid 2 h) | ✅ | ✅ |
@@ -410,7 +418,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 
 > **In short:**
 > - after admin approval, the pharmacy **uploads its inventory with the DawaLink template** and **keeps quantities up to date** (e.g. after a sale in the shop);
-> - near-expiry items are **published automatically** at the system discount (overridable per item);
+> - near-expiry items are **published by the pharmacy's own rule** (by themselves at 30, 60, 90 or 180 days left, or one by one; BLD-D44) at the system discount (overridable per item);
 > - **reservations arrive instantly**: the pharmacy puts the box aside, then presses **[Picked up]** when the client collects it, or **[Not available]** if it isn't there;
 > - it answers **early-release asks** from the agent;
 > - it never sees who the client is.
@@ -479,8 +487,10 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 5. **Quick edit** of a quantity in the table (e.g. after a sale in the shop), and a manual add form where the medicine is chosen from the catalog. Reserved units can't be removed here; use [Not available] on the reservation.
 
 #### PS-7 Listings
-- Live items (the boxes of the inventory that are within 6 months of their expiry): product, batch, days left, available and reserved, price (system tier or override), discount, and whether clients see it now (listed, paused, none left).
-- **[Override price]** (≤ public price, ≥ 0; 0 = donation) · [Back to system price] · **[Pause] / [Resume]**.
+- **The boxes within 6 months of their expiry, and whether clients see each one.** The page says the pharmacy's own rule in a line ("a box is listed by itself when it has 60 days left or fewer"), with the way to change it (PS-10; the owner, 2026-11-19, BLD-D44).
+- Each box: product, batch, days left, available and reserved, price (system tier or override), discount, and its state: **Listed**, **Listed by you**, **Not listed yet** (the rule waits for it: "clients will see it when it has 60 days left, or now if you list it"), **Paused**, **None left**.
+- **[Override price]** (≤ public price, ≥ 0; 0 = donation) · [Back to system price].
+- **One way out of each state:** [List now] on a box the rule holds back · [Back to my rule] on a box listed by hand · [Pause] / [Resume] on the others.
 - The system tiers are shown read-only: 25% / 40% / 60%.
 
 #### PS-9 Early-release asks
@@ -488,7 +498,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 ┌────────────────────────────────────────────────────┐
 │ A client needs 2 × Concor 5mg · 30 tabs today      │
 │ You have (private): 5 · batch X9 · exp 03 Jun 2027 │
-│ Release [ 2 ▾ ] at [ 436,000 LBP ] (suggested −25%; public 581,750) │
+│ Release [ 2 ▾ ] at [ 436,000 LBP ] (suggested 25% off; public 581,750) │
 │ Answer within 1h 42m                               │
 │ [ Accept & reserve ]   [ Decline ▾ ]               │
 └────────────────────────────────────────────────────┘
@@ -498,7 +508,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 - **Decline:** a reason from a list, no penalty. **No answer within 2 h** → expired.
 
 #### PS-10 Settings
-Weekly opening hours, **pickup time (1–3 days)**, **phone number**, **address, district and map pin**, change password. The pharmacy changes its phone and its place itself (the owner, 2026-11-16, Q42 and Q45): a new number is checked like the first one; a new address or pin shows to clients at once, and DawaLink's team then looks at the pin (nothing waits for that). Name and license are shown, and changed only by an admin (`10` TM-D2, TH-59; decision log BLD-D33).
+Weekly opening hours, **pickup time (1–3 days)**, **when its boxes are listed** (by themselves at 30, 60, 90 or 180 days left, or never: it then lists each box itself; BLD-D44), **phone number**, **address, district and map pin**, change password. The pharmacy changes its phone and its place itself (the owner, 2026-11-16, Q42 and Q45): a new number is checked like the first one; a new address or pin shows to clients at once, and DawaLink's team then looks at the pin (nothing waits for that). Name and license are shown, and changed only by an admin (`10` TM-D2, TH-59; decision log BLD-D33).
 
 #### PS-11 Notifications
 In-app list (§2.4).
@@ -506,7 +516,7 @@ In-app list (§2.4).
 ### 2.3 Main flows
 | ID | Flow |
 |---|---|
-| PF-1 | Register → pending → approved (PN-2) → download the template → upload → summary → [Apply] → eligible items go live. |
+| PF-1 | Register → pending → approved (PN-2) → download the template → upload → summary → [Apply] → the boxes its rule covers go live (every box within 180 days, unless it chose otherwise; BLD-D44). |
 | PF-2 | Keep stock current: quick-edit quantities after shop sales, or re-upload → summary → [Apply]; reserved stock protected. |
 | PF-3 | New reservation (PN-4) → put the box aside → the client comes and shows the number → [Picked up]; or [Not available]. |
 | PF-4 | Early-release ask (PN-7) → Accept (quantity, price) or Decline. |
@@ -548,7 +558,7 @@ In-app list (§2.4).
 | P-D1 | License document upload | **postponed** (§K) |
 | P-D2 | Inventory only after approval | ✅ |
 | P-D3 | ~~Partial confirmation~~ → partial **[Not available]** | ✅ (review #2) |
-| P-D4 | Auto-publish | ✅ **always on** (§K) |
+| P-D4 | Auto-publish | ✅ **the pharmacy's choice** since 2026-11-19 (BLD-D44): by itself at 30, 60, 90 or 180 days left, or by hand. It was "always on" (§K) |
 | P-D5 | One account per pharmacy | ✅ |
 | P-D6 | No client identity | ✅ |
 | P-D7 | Free listings (price 0) | ✅ |
@@ -602,37 +612,46 @@ Marketplace (7 days): reservations 142 · picked up 83% · not available 4% · n
 - **A pharmacy that moved** is counted on the Pharmacies tab and marked "Pin to check": the admin looks at the map and presses **[The pin is right]**, or drags the pin and saves the correction.
 
 #### AS-5 Clients
-- Status (active, paused, suspended), reservations, no-shows, open requests.
-- [Lift pause] / [Suspend] / [Reinstate] (reason). Suspending ends the client's sessions at once.
-- **[Clear no-show]** on a contested reservation (reason; audited; `04` R-N3).
-- Viewing contact details is audited, and limited to 30 clients per hour per admin (`04` N-47).
-- **As built:** the list shows a status and counts (open reservations, no-shows in 30 days, open requests), **never a name**; an order or request number finds its client; a client is reached from an escalation by an ID. The name, email and phone are behind [Show the name, email and phone].
+- **The list:** each client by an ID, with a status (active, paused, suspended) and what they have going: open reservations, how many they picked up, open requests, missed pickups in 30 days. **Never a name.** An order or request number finds its client. Filters: with a reservation · picked up an order · with an open request · **needs a look** (a contested missed pickup, or a flag). Who needs a look is first, and counted on the Clients tab.
+- **A client's page** (the owner, 2026-11-19: "to know each client what he has"):
+  - their last 30 reservations, newest first: order number, medicine, pharmacy, and how each ended (to pick up, with its deadline · picked up · cancelled · missed pickup · not available at the pharmacy);
+  - their last 10 requests, the open ones first: "searching until…" or how it closed, and how many of its medicines are reserved;
+  - only when there is one: a missed pickup they contest, with **[Clear this missed pickup]** (`04` R-N3), and a flag about them (AS-7).
+- [Lift the pause] / [Suspend] / [Reinstate]. Suspending ends the client's sessions at once. **Each action asks for its reason where its button is.**
+- The name, email and phone are behind [Show the name, email and phone]: each look is audited, 30 clients per hour per admin (`04` N-47).
 
 #### AS-6 Escalations
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ ESC-81 · emergency_claim · Request Q-6BN2RA · opened 20 min ago  │
-│ Agent summary: "Client says the need is urgent; Glucophage   │
-│ 850 ×1 still missing; 2 pharmacies declined; 2 h left."      │
-│ Conversation (redacted) [Show] · Trace [Open in Langfuse]    │
-│ Reply: [ text ≤ 500 chars ]  [ Send ]  [ Resolve with note ] │
+│ Asked for a person · New · opened Thu 19 Nov 09:17            │
+│ Client 7c41e9b2 (open the client's page)                      │
+│ What the client needs                                         │
+│   "The client asked to talk to a person: no pharmacy has     │
+│    their medicine listed."                                    │
+│ The chat  (when there is one)                                 │
+│ Write to the client: [ text ≤ 500 chars ]  [ Send ]           │
+│ Note (optional): [            ]  [ Close this case ]          │
 └──────────────────────────────────────────────────────────────┘
 ```
-- **Reasons:** client asked for a human · **emergency claim** · can't resolve · window ending · suspicious · complaint.
-- **Priority can't be changed here or anywhere** (`04` R-PRI4). For an emergency claim, the admin replies with human help (e.g. point to emergency services, or suggest calling pharmacies directly).
+- **What an escalation is:** a client who needs a person. It opens when the assistant hands a case over (the client asked for a human · **emergency claim** · it can't resolve · the search time is ending · suspicious), or when a client presses [I picked it up] on a missed pickup (a **complaint**).
+- **The page is four things** (the owner, 2026-11-19, BLD-D45): what the client needs, the chat if there is one, one box to write to the client, one button to close the case. There is no "I take it": a first reply marks the case "Answered". The note on closing is optional, and the client never sees it.
+- **A contested missed pickup** shows its reservation on the case itself (order number, medicine, pharmacy) with **[Clear the missed pickup]**: the admin calls the pharmacy, and clears it if the client did collect it. Such a case comes from a button, so it has no chat: the page says "No chat goes with this case".
+- **Priority can't be changed here or anywhere** (`04` R-PRI4). The page says so on an emergency claim, where the temptation is: the admin replies with human help (e.g. point to emergency services, or suggest calling pharmacies directly).
 - The reply appears as "DawaLink team" (CN-14), in the conversation the client has open now, **exactly as the admin wrote it**: a phone number is allowed when the situation needs one (the owner, 2026-11-16, Q46). The assistant never sees a name, a phone number or an email from it. The email that announces it is a template without the reply's text.
-- **An admin reads a chat only here and in a reported answer** (A-D4), as it was stored: the client's and the assistant's messages without personal details, the team's own replies as typed. There is no list of conversations.
+- **An admin reads a chat only here** (A-D4), as it was stored: the client's and the assistant's messages without personal details, the team's own replies as typed. There is no list of conversations. (A reported answer shows the reply and the one message it answered.)
 - A new escalation for a client who already has one open is added to it.
 
 #### AS-7 Abuse flags (reduced)
 - No-show pause.
 - Repeated injection or cross-user attempts (high at ≥ 3 in 24 h).
 
+**A flag is shown on the page of the client it is about** (the owner's finding of 2026-11-19: its link led to a page that said nothing of it). There is no page of flags: the client is counted on the Clients tab, marked "Flagged" and listed first.
+
 Actions: dismiss · note a warning · suspend, each with a reason. "Note a warning" (the owner, 2026-11-17, Q52: it was "Warn"; the screen says that DawaLink sends nothing) records that the account's owner was warned (in a reply to their escalation, or outside DawaLink); "suspend" is a real suspension. A flag shows counts, never a message.
 
 #### AS-8 Reported answers
-- 👎 reports with the reply, reason, redacted context and trace.
-- [Not a problem] · [Confirmed] + category (understanding · decision · safety · language · other) → **[Add to regression tests]**. [Download the regression cases] gives them as one JSON file for the team to copy into the repo.
+- **One list** (the owner, 2026-11-19, BLD-D45): each 👎 with the client's reason and comment, the client's message, and the assistant's reply to it.
+- Two buttons: **[Real problem]** · **[Not a problem]**. A real problem is kept as a regression case; nothing to file, nothing to download on the screen. The team takes the cases from the API when it writes the regression tests (A-D6).
 
 #### AS-9 Catalog (read-only)
 - Search products, flags (prescription, controlled), equivalence groups, source file and date.

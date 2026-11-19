@@ -9,6 +9,7 @@ again to everything a trace would hold. Two kinds of things are removed:
 
 import re
 from dataclasses import dataclass
+from datetime import date
 
 EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+")
 
@@ -32,6 +33,21 @@ COORDINATES = re.compile(r"-?\d{1,3}\.\d{3,}\s*[,;/ ]\s*-?\d{1,3}\.\d{3,}")
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
 NAME, EMAIL_MARK, PHONE_MARK, LOCATION = "[name]", "[email]", "[phone]", "[location]"
+BIRTH_DATE = "[date of birth]"
+_MONTHS = (
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+)
 
 
 @dataclass(frozen=True)
@@ -41,6 +57,9 @@ class Identity:
     full_name: str
     email: str
     phone: str | None = None
+    # A client's date of birth (decision log BLD-D40). No rule reads it; it is here only
+    # to be removed from what the client types.
+    birth_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -74,6 +93,25 @@ def _own_phone(identity: Identity) -> re.Pattern[str] | None:
     return re.compile(rf"(?<!\d)(?:(?:\+|00)?961{_SEP}|0)?{spaced}(?!\d)")
 
 
+def _own_birth_date(identity: Identity) -> re.Pattern[str] | None:
+    """The account's date of birth as people write one: 17/05/1990, 17-5-1990, 1990-05-17,
+    17 May 1990, May 17, 1990. Only this date: other dates are what a chat is about."""
+    born = identity.birth_date
+    if born is None:
+        return None
+    day, month, year = rf"0?{born.day}", rf"0?{born.month}", str(born.year)
+    name = _MONTHS[born.month - 1]
+    word = rf"(?:{name}|{name[:3]})\.?"
+    gap = r"[\s./-]+"
+    forms = [
+        rf"{day}{gap}{month}{gap}{year}",
+        rf"{year}{gap}{month}{gap}{day}",
+        rf"{day}(?:st|nd|rd|th)?{gap}{word}{gap}{year}",
+        rf"{word}{gap}{day}(?:st|nd|rd|th)?,?{gap}{year}",
+    ]
+    return re.compile(r"(?<!\d)(?:" + "|".join(forms) + r")(?!\d)", re.IGNORECASE)
+
+
 def redact(text: str, identity: Identity | None = None) -> Redacted:
     """`text` without personal details, and how many were removed."""
     count = 0
@@ -92,6 +130,8 @@ def redact(text: str, identity: Identity | None = None) -> Redacted:
 
     result = swap(EMAIL, EMAIL_MARK, text)
     if identity is not None:
+        # Before the phone patterns: a date's digits must not be read as part of a number.
+        result = swap(_own_birth_date(identity), BIRTH_DATE, result)
         result = swap(_own_phone(identity), PHONE_MARK, result)
     result = swap(COORDINATES, LOCATION, result)
     result = swap(PHONE, PHONE_MARK, result)

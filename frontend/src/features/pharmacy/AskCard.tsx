@@ -97,7 +97,14 @@ export function AskCard({ ask, now }: { ask: Ask; now: string }) {
         />
       </div>
       <span className="soft" style={{ fontSize: 14 }}>
-        {a.suggested(plainAmount(ask.suggested_price.lbp), plainAmount(ask.product.public_price.lbp))}
+        {a.suggested(
+          plainAmount(ask.suggested_price.lbp),
+          // The discount DawaLink would give this box today, or the pharmacy's own price.
+          ask.product.public_price.lbp > 0
+            ? Math.round((1 - ask.suggested_price.lbp / ask.product.public_price.lbp) * 100)
+            : 0,
+          plainAmount(ask.product.public_price.lbp),
+        )}
       </span>
       {notice && (
         <Banner tone={notice.tone} alert={notice.tone === 'red'}>

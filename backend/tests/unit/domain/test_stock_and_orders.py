@@ -6,7 +6,13 @@ import pytest
 
 from dawalink.domain.accounts import PharmacyStatus
 from dawalink.domain.expiry import Zone
-from dawalink.domain.inventory import ListingControl, NotEnoughStock, Stock, is_visible
+from dawalink.domain.inventory import (
+    ListingControl,
+    NotEnoughStock,
+    Stock,
+    is_held_back,
+    is_visible,
+)
 from dawalink.domain.orders import (
     OrderState,
     is_no_show,
@@ -76,6 +82,8 @@ class TestStock:
 VISIBLE = {
     "zone": Zone.NEAR_EXPIRY,
     "control": ListingControl.LIVE,
+    "days_left": 60,
+    "auto_list_days": 180,
     "pharmacy_status": PharmacyStatus.APPROVED,
     "qty_available": 1,
     "controlled": False,
@@ -103,6 +111,56 @@ def test_a_listing_is_visible_when_every_condition_holds() -> None:
 def test_breaking_any_one_condition_hides_it(change: dict[str, object]) -> None:
     """INV-16: visible if and only if the whole SM-3 condition holds."""
     assert not is_visible(**{**VISIBLE, **change})  # type: ignore[arg-type]
+
+
+class TestAPharmacysOwnListingRule:
+    """The owner, 2026-11-19 (BLD-D44): each pharmacy decides when its boxes are listed
+    by themselves, and may list one by hand. Never with more than 180 days left."""
+
+    @pytest.mark.parametrize(
+        ("rule", "days", "listed"),
+        [
+            (180, 180, True),  # the rule every pharmacy starts with: as before
+            (60, 60, True),  # the day it reaches the pharmacy's number
+            (60, 61, False),
+            (30, 0, True),
+            (0, 0, False),  # "never by themselves": not even a box that expires today
+            (0, 20, False),
+        ],
+    )
+    def test_a_box_is_listed_by_itself_at_the_pharmacys_number_of_days(
+        self, rule: int, days: int, listed: bool
+    ) -> None:
+        box = {**VISIBLE, "days_left": days, "auto_list_days": rule}
+
+        assert is_visible(**box) is listed  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("rule", [0, 30, 60])
+    def test_a_box_listed_by_hand_is_visible_whatever_the_rule(self, rule: int) -> None:
+        box = {**VISIBLE, "control": ListingControl.LISTED, "days_left": 150}
+
+        assert is_visible(**{**box, "auto_list_days": rule})  # type: ignore[arg-type]
+
+    def test_nothing_is_listed_with_more_than_180_days_left_not_even_by_hand(self) -> None:
+        box = {**VISIBLE, "zone": Zone.EARLY_RELEASE, "days_left": 200}
+
+        assert not is_visible(**{**box, "control": ListingControl.LISTED})  # type: ignore[arg-type]
+
+    def test_a_paused_box_stays_hidden_whatever_the_rule(self) -> None:
+        assert not is_visible(**{**VISIBLE, "control": ListingControl.PAUSED})  # type: ignore[arg-type]
+
+    def test_held_back_is_a_box_the_rule_waits_for_and_nothing_else(self) -> None:
+        def held(
+            control: ListingControl, days: int, rule: int, zone: Zone = Zone.NEAR_EXPIRY
+        ) -> bool:
+            return is_held_back(zone=zone, control=control, days_left=days, auto_list_days=rule)
+
+        assert held(ListingControl.LIVE, 90, 30)
+        assert held(ListingControl.LIVE, 5, 0)
+        assert not held(ListingControl.LIVE, 30, 30)  # listed by the rule
+        assert not held(ListingControl.LISTED, 90, 30)  # listed by hand
+        assert not held(ListingControl.PAUSED, 90, 30)  # taken off on purpose
+        assert not held(ListingControl.LIVE, 200, 30, Zone.EARLY_RELEASE)  # outside the window
 
 
 class TestOrderTiming:

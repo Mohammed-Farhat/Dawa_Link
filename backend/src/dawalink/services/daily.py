@@ -15,6 +15,7 @@ from dawalink.domain.numbers import (
     AUDIT_RETENTION,
     CONVERSATION_RETENTION,
     NOTIFICATION_RETENTION,
+    SEARCH_HISTORY_RETENTION,
     STALE_INVENTORY_AFTER,
     TRAVEL_CACHE_TTL,
     VERIFICATION_LINK_VALID,
@@ -193,6 +194,11 @@ def purge(tx: Tx) -> dict[str, int]:
             "UPDATE claims SET loc_lat = NULL, loc_lon = NULL "
             "WHERE closed_at < :cutoff AND loc_lat IS NOT NULL",
             {"cutoff": chat_cutoff},
+        ),
+        # What a client searched says something about their health: it is not kept long.
+        "search_history": (
+            "DELETE FROM search_history WHERE searched_at < :cutoff",
+            {"cutoff": tx.now - SEARCH_HISTORY_RETENTION},
         ),
         "notifications": (
             "DELETE FROM notifications WHERE created_at < :cutoff",

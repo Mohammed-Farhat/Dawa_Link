@@ -307,9 +307,13 @@ function StockRow({ item }: { item: Item }) {
       ? s.zoneOf[item.zone]
       : item.paused
         ? s.paused
-        : item.qty_available === 0
-          ? s.outOfStock
-          : s.zoneOf.NEAR_EXPIRY
+        : item.held_back
+          ? s.heldBack
+          : item.qty_available === 0
+            ? s.outOfStock
+            : item.listed_by_hand
+              ? s.listedByYou
+              : s.zoneOf.NEAR_EXPIRY
   return (
     <>
       <tr>

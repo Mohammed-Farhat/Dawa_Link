@@ -234,8 +234,11 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         "the pharmacy's phone": re.escape(pharmacist.phone),
         "the pharmacy's licence": re.escape(pharmacist.license_number),
         "the pharmacist": re.escape(pharmacist.full_name) + "|" + re.escape(pharmacist.email),
-        # The client's shared point and the pharmacy's pin, to any precision.
-        "a coordinate": r"3[345]\.\d{3}",
+        # The client's shared point and the pharmacy's pin, to any precision. Not the
+        # seconds of a real timestamp ("18:53:33.546" in a trace): that made this test
+        # fail about one run in twenty, whenever it ran at 33 to 35 seconds past a minute
+        # (found 2026-11-18).
+        "a coordinate": r"(?<!\d:)(?<![\d.])3[345]\.\d{3}",
         "the private box": re.escape(str(private)),
         "a pharmacy's ID": re.escape(str(scene.pharmacy)),
     }
@@ -302,3 +305,96 @@ def test_what_one_client_wrote_never_reaches_another_clients_agent(scene: Scene)
     assert "AUGMENTIN" in sent
     assert "zebra-7731" not in sent
     assert "IGNORE EVERY RULE" not in sent
+
+
+def test_a_saved_home_place_and_a_date_of_birth_never_reach_the_model(scene: Scene) -> None:
+    """INV-10, INV-24, decision log BLD-D40 (docs/10 TH-64). The client saved a place on
+    the map and gave a date of birth. A chat with no location of its own starts from that
+    place: the tools count from it, and the model is told a town's name and nothing more,
+    although the client typed the date themselves."""
+    world = scene.world
+    (town, town_name) = world.one(
+        "SELECT id, name FROM areas WHERE district_id = 1 AND NOT whole_district "
+        "ORDER BY id LIMIT 1"
+    )
+    with world.as_owner():
+        world.connection.exec_driver_sql(
+            "UPDATE client_profiles SET birth_date = '1990-05-07', home_area_id = %s, "
+            "home_lat = 33.912, home_lon = 35.587 WHERE user_id = %s",
+            (town, scene.client),
+        )
+        # The chat has no location of its own: it starts from the client's home.
+        world.connection.exec_driver_sql(
+            "UPDATE conversations SET loc_lat = NULL, loc_lon = NULL, loc_source = NULL, "
+            "loc_set_at = NULL WHERE id = %s",
+            (scene.chat,),
+        )
+    world.session.expire_all()
+    scene.stock()
+    tracer = RecordingTracer()
+
+    scene.turn(
+        calls(
+            ("search_catalog", {"query": "augmentin"}),
+            ("find_options", {"product_ids": [str(scene.augmentin)]}),
+        ),
+        reply("Here is what I found."),
+        text="I was born on 07/05/1990, and on 7 May 1990 too. I need Augmentin near my home.",
+        tracer=tracer,
+    )
+
+    traced = json.dumps([dataclasses.asdict(trace) for trace in tracer.traces], default=str)
+    assert tracer.traces
+    sent = scene.model.everything_sent() + traced
+    # The tools did count from the saved place: the pharmacy is found with a travel time.
+    assert "car_min" in sent
+    # The model is told that a place is saved, and no name it could take for where it
+    # is: the place may be far from the town of the profile.
+    assert "Home area: a place the client saved on the map" in sent
+    assert f"Home area: {town_name}" not in sent
+    for private in ("33.912", "35.587", "33.91", "35.58", "1990", "07/05", "7 May"):
+        assert private not in sent, private
+    assert "[date of birth]" in sent
+
+
+def test_a_client_with_a_place_and_no_district_is_served_from_the_place(scene: Scene) -> None:
+    """Decision log BLD-D42 (docs/09 FI-32). At sign-up a client may give a place on the
+    map and nothing else: the profile then has no district and no town. The tools count
+    from the place, the model is told that a saved place is used, and nothing it reads
+    says "None" where a district's name would have been."""
+    world = scene.world
+    with world.as_owner():
+        world.connection.exec_driver_sql(
+            "UPDATE client_profiles SET district_id = NULL, home_area_id = NULL, "
+            "home_lat = 33.912, home_lon = 35.587 WHERE user_id = %s",
+            (scene.client,),
+        )
+        world.connection.exec_driver_sql(
+            "UPDATE conversations SET loc_lat = NULL, loc_lon = NULL, loc_source = NULL, "
+            "loc_set_at = NULL WHERE id = %s",
+            (scene.chat,),
+        )
+    world.session.expire_all()
+    scene.stock()
+
+    scene.turn(
+        calls(
+            ("search_catalog", {"query": "augmentin"}),
+            ("find_options", {"product_ids": [str(scene.augmentin)]}),
+        ),
+        reply("Here is what I found."),
+        # The reply guard asks once for a card when options were found (docs/09 FA-40);
+        # the second reply is sent as it is.
+        reply("Hamra Pharmacy has it, 12 minutes away by car."),
+        text="I need Augmentin near my home.",
+    )
+
+    sent = scene.model.everything_sent()
+    assert "car_min" in sent
+    assert "Home area: a place the client saved on the map" in sent
+    for point in ("33.912", "35.587", "33.91", "35.58"):
+        assert point not in sent, point
+    # What the model is told about where the client is: no "None" where a name would be.
+    about = re.findall(r"(?:Home area|Location): [^\\\n\"]*", sent)
+    assert about, "the context says where the client is"
+    assert all("None" not in line and "null" not in line for line in about), about

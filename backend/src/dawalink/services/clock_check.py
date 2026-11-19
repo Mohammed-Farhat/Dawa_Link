@@ -24,7 +24,7 @@ from dawalink.db.models import (
     SourcingRequest,
 )
 from dawalink.domain.clock import Clock
-from dawalink.domain.numbers import PICKUP_REMINDER_BEFORE, WINDOW_CHECK_BEFORE_END
+from dawalink.domain.numbers import WINDOW_CHECK_BEFORE_END
 from dawalink.domain.requests import FINAL_ITEM_STATES
 from dawalink.services import (
     claims,
@@ -101,13 +101,8 @@ class ClockTasks:
         now = self._clock.now()
         due = self._due(
             select(Order.id)
-            .where(
-                Order.state == "RESERVED",
-                Order.reminder_sent_at.is_(None),
-                Order.deadline <= now + PICKUP_REMINDER_BEFORE,
-                Order.deadline > now,
-            )
-            .order_by(Order.deadline)
+            .where(Order.state == "RESERVED", Order.next_reminder_at <= now)
+            .order_by(Order.next_reminder_at)
         )
         return self._each(due, lambda tx, order_id: orders.send_pickup_reminder(tx, order_id))
 

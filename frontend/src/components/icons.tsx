@@ -23,6 +23,19 @@ export const CloseIcon = (p: Props) => (
     <path d="M6 6l12 12M18 6L6 18" />
   </Icon>
 )
+/** A clock with an arrow going back: earlier chats. */
+export const HistoryIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M4 12a8 8 0 1 0 2.5-5.8L4 8.5" />
+    <path d="M4 4v4.5h4.5M12 8v4.5l3 1.5" />
+  </Icon>
+)
+/** Two arrows going apart: open on a full page. */
+export const OpenIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M14 5h5v5M19 5l-6 6M10 19H5v-5M5 19l6-6" />
+  </Icon>
+)
 export const PlusIcon = (p: Props) => (
   <Icon {...p}>
     <path d="M12 5v14M5 12h14" />

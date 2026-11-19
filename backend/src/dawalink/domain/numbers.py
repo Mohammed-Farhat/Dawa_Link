@@ -8,6 +8,11 @@ from datetime import time, timedelta
 # --- Expiry zones and prices ---
 NEAR_EXPIRY_MAX_DAYS = 180  # N-1: published when 0-180 days are left
 EARLY_RELEASE_MAX_DAYS = 270  # N-3: 181-270 days is the early-release zone
+# N-54: a pharmacy lists its boxes by themselves when they have this many days left
+# or fewer. It chooses one of these; 0 is "never by themselves, I list each box".
+# Nothing with more than N-1's days left is ever listed.
+AUTO_LIST_CHOICES = (0, 30, 60, 90, NEAR_EXPIRY_MAX_DAYS)
+DEFAULT_AUTO_LIST_DAYS = NEAR_EXPIRY_MAX_DAYS
 # N-4: (fewest days left, most days left, discount %), the same for every pharmacy
 DISCOUNT_TIERS: tuple[tuple[int, int, int], ...] = ((91, 180, 25), (31, 90, 40), (0, 30, 60))
 PRICE_STEP_LBP = 1_000  # SM-3, R-PR2: policy prices are rounded down to this
@@ -61,7 +66,11 @@ STRAIGHT_LINE_CAR_KMH = 30
 STRAIGHT_LINE_WALK_KMH = 4.5
 DEFAULT_PAGE_SIZE = 20  # R-S1
 MAX_PAGE_SIZE = 50  # N-31
-PICKUP_REMINDER_BEFORE = timedelta(hours=4)  # N-8
+# N-8 (the owner, 2026-11-18): a reminder every 12 hours while reserved, a last one
+# 2 hours before the deadline, and none in the first hour (nor two within an hour).
+PICKUP_REMINDER_EVERY = timedelta(hours=12)
+PICKUP_REMINDER_LAST_BEFORE = timedelta(hours=2)
+PICKUP_REMINDER_QUIET = timedelta(hours=1)
 SAME_PRODUCT_EARLY_RELEASE_WAIT = timedelta(hours=24)  # R-E5
 
 # --- The system ---
@@ -130,5 +139,9 @@ SSE_HEARTBEAT_S = 15  # docs/06 §6.6.1
 
 # --- Retention (N-19, R-RET) ---
 CONVERSATION_RETENTION = timedelta(days=30)
+# A client's last searches (BLD-D42): how many are shown, how many are kept, how long.
+SEARCH_HISTORY_SHOWN = 8
+SEARCH_HISTORY_KEPT = 20
+SEARCH_HISTORY_RETENTION = timedelta(days=30)
 NOTIFICATION_RETENTION = timedelta(days=90)
 AUDIT_RETENTION = timedelta(days=365)

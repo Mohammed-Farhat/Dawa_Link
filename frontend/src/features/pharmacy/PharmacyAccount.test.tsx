@@ -38,7 +38,7 @@ const visitorApi = (more: Record<string, unknown> = {}) =>
 
 async function fillIn(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText(r.email), 'owner@hamra.example.com')
-  await user.type(screen.getByLabelText(r.password), 'a long enough passphrase')
+  await user.type(screen.getByLabelText(r.password), 'A long enough passphrase, 1')
   await user.type(screen.getByLabelText(d.name), 'Hamra Pharmacy')
   await user.type(screen.getByLabelText(d.license), 'PH 1234')
   await user.type(screen.getByLabelText(d.phone), '01 234 567')
@@ -252,6 +252,33 @@ describe("The pharmacy's settings (PS-10)", () => {
     expect(screen.getByLabelText(d.phone)).toHaveValue('+9611000000')
   })
 
+  it('chooses when its boxes are listed, and sends only that (BLD-D44)', async () => {
+    const api = portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': { ...PROFILE, auto_list_days: 30 },
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+    const page = s.settingsPage
+
+    const rule = await screen.findByRole('region', { name: page.ruleTitle })
+    // What every pharmacy starts with: everything within 180 days, as before.
+    expect(within(rule).getByRole('radio', { name: page.ruleChoice(180) })).toBeChecked()
+    expect(within(rule).getByRole('radio', { name: page.ruleChoice(0) })).toBeInTheDocument()
+    const save = within(rule).getByRole('button', { name: page.ruleSave })
+    expect(save).toBeDisabled()
+    await user.click(within(rule).getByRole('radio', { name: page.ruleChoice(30) }))
+    await user.click(save)
+
+    expect(await within(rule).findByText(page.ruleSaved)).toBeInTheDocument()
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me').map((call) => call.body)).toEqual([
+      { auto_list_days: 30 },
+    ])
+  })
+
   it('changes its own phone number (the owner, Q42)', async () => {
     const api = portalApi(
       {},
@@ -364,13 +391,13 @@ describe("The pharmacy's settings (PS-10)", () => {
     const p = strings.password
 
     await user.type(await screen.findByLabelText(p.current), 'the old passphrase')
-    await user.type(screen.getByLabelText(p.new), 'a new long passphrase')
+    await user.type(screen.getByLabelText(p.new), 'A new long passphrase, 2')
     await user.click(screen.getByRole('button', { name: p.submit }))
 
     expect(await screen.findByText(p.done)).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/auth/password')[0].body).toEqual({
       current_password: 'the old passphrase',
-      new_password: 'a new long passphrase',
+      new_password: 'A new long passphrase, 2',
     })
   })
 })

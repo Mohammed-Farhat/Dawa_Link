@@ -90,6 +90,8 @@ class SearchListings(In):
     max_price: MoneyIn | None = None
     sort: Literal["best", "nearest", "cheapest", "latest_expiry"] = "best"
     on_foot: bool = False
+    # Only pharmacies that are open at this moment.
+    open_now: bool = False
     cursor: int = Field(default=0, ge=0, le=MAX_SKIP)
     limit: int = Field(default=20, ge=1, le=50)
 
@@ -107,6 +109,56 @@ class SearchResult(Out):
     # The days a client may say they'll come, for the "Pick up" choice (N-49).
     upcoming_days: list[date]
     server_now: datetime
+
+
+class SearchByName(In):
+    """A search by a typed name: every medicine it stands for, with its boxes in stock.
+    A POST for the same reason as `SearchListings`: the location travels in the body."""
+
+    q: str = Field(min_length=1, max_length=100)
+    location: LocationIn | None = None
+    days_of_use: int | None = Field(default=None, ge=1, le=365)
+    pickup_day: date | None = None
+    max_price: MoneyIn | None = None
+    sort: Literal["best", "nearest", "cheapest", "latest_expiry"] = "best"
+    on_foot: bool = False
+    # Only pharmacies that are open at this moment.
+    open_now: bool = False
+    # How many boxes each medicine shows; the medicine's own page has them all.
+    per_medicine: int = Field(default=3, ge=1, le=5)
+
+
+class MedicineGroup(Out):
+    """One medicine of a search by name: a catalog product under its own name."""
+
+    product: ProductSummary
+    # It matched by what it contains, not by its name.
+    by_ingredient: bool
+    items: list[Listing]
+    total_found: int
+    no_match: NoMatch | None
+
+
+class NameSearchResult(Out):
+    groups: list[MedicineGroup]
+    # No medicine is written exactly like `q`: these are the closest names.
+    closest: bool
+    did_you_mean: list[str]
+    location: LocationSummary
+    upcoming_days: list[date]
+    server_now: datetime
+
+
+class Searched(In):
+    """A name the client searched, to keep in their list of last searches."""
+
+    q: str = Field(min_length=1, max_length=100)
+
+
+class Searches(Out):
+    """The client's last searches, the newest first."""
+
+    items: list[str]
 
 
 class ViewListing(In):

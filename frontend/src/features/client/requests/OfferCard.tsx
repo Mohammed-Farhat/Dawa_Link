@@ -73,8 +73,12 @@ export function OfferCard({ offer, now }: { offer: Schemas['Offer']; now: string
           <dd>{calendarDate(offer.expiry_date)}</dd>
         </div>
       </dl>
-      {offer.saving.lbp > 0 && (
+      {offer.saving.lbp > 0 ? (
         <span className="saving">{strings.common.save_(plainAmount(offer.saving.lbp))}</span>
+      ) : (
+        // A pharmacy names the price of a box it releases, up to the public price
+        // (BLD-D44): an offer with nothing off says so before the client accepts.
+        <span className="hint">{o.noSaving}</span>
       )}
       {days.length > 0 ? (
         <fieldset className="choice">

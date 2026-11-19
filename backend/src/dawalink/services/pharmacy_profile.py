@@ -26,6 +26,7 @@ from dawalink.db.models import District, Pharmacy, PharmacyHours, TravelTimeCach
 from dawalink.domain import pharmacy_details as details_rules
 from dawalink.domain.accounts import PHARMACY_MACHINE, PharmacyStatus
 from dawalink.domain.numbers import (
+    AUTO_LIST_CHOICES,
     PICKUP_TIME_MAX_DAYS,
     PICKUP_TIME_MIN_DAYS,
     TRAVEL_CACHE_TTL,
@@ -77,6 +78,13 @@ def checked_hours(rows: Sequence[HoursRow]) -> WeeklyHours:
     if not any(hours.by_weekday):
         raise _refuse("hours", "A pharmacy is open at least one day a week.")
     return hours
+
+
+def checked_auto_list_days(days: int) -> int:
+    if days not in AUTO_LIST_CHOICES:
+        choices = ", ".join(str(choice) for choice in AUTO_LIST_CHOICES)
+        raise _refuse("auto_list_days", f"Choose one of: {choices} days.")
+    return days
 
 
 def checked_pickup_days(pickup_days: int) -> int:
@@ -388,13 +396,18 @@ def change_settings(
     *,
     hours: Sequence[HoursRow] | None = None,
     pickup_days: int | None = None,
+    auto_list_days: int | None = None,
     phone: str | None = None,
     address: str | None = None,
     district_id: int | None = None,
     location: tuple[float, float] | None = None,
 ) -> Pharmacy:
-    """An approved pharmacy changes its hours, its pickup time, its phone, or where it
-    is (PS-10).
+    """An approved pharmacy changes its hours, its pickup time, when its boxes are listed
+    by themselves, its phone, or where it is (PS-10).
+
+    A new listing rule counts at once: boxes it now covers are found by clients, and the
+    matching sweep offers them to who was waiting; boxes it no longer covers leave the
+    listings. What clients already reserved or were offered is kept.
 
     Reservations already made keep the deadline they were given (R-T5): a client was told
     "pick up by Tuesday 21:00", and that stays true.
@@ -460,6 +473,19 @@ def change_settings(
             pharmacy_id,
             actor_id=pharmacy_id,
             after={"fields": moved},
+        )
+    if auto_list_days is not None and auto_list_days != pharmacy.auto_list_days:
+        was = pharmacy.auto_list_days
+        pharmacy.auto_list_days = checked_auto_list_days(auto_list_days)
+        audit.record(
+            tx,
+            Actor.PHARMACY,
+            "pharmacy.listing_rule",
+            "pharmacy",
+            pharmacy_id,
+            actor_id=pharmacy_id,
+            before={"auto_list_days": was},
+            after={"auto_list_days": pharmacy.auto_list_days},
         )
     if hours is not None or pickup_days is not None:
         audit.record(

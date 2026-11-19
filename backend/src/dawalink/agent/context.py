@@ -51,7 +51,7 @@ from dawalink.domain.numbers import (
 from dawalink.domain.pickup import upcoming_days
 from dawalink.domain.vocabulary import AgentMode, TurnTrigger
 from dawalink.domain.windows import in_request_hours
-from dawalink.services import conversations, proposals
+from dawalink.services import clients, conversations, proposals
 from dawalink.services.context import Tx
 from dawalink.services.events import Decision
 
@@ -92,7 +92,13 @@ class Loaded:
 def identity_of(tx: Tx, client_id: uuid.UUID) -> Identity:
     """The account's own personal details: read by code, to remove them from text."""
     user = tx.session.get_one(User, client_id)
-    return Identity(full_name=user.full_name, email=user.email, phone=user.phone)
+    profile = tx.session.get(ClientProfile, client_id)
+    return Identity(
+        full_name=user.full_name,
+        email=user.email,
+        phone=user.phone,
+        birth_date=profile.birth_date if profile is not None else None,
+    )
 
 
 def _order_facts(tx: Tx, order_id: Any) -> str:
@@ -328,11 +334,16 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     money = rate(tx)
 
     profile = tx.session.get_one(ClientProfile, client_id)
-    area = None
-    if profile.district_id is not None:
-        area = tx.session.execute(
-            select(District.name).where(District.id == profile.district_id)
-        ).scalar()
+    # The home's name only: a town or a district (INV-24). A place saved on the map may
+    # be anywhere, also outside the town of the profile, so the model is told that the
+    # tools count from a saved place, and no name it could take for where that is.
+    home = clients.home(tx, client_id)
+    if home is None:
+        area = None
+    elif home.kind == "place":
+        area = "a place the client saved on the map (the travel times are counted from it)"
+    else:
+        area = home.name
     open_orders = tx.session.execute(
         select(func.count())
         .select_from(Order)

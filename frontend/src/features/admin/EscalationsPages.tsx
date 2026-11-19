@@ -1,3 +1,4 @@
+import { TextInput } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -6,6 +7,7 @@ import { api, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
 import { errorMessage, strings } from '../../strings/en'
 import { codeOf, useEscalation, useEscalations, when } from './data'
+import { ReasonedButton } from './ReasonedButton'
 
 const s = strings.admin
 const e = s.escalations
@@ -35,7 +37,10 @@ export function EscalationsPage() {
   const items = found.data?.items ?? []
   return (
     <main className="portal__main">
-      <h1 className="page-title">{e.title}</h1>
+      <div>
+        <h1 className="page-title">{e.title}</h1>
+        <span className="soft">{e.intro}</span>
+      </div>
       <div className="tabs" role="tablist" aria-label={e.title}>
         {[false, true].map((choice) => (
           <button
@@ -65,8 +70,12 @@ export function EscalationsPage() {
   )
 }
 
-/** One escalation: the assistant's summary, the conversation as stored, and the three
- * things a person can do: take it, reply, resolve. Nothing here changes an order. */
+/**
+ * One escalation, as the owner chose it (2026-11-19): what the client needs, the chat
+ * if there is one, one box to write to the client, and one button to close the case.
+ * A first reply says by itself that someone is on it. Nothing here changes an order;
+ * a missed pickup the client contests can be cleared, which only stops it counting.
+ */
 export function EscalationPage() {
   const { id = '' } = useParams()
   const queryClient = useQueryClient()
@@ -87,26 +96,38 @@ export function EscalationPage() {
     )
   }
   if (!found.data) return <p className="soft">{strings.common.loading}</p>
-  const { escalation, thread, trace_ids: traces } = found.data
+  const { escalation, thread, contested } = found.data
   const open = escalation.state !== 'RESOLVED'
   const path = { escalation_id: id }
+  const short = escalation.client_id.slice(0, 8)
+  // R-PRI4, where the temptation is: on the screen of an emergency claim, and only there.
+  const emergency =
+    escalation.reason === 'emergency_claim' || escalation.notes.some((added) => added.reason === 'emergency_claim')
 
-  async function act(call: () => Promise<Detail>, done: string | null) {
+  function failed(error: unknown) {
+    const code = codeOf(error)
+    setSaid({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
+  }
+
+  function refreshLists() {
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'escalations'] })
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] })
+  }
+
+  async function act(call: () => Promise<Detail>, done: string) {
     setSaid(null)
     setBusy(true)
     try {
       queryClient.setQueryData(['admin', 'escalation', id], await call())
-      if (done) setSaid({ tone: 'green', text: done })
+      setSaid({ tone: 'green', text: done })
       return true
     } catch (error) {
-      const code = codeOf(error)
-      setSaid({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
+      failed(error)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'escalation', id] })
       return false
     } finally {
       setBusy(false)
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'escalations'] })
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] })
+      refreshLists()
     }
   }
 
@@ -119,12 +140,34 @@ export function EscalationPage() {
     if (sent) setReply('')
   }
 
-  async function resolve(event: FormEvent) {
+  async function close(event: FormEvent) {
     event.preventDefault()
     await act(
       () => unwrap(api.POST('/api/v1/admin/escalations/{escalation_id}/resolve', { params: { path }, body: { note } })),
-      null,
+      e.closed,
     )
+  }
+
+  async function clear(reservationId: string, reason: string) {
+    setSaid(null)
+    try {
+      await unwrap(
+        api.POST('/api/v1/admin/reservations/{reservation_id}/clear-no-show', {
+          params: { path: { reservation_id: reservationId } },
+          body: { reason },
+        }),
+      )
+      setSaid({ tone: 'green', text: e.cleared })
+      return true
+    } catch (error) {
+      failed(error)
+      return false
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'escalation', id] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'client'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] })
+      refreshLists()
+    }
   }
 
   return (
@@ -135,6 +178,10 @@ export function EscalationPage() {
         </Link>
         <section className="panel" aria-labelledby="summary">
           <Head row={escalation} />
+          <span className="soft" style={{ fontSize: 15 }}>
+            <span className="audit-change">{e.client(short)}</span> (
+            <Link to={`/admin/clients/${escalation.client_id}`}>{e.openClient}</Link>)
+          </span>
           <div>
             <h1 id="summary" className="panel__title">
               {e.summary}
@@ -153,26 +200,41 @@ export function EscalationPage() {
               </ul>
             </div>
           )}
-          <Link
-            to={`/admin/clients/${escalation.client_id}`}
-            className="text-button"
-            style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}
-          >
-            {e.openClient}
-          </Link>
           {escalation.resolution_note && <Banner tone="green">{e.resolvedNote(escalation.resolution_note)}</Banner>}
-          {/* R-PRI4, where the temptation is: on the screen of an emergency claim. */}
-          <Banner tone="grey">{e.noPriority}</Banner>
+          {emergency && <Banner tone="grey">{e.noPriority}</Banner>}
         </section>
+
+        {contested.length > 0 && (
+          <section className="panel" aria-labelledby="missed">
+            <div>
+              <h2 id="missed" className="panel__title">
+                {e.missed}
+              </h2>
+              <span className="hint">{e.missedHint}</span>
+            </div>
+            {contested.map((order) => (
+              <div key={order.id} className="row-card" style={{ background: 'var(--page)' }}>
+                <div className="row-card__top">
+                  <span className="order-ref">{order.ref}</span>
+                  <span className="hint">{s.clients.contestedOn(when(order.contested_at))}</span>
+                </div>
+                <span>
+                  {order.product} · {order.pharmacy}
+                </span>
+                <ReasonedButton label={e.clear} tone="outline" onConfirm={(reason) => clear(order.id, reason)} />
+              </div>
+            ))}
+          </section>
+        )}
 
         <section className="panel" aria-labelledby="thread">
           <div>
             <h2 id="thread" className="panel__title">
               {e.thread}
             </h2>
-            <span className="hint">{e.threadNote}</span>
+            {thread.length > 0 && <span className="hint">{e.threadNote}</span>}
           </div>
-          {thread.length === 0 && <span className="soft">{e.threadGone}</span>}
+          {thread.length === 0 && <span className="soft">{e.noThread}</span>}
           <div>
             {thread.map((line, index) => (
               // Two conversations may follow each other here: a number is not unique.
@@ -199,18 +261,6 @@ export function EscalationPage() {
             <h2 id="reply" className="panel__title">
               {e.reply}
             </h2>
-            {escalation.state === 'OPEN' && (
-              <button
-                type="button"
-                className="pill-button pill-button--grey"
-                disabled={busy}
-                onClick={() =>
-                  void act(() => unwrap(api.POST('/api/v1/admin/escalations/{escalation_id}/take', { params: { path } })), null)
-                }
-              >
-                {e.take}
-              </button>
-            )}
             <form className="form" onSubmit={sendReply}>
               <label htmlFor="team-reply" className="sr-only">
                 {e.reply}
@@ -234,37 +284,21 @@ export function EscalationPage() {
           </section>
         )}
         {open && (
-          <section className="panel" aria-labelledby="resolve">
-            <h2 id="resolve" className="panel__title">
-              {e.resolve}
-            </h2>
-            <form className="form" onSubmit={resolve}>
-              <label htmlFor="resolve-note">{e.note}</label>
-              <textarea
-                id="resolve-note"
-                className="text-area"
+          <section className="panel" aria-label={e.close}>
+            <form className="form" onSubmit={close}>
+              <TextInput
+                label={e.note}
+                description={e.noteHint}
+                size="md"
                 maxLength={500}
+                autoComplete="off"
                 value={note}
                 onChange={(event) => setNote(event.currentTarget.value)}
               />
-              <button type="submit" className="pill-button pill-button--grey" disabled={busy || !note.trim()}>
-                {e.resolve}
+              <button type="submit" className="pill-button pill-button--grey" disabled={busy}>
+                {e.close}
               </button>
             </form>
-          </section>
-        )}
-        {traces.length > 0 && (
-          <section className="panel" aria-labelledby="traces">
-            <h2 id="traces" className="panel__title">
-              {e.traces}
-            </h2>
-            <ul className="plain-list">
-              {traces.map((trace) => (
-                <li key={trace} className="audit-change">
-                  {trace}
-                </li>
-              ))}
-            </ul>
           </section>
         )}
       </aside>

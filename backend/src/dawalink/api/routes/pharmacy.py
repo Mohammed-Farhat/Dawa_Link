@@ -47,10 +47,16 @@ from dawalink.domain.accounts import (
     pharmacy_can_update_reservations,
 )
 from dawalink.domain.clock import end_of_day
-from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, STALE_INVENTORY_AFTER
+from dawalink.domain.expiry import days_left
+from dawalink.domain.numbers import (
+    AUTO_LIST_CHOICES,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    STALE_INVENTORY_AFTER,
+)
 from dawalink.domain.opening_hours import closes_at, is_open
 from dawalink.domain.orders import OrderState
-from dawalink.domain.pricing import early_release_suggested_price_lbp
+from dawalink.domain.pricing import release_suggested_price_lbp
 from dawalink.services import auth, counter, early_release, pharmacies, pharmacy_profile
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
@@ -110,6 +116,8 @@ def _profile(tx: Tx, pharmacy_id: uuid.UUID) -> PharmacyProfile:
         license_number=pharmacy.license_number,
         location=Pin(lat=float(pharmacy.lat), lon=float(pharmacy.lon)),
         pickup_days=pharmacy.pickup_days,
+        auto_list_days=pharmacy.auto_list_days,
+        auto_list_choices=list(AUTO_LIST_CHOICES),
         hours=[
             OpeningRange(weekday=weekday, open=opens, close=closes)
             for weekday, opens, closes in pharmacy_profile.hours_rows(weekly)
@@ -196,6 +204,7 @@ def change_settings(
                 else None
             ),
             pickup_days=body.pickup_days if "pickup_days" in sent else None,
+            auto_list_days=body.auto_list_days if "auto_list_days" in sent else None,
             phone=body.phone if "phone" in sent else None,
             address=body.address if "address" in sent else None,
             district_id=body.district_id if "district_id" in sent else None,
@@ -413,7 +422,12 @@ def _asks(tx: Tx, rows: list[AskRow]) -> list[EarlyReleaseAsk]:
                     qty_available=max(0, item.qty_on_hand - item.qty_reserved),
                 ),
                 suggested_price=present.money(
-                    early_release_suggested_price_lbp(product.public_price_lbp), lbp_per_usd
+                    release_suggested_price_lbp(
+                        product.public_price_lbp,
+                        item.price_override_lbp,
+                        days_left(item.expiry_date, tx.today),
+                    ),
+                    lbp_per_usd,
                 ),
                 respond_by=row.respond_by,
                 answered_at=row.answered_at,

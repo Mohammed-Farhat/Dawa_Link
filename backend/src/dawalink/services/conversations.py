@@ -8,6 +8,8 @@ row, not a lock: a turn that crashes simply lets it run out.
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, or_, select, update
@@ -182,6 +184,52 @@ def release_lease(conversation: Conversation, owner: str) -> None:
 def is_busy(tx: Tx, conversation: Conversation) -> bool:
     """An agent turn is running: the website shows "one moment" (docs/06 `MessagesPage.busy`)."""
     return conversation.turn_lease_until is not None and conversation.turn_lease_until > tx.now
+
+
+@dataclass(frozen=True)
+class ChatLine:
+    """One chat in the client's list of chats."""
+
+    id: uuid.UUID
+    active: bool
+    started_at: datetime
+    last_activity_at: datetime
+    # The client's first message, as stored (redacted): what the chat was about.
+    first_words: str | None
+
+
+def chats(tx: Tx, client_id: uuid.UUID, *, limit: int = 50) -> list[ChatLine]:
+    """The client's chats, the newest first: the active one and the ones put away by
+    [New chat], until the daily clean-up removes them after 30 days (D9, R-RET). A chat
+    nobody wrote in is left out, unless it is the active one."""
+    first = (
+        select(ChatMessage.text_redacted)
+        .where(
+            ChatMessage.conversation_id == Conversation.id,
+            ChatMessage.author == "client",
+            ChatMessage.kind == "text",
+        )
+        .order_by(ChatMessage.seq)
+        .limit(1)
+        .scalar_subquery()
+    )
+    rows = tx.session.execute(
+        select(Conversation, first)
+        .where(Conversation.client_id == client_id, Conversation.kind == "chat")
+        .order_by(Conversation.last_activity_at.desc(), Conversation.id)
+        .limit(limit)
+    ).all()
+    return [
+        ChatLine(
+            id=chat.id,
+            active=chat.status == "ACTIVE",
+            started_at=chat.created_at,
+            last_activity_at=chat.last_activity_at,
+            first_words=words,
+        )
+        for chat, words in rows
+        if words is not None or chat.status == "ACTIVE"
+    ]
 
 
 # --- A chat's own settings --------------------------------------------------------------

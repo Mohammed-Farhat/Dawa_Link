@@ -1,0 +1,3 @@
+cwd: backend
+command: ["mypy"]
+Success: no issues found in 335 source files

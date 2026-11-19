@@ -5,6 +5,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api, ApiFailure, unwrap } from '../../api/client'
 import { BackIcon } from '../../components/icons'
 import { Banner } from '../../components/layout'
+import { passwordGaps } from '../../components/passwordRule'
+import { PasswordRules } from '../../components/PasswordRules'
 import { errorMessage, strings } from '../../strings/en'
 import { useDistricts } from '../client/data'
 import { DetailsFields } from './details'
@@ -31,7 +33,7 @@ export default function RegisterPharmacyPage() {
 
   const problems = {
     email: EMAIL_SHAPE.test(email.trim()) ? null : s.emailProblem,
-    password: password.length >= 10 ? null : errorMessage('WEAK_PASSWORD'),
+    password: passwordGaps(password).length === 0 ? null : errorMessage('WEAK_PASSWORD'),
     terms: terms ? null : s.termsProblem,
   }
 
@@ -83,7 +85,6 @@ export default function RegisterPharmacyPage() {
         />
         <PasswordInput
           label={s.password}
-          description={s.passwordHint}
           size="md"
           autoComplete="new-password"
           value={password}
@@ -93,6 +94,7 @@ export default function RegisterPharmacyPage() {
             (failed?.code === 'WEAK_PASSWORD' && errorMessage('WEAK_PASSWORD'))
           }
         />
+        <PasswordRules password={password} />
 
         <h2 className="panel__title">{strings.pharmacy.details.section}</h2>
         <DetailsFields

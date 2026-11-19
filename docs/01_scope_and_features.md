@@ -1,6 +1,6 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.6 · **Date:** 2026-11-16
+**Version:** v5.7 · **Date:** 2026-11-19
 **Status:** ✅ validated by the team (2026-10-20). **v5.6:** stock files are CSV only (the owner, decision log BLD-D32). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
@@ -64,7 +64,7 @@ uploads / edits inventory ──► private inventory ──(0–180 days to exp
                                    │ release → wait → re-plan → report / escalate  │        (6-hour search window,
                                    └───────────────────────────────────────────────┘         08:00–20:00 to start)
 reservation (instant, after the client's tap) ──► pickup within the pharmacy's pickup time ──► [Picked up]
-answers early-release ask ◄── agent asks open pharmacies holding unlisted stock (181–270 days)
+answers early-release ask ◄── agent asks open pharmacies holding unlisted stock (held back, or 181–270 days)
                               matching: new stock → waiting claims, FIRST COME FIRST SERVED (code, not the LLM)
 ```
 
@@ -146,7 +146,7 @@ The client submits a **request** for **1–5 medicines** they need **now**, with
 - [ ] A group reserve is atomic.
 
 #### C8: Early release (unlisted stock)
-- The agent asks up to **3 pharmacies that are open now** whose **private** inventory holds the medicine in the early-release window (181–270 days to expiry) to release it at a discount (suggested 25%), for a watch or a request item.
+- The agent asks up to **3 pharmacies that are open now** whose **private** inventory holds the medicine, either in the early-release window (181–270 days to expiry) or nearer its expiry and held back by the pharmacy's own listing rule (BLD-D44), to release it for a watch or a request item. The pharmacy sets the price; DawaLink suggests one.
 - Pharmacies accept (quantity, price ≤ public price) or decline within **2 hours**, with no penalty.
 - An acceptance becomes an **offer** the client accepts with a tap → reserved.
 - If watching finds stock too, **the first offer the client accepts wins**, and the other is cancelled at once.
@@ -201,7 +201,7 @@ If the LLM is down or over budget:
 - The inventory is **private**.
 
 #### C4: Near-expiry publishing and pricing
-- Items **0–180 days** from expiry are **published automatically**. There's no fixed minimum: whether a box suits a client depends on their **days of use** (C7).
+- Items **0–180 days** from expiry can be published, and **each pharmacy decides which** (the owner, 2026-11-19, BLD-D44): by themselves when they have 30, 60, 90 or 180 days left (180 is where every pharmacy starts), or one by one by hand. A box it holds back stays private, and the agent may ask for it (C8). There's no fixed minimum: whether a box suits a client depends on their **days of use** (C7).
 - **System-wide discount tiers** (25% / 40% / 60% by days left), with a **per-item price override** (≤ public price; 0 = donation).
 - Pharmacies can pause items.
 - Prices are stored in LBP and **shown in LBP + ≈ USD**.

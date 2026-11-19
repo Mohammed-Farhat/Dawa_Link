@@ -1,8 +1,11 @@
 """The admin's side of a client's account (docs/04 SM-2, R-N3; docs/03 AS-5).
 
-An admin sees a client as a status and a few counts, **never as a person**: the name,
-the email and the phone are read through one function only (`contact`), which writes an
-audit event each time and stops after 30 views in an hour (N-47).
+An admin sees a client as a status, a few counts and what they have going (their
+reservations and their requests), **never as a person**: the name, the email and the
+phone are read through one function only (`contact`), which writes an audit event each
+time and stops after 30 views in an hour (N-47). A list of medicines beside an ID names
+nobody; beside a name it is someone's health, which is why the name stays behind that
+one audited view.
 
 Suspending a client ends what they had going, in an order that matters:
 1. their open requests close as cancelled, and their watches end;
@@ -19,26 +22,40 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, or_, select
 
 from dawalink.db.models import (
+    AbuseFlag,
     AuditEvent,
     ClientProfile,
     District,
     Order,
     Pharmacy,
     Product,
+    RequestItem,
     SourcingRequest,
     User,
 )
 from dawalink.domain.accounts import CLIENT_MACHINE, ClientStatus
 from dawalink.domain.numbers import NO_SHOW_WINDOW
 from dawalink.domain.orders import OPEN_STATES, OrderState
-from dawalink.domain.requests import RequestState
+from dawalink.domain.requests import ItemState, RequestState
 from dawalink.domain.state_machine import Actor, TransitionNotAllowed
+from dawalink.domain.vocabulary import FlagState, FlagSubject
 from dawalink.services import audit, auth, claims, clients, orders, requests
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
 CONTACT_VIEWS_PER_HOUR = 30  # N-47
 PII_VIEW = "pii.view"
+# How much of a client's history their page shows, newest first.
+RESERVATIONS_SHOWN = 30
+REQUESTS_SHOWN = 10
+# An offer the client let go was never a reservation: it is not in their list.
+_NEVER_RESERVED = (
+    OrderState.OFFER_DECLINED.value,
+    OrderState.OFFER_EXPIRED.value,
+    OrderState.OFFER_WITHDRAWN.value,
+)
+# The lists an admin can ask for: who has something going, and who needs a look.
+HAVING = ("reservation", "picked_up", "request", "look")
 
 
 @dataclass(frozen=True)
@@ -48,18 +65,32 @@ class Listed:
     paused_until: datetime | None
     district: str | None
     open_orders: int
+    # Everything they ever collected at a counter, as far back as orders are kept.
+    picked_up: int
     # No-shows that still count (30 days).
     no_shows: int
     open_requests: int
     # Expired reservations the client says they picked up, waiting for an admin's look.
     contested: int
+    # Flags raised about them that nobody has handled yet (R-AB).
+    flags_open: int
 
 
 @dataclass(frozen=True)
-class Contested:
+class OrderLine:
+    """One reservation with the names an admin reads it by."""
+
     order: Order
     product: str
     pharmacy: str
+
+
+@dataclass(frozen=True)
+class RequestLine:
+    request: SourcingRequest
+    medicines: int
+    # How many of them are fully reserved.
+    secured: int
 
 
 @dataclass(frozen=True)
@@ -69,18 +100,29 @@ class Contact:
     phone: str | None
 
 
-def _counts(tx: Tx, client_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, tuple[int, int, int, int]]:
-    """Open orders, counted no-shows, open requests and waiting contests, by client."""
+@dataclass(frozen=True)
+class _Counts:
+    open_orders: int = 0
+    picked_up: int = 0
+    no_shows: int = 0
+    contested: int = 0
+    open_requests: int = 0
+    flags_open: int = 0
+
+
+def _counts(tx: Tx, client_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, _Counts]:
+    """What each client has going, in numbers."""
     if not client_ids:
         return {}
     open_states = [state.value for state in OPEN_STATES]
     counted = (Order.counts_as_no_show.is_(True)) & (Order.closed_at > tx.now - NO_SHOW_WINDOW)
     by_order = {
-        client_id: (int(opened), int(missed), int(contested))
-        for client_id, opened, missed, contested in tx.session.execute(
+        client_id: (int(opened), int(collected), int(missed), int(contested))
+        for client_id, opened, collected, missed, contested in tx.session.execute(
             select(
                 Order.client_id,
                 func.count().filter(Order.state.in_(open_states)),
+                func.count().filter(Order.state == OrderState.PICKED_UP.value),
                 func.count().filter(counted),
                 func.count().filter(counted & Order.contested_at.is_not(None)),
             )
@@ -98,14 +140,29 @@ def _counts(tx: Tx, client_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, tuple[in
             .group_by(SourcingRequest.client_id)
         ).all()
     )
-    return {
-        client_id: (
-            *by_order.get(client_id, (0, 0, 0))[:2],
-            int(by_request.get(client_id, 0)),
-            by_order.get(client_id, (0, 0, 0))[2],
+    by_flag = dict(
+        tx.session.execute(
+            select(AbuseFlag.subject_id, func.count())
+            .where(
+                AbuseFlag.subject_type == FlagSubject.CLIENT.value,
+                AbuseFlag.subject_id.in_(client_ids),
+                AbuseFlag.state == FlagState.OPEN.value,
+            )
+            .group_by(AbuseFlag.subject_id)
+        ).all()
+    )
+    found = {}
+    for client_id in client_ids:
+        opened, collected, missed, contested = by_order.get(client_id, (0, 0, 0, 0))
+        found[client_id] = _Counts(
+            open_orders=opened,
+            picked_up=collected,
+            no_shows=missed,
+            contested=contested,
+            open_requests=int(by_request.get(client_id, 0)),
+            flags_open=int(by_flag.get(client_id, 0)),
         )
-        for client_id in client_ids
-    }
+    return found
 
 
 def _rows(tx: Tx, found: Sequence[tuple[ClientProfile, str | None]]) -> list[Listed]:
@@ -116,10 +173,12 @@ def _rows(tx: Tx, found: Sequence[tuple[ClientProfile, str | None]]) -> list[Lis
             status=profile.status,
             paused_until=profile.paused_until,
             district=district,
-            open_orders=counts[profile.user_id][0],
-            no_shows=counts[profile.user_id][1],
-            open_requests=counts[profile.user_id][2],
-            contested=counts[profile.user_id][3],
+            open_orders=counts[profile.user_id].open_orders,
+            picked_up=counts[profile.user_id].picked_up,
+            no_shows=counts[profile.user_id].no_shows,
+            open_requests=counts[profile.user_id].open_requests,
+            contested=counts[profile.user_id].contested,
+            flags_open=counts[profile.user_id].flags_open,
         )
         for profile, district in found
     ]
@@ -129,12 +188,15 @@ def listed(
     tx: Tx,
     *,
     status: ClientStatus | None = None,
+    having: str | None = None,
     ref: str = "",
     offset: int = 0,
     limit: int = 50,
 ) -> list[Listed]:
     """Clients, without a name or a contact detail. `ref` finds the client of an order
-    number or a request number (`R-7K3Q2F`, `Q-4HX9TM`): what a complaint quotes."""
+    number or a request number (`R-7K3Q2F`, `Q-4HX9TM`): what a complaint quotes.
+    `having` keeps those with a reservation going, who picked an order up, with an
+    open request, or who need a look (a contested no-show, or an open flag)."""
     statement = select(ClientProfile, District.name).outerjoin(
         District, District.id == ClientProfile.district_id
     )
@@ -150,7 +212,6 @@ def listed(
                 ),
             )
         )
-    # Who needs a look comes first: a contest waiting, then the paused and the suspended.
     waiting = (
         select(func.count())
         .select_from(Order)
@@ -161,8 +222,46 @@ def listed(
         )
         .scalar_subquery()
     )
+    flagged = (
+        select(func.count())
+        .select_from(AbuseFlag)
+        .where(
+            AbuseFlag.subject_type == FlagSubject.CLIENT.value,
+            AbuseFlag.subject_id == ClientProfile.user_id,
+            AbuseFlag.state == FlagState.OPEN.value,
+        )
+        .scalar_subquery()
+    )
+    if having == "reservation":
+        statement = statement.where(
+            ClientProfile.user_id.in_(
+                select(Order.client_id).where(
+                    Order.state.in_([state.value for state in OPEN_STATES])
+                )
+            )
+        )
+    elif having == "picked_up":
+        statement = statement.where(
+            ClientProfile.user_id.in_(
+                select(Order.client_id).where(Order.state == OrderState.PICKED_UP.value)
+            )
+        )
+    elif having == "request":
+        statement = statement.where(
+            ClientProfile.user_id.in_(
+                select(SourcingRequest.client_id).where(
+                    SourcingRequest.state == RequestState.OPEN.value
+                )
+            )
+        )
+    elif having == "look":
+        statement = statement.where((waiting > 0) | (flagged > 0))
+    # Who needs a look comes first: a contest waiting, a flag, then the paused and the
+    # suspended.
     found = tx.session.execute(
-        statement.order_by(waiting.desc(), ClientProfile.status.desc(), ClientProfile.user_id)
+        statement.order_by(
+            waiting.desc(), flagged.desc(), ClientProfile.status.desc(), ClientProfile.user_id
+        )
         .offset(offset)
         .limit(limit)
     ).all()
@@ -180,7 +279,54 @@ def one(tx: Tx, client_id: uuid.UUID) -> Listed:
     return _rows(tx, [(found[0], found[1])])[0]
 
 
-def contested_orders(tx: Tx, client_id: uuid.UUID) -> list[Contested]:
+def reservations(tx: Tx, client_id: uuid.UUID) -> list[OrderLine]:
+    """What this client reserved, newest first: waiting to be collected, picked up,
+    cancelled, missed. The last 30; an offer they let go is not one of them."""
+    rows = tx.session.execute(
+        select(Order, Product.moph_name, Pharmacy.name)
+        .join(Product, Product.id == Order.product_id)
+        .join(Pharmacy, Pharmacy.id == Order.pharmacy_id)
+        .where(Order.client_id == client_id, Order.state.not_in(_NEVER_RESERVED))
+        .order_by(Order.created_at.desc(), Order.id)
+        .limit(RESERVATIONS_SHOWN)
+    )
+    return [OrderLine(order, product, pharmacy) for order, product, pharmacy in rows]
+
+
+def requests_of(tx: Tx, client_id: uuid.UUID) -> list[RequestLine]:
+    """This client's sourcing requests, the open ones first, then the newest: the last 10."""
+    found = (
+        tx.session.execute(
+            select(SourcingRequest)
+            .where(SourcingRequest.client_id == client_id)
+            .order_by(
+                (SourcingRequest.state == RequestState.OPEN.value).desc(),
+                SourcingRequest.created_at.desc(),
+                SourcingRequest.id,
+            )
+            .limit(REQUESTS_SHOWN)
+        )
+        .scalars()
+        .all()
+    )
+    if not found:
+        return []
+    items = {
+        request_id: (int(medicines), int(secured))
+        for request_id, medicines, secured in tx.session.execute(
+            select(
+                RequestItem.request_id,
+                func.count(),
+                func.count().filter(RequestItem.state == ItemState.SECURED.value),
+            )
+            .where(RequestItem.request_id.in_([request.id for request in found]))
+            .group_by(RequestItem.request_id)
+        )
+    }
+    return [RequestLine(request, *items.get(request.id, (0, 0))) for request in found]
+
+
+def contested_orders(tx: Tx, client_id: uuid.UUID) -> list[OrderLine]:
     """The no-shows this client contests and that still count: each waits for [Clear]."""
     rows = tx.session.execute(
         select(Order, Product.moph_name, Pharmacy.name)
@@ -194,7 +340,7 @@ def contested_orders(tx: Tx, client_id: uuid.UUID) -> list[Contested]:
         )
         .order_by(Order.contested_at)
     )
-    return [Contested(order, product, pharmacy) for order, product, pharmacy in rows]
+    return [OrderLine(order, product, pharmacy) for order, product, pharmacy in rows]
 
 
 def contact(tx: Tx, admin_id: uuid.UUID, client_id: uuid.UUID) -> Contact:

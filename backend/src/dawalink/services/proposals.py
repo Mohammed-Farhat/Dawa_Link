@@ -19,7 +19,7 @@ from dawalink.db.models import Conversation, Order, Pharmacy, Proposal, Sourcing
 from dawalink.domain.numbers import PROPOSAL_VALIDITY
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ProposalKind
-from dawalink.services import events, orders, requests, travel
+from dawalink.services import clients, events, orders, requests, travel
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.events import Decision
@@ -80,10 +80,19 @@ def create(
     return proposal
 
 
+def _put_away(tx: Tx, proposal: Proposal) -> bool:
+    """The card is in a chat the client left with [New chat]. An earlier chat is read,
+    never continued (D9, BLD-D40): its cards are read too, and can't be tapped."""
+    conversation = tx.session.get_one(Conversation, proposal.conversation_id)
+    return conversation.kind == "chat" and conversation.status == "ARCHIVED"
+
+
 def state_of(tx: Tx, proposal: Proposal) -> str:
     if proposal.used_at is not None:
         return "used"
-    return "expired" if proposal.expires_at <= tx.now else "open"
+    if proposal.expires_at <= tx.now or _put_away(tx, proposal):
+        return "expired"
+    return "open"
 
 
 def of_conversation(
@@ -119,7 +128,7 @@ def _own_open(tx: Tx, client_id: uuid.UUID, proposal_id: uuid.UUID) -> Proposal:
         raise ServiceError(Code.NOT_FOUND, "Unknown card.")
     if proposal.used_at is not None:
         raise ServiceError(Code.PROPOSAL_USED, "This card's button was already used.")
-    if proposal.expires_at <= tx.now:
+    if proposal.expires_at <= tx.now or _put_away(tx, proposal):
         raise ServiceError(
             Code.PROPOSAL_EXPIRED, "This option has expired; ask the assistant for fresh options."
         )
@@ -320,8 +329,11 @@ def _start_request(tx: Tx, client_id: uuid.UUID, proposal: Proposal, key: str) -
     payload = proposal.payload
     conversation = tx.session.get_one(Conversation, proposal.conversation_id)
     location = travel.conversation_location(tx, conversation)
-    if location is None and payload.get("district_id") is not None:
-        location = travel.district_location(tx, int(payload["district_id"]))
+    if location is None:
+        # The chat had no location of its own: the request starts from the client's
+        # home, as the agent's tools did when they made the card.
+        home = clients.home(tx, client_id)
+        location = home.location if home is not None else None
     if location is None:
         raise ServiceError(Code.VALIDATION_ERROR, "Share your location or choose a district first.")
     return requests.create_request(

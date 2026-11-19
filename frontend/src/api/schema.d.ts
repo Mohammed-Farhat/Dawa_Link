@@ -4,26 +4,6 @@
  */
 
 export interface paths {
-    "/api/v1/admin/abuse-flags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Abuse Flags
-         * @description The high ones first. A flag holds counts and IDs, never a message.
-         */
-        get: operations["list_abuse_flags"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/abuse-flags/{flag_id}/act": {
         parameters: {
             query?: never;
@@ -128,7 +108,8 @@ export interface paths {
         put?: never;
         /**
          * Confirm Answer Report
-         * @description [Confirmed], filed under a category; `add_to_regression` puts it in the export.
+         * @description [Real problem]: the report is confirmed and joins the regression cases the
+         *     export gives (A-D6). A category may be sent; the console sends none.
          */
         post: operations["confirm_answer_report"];
         delete?: never;
@@ -226,7 +207,9 @@ export interface paths {
         /**
          * List Clients
          * @description Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the
-         *     client of an order number or a request number.
+         *     client of an order number or a request number. `having` keeps the clients with a
+         *     reservation going, who picked an order up, with an open request, or who need a look
+         *     (a contested no-show or an open flag).
          */
         get: operations["list_clients"];
         put?: never;
@@ -244,7 +227,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Look At Client */
+        /**
+         * Look At Client
+         * @description One client by their ID: the counts, their last reservations and requests with
+         *     how each ended, what they contest, and the flags about them. **Still no name:** that
+         *     is the audited `/contact` below.
+         */
         get: operations["look_at_client"];
         put?: never;
         post?: never;
@@ -423,9 +411,9 @@ export interface paths {
         /**
          * Reply To Escalation
          * @description The client reads the reply in their conversation, signed "DawaLink team", and is
-         *     notified (CN-14). The client's own name, email and phone, and anything that looks
-         *     like an email or a phone number, are removed before it is stored, as for every
-         *     message. **It changes no order and no priority** (R-PRI4).
+         *     notified (CN-14). It is stored as typed (a person may have to give a phone number),
+         *     and cleaned where the model or an export reads it. A first reply marks the
+         *     escalation as being handled. **It changes no order and no priority** (R-PRI4).
          */
         post: operations["reply_to_escalation"];
         delete?: never;
@@ -443,25 +431,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resolve Escalation */
+        /**
+         * Resolve Escalation
+         * @description [Close this case]. A note of what was done may go with it; none is asked for.
+         */
         post: operations["resolve_escalation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/escalations/{escalation_id}/take": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Take Escalation */
-        post: operations["take_escalation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -928,6 +902,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Chats
+         * @description The client's own chats, the newest first: the one they write in now and the
+         *     earlier ones, which are kept 30 days (D9). Reading one is `GET …/messages`.
+         */
+        get: operations["list_chats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversations/new-chat": {
         parameters: {
             query?: never;
@@ -1086,6 +1081,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/listings/search-by-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search By Name
+         * @description Everything in stock for a typed name, grouped by medicine (CS-6).
+         *
+         *     "panadol" answers with every Panadol a pharmacy lists, each under its own name,
+         *     strength and form; a misspelled name answers with the closest one and says so.
+         *     **Still only what was typed** (R-S4): a medicine is here because its name, or what it
+         *     contains, matches the words, never because it could replace another one.
+         */
+        post: operations["search_by_name"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/listings/{listing_id}/view": {
         parameters: {
             query?: never;
@@ -1102,6 +1122,33 @@ export interface paths {
          */
         post: operations["view_listing"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/home-place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Home Place
+         * @description The place the caller saved, so their own map can show it. It is sent to nobody
+         *     else, and never in an address.
+         */
+        get: operations["read_home_place"];
+        /**
+         * Save Home Place
+         * @description Saves or moves the caller's home place (CS-13). Rounded before it is stored; a new
+         *     place can start a paid routing call, so it counts for the hourly limit (N-47).
+         */
+        put: operations["save_home_place"];
+        post?: never;
+        /** Forget Home Place */
+        delete: operations["forget_home_place"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1126,6 +1173,36 @@ export interface paths {
          * @description Only what was sent changes (CS-13). An empty phone removes it.
          */
         patch: operations["change_profile"];
+        trace?: never;
+    };
+    "/api/v1/me/searches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Last Searches
+         * @description The caller's last searches, the newest first (CS-6). Nobody else reads them.
+         */
+        get: operations["last_searches"];
+        put?: never;
+        /**
+         * Keep A Search
+         * @description Keeps a name the client searched. The page sends it when a search led somewhere (a
+         *     result was opened, or Enter was pressed), not for every letter typed. A name that is
+         *     not a medicine's name in shape is quietly left out.
+         */
+        post: operations["keep_a_search"];
+        /**
+         * Clear Searches
+         * @description [Clear]: the caller's whole list is deleted.
+         */
+        delete: operations["clear_searches"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/notifications": {
@@ -1379,8 +1456,8 @@ export interface paths {
         head?: never;
         /**
          * Change Stock Item
-         * @description A quantity corrected after a sale in the shop, the pharmacy's own price, or a
-         *     pause. Reserved packs are never taken away here (R-U3).
+         * @description A quantity corrected after a sale in the shop, the pharmacy's own price, a pause,
+         *     or [List now]. Reserved packs are never taken away here (R-U3).
          */
         patch: operations["change_stock_item"];
         trace?: never;
@@ -1627,6 +1704,31 @@ export interface paths {
          *     pickup: after the deadline the box is back in stock (INV-7).
          */
         post: operations["mark_picked_up"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Places Of A District
+         * @description The towns and neighbourhoods of a district, from our own list of places: what a
+         *     client chooses a home town from. Public, like the list of districts.
+         *
+         *     Only the places whose name is written in Latin letters: the map gives some villages a
+         *     name in Arabic script only, and one list in two alphabets reads as a mistake (the
+         *     owner, 2026-11-18). Those places can still be named to the assistant.
+         */
+        get: operations["places_of_a_district"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1896,13 +1998,6 @@ export interface components {
              */
             subject_type: "client" | "pharmacy";
         };
-        /** AbuseFlags */
-        AbuseFlags: {
-            /** Items */
-            items: components["schemas"]["AbuseFlagRow"][];
-            /** Next Cursor */
-            next_cursor: string | null;
-        };
         /** AcceptAsk */
         AcceptAsk: {
             /** Price Lbp */
@@ -1940,11 +2035,20 @@ export interface components {
             /** Qty */
             qty: number;
         };
-        /** AdminClient */
+        /**
+         * AdminClient
+         * @description A client's page: what they have going, by an ID. The name is not here.
+         */
         AdminClient: {
             client: components["schemas"]["AdminClientRow"];
             /** Contested */
             contested: components["schemas"]["ContestedReservation"][];
+            /** Flags */
+            flags: components["schemas"]["AbuseFlagRow"][];
+            /** Requests */
+            requests: components["schemas"]["ClientRequest"][];
+            /** Reservations */
+            reservations: components["schemas"]["ClientReservation"][];
         };
         /**
          * AdminClientRow
@@ -1955,6 +2059,8 @@ export interface components {
             contested: number;
             /** District */
             district: string | null;
+            /** Flags Open */
+            flags_open: number;
             /**
              * Id
              * Format: uuid
@@ -1968,6 +2074,8 @@ export interface components {
             open_requests: number;
             /** Paused Until */
             paused_until: string | null;
+            /** Picked Up */
+            picked_up: number;
             /**
              * Status
              * @enum {string}
@@ -2180,6 +2288,8 @@ export interface components {
         };
         /** AnswerReportRow */
         AnswerReportRow: {
+            /** Asked */
+            asked: string | null;
             /** Category */
             category: string | null;
             /** Comment */
@@ -2435,6 +2545,41 @@ export interface components {
             text: string | null;
         };
         /**
+         * ChatSummary
+         * @description One line of the client's list of chats (D9).
+         */
+        ChatSummary: {
+            /** Active */
+            active: boolean;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Title */
+            title: string | null;
+        };
+        /** Chats */
+        Chats: {
+            /** Items */
+            items: components["schemas"]["ChatSummary"][];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+        };
+        /**
          * ClientContact
          * @description Read through one audited endpoint only (A-D3).
          */
@@ -2446,15 +2591,89 @@ export interface components {
             /** Phone */
             phone: string | null;
         };
+        /**
+         * ClientRequest
+         * @description One sourcing request of a client, as their page lists it.
+         */
+        ClientRequest: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Medicines */
+            medicines: number;
+            /** Outcome */
+            outcome: string | null;
+            /** Ref */
+            ref: string;
+            /** Secured */
+            secured: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "OPEN" | "CLOSED";
+        };
+        /**
+         * ClientReservation
+         * @description One reservation of a client, as their page lists it.
+         */
+        ClientReservation: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Counts As No Show */
+            counts_as_no_show: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline */
+            deadline: string | null;
+            /** Pharmacy */
+            pharmacy: string;
+            /** Product */
+            product: string;
+            /** Ref */
+            ref: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "OFFERED" | "RESERVED" | "PICKED_UP" | "NOT_AVAILABLE" | "EXPIRED_NO_SHOW" | "CANCELLED_BY_CLIENT" | "CANCELLED_BY_SYSTEM";
+            /** Units */
+            units: number;
+        };
         /** ClientState */
         ClientState: {
             /** Alternatives Ok Default */
             alternatives_ok_default: boolean;
+            /** Birth Date */
+            birth_date: string | null;
             district: components["schemas"]["District"] | null;
+            /** First Name */
+            first_name: string | null;
+            home_area: components["schemas"]["Place"] | null;
+            /** Home Place Saved */
+            home_place_saved: boolean;
+            /** Last Name */
+            last_name: string | null;
+            /** Middle Name */
+            middle_name: string | null;
             /** Missed Pickups 30D */
             missed_pickups_30d: number;
             /** Missed Pickups Before Pause */
             missed_pickups_before_pause: number;
+            /** Missed Pickups Pause Days */
+            missed_pickups_pause_days: number;
+            /** Missed Pickups Window Days */
+            missed_pickups_window_days: number;
             /** Paused Until */
             paused_until: string | null;
             /**
@@ -2463,15 +2682,20 @@ export interface components {
              */
             status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED";
         };
-        /** ConfirmReport */
+        /**
+         * ConfirmReport
+         * @description [Real problem]. The console sends nothing with it: a confirmed report is a
+         *     regression case, filed under "other" unless a category is given.
+         */
         ConfirmReport: {
             /**
              * Add To Regression
-             * @default false
+             * @default true
              */
             add_to_regression: boolean;
             /**
              * Category
+             * @default other
              * @enum {string}
              */
             category: "understanding" | "decision" | "safety" | "language" | "other";
@@ -2634,11 +2858,11 @@ export interface components {
         };
         /** EscalationDetail */
         EscalationDetail: {
+            /** Contested */
+            contested: components["schemas"]["ContestedReservation"][];
             escalation: components["schemas"]["EscalationRow"];
             /** Thread */
             thread: components["schemas"]["ThreadMessage"][];
-            /** Trace Ids */
-            trace_ids: string[];
         };
         /**
          * EscalationNote
@@ -2753,6 +2977,16 @@ export interface components {
             /** Version */
             version: string;
         };
+        /**
+         * HomePlace
+         * @description The client's own saved place, as they put it (rounded to about 100 m).
+         */
+        HomePlace: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+        };
         /** Ingredient */
         Ingredient: {
             /** Name */
@@ -2828,7 +3062,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "shared" | "district" | "area" | "profile" | "none";
+            source: "shared" | "district" | "area" | "profile" | "place" | "none";
         };
         /**
          * LoggedIn
@@ -2890,6 +3124,20 @@ export interface components {
             role: "client" | "pharmacist" | "admin";
         };
         /**
+         * MedicineGroup
+         * @description One medicine of a search by name: a catalog product under its own name.
+         */
+        MedicineGroup: {
+            /** By Ingredient */
+            by_ingredient: boolean;
+            /** Items */
+            items: components["schemas"]["Listing"][];
+            no_match: components["schemas"]["NoMatch"] | null;
+            product: components["schemas"]["ProductSummary"];
+            /** Total Found */
+            total_found: number;
+        };
+        /**
          * Message
          * @description A plain sentence, for the answers that say nothing else.
          */
@@ -2907,6 +3155,8 @@ export interface components {
          * @description What the page asks for every few seconds while it is open (API-D7).
          */
         MessagesPage: {
+            /** Archived */
+            archived: boolean;
             /** Busy */
             busy: boolean;
             /**
@@ -2948,6 +3198,23 @@ export interface components {
              * @enum {string}
              */
             currency: "LBP" | "USD";
+        };
+        /** NameSearchResult */
+        NameSearchResult: {
+            /** Closest */
+            closest: boolean;
+            /** Did You Mean */
+            did_you_mean: string[];
+            /** Groups */
+            groups: components["schemas"]["MedicineGroup"][];
+            location: components["schemas"]["LocationSummary"];
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /** Upcoming Days */
+            upcoming_days: string[];
         };
         /** NewWatch */
         NewWatch: {
@@ -3152,6 +3419,10 @@ export interface components {
         PharmacyProfile: {
             /** Address */
             address: string;
+            /** Auto List Choices */
+            auto_list_choices: number[];
+            /** Auto List Days */
+            auto_list_days: number;
             /** Closes At */
             closes_at: string | null;
             /** District */
@@ -3288,6 +3559,16 @@ export interface components {
             /** Lon */
             lon: number;
         };
+        /**
+         * Place
+         * @description A town or a neighbourhood of our own list of places (docs/04 R-S2).
+         */
+        Place: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
         /** PrivateItem */
         PrivateItem: {
             /** Batch */
@@ -3355,12 +3636,26 @@ export interface components {
             /** Items */
             items: components["schemas"]["ProductSummary"][];
         };
-        /** ProfileChange */
+        /**
+         * ProfileChange
+         * @description Only what is sent changes. The three name parts are sent together; so are the
+         *     district and the town, because a town belongs to its district.
+         */
         ProfileChange: {
             /** Alternatives Ok Default */
             alternatives_ok_default?: boolean | null;
+            /** Birth Date */
+            birth_date?: string | null;
             /** District Id */
             district_id?: number | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Home Area Id */
+            home_area_id?: number | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Middle Name */
+            middle_name?: string | null;
             /** Phone */
             phone?: string | null;
         };
@@ -3404,12 +3699,24 @@ export interface components {
              * @constant
              */
             accept_terms: true;
+            /**
+             * Birth Date
+             * Format: date
+             */
+            birth_date: string;
             /** District Id */
-            district_id: number;
+            district_id?: number | null;
             /** Email */
             email: string;
-            /** Full Name */
-            full_name: string;
+            /** First Name */
+            first_name: string;
+            /** Home Area Id */
+            home_area_id?: number | null;
+            home_place?: components["schemas"]["PinIn"] | null;
+            /** Last Name */
+            last_name: string;
+            /** Middle Name */
+            middle_name?: string | null;
             /** Password */
             password: string;
             /** Phone */
@@ -3661,6 +3968,42 @@ export interface components {
             note: string;
         };
         /**
+         * SearchByName
+         * @description A search by a typed name: every medicine it stands for, with its boxes in stock.
+         *     A POST for the same reason as `SearchListings`: the location travels in the body.
+         */
+        SearchByName: {
+            /** Days Of Use */
+            days_of_use?: number | null;
+            location?: components["schemas"]["LocationIn"] | null;
+            max_price?: components["schemas"]["MoneyIn"] | null;
+            /**
+             * On Foot
+             * @default false
+             */
+            on_foot: boolean;
+            /**
+             * Open Now
+             * @default false
+             */
+            open_now: boolean;
+            /**
+             * Per Medicine
+             * @default 3
+             */
+            per_medicine: number;
+            /** Pickup Day */
+            pickup_day?: string | null;
+            /** Q */
+            q: string;
+            /**
+             * Sort
+             * @default best
+             * @enum {string}
+             */
+            sort: "best" | "nearest" | "cheapest" | "latest_expiry";
+        };
+        /**
          * SearchListings
          * @description A search. **It is a POST so that the client's location travels in the body**, never
          *     in an address that a browser's history or a server's log keeps.
@@ -3685,6 +4028,11 @@ export interface components {
              * @default false
              */
             on_foot: boolean;
+            /**
+             * Open Now
+             * @default false
+             */
+            open_now: boolean;
             /** Pickup Day */
             pickup_day?: string | null;
             /**
@@ -3721,6 +4069,22 @@ export interface components {
             upcoming_days: string[];
         };
         /**
+         * Searched
+         * @description A name the client searched, to keep in their list of last searches.
+         */
+        Searched: {
+            /** Q */
+            q: string;
+        };
+        /**
+         * Searches
+         * @description The client's last searches, the newest first.
+         */
+        Searches: {
+            /** Items */
+            items: string[];
+        };
+        /**
          * SelectableItem
          * @description One checkbox of a [Reserve these] card (R-RQ6).
          */
@@ -3750,6 +4114,8 @@ export interface components {
         SettingsChange: {
             /** Address */
             address?: string | null;
+            /** Auto List Days */
+            auto_list_days?: number | null;
             /** District Id */
             district_id?: number | null;
             /** Hours */
@@ -3837,6 +4203,8 @@ export interface components {
              * Format: date
              */
             expiry_date: string;
+            /** Held Back */
+            held_back: boolean;
             /**
              * Id
              * Format: uuid
@@ -3844,6 +4212,8 @@ export interface components {
             id: string;
             /** Last Edited At */
             last_edited_at: string | null;
+            /** Listed By Hand */
+            listed_by_hand: boolean;
             /** Paused */
             paused: boolean;
             price: components["schemas"]["StockPrice"];
@@ -3868,6 +4238,8 @@ export interface components {
          *     price.
          */
         StockItemChange: {
+            /** Listed */
+            listed?: boolean | null;
             /** Paused */
             paused?: boolean | null;
             /** Price Override Lbp */
@@ -4099,41 +4471,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_abuse_flags: {
-        parameters: {
-            query?: {
-                state?: ("OPEN" | "DISMISSED" | "ACTIONED") | null;
-                cursor?: number;
-                limit?: number;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AbuseFlags"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     act_on_abuse_flag: {
         parameters: {
             query?: never;
@@ -4485,6 +4822,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED") | null;
+                having?: ("reservation" | "picked_up" | "request" | "look") | null;
                 ref?: string;
                 cursor?: number;
                 limit?: number;
@@ -4881,39 +5219,6 @@ export interface operations {
                 "application/json": components["schemas"]["Resolve"];
             };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EscalationDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    take_escalation: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                escalation_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -5734,6 +6039,37 @@ export interface operations {
             };
         };
     };
+    list_chats: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Chats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     new_chat: {
         parameters: {
             query?: never;
@@ -5995,6 +6331,41 @@ export interface operations {
             };
         };
     };
+    search_by_name: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchByName"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NameSearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     view_listing: {
         parameters: {
             query?: never;
@@ -6019,6 +6390,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_home_place: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomePlace"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_home_place: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PinIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forget_home_place: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
                 };
             };
             /** @description Validation Error */
@@ -6085,6 +6553,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    last_searches: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Searches"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    keep_a_search: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Searched"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Searches"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_searches: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Searches"];
                 };
             };
             /** @description Validation Error */
@@ -6959,6 +7524,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PharmacyReservation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    places_of_a_district: {
+        parameters: {
+            query: {
+                district_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"][];
                 };
             };
             /** @description Validation Error */

@@ -100,7 +100,7 @@ export function pretendApi(routes: Record<string, Answer>) {
       return new Response(JSON.stringify(refusal(404, 'NOT_FOUND').body), { status: 404 })
     }
     const route = routes[key]
-    const found = (typeof route === 'function' ? route(call) : route) as
+    const found = (await (typeof route === 'function' ? route(call) : route)) as
       | { __status?: number; body?: unknown; __stream?: string }
       | undefined
     if (found && typeof found === 'object' && '__stream' in found) {
@@ -136,9 +136,17 @@ export const CLIENT = {
     status: 'ACTIVE',
     paused_until: null,
     district: { id: 1, name: 'Beirut', governorate: 'Beirut', lat: 33.8938, lon: 35.5018 },
+    home_area: null,
+    home_place_saved: false,
+    first_name: 'Nour',
+    middle_name: null,
+    last_name: 'Khoury',
+    birth_date: '1990-05-17',
     alternatives_ok_default: false,
     missed_pickups_30d: 0,
     missed_pickups_before_pause: 2,
+    missed_pickups_window_days: 30,
+    missed_pickups_pause_days: 7,
   },
   pharmacy: null,
 } satisfies Schemas['Me']
@@ -257,6 +265,7 @@ export function page(messages: ReturnType<typeof message>[], more: object = {}) 
     messages,
     last_seq: messages.length ? messages[messages.length - 1].seq : 0,
     busy: false,
+    archived: false,
     location: { source: 'profile', label: 'Beirut' },
     server_now: '2026-11-16T08:00:00Z',
     ...more,

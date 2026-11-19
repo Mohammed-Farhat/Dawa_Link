@@ -92,6 +92,8 @@ def ensure_template(settings: Settings, *, catalog_folder: Path = DEFAULT_FOLDER
     admin = _outside_a_transaction(base.admin)
     try:
         if _exists(admin, template_name):
+            # Migrations are part of the fingerprint: schema changes build a new
+            # template instead of mutating a prior evaluation's starting point.
             with admin.connect() as connection:
                 ready = connection.execute(
                     text(

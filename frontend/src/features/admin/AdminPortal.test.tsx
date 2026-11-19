@@ -13,7 +13,6 @@ import {
   OVERVIEW,
   PHARMACY_ID,
   REPORT,
-  REPORT_DETAIL,
   REPORT_ID,
   WAITING,
   WAITING_ROW,
@@ -61,7 +60,6 @@ function adminApi(more: Record<string, unknown> = {}) {
     'GET /api/v1/admin/escalations': { items: [ESCALATION], next_cursor: null },
     [`GET ${ESCALATED}`]: ESCALATION_DETAIL,
     'GET /api/v1/admin/answer-reports': { items: [REPORT], next_cursor: null },
-    [`GET ${REPORTED}`]: REPORT_DETAIL,
     'GET /api/v1/admin/audit': { items: [AUDIT_EVENT], next_cursor: null },
     ...more,
   })
@@ -410,7 +408,7 @@ describe('Escalations (AS-6)', () => {
     expect(container.querySelector('[onerror]')).toBeNull()
   })
 
-  it('is resolved with a note, and then offers nothing more to do', async () => {
+  it('is closed with a note, and then offers nothing more to do', async () => {
     const resolved = {
       ...ESCALATION_DETAIL,
       escalation: { ...ESCALATION, state: 'RESOLVED', resolution_note: 'Pointed to 140.' },
@@ -419,12 +417,83 @@ describe('Escalations (AS-6)', () => {
     renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
     const user = userEvent.setup()
 
-    await user.type(await screen.findByLabelText(e.note), 'Pointed to 140.')
-    await user.click(screen.getByRole('button', { name: e.resolve }))
+    await user.type(await screen.findByLabelText(new RegExp(`^${e.note.replace(/[()]/g, '\\$&')}`)), 'Pointed to 140.')
+    await user.click(screen.getByRole('button', { name: e.close }))
 
     expect(await screen.findByText(e.resolvedNote('Pointed to 140.'))).toBeInTheDocument()
     expect(api.sent('POST', `${ESCALATED}/resolve`)[0].body).toEqual({ note: 'Pointed to 140.' })
     expect(screen.queryByRole('button', { name: e.send })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: e.close })).not.toBeInTheDocument()
+  })
+
+  it('is closed in one press: no note is asked for, and nobody "takes" it first', async () => {
+    const resolved = { ...ESCALATION_DETAIL, escalation: { ...ESCALATION, state: 'RESOLVED' } }
+    const api = adminApi({ [`POST ${ESCALATED}/resolve`]: resolved })
+    renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+    const user = userEvent.setup()
+
+    const close = await screen.findByRole('button', { name: e.close })
+    expect(close).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /take/i })).not.toBeInTheDocument()
+    // The tracing tool's IDs are for developers: not on an admin's page.
+    expect(screen.queryByText(/trace/i)).not.toBeInTheDocument()
+    await user.click(close)
+
+    expect(await screen.findByText(e.closed)).toBeInTheDocument()
+    expect(api.sent('POST', `${ESCALATED}/resolve`)[0].body).toEqual({ note: '' })
+  })
+
+  it('says the rule about priority on an emergency claim only', async () => {
+    adminApi({
+      [`GET ${ESCALATED}`]: {
+        ...ESCALATION_DETAIL,
+        escalation: { ...ESCALATION, reason: 'client_asked_human', request_ref: null },
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+
+    expect(await screen.findByRole('heading', { name: e.summary })).toBeInTheDocument()
+    expect(screen.getByText(e.reasons.client_asked_human)).toBeInTheDocument()
+    expect(screen.queryByText(e.noPriority)).not.toBeInTheDocument()
+  })
+
+  it('shows a contested missed pickup with its own button, and no chat that never was', async () => {
+    const contested = {
+      id: 'dddddddd-4444-4444-8444-dddddddddddd',
+      ref: 'R-7K3Q2F',
+      product: 'AUGMENTIN 1G',
+      pharmacy: 'Hamra Pharmacy',
+      expired_at: '2026-11-15T19:00:00Z',
+      contested_at: '2026-11-16T07:00:00Z',
+    }
+    const complaint = {
+      escalation: {
+        ...ESCALATION,
+        reason: 'complaint',
+        request_ref: null,
+        summary:
+          'The client says they collected order R-7K3Q2F, but the pharmacy never pressed [Picked up]: it was counted as a missed pickup.',
+      },
+      thread: [],
+      contested: [contested],
+    }
+    const clearing = `/api/v1/admin/reservations/${contested.id}/clear-no-show`
+    const api = adminApi({ [`GET ${ESCALATED}`]: complaint, [`POST ${clearing}`]: {} })
+    const { container } = renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('heading', { name: e.missed })).toBeInTheDocument()
+    expect(screen.getByText(/AUGMENTIN 1G · Hamra Pharmacy/)).toBeInTheDocument()
+    // The case came from a button: the page doesn't claim a chat was deleted.
+    expect(screen.getByText(e.noThread)).toBeInTheDocument()
+    expect(screen.queryByText(/deleted/)).not.toBeInTheDocument()
+    expect(await accessibilityProblems(container)).toEqual([])
+    await user.click(screen.getByRole('button', { name: e.clear }))
+    await user.type(screen.getByLabelText(new RegExp(`^${e.clear}`)), 'The pharmacy confirmed.')
+    await user.click(screen.getByRole('button', { name: e.clear }))
+
+    expect(await screen.findByText(e.cleared)).toBeInTheDocument()
+    expect(api.sent('POST', clearing)[0].body).toEqual({ reason: 'The pharmacy confirmed.' })
   })
 
   it('says so when another admin resolved it first', async () => {
@@ -440,38 +509,32 @@ describe('Escalations (AS-6)', () => {
 })
 
 describe('Reported answers (AS-8)', () => {
-  it('shows the reply with what came before, and confirms it into the regression tests', async () => {
-    const api = adminApi({
-      [`POST ${REPORTED}/confirm`]: {
-        ...REPORT_DETAIL,
-        report: { ...REPORT, state: 'CONFIRMED', category: 'safety', in_regression: true },
-      },
-    })
-    const { container } = renderApp(<AppRoutes />, { path: `/admin/reports/${REPORT_ID}` })
+  it('is one list: the reply, what it answered, the reason, and two buttons', async () => {
+    const api = adminApi({ [`POST ${REPORTED}/confirm`]: {} })
+    const { container } = renderApp(<AppRoutes />, { path: '/admin/reports' })
     const user = userEvent.setup()
 
     expect(await screen.findByText('Take two tablets a day.')).toBeInTheDocument()
     expect(screen.getByText('How much Panadol can I take?')).toBeInTheDocument()
     expect(screen.getByText(r.comment('It told me how much to take.'))).toBeInTheDocument()
-    expect(screen.getByText('v1.13')).toBeInTheDocument()
+    // Nothing to file and nothing to download: no category, no model, no export.
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Take two tablets/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /download/i })).not.toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
-    await user.selectOptions(screen.getByRole('combobox', { name: r.category }), 'safety')
     await user.click(screen.getByRole('button', { name: r.confirm }))
 
     expect(await screen.findByText(r.reviewed)).toBeInTheDocument()
+    // A real problem is a regression case (A-D6).
     expect(api.sent('POST', `${REPORTED}/confirm`)[0].body).toEqual({
-      category: 'safety',
+      category: 'other',
       add_to_regression: true,
     })
-    expect(screen.getByText(r.inRegression)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: r.confirm })).not.toBeInTheDocument()
   })
 
   it('dismisses a report that is not a problem', async () => {
-    const api = adminApi({
-      [`POST ${REPORTED}/dismiss`]: { ...REPORT_DETAIL, report: { ...REPORT, state: 'DISMISSED' } },
-    })
-    renderApp(<AppRoutes />, { path: `/admin/reports/${REPORT_ID}` })
+    const api = adminApi({ [`POST ${REPORTED}/dismiss`]: {} })
+    renderApp(<AppRoutes />, { path: '/admin/reports' })
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: r.dismiss }))
@@ -480,18 +543,18 @@ describe('Reported answers (AS-8)', () => {
     expect(api.sent('POST', `${REPORTED}/dismiss`)).toHaveLength(1)
   })
 
-  it('downloads the regression cases', async () => {
-    const made = vi.fn(() => 'blob:test')
-    Object.assign(URL, { createObjectURL: made, revokeObjectURL: vi.fn() })
-    adminApi({ 'GET /api/v1/admin/answer-reports/export': { cases: [{ id: REPORT_ID }] } })
+  it('offers no button on an answer that was already reviewed', async () => {
+    adminApi({
+      'GET /api/v1/admin/answer-reports': {
+        items: [{ ...REPORT, state: 'CONFIRMED', in_regression: true }],
+        next_cursor: null,
+      },
+    })
     renderApp(<AppRoutes />, { path: '/admin/reports' })
-    const user = userEvent.setup()
 
     expect(await screen.findByText('Take two tablets a day.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: r.export }))
-
-    expect(await screen.findByText(r.exported(1))).toBeInTheDocument()
-    expect(made).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: r.confirm })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: r.dismiss })).not.toBeInTheDocument()
   })
 })
 

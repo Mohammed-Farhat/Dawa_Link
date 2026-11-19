@@ -88,7 +88,10 @@ def contest_no_show(reservation_id: uuid.UUID, caller: AsClient, work: DoWork) -
             client_id=caller.user_id,
             reason=EscalationReason.COMPLAINT,
             # An order number names no person.
-            summary=f"The client says they picked up {order.ref}; it expired as a no-show.",
+            summary=(
+                f"The client says they collected order {order.ref}, but the pharmacy never"
+                " pressed [Picked up]: it was counted as a missed pickup."
+            ),
             conversation_id=orders.conversation_of(tx, order),
             actor=Actor.CLIENT,
         )

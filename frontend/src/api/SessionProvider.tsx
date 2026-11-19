@@ -23,28 +23,43 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     retry: false,
   })
 
+  /**
+   * Whoever is logged in changes: a log out, a session that ended, a new login. **Nothing
+   * of the person before is shown to the next one** (docs/09 FS-34): the lists the pages
+   * keep in memory (reservations, offers, the chat) carry no name of their own, so they
+   * are all dropped.
+   *
+   * The screen is told first who is there now. Emptying the whole memory first left the
+   * page holding on to the person who had just logged out (found 2026-11-18).
+   */
+  const becomes = useCallback(
+    (me: Me | null) => {
+      queryClient.setQueryData(ME, me)
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME[0] })
+    },
+    [queryClient],
+  )
+
   // The API said the session ended (docs/11 §7, "Session expired").
   useEffect(() => {
-    const forget = () => queryClient.setQueryData(ME, null)
+    const forget = () => becomes(null)
     window.addEventListener(LOGGED_OUT_EVENT, forget)
     return () => window.removeEventListener(LOGGED_OUT_EVENT, forget)
-  }, [queryClient])
+  }, [becomes])
 
   const start = useCallback(
     (loggedIn: Schemas['LoggedIn']) => {
       setToken(loggedIn.token)
-      queryClient.setQueryData(ME, loggedIn.me)
+      becomes(loggedIn.me)
     },
-    [queryClient],
+    [becomes],
   )
   const logout = useCallback(async () => {
     await api.POST('/api/v1/auth/logout').catch(() => undefined)
     clearToken()
     await queryClient.cancelQueries()
-    // Keep the mounted session observer attached while forgetting the user.
-    queryClient.setQueryData(ME, null)
-    queryClient.removeQueries({ predicate: (entry) => entry.queryKey[0] !== ME[0] })
-  }, [queryClient])
+    becomes(null)
+  }, [becomes, queryClient])
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ME })
   }, [queryClient])

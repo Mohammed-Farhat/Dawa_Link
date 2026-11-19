@@ -16,6 +16,7 @@ from dawalink.db.models import Product
 from dawalink.domain.expiry import fits
 from dawalink.domain.geo import Travel
 from dawalink.domain.numbers import DEFAULT_DAYS_OF_USE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+from dawalink.domain.opening_hours import is_open
 from dawalink.domain.pickup import PickupChoice, pharmacy_pickup_days
 from dawalink.domain.pricing import discount_shown_pct
 from dawalink.domain.search import Ranked, Sort, availability_shown, sort_options
@@ -171,6 +172,7 @@ def search_listings(
     max_price_lbp: int | None = None,
     sort: Sort = "best",
     on_foot: bool = False,
+    open_now: bool = False,
     limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
 ) -> SearchResult:
@@ -194,6 +196,9 @@ def search_listings(
     choices = {box.item_id: box.choice(days) for box in boxes}
     if max_price_lbp is not None:
         boxes = [box for box in boxes if box.price_lbp <= max_price_lbp]
+    if open_now:
+        hours_now = pharmacies.weekly_hours(tx, list({box.pharmacy_id for box in boxes}))
+        boxes = [box for box in boxes if is_open(hours_now[box.pharmacy_id], tx.now)]
 
     kept: list[Box] = []
     left_out_by_pickup_day = 0
@@ -256,3 +261,76 @@ def search_listings(
             latest_pickup_day=max(possible) if possible else None,
         )
     return SearchResult(listings, len(kept), left_out_by_pickup_day, no_match)
+
+
+@dataclass(frozen=True)
+class MedicineGroup:
+    """One medicine of a search by name, with its best boxes."""
+
+    product: Product
+    by_ingredient: bool
+    result: SearchResult
+
+
+@dataclass(frozen=True)
+class NameResult:
+    groups: list[MedicineGroup]
+    closest: bool
+    did_you_mean: list[str]
+
+
+def stocked_products(tx: Tx) -> list[uuid.UUID]:
+    """The medicines some pharmacy lists right now. Visibility has one definition, the
+    `visible_listings` function (INV-16)."""
+    rows = tx.session.execute(
+        text("SELECT DISTINCT v.product_id FROM visible_listings(:today) v"), {"today": tx.today}
+    ).scalars()
+    return list(rows)
+
+
+def search_by_name(
+    tx: Tx,
+    *,
+    client_id: uuid.UUID,
+    query: str,
+    location: Location,
+    days_of_use: int | None = None,
+    pickup_day: date | None = None,
+    max_price_lbp: int | None = None,
+    sort: Sort = "best",
+    on_foot: bool = False,
+    open_now: bool = False,
+    per_medicine: int = 3,
+) -> NameResult:
+    """Everything in stock for a typed name, grouped by medicine (CS-6). **Only what a
+    pharmacy lists now:** a medicine nobody has is not shown, and the name is matched
+    among the medicines in stock, from its first letter (the owner, 2026-11-18, BLD-D42).
+
+    Each group is one catalog product under its own name, strength and form, so a
+    misspelled name can't lead to reserving another medicine unseen. A medicine is "in
+    stock" when a pharmacy has a visible box of it, whether or not that box lasts the
+    client's days: a group whose boxes all expire too early says so (R-F4).
+    """
+    clients.require_search(clients.profile(tx, client_id))
+    named = catalog.find_by_name(tx, query, among=stocked_products(tx))
+    groups = [
+        MedicineGroup(
+            product=product,
+            by_ingredient=product.id in named.by_ingredient,
+            result=search_listings(
+                tx,
+                client_id=client_id,
+                product_ids=[product.id],
+                location=location,
+                days_of_use=days_of_use,
+                pickup_day=pickup_day,
+                max_price_lbp=max_price_lbp,
+                sort=sort,
+                on_foot=on_foot,
+                open_now=open_now,
+                limit=per_medicine,
+            ),
+        )
+        for product in named.products
+    ]
+    return NameResult(groups=groups, closest=named.closest, did_you_mean=named.did_you_mean)

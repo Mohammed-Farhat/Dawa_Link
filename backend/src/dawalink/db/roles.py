@@ -36,7 +36,8 @@ _APP_READS_ONLY = (
 # Logs the app adds to and never changes.
 _APP_APPENDS_ONLY = ("audit_events", "agent_tool_calls")
 # The few tables where the app replaces rows.
-_APP_MAY_DELETE = ("inventory_upload_rows", "pharmacy_hours", "claim_skips")
+# (`search_history`: a client clears their own list, and a repeated search replaces its row.)
+_APP_MAY_DELETE = ("inventory_upload_rows", "pharmacy_hours", "claim_skips", "search_history")
 
 RETENTION_DELETES = (
     "conversations",
@@ -48,6 +49,7 @@ RETENTION_DELETES = (
     "travel_time_cache",
     "claim_skips",
     "audit_events",
+    "search_history",
 )
 # For one thing only: a pharmacy registration whose email was never confirmed
 # (`services/daily.py`, the owner's Q49). The login may delete rows of these tables and

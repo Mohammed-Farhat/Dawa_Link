@@ -1,11 +1,12 @@
-import { createContext, type ReactNode, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-// Wider than 992 px the client's portal has a top bar instead of the floating menu, and
-// the assistant stands beside the page (docs/11 §3.1).
+// On a computer (wider than 992 px) the client's portal is a desktop layout: a top bar
+// and pages that use the window's width (docs/11 §3.1, decision log BLD-D40, BLD-D42).
 
 const WIDE = '(min-width: 992px)'
 
-/** True on a screen wide enough for the side panel. It follows the window's size. */
+/** True on a screen wide enough for the desktop layout. It follows the window as it is
+ * resized. */
 export function useWide(): boolean {
   const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches)
   useEffect(() => {
@@ -16,10 +17,3 @@ export function useWide(): boolean {
   }, [])
   return wide
 }
-
-/**
- * What stands beside a page on a wide screen: the assistant. The app gives it; a screen
- * only places it. (A screen can't import the assistant itself: the assistant's own
- * pages are built from screens.) null: nothing beside the page.
- */
-export const SidePanelContext = createContext<ReactNode>(null)

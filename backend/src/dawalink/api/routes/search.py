@@ -9,6 +9,7 @@ import time
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
+from decimal import Decimal
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Query, Request
@@ -19,26 +20,39 @@ from dawalink.api.deps import AsClient, DoWork, IdempotencyKey, SignedIn, Work
 from dawalink.api.errors import ApiError, ErrorCode
 from dawalink.api.limits import Limiter
 from dawalink.api.schemas.chat import LocationSummary
-from dawalink.api.schemas.common import LocationIn
+from dawalink.api.schemas.common import LocationIn, MoneyIn
 from dawalink.api.schemas.orders import Reservation
 from dawalink.api.schemas.search import (
     DayHours,
     Ingredient,
     ListingDetail,
+    MedicineGroup,
+    NameSearchResult,
     NoMatch,
     ProductDetail,
     Products,
     Reserve,
+    SearchByName,
+    Searched,
+    Searches,
     SearchListings,
     SearchResult,
     ViewListing,
 )
-from dawalink.db.models import ClientProfile, District, ProductIngredient
+from dawalink.db.models import District, ProductIngredient
 from dawalink.domain.geo import cell
 from dawalink.domain.money import to_lbp
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.pickup import upcoming_days
-from dawalink.services import catalog, orders, pharmacies, search, travel
+from dawalink.services import (
+    catalog,
+    clients,
+    orders,
+    pharmacies,
+    search,
+    search_history,
+    travel,
+)
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.orders import ReserveLine
@@ -115,14 +129,12 @@ def location_of(
             travel.district_location(tx, chosen.id),
             LocationSummary(source="district", label=chosen.name),
         )
-    profile = tx.session.get(ClientProfile, client_id)
-    home_id = profile.district_id if profile else None
-    home = tx.session.get(District, home_id) if home_id else None
+    home = clients.home(tx, client_id)
     if home is None:
         raise ServiceError(
             Code.VALIDATION_ERROR, "Share your location or choose a district.", field="location"
         )
-    return travel.district_location(tx, home.id), LocationSummary(source="profile", label=home.name)
+    return home.location, present.home_summary(home)
 
 
 def count_the_point(request: Request, client_id: uuid.UUID, sent: LocationIn | None) -> None:
@@ -194,13 +206,7 @@ def search_listings(
     with work.tx() as tx:
         origin, where = location_of(tx, caller.user_id, body.location)
         lbp_per_usd = present.rate(tx)
-        max_price_lbp = (
-            to_lbp(body.max_price.amount, body.max_price.currency, int(lbp_per_usd or 1))
-            if body.max_price
-            else None
-        )
-        if body.max_price and body.max_price.currency == "USD" and not lbp_per_usd:
-            raise ServiceError(Code.VALIDATION_ERROR, "No exchange rate is known for USD amounts.")
+        max_price_lbp = _price_limit(body.max_price, lbp_per_usd)
         found = search.search_listings(
             tx,
             client_id=caller.user_id,
@@ -211,6 +217,7 @@ def search_listings(
             max_price_lbp=max_price_lbp,
             sort=body.sort,
             on_foot=body.on_foot,
+            open_now=body.open_now,
             limit=body.limit,
             offset=body.cursor,
         )
@@ -235,6 +242,114 @@ def search_listings(
             upcoming_days=upcoming_days(tx.now),
             server_now=tx.now,
         )
+
+
+def _price_limit(limit: MoneyIn | None, lbp_per_usd: Decimal | None) -> int | None:
+    """A price limit given in either currency, in whole LBP."""
+    if limit is None:
+        return None
+    if limit.currency == "USD" and not lbp_per_usd:
+        raise ServiceError(Code.VALIDATION_ERROR, "No exchange rate is known for USD amounts.")
+    return to_lbp(limit.amount, limit.currency, int(lbp_per_usd or 1))
+
+
+@router.post("/listings/search-by-name")
+def search_by_name(
+    body: SearchByName, caller: AsClient, work: DoWork, request: Request
+) -> NameSearchResult:
+    """Everything in stock for a typed name, grouped by medicine (CS-6).
+
+    "panadol" answers with every Panadol a pharmacy lists, each under its own name,
+    strength and form; a misspelled name answers with the closest one and says so.
+    **Still only what was typed** (R-S4): a medicine is here because its name, or what it
+    contains, matches the words, never because it could replace another one.
+    """
+    count_the_point(request, caller.user_id, body.location)
+    _road_times_first(
+        request,
+        work,
+        caller.user_id,
+        body.location,
+        lambda tx: list(
+            {
+                box.pharmacy_id
+                for box in search.visible_boxes(
+                    tx,
+                    product_ids=[
+                        p.id
+                        for p in catalog.find_by_name(
+                            tx, body.q, among=search.stocked_products(tx)
+                        ).products
+                    ],
+                )
+            }
+        ),
+    )
+    with work.tx() as tx:
+        origin, where = location_of(tx, caller.user_id, body.location)
+        lbp_per_usd = present.rate(tx)
+        found = search.search_by_name(
+            tx,
+            client_id=caller.user_id,
+            query=body.q,
+            location=origin,
+            days_of_use=body.days_of_use,
+            pickup_day=body.pickup_day,
+            max_price_lbp=_price_limit(body.max_price, lbp_per_usd),
+            sort=body.sort,
+            on_foot=body.on_foot,
+            open_now=body.open_now,
+            per_medicine=body.per_medicine,
+        )
+        return NameSearchResult(
+            groups=[
+                MedicineGroup(
+                    product=present.product_summary(group.product, lbp_per_usd),
+                    by_ingredient=group.by_ingredient,
+                    items=present.listings(tx, group.result.listings, lbp_per_usd),
+                    total_found=group.result.total_found,
+                    no_match=(
+                        NoMatch(
+                            latest_expiry=group.result.no_match.latest_expiry,
+                            latest_pickup_day=group.result.no_match.latest_pickup_day,
+                        )
+                        if group.result.no_match
+                        else None
+                    ),
+                )
+                for group in found.groups
+            ],
+            closest=found.closest,
+            did_you_mean=found.did_you_mean,
+            location=where,
+            upcoming_days=upcoming_days(tx.now),
+            server_now=tx.now,
+        )
+
+
+@router.get("/me/searches")
+def last_searches(caller: AsClient, work: DoWork) -> Searches:
+    """The caller's last searches, the newest first (CS-6). Nobody else reads them."""
+    with work.tx() as tx:
+        return Searches(items=search_history.recent(tx, caller.user_id))
+
+
+@router.post("/me/searches")
+def keep_a_search(body: Searched, caller: AsClient, work: DoWork) -> Searches:
+    """Keeps a name the client searched. The page sends it when a search led somewhere (a
+    result was opened, or Enter was pressed), not for every letter typed. A name that is
+    not a medicine's name in shape is quietly left out."""
+    with work.tx() as tx:
+        search_history.record(tx, caller.user_id, body.q)
+        return Searches(items=search_history.recent(tx, caller.user_id))
+
+
+@router.delete("/me/searches")
+def clear_searches(caller: AsClient, work: DoWork) -> Searches:
+    """[Clear]: the caller's whole list is deleted."""
+    with work.tx() as tx:
+        search_history.clear(tx, caller.user_id)
+        return Searches(items=[])
 
 
 @router.post("/listings/{listing_id}/view")

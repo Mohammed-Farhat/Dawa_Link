@@ -28,10 +28,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from dawalink.agent import display
 from dawalink.agent.llm import ToolSpec
 from dawalink.agent.state import CaseState
-from dawalink.db.models import ClientProfile, Conversation, Product
+from dawalink.db.models import Conversation, Product
 from dawalink.domain.clock import Clock
 from dawalink.domain.vocabulary import AgentMode
-from dawalink.services import catalog, email, travel
+from dawalink.services import catalog, clients, email, travel
 from dawalink.services.context import Tx, unit_of_work
 from dawalink.services.errors import ServiceError
 from dawalink.services.travel import Location, RoutingService
@@ -255,7 +255,8 @@ def _in_a_transaction(turn: Turn, tool: Tool, parsed: Arguments) -> Output:
 
 def location_of(tx: Tx, turn: Turn) -> Location:
     """Where this conversation's client is: the location shared from the phone, the area
-    they named in chat, or else the profile's district.
+    they named in chat, or else their home: the place saved in the profile, its town,
+    or its district.
 
     It is read here, by code, for every tool call. It is never part of the case state or
     of a tool's output, so it can't reach the model (INV-24).
@@ -264,9 +265,9 @@ def location_of(tx: Tx, turn: Turn) -> Location:
     known = travel.conversation_location(tx, conversation)
     if known is not None:
         return known
-    profile = tx.session.get(ClientProfile, turn.client_id)
-    if profile is not None and profile.district_id is not None:
-        return travel.district_location(tx, profile.district_id)
+    home = clients.home(tx, turn.client_id)
+    if home is not None:
+        return home.location
     raise Refused(
         ToolError.LOCATION_NEEDED,
         "The client's location isn't known. Ask them which area or town they are in, or to "

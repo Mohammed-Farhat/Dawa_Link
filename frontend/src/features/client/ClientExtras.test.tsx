@@ -145,6 +145,7 @@ describe('[Notify me] on a search that found nothing (CS-6)', () => {
     renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
     const user = userEvent.setup()
 
+    await user.click(await screen.findByRole('button', { name: new RegExp(s.filters) }))
     await user.type(await screen.findByLabelText(s.maxPrice), '500000')
 
     await waitFor(() => {
@@ -155,6 +156,17 @@ describe('[Notify me] on a search that found nothing (CS-6)', () => {
 })
 
 describe('Watches in My medicines (CS-11)', () => {
+  it('opens the ticket of a past reservation from History', async () => {
+    const past = { ...RESERVATION, state: 'EXPIRED_NO_SHOW', status_text: 'Not picked up in time' }
+    clientApi({
+      'GET /api/v1/reservations': { items: [past], next_cursor: null, server_now: CONFIG.server_now },
+    })
+    renderApp(<AppRoutes />, { path: '/medicines' })
+
+    const details = await screen.findByRole('link', { name: new RegExp(strings.medicines.details) })
+    expect(details).toHaveAttribute('href', `/reservations/${RESERVATION.id}`)
+  })
+
   it('lists what is watched and stops one', async () => {
     const api = clientApi({
       'GET /api/v1/watches': { items: [WATCH], server_now: CONFIG.server_now },
@@ -227,16 +239,149 @@ describe('Notifications and the profile (CS-12, CS-13)', () => {
 
     expect(await screen.findByText(strings.notifications.count(1))).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
-    await user.type(screen.getByLabelText(new RegExp(`^${m.phone.replace(/[()]/g, '\\$&')}`)), '70 123 456')
-    await user.click(screen.getByRole('checkbox'))
-    await user.click(screen.getByRole('button', { name: m.save }))
+    // The client's own details: the name in parts, the date of birth, the phone.
+    const details = screen.getByRole('region', { name: m.profile })
+    await user.type(within(details).getByLabelText(new RegExp(`^${m.phone.replace(/[()]/g, '\\$&')}`)), '70 123 456')
+    await user.click(within(details).getByRole('button', { name: m.save }))
 
-    expect(await screen.findByText(m.saved)).toBeInTheDocument()
+    expect(await within(details).findByText(m.saved)).toBeInTheDocument()
     expect(api.sent('PATCH', '/api/v1/me/profile')[0].body).toEqual({
+      first_name: 'Nour',
+      middle_name: null,
+      last_name: 'Khoury',
+      birth_date: '1990-05-17',
       phone: '70 123 456',
-      district_id: 1,
-      alternatives_ok_default: true,
     })
+
+    // "Other brands" is saved by its own tick.
+    await user.click(screen.getByRole('checkbox'))
+    await waitFor(() =>
+      expect(api.sent('PATCH', '/api/v1/me/profile').at(-1)?.body).toEqual({ alternatives_ok_default: true }),
+    )
+  })
+
+  it('says what a missed pickup is, in a sentence', async () => {
+    clientApi()
+    renderApp(<AppRoutes />, { path: '/me' })
+    const m = strings.me
+
+    const missed = await screen.findByRole('region', { name: m.missedTitle })
+    expect(within(missed).getByText(m.missedNone(30))).toBeInTheDocument()
+    expect(within(missed).getByText(m.missedRule(2, 30, 7))).toBeInTheDocument()
+  })
+
+  it('changes where the client lives: the district with its town', async () => {
+    const api = clientApi({
+      'GET /api/v1/places': [{ id: 40, name: 'Antelias' }],
+      'PATCH /api/v1/me/profile': CLIENT,
+    })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+    const f = strings.signUp
+
+    const home = await screen.findByRole('region', { name: strings.me.homeTitle })
+    // This client gave an area, so the area is what is shown: the map is the other way.
+    expect(within(home).getByRole('radio', { name: strings.where.area })).toBeChecked()
+    await within(home).findByRole('option', { name: 'Mount Lebanon' })
+    await user.selectOptions(within(home).getByLabelText(f.governorate), 'Mount Lebanon')
+    await user.selectOptions(within(home).getByLabelText(f.district), 'Matn')
+    await within(home).findByRole('option', { name: 'Antelias' })
+    await user.selectOptions(within(home).getByLabelText(f.town), 'Antelias')
+    await user.click(within(home).getByRole('button', { name: strings.me.save }))
+
+    await waitFor(() =>
+      expect(api.sent('PATCH', '/api/v1/me/profile')[0].body).toEqual({ district_id: 2, home_area_id: 40 }),
+    )
+  })
+
+  it('saves a place on the map, sent in a body and kept out of the profile', async () => {
+    const api = clientApi({ 'PUT /api/v1/me/home-place': { ...CLIENT, client: { ...CLIENT.client, home_place_saved: true } } })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+
+    const home = await screen.findByRole('region', { name: strings.me.homeTitle })
+    await user.click(within(home).getByRole('radio', { name: strings.where.map }))
+    // One way or the other: the lists of the area are gone while the map is chosen.
+    expect(within(home).queryByLabelText(strings.signUp.governorate)).not.toBeInTheDocument()
+    const save = within(home).getByRole('button', { name: strings.me.save })
+    expect(save).toBeDisabled()
+    await user.click(within(home).getByRole('button', { name: strings.where.openMap }))
+    await user.click(await within(home).findByRole('button', { name: 'put the pin' }))
+    await user.click(save)
+
+    await waitFor(() =>
+      expect(api.sent('PUT', '/api/v1/me/home-place')[0].body).toEqual({ lat: 33.8959, lon: 35.4828 }),
+    )
+    expect(api.calls.every((call) => !/lat=|lon=/.test(call.path))).toBe(true)
+  })
+
+  it('puts the pin where the device is and saves at once, on [Use my location]', async () => {
+    const api = clientApi({ 'PUT /api/v1/me/home-place': { ...CLIENT, client: { ...CLIENT.client, home_place_saved: true } } })
+    const getCurrentPosition = vi.fn((done: PositionCallback) =>
+      done({ coords: { latitude: 33.9012, longitude: 35.5201 } } as GeolocationPosition),
+    )
+    vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition } })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+
+    const home = await screen.findByRole('region', { name: strings.me.homeTitle })
+    await user.click(within(home).getByRole('radio', { name: strings.where.map }))
+    // The browser is asked only after the tap.
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+    await user.click(within(home).getByRole('button', { name: strings.where.useMine }))
+
+    await waitFor(() =>
+      expect(api.sent('PUT', '/api/v1/me/home-place')[0].body).toEqual({ lat: 33.9012, lon: 35.5201 }),
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('says so when the device refuses its location, and saves nothing', async () => {
+    const api = clientApi()
+    const getCurrentPosition = vi.fn((_done: PositionCallback, failed?: PositionErrorCallback | null) =>
+      failed?.({ code: 1 } as GeolocationPositionError),
+    )
+    vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition } })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+
+    const home = await screen.findByRole('region', { name: strings.me.homeTitle })
+    await user.click(within(home).getByRole('radio', { name: strings.where.map }))
+    await user.click(within(home).getByRole('button', { name: strings.where.useMine }))
+
+    expect(await within(home).findByText(strings.where.refused)).toBeInTheDocument()
+    expect(api.sent('PUT', '/api/v1/me/home-place')).toEqual([])
+    vi.unstubAllGlobals()
+  })
+
+  it('removes the saved place when the client goes back to an area', async () => {
+    const withPlace = { ...CLIENT, client: { ...CLIENT.client, home_place_saved: true } }
+    const api = clientApi({
+      'GET /api/v1/auth/me': withPlace,
+      'GET /api/v1/me/home-place': { lat: 33.8959, lon: 35.4828 },
+      'DELETE /api/v1/me/home-place': CLIENT,
+      'PATCH /api/v1/me/profile': CLIENT,
+    })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+
+    const home = await screen.findByRole('region', { name: strings.me.homeTitle })
+    // A saved place is what the page opens on. The map is not downloaded for it: its
+    // pictures come from another company's servers, so the client asks for it first.
+    expect(within(home).getByRole('radio', { name: strings.where.map })).toBeChecked()
+    expect(await within(home).findByText(strings.where.pinPut)).toBeInTheDocument()
+    expect(within(home).getByRole('button', { name: strings.where.showMap })).toBeInTheDocument()
+    expect(within(home).queryByRole('button', { name: 'put the pin' })).not.toBeInTheDocument()
+    await user.click(within(home).getByRole('radio', { name: strings.where.area }))
+    await within(home).findByRole('option', { name: 'Mount Lebanon' })
+    await user.click(within(home).getByRole('button', { name: strings.me.save }))
+
+    // A saved place wins over an area when a search starts: keeping both would hide the area.
+    await waitFor(() => expect(api.sent('DELETE', '/api/v1/me/home-place')).toHaveLength(1))
+    // The area is saved before the place is removed: a failure in between never leaves
+    // the client with nowhere a search can start from.
+    const changes = api.calls.filter((call) => call.method !== 'GET').map((call) => call.method)
+    expect(changes).toEqual(['PATCH', 'DELETE'])
   })
 
   it("lists a pharmacy's own notifications in its portal (PS-11)", async () => {
@@ -254,6 +399,74 @@ describe('Notifications and the profile (CS-12, CS-13)', () => {
     renderApp(<AppRoutes />, { path: '/pharmacy/notifications' })
 
     expect(await screen.findByText('New reservation R-7K3Q2F: put the box aside')).toBeInTheDocument()
+  })
+})
+
+describe('Home is what needs the client now (CS-5)', () => {
+  it('shows what is watched, and has no search box of its own', async () => {
+    clientApi({ 'GET /api/v1/watches': { items: [WATCH], server_now: CONFIG.server_now } })
+    renderApp(<AppRoutes />, { path: '/' })
+
+    const watched = await screen.findByRole('link', { name: new RegExp(PRODUCT.name) })
+    expect(watched).toHaveAttribute('href', '/medicines')
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(s.label)).not.toBeInTheDocument()
+    expect(screen.queryByText(strings.home.nothingReserved)).not.toBeInTheDocument()
+  })
+
+  it('shows every reservation to pick up as the same ticket, the nearest deadline first', async () => {
+    const later = {
+      ...RESERVATION,
+      id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+      ref: 'R-42RZCD',
+      deadline: '2026-11-18T18:00:00Z',
+    }
+    clientApi({
+      // The later one comes first in the answer: the page puts them in order.
+      'GET /api/v1/reservations': {
+        items: [later, RESERVATION],
+        next_cursor: null,
+        server_now: CONFIG.server_now,
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/' })
+
+    const first = await screen.findByRole('region', { name: `${strings.home.pickUp} ${RESERVATION.ref}` })
+    const second = screen.getByRole('region', { name: `${strings.home.pickUp} ${later.ref}` })
+    for (const [ticket, order] of [
+      [first, RESERVATION],
+      [second, later],
+    ] as const) {
+      expect(within(ticket).getByText(order.ref)).toBeInTheDocument()
+      expect(within(ticket).getByRole('link', { name: strings.home.showAtCounter })).toHaveAttribute(
+        'href',
+        `/reservations/${order.id}`,
+      )
+    }
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('says that nothing is waiting, with the two ways on', async () => {
+    clientApi()
+    renderApp(<AppRoutes />, { path: '/' })
+
+    expect(await screen.findByText(strings.home.nothingReserved)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: strings.home.goSearch })).toHaveAttribute('href', '/search')
+    expect(screen.getByRole('link', { name: strings.home.goAsk })).toHaveAttribute('href', '/assistant')
+  })
+
+  it("has Search in the phone's menu", async () => {
+    clientApi()
+    renderApp(<AppRoutes />, { path: '/' })
+
+    const menu = await screen.findByRole('navigation', { name: strings.nav.label })
+    expect(within(menu).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '/',
+      '/search',
+      '/medicines',
+      '/assistant',
+      '/me',
+    ])
   })
 })
 
@@ -333,24 +546,105 @@ describe('On a wide screen (docs/11 §3.1)', () => {
         }) as unknown as MediaQueryList,
     )
   }
+  const OLD_CHAT = 'cccccccc-1111-4111-8111-cccccccccccc'
   const chatRoutes = {
     'GET /api/v1/conversations/active-chat': { conversation_id: CHAT_ID, kind: 'chat' },
     [`GET /api/v1/conversations/${CHAT_ID}/messages`]: page([message(1, 'agent', 'Hello.')]),
+    [`GET /api/v1/conversations/${OLD_CHAT}/messages`]: {
+      ...page([message(1, 'client', 'baddi panadol'), message(2, 'agent', 'Which strength?')]),
+      archived: true,
+    },
+    'GET /api/v1/conversations/chats': {
+      items: [
+        {
+          conversation_id: CHAT_ID,
+          active: true,
+          started_at: '2026-11-16T08:00:00Z',
+          last_activity_at: '2026-11-16T08:00:00Z',
+          title: null,
+        },
+        {
+          conversation_id: OLD_CHAT,
+          active: false,
+          started_at: '2026-11-14T08:00:00Z',
+          last_activity_at: '2026-11-14T08:05:00Z',
+          title: 'baddi panadol',
+        },
+      ],
+      server_now: CONFIG.server_now,
+    },
   }
 
-  it('puts the assistant beside the page, under one title', async () => {
+  it('opens the assistant on a page of its own, never beside another page', async () => {
     wideScreen()
     clientApi(chatRoutes)
     const { container } = renderApp(<AppRoutes />, { path: '/medicines' })
+    const user = userEvent.setup()
 
-    const beside = await screen.findByRole('complementary', { name: strings.chat.title })
-    expect(await within(beside).findByText('Hello.')).toBeInTheDocument()
-    expect(within(beside).getByText(strings.chat.aiNotice)).toBeInTheDocument()
-    // The page keeps the one main title; the panel has no way "back".
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
-    expect(within(beside).queryByRole('link', { name: strings.common.back })).not.toBeInTheDocument()
-    expect(container.querySelector('.nav--top')).not.toBeNull()
+    await screen.findByRole('heading', { name: strings.medicines.title })
+    // No panel (the owner, 2026-11-18): the page has the whole window.
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    // A bar at the top, and no floating menu made for a thumb.
+    expect(container.querySelector('.topbar')).not.toBeNull()
+    expect(container.querySelector('.nav')).toBeNull()
     expect(await accessibilityProblems(container)).toEqual([])
+
+    const ask = screen.getByRole('link', { name: strings.nav.askAssistant })
+    expect(ask).toHaveAttribute('href', '/assistant')
+    await user.click(ask)
+    expect(await screen.findByText('Hello.')).toBeInTheDocument()
+    expect(screen.getByText(strings.chat.aiNotice)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: strings.medicines.title })).not.toBeInTheDocument()
+  })
+
+  it('logs out from the account menu of the top bar', async () => {
+    wideScreen()
+    const api = clientApi({ ...chatRoutes, 'POST /api/v1/auth/logout': answer(204) })
+    renderApp(<AppRoutes />, { path: '/medicines' })
+    const user = userEvent.setup()
+
+    await screen.findByRole('heading', { name: strings.medicines.title })
+    await user.click(screen.getByRole('button', { name: new RegExp(CLIENT.client.first_name) }))
+    await user.click(await screen.findByRole('menuitem', { name: strings.me.logOut }))
+
+    await waitFor(() => expect(api.sent('POST', '/api/v1/auth/logout')).toHaveLength(1))
+    // Nothing of the person who logged out stays on the screen: the login page is shown,
+    // and their pages are gone (found by the break test of 2026-11-18).
+    expect(await screen.findByRole('heading', { name: strings.login.title })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: strings.medicines.title })).not.toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(CLIENT.client.first_name))).not.toBeInTheDocument()
+  })
+
+  it('logs out from the button at the end of the profile too', async () => {
+    const api = clientApi({ 'POST /api/v1/auth/logout': answer(204) })
+    renderApp(<AppRoutes />, { path: '/me' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(CLIENT.email)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: strings.me.logOut }))
+
+    await waitFor(() => expect(api.sent('POST', '/api/v1/auth/logout')).toHaveLength(1))
+    expect(await screen.findByRole('heading', { name: strings.login.title })).toBeInTheDocument()
+    expect(screen.queryByText(CLIENT.email)).not.toBeInTheDocument()
+  })
+
+  it('lists the earlier chats beside the conversation, to read and not to write in', async () => {
+    wideScreen()
+    clientApi(chatRoutes)
+    renderApp(<AppRoutes />, { path: '/assistant' })
+    const user = userEvent.setup()
+
+    const chats = await screen.findByRole('complementary', { name: strings.chat.chats })
+    await user.click(await within(chats).findByRole('button', { name: /baddi panadol/ }))
+
+    expect(await screen.findByText('Which strength?')).toBeInTheDocument()
+    expect(screen.getByText(strings.chat.earlier)).toBeInTheDocument()
+    // The box to write in is not there for an earlier chat.
+    expect(screen.getByLabelText(strings.chat.messageLabel)).not.toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: strings.chat.backToCurrent }))
+    expect(await screen.findByText('Hello.')).toBeInTheDocument()
+    expect(screen.getByLabelText(strings.chat.messageLabel)).toBeVisible()
   })
 
   it('shows one conversation on the assistant\'s own page, never two', async () => {
@@ -360,7 +654,8 @@ describe('On a wide screen (docs/11 §3.1)', () => {
 
     expect(await screen.findByText('Hello.')).toBeInTheDocument()
     expect(screen.getAllByLabelText(strings.chat.messageLabel)).toHaveLength(1)
-    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    // Beside it stands the list of chats, not a second conversation.
+    expect(screen.queryByRole('complementary', { name: strings.chat.title })).not.toBeInTheDocument()
   })
 
   it('has no panel at all on a phone: nothing asks for the chat', async () => {
@@ -370,5 +665,42 @@ describe('On a wide screen (docs/11 §3.1)', () => {
     expect(await screen.findByRole('heading', { name: strings.medicines.title })).toBeInTheDocument()
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
     expect(api.sent('GET', '/api/v1/conversations')).toEqual([])
+  })
+})
+
+describe('One computer, two people (docs/09 FS-34)', () => {
+  it("shows nothing of the first client when their session ended and another one logs in", async () => {
+    const OTHER = { ...CLIENT, id: '99999999-9999-4999-8999-999999999999', email: 'other@example.com', full_name: 'Other Person' }
+    let now: 'first' | 'ended' | 'other' = 'first'
+    const mine = { items: [RESERVATION], next_cursor: null, server_now: CONFIG.server_now }
+    loggedIn()
+    pretendApi({
+      'GET /api/v1/auth/me': CLIENT,
+      'GET /api/v1/config/public': CONFIG,
+      'GET /api/v1/offers': { items: [], server_now: CONFIG.server_now },
+      'GET /api/v1/requests': { items: [], server_now: CONFIG.server_now },
+      'GET /api/v1/watches': { items: [], server_now: CONFIG.server_now },
+      // The first client's list; then "no session"; then the other client's, which never
+      // arrives: whatever the page shows meanwhile comes from its own memory.
+      'GET /api/v1/reservations': () =>
+        now === 'first' ? mine : now === 'ended' ? refusal(401, 'UNAUTHENTICATED') : new Promise(() => {}),
+      'POST /api/v1/auth/login': { me: OTHER, token: 'another-token', expires_at: '2026-11-23T08:00:00Z' },
+    })
+    renderApp(<AppRoutes />, { path: '/medicines' })
+    const user = userEvent.setup()
+    expect(await screen.findByText(RESERVATION.ref)).toBeInTheDocument()
+
+    // The session ends while the page is open: the next thing the page asks is refused.
+    now = 'ended'
+    await user.click(screen.getByRole('tab', { name: strings.medicines.history }))
+    expect(await screen.findByRole('heading', { name: strings.login.title })).toBeInTheDocument()
+
+    now = 'other'
+    await user.type(screen.getByLabelText(strings.login.email), 'other@example.com')
+    await user.type(screen.getByLabelText(strings.login.password), 'A long enough passphrase, 1')
+    await user.click(screen.getByRole('button', { name: strings.login.submit }))
+
+    expect(await screen.findByRole('heading', { name: strings.medicines.title })).toBeInTheDocument()
+    expect(screen.queryByText(RESERVATION.ref)).not.toBeInTheDocument()
   })
 })

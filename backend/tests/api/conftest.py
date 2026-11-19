@@ -29,7 +29,7 @@ from tests.conftest import WEBSITE, make_settings
 from tests.fakes import FakeRouting
 from tests.services.conftest import World, world  # noqa: F401  (the fixture)
 
-PASSWORD = "a long enough passphrase"
+PASSWORD = "A long enough passphrase, 1"
 
 
 class Mailbox:

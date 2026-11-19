@@ -77,8 +77,9 @@ export function NotifyMe({ productId }: { productId: string }) {
             className="quantity-input quantity-input--wide"
             type="text"
             inputMode="numeric"
+            maxLength={11}
             value={typed}
-            onChange={(event) => setTyped(event.currentTarget.value.replace(/\D/g, ''))}
+            onChange={(event) => setTyped(event.currentTarget.value.replace(/\D/g, '').slice(0, 11))}
           />
           <button type="submit" className="pill-button" disabled={state === 'sending'}>
             {s.start}

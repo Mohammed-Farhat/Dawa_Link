@@ -5,10 +5,11 @@ import { strings } from '../../strings/en'
 
 const s = strings.welcome
 
-/** CS-1: the public landing. No stock is shown before login (decision log D1). */
+/** CS-1: the public landing. No stock is shown before login (decision log D1).
+ * On a phone the picture is above the words; on a computer they stand side by side. */
 export function WelcomePage() {
   return (
-    <main className="screen screen--plain screen--white">
+    <main className="screen screen--plain screen--white welcome">
       {/* An illustration of what the app does: invented numbers, read by nobody's screen reader. */}
       <section className="hero" aria-hidden="true">
         <div className="brand">
@@ -38,39 +39,41 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-        <h1 className="page-title" style={{ fontSize: 30 }}>
-          {s.title}
-        </h1>
-        <p className="soft" style={{ margin: 0, fontSize: 17, lineHeight: 1.5 }}>
-          {s.intro}
-        </p>
-      </div>
+      <div className="stack welcome__words" style={{ flex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+          <h1 className="page-title">
+            {s.title}
+          </h1>
+          <p className="soft" style={{ margin: 0, fontSize: 17, lineHeight: 1.5 }}>
+            {s.intro}
+          </p>
+        </div>
 
-      <ol className="steps">
-        {s.steps.map((step, index) => (
-          <li key={step}>
-            <span className="steps__number">{index + 1}</span>
-            {step}
-          </li>
-        ))}
-      </ol>
+        <ol className="steps">
+          {s.steps.map((step, index) => (
+            <li key={step}>
+              <span className="steps__number">{index + 1}</span>
+              {step}
+            </li>
+          ))}
+        </ol>
 
-      <div className="banner banner--green">
-        <ShieldIcon />
-        <span className="banner__text">{s.safe}</span>
-      </div>
+        <div className="banner banner--green">
+          <ShieldIcon />
+          <span className="banner__text">{s.safe}</span>
+        </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 'auto' }}>
-        <Link to="/signup" className="pill-button pill-button--wide">
-          {s.signUp}
-        </Link>
-        <Link to="/login" className="pill-button pill-button--wide pill-button--grey">
-          {s.logIn}
-        </Link>
-        <Link to="/pharmacy/signup" className="text-button" style={{ alignSelf: 'center' }}>
-          {s.pharmacy}
-        </Link>
+        <div className="welcome__actions">
+          <Link to="/signup" className="pill-button pill-button--wide">
+            {s.signUp}
+          </Link>
+          <Link to="/login" className="pill-button pill-button--wide pill-button--grey">
+            {s.logIn}
+          </Link>
+          <Link to="/pharmacy/signup" className="text-button" style={{ alignSelf: 'center' }}>
+            {s.pharmacy}
+          </Link>
+        </div>
       </div>
     </main>
   )

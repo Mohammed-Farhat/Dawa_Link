@@ -140,6 +140,8 @@ class TestVisibleListings:
             expected = is_visible(
                 zone=zone_of(60),
                 control=control,
+                days_left=60,
+                auto_list_days=180,
                 pharmacy_status=status,
                 qty_available=on_hand - reserved,
                 controlled=controlled,
@@ -151,6 +153,39 @@ class TestVisibleListings:
                 on_hand,
                 reserved,
             )
+
+    @pytest.mark.parametrize("rule", [0, 30, 60, 90, 180])
+    def test_the_pharmacys_own_rule_is_the_same_in_sql_and_in_python(
+        self, db: Connection, rule: int
+    ) -> None:
+        """BLD-D44: on every edge. The day a box reaches the pharmacy's number, the day
+        before, 180 and 181 days, and "never by themselves" with a box that expires today."""
+        pharmacy = make.pharmacy(db, auto_list_days=rule)
+        for control in ListingControl:
+            for days in (-1, 0, 1, rule - 1, rule, rule + 1, 180, 181):
+                if days < -1:
+                    continue
+                item = make.item(
+                    db, pharmacy_id=pharmacy, days_left=days, listing_control=control.value
+                )
+                expected = is_visible(
+                    zone=zone_of(days),
+                    control=control,
+                    days_left=days,
+                    auto_list_days=rule,
+                    pharmacy_status=PharmacyStatus.APPROVED,
+                    qty_available=1,
+                    controlled=False,
+                )
+                assert (item in self.visible(db)) is expected, (rule, control, days)
+
+    def test_every_pharmacy_starts_with_the_rule_there_was_before(self, db: Connection) -> None:
+        pharmacy = make.pharmacy(db)
+
+        (rule,) = db.execute(
+            text("SELECT auto_list_days FROM pharmacies WHERE id = :p"), {"p": pharmacy}
+        ).one()
+        assert rule == NEAR_EXPIRY_MAX_DAYS
 
     def test_it_reports_the_days_left_the_available_units_and_the_price(
         self, db: Connection

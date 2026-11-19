@@ -42,19 +42,20 @@ def raise_no_show_pause(tx: Tx, client_id: uuid.UUID, counted: int) -> None:
     )
 
 
-def listed(
-    tx: Tx, *, state: FlagState | None = FlagState.OPEN, offset: int = 0, limit: int = 50
-) -> Sequence[AbuseFlag]:
-    """Flags, the high ones first, then the oldest."""
-    statement = select(AbuseFlag)
-    if state is not None:
-        statement = statement.where(AbuseFlag.state == state.value)
+def open_about(tx: Tx, client_id: uuid.UUID) -> Sequence[AbuseFlag]:
+    """The flags about this client that nobody has handled, the high ones first, then
+    the oldest. An admin reads a flag on the page of the account it is about: there is
+    no list of flags on its own."""
     high_first = case((AbuseFlag.severity == FlagSeverity.HIGH.value, 0), else_=1)
     return (
         tx.session.execute(
-            statement.order_by(high_first, AbuseFlag.created_at, AbuseFlag.id)
-            .offset(offset)
-            .limit(limit)
+            select(AbuseFlag)
+            .where(
+                AbuseFlag.subject_type == FlagSubject.CLIENT.value,
+                AbuseFlag.subject_id == client_id,
+                AbuseFlag.state == FlagState.OPEN.value,
+            )
+            .order_by(high_first, AbuseFlag.created_at, AbuseFlag.id)
         )
         .scalars()
         .all()

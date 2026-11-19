@@ -81,7 +81,7 @@ export const ESCALATION_DETAIL = {
     { seq: 1, author: 'client', text: 'I need it today, call me on [phone].', cards: [], created_at: '2026-11-16T07:38:00Z' },
     { seq: 2, author: 'agent', text: 'I asked a person from DawaLink to help you.', cards: ['reserve'], created_at: '2026-11-16T07:39:00Z' },
   ],
-  trace_ids: ['trace-abc'],
+  contested: [],
 } satisfies Schemas['EscalationDetail']
 
 export const REPORT_ID = 'cccccccc-3333-4333-8333-cccccccccccc'
@@ -94,25 +94,9 @@ export const REPORT = {
   category: null,
   in_regression: false,
   reply: 'Take two tablets a day.',
+  asked: 'How much Panadol can I take?',
   created_at: '2026-11-16T07:50:00Z',
 } satisfies Schemas['AnswerReportRow']
-
-export const REPORT_DETAIL = {
-  report: REPORT,
-  conversation_kind: 'chat',
-  reply: { seq: 2, author: 'agent', text: 'Take two tablets a day.', cards: [], quick_replies: [] },
-  context: [{ seq: 1, author: 'client', text: 'How much Panadol can I take?', cards: [], quick_replies: [] }],
-  run: {
-    id: 'run-1',
-    mode: 'assistant',
-    trigger: 'client_message',
-    model: 'claude-haiku-5-5',
-    prompt_version: 'v1.13',
-    outcome: 'ok',
-    guardrails: [],
-    trace_id: 'trace-xyz',
-  },
-} satisfies Schemas['AnswerReportDetail']
 
 export const AUDIT_EVENT = {
   id: 42,
@@ -133,15 +117,62 @@ export const CLIENT_ROW = {
   paused_until: '2026-11-20T08:00:00Z',
   district: 'Beirut',
   open_orders: 1,
+  picked_up: 3,
   no_shows: 2,
-  open_requests: 0,
+  open_requests: 1,
   contested: 1,
+  flags_open: 0,
 } satisfies Schemas['AdminClientRow']
 
 export const CONTESTED_ID = 'dddddddd-4444-4444-8444-dddddddddddd'
 
+const RESERVED_LINE = {
+  ref: 'R-2WAITS',
+  product: 'CONCOR 5MG',
+  pharmacy: 'Hamra Pharmacy',
+  state: 'RESERVED',
+  units: 1,
+  created_at: '2026-11-16T07:10:00Z',
+  deadline: '2026-11-16T18:00:00Z',
+  closed_at: null,
+  counts_as_no_show: false,
+} satisfies Schemas['ClientReservation']
+
 export const CLIENT_DETAIL = {
   client: CLIENT_ROW,
+  reservations: [
+    RESERVED_LINE,
+    {
+      ...RESERVED_LINE,
+      ref: 'R-3TAKEN',
+      product: 'PANADOL 500MG',
+      state: 'PICKED_UP',
+      units: 2,
+      deadline: '2026-11-14T18:00:00Z',
+      closed_at: '2026-11-14T10:00:00Z',
+    },
+    {
+      ...RESERVED_LINE,
+      ref: 'R-7K3Q2F',
+      product: 'AUGMENTIN 1G',
+      state: 'EXPIRED_NO_SHOW',
+      deadline: '2026-11-15T19:00:00Z',
+      closed_at: '2026-11-15T19:00:00Z',
+      counts_as_no_show: true,
+    },
+  ],
+  requests: [
+    {
+      ref: 'Q-6BN2RA',
+      state: 'OPEN',
+      outcome: null,
+      medicines: 2,
+      secured: 1,
+      created_at: '2026-11-16T07:00:00Z',
+      ends_at: '2026-11-16T13:00:00Z',
+    },
+  ],
+  flags: [],
   contested: [
     {
       id: CONTESTED_ID,

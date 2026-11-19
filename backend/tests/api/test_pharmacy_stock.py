@@ -229,6 +229,59 @@ class TestEditingABox:
         assert (resumed["paused"], resumed["visible"]) == (False, True)
         assert shop.api.world.one(listed, today=TODAY, id=box)[0] == 1
 
+    def test_the_pharmacy_decides_when_its_boxes_are_listed(self, shop: Shop) -> None:
+        """The owner, 2026-11-19 (BLD-D44). It starts as before: everything with 180 days
+        left or fewer. With "at 30 days", a box with 90 days left is held back."""
+        near, far = shop.box(days_left=20), shop.box(shop.concor, days_left=90)
+
+        def state() -> dict[str, tuple[bool, bool]]:
+            return {item["id"]: (item["visible"], item["held_back"]) for item in shop.stock()}
+
+        before = state()
+        me = shop.patch("/me", {"auto_list_days": 30})
+        after = state()
+
+        assert before == {str(near): (True, False), str(far): (True, False)}
+        assert (me.status_code, me.json()["auto_list_days"]) == (200, 30)
+        assert me.json()["auto_list_choices"] == [0, 30, 60, 90, 180]
+        assert after == {str(near): (True, False), str(far): (False, True)}
+
+    def test_list_now_lists_a_box_that_was_held_back_and_takes_it_back(self, shop: Shop) -> None:
+        shop.patch("/me", {"auto_list_days": 0})
+        box = shop.box(days_left=90)
+        listed = "SELECT count(*) FROM visible_listings(:today) WHERE inventory_item_id = :id"
+
+        waiting = shop.stock()[0]
+        by_hand = shop.patch(f"/inventory/items/{box}", {"listed": True}).json()["item"]
+        seen = shop.api.world.one(listed, today=TODAY, id=box)[0]
+        back = shop.patch(f"/inventory/items/{box}", {"listed": False}).json()["item"]
+
+        assert (waiting["visible"], waiting["held_back"], waiting["listed_by_hand"]) == (
+            False,
+            True,
+            False,
+        )
+        assert (by_hand["visible"], by_hand["held_back"], by_hand["listed_by_hand"], seen) == (
+            True,
+            False,
+            True,
+            1,
+        )
+        assert (back["visible"], back["held_back"], back["listed_by_hand"]) == (False, True, False)
+
+    def test_what_listing_by_hand_refuses(self, shop: Shop) -> None:
+        too_far = shop.box(days_left=200)
+        box = shop.box(shop.concor, days_left=90)
+
+        far = shop.patch(f"/inventory/items/{too_far}", {"listed": True})
+        both = shop.patch(f"/inventory/items/{box}", {"listed": True, "paused": True})
+        odd_rule = shop.patch("/me", {"auto_list_days": 45})
+        too_long = shop.patch("/me", {"auto_list_days": 365})
+
+        for answer in (far, both, odd_rule, too_long):
+            assert (answer.status_code, code_of(answer)) == (422, "VALIDATION_ERROR"), answer.text
+        assert shop.get("/me").json()["auto_list_days"] == 180
+
     def test_only_what_is_sent_changes(self, shop: Shop) -> None:
         box = shop.box(days_left=20, qty_on_hand=5, price_override_lbp=300_000)
 

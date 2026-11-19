@@ -1,22 +1,41 @@
 """Accounts and logins (docs/06 §5.2, §6.1)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import District, DistrictId, In, Out
+from dawalink.api.schemas.common import AreaId, District, DistrictId, In, Out
+
+
+class Place(Out):
+    """A town or a neighbourhood of our own list of places (docs/04 R-S2)."""
+
+    id: int
+    name: str
 
 
 class ClientState(Out):
     status: Literal["UNVERIFIED", "ACTIVE", "PAUSED", "SUSPENDED"]
     paused_until: datetime | None
     district: District | None
+    # The home town, when the client chose one inside their district.
+    home_area: Place | None
+    # A place is saved on the map. The point itself is only ever sent by its own
+    # endpoint, to the client who saved it.
+    home_place_saved: bool
+    first_name: str | None
+    middle_name: str | None
+    last_name: str | None
+    birth_date: date | None
     alternatives_ok_default: bool
     # "Missed pickups: 0 of 2" (R-N1).
     missed_pickups_30d: int
     missed_pickups_before_pause: int
+    # The rule's own numbers, so the page can say it in a sentence (R-N1).
+    missed_pickups_window_days: int
+    missed_pickups_pause_days: int
 
 
 class PharmacyState(Out):
@@ -51,12 +70,25 @@ class LoggedIn(Out):
 EMAIL_SHAPE = "^[^@ ]+@[^@ ]+[.][^@ ]+$"
 
 
+class PinIn(In):
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+
+
 class RegisterClient(In):
     email: str = Field(max_length=320, pattern=EMAIL_SHAPE)
     password: str = Field(min_length=1, max_length=200)
-    full_name: str = Field(min_length=2, max_length=80)
+    first_name: str = Field(min_length=1, max_length=40)
+    middle_name: str | None = Field(default=None, max_length=40)
+    last_name: str = Field(min_length=1, max_length=40)
+    birth_date: date
     phone: str | None = Field(default=None, max_length=30)
-    district_id: DistrictId
+    # Where the client lives, one way or the other (the owner, 2026-11-18): a place they
+    # put on a map (or their device's location), **or** their district, with a town of it
+    # if they want. At least one of the two.
+    home_place: PinIn | None = None
+    district_id: DistrictId | None = None
+    home_area_id: AreaId | None = None
     accept_terms: Literal[True]
 
 
@@ -68,11 +100,6 @@ class OpeningRange(In):
     weekday: int = Field(ge=0, le=6)
     open: str = Field(pattern="^[0-2][0-9]:[0-5][0-9]$")
     close: str = Field(pattern="^[0-2][0-9]:[0-5][0-9]$")
-
-
-class PinIn(In):
-    lat: float = Field(ge=-90, le=90)
-    lon: float = Field(ge=-180, le=180)
 
 
 class PharmacyDetails(In):
@@ -114,9 +141,24 @@ class ChangePassword(In):
 
 
 class ProfileChange(In):
+    """Only what is sent changes. The three name parts are sent together; so are the
+    district and the town, because a town belongs to its district."""
+
     phone: str | None = Field(default=None, max_length=30)
+    first_name: str | None = Field(default=None, max_length=40)
+    middle_name: str | None = Field(default=None, max_length=40)
+    last_name: str | None = Field(default=None, max_length=40)
+    birth_date: date | None = None
     district_id: DistrictId | None = None
+    home_area_id: AreaId | None = None
     alternatives_ok_default: bool | None = None
+
+
+class HomePlace(Out):
+    """The client's own saved place, as they put it (rounded to about 100 m)."""
+
+    lat: float
+    lon: float
 
 
 class DiscountTier(Out):

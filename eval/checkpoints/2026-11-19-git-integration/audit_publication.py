@@ -5,6 +5,7 @@ import json
 import re
 import sqlite3
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -14,6 +15,10 @@ HANDOFF = "DawaLink_Roadmap_and_Database_Handoff.md"
 names = subprocess.check_output(
     ["git", "ls-files", "--modified", "--others", "--exclude-standard", "-z"], cwd=ROOT
 ).decode().split("\0")
+if "--final" in sys.argv:
+    names += subprocess.check_output(
+        ["git", "diff", "--name-only", "1e17db0", "-z"], cwd=ROOT
+    ).decode().split("\0")
 paths = sorted(set(name for name in names if name and name != HANDOFF))
 secrets = []
 for line in (ROOT / ".env").read_text().splitlines():
@@ -31,6 +36,7 @@ def scan(label, data):
         bad.append(label)
 for name in paths:
     path = ROOT / name
+    assert "heldout" not in name.lower() and "held-out" not in name.lower(), "held-out access prohibited"
     assert not path.is_symlink(), name
     assert path.name != "local.env" and not name.startswith(("backend/data/moph/", "backend/data/osm/"))
     data = path.read_bytes()
@@ -56,6 +62,7 @@ result = {"files_scanned": len(paths), "source_archives_inspected": archives,
           "configured_credentials_and_token_patterns": "clean", "old_run_hashes_verified": True,
           "handoff_unchanged_excluded": True, "ledger_call_rows_unchanged": True,
           "paths": paths}
-with (HERE / "evidence/publication-audit.json").open("x") as out:
+output = "publication-audit-final.json" if "--final" in sys.argv else "publication-audit.json"
+with (HERE / "evidence" / output).open("x") as out:
     json.dump(result, out, indent=2)
 print("Publication audit passed:", len(paths), "files,", archives, "source archives; original evidence preserved.")

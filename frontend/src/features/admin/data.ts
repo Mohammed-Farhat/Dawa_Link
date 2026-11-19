@@ -114,18 +114,6 @@ export function useAnswerReports(state: ReportState) {
   })
 }
 
-export function useAnswerReport(id: string) {
-  return useQuery({
-    queryKey: ['admin', 'report', id],
-    queryFn: () =>
-      unwrap(
-        api.GET('/api/v1/admin/answer-reports/{report_id}', {
-          params: { path: { report_id: id } },
-        }),
-      ),
-  })
-}
-
 export type AuditFilters = { action: string; actor: string; entity: string }
 
 export function useAudit(filters: AuditFilters) {
@@ -158,15 +146,27 @@ export function useAudit(filters: AuditFilters) {
   }
 }
 
-export function useAdminClients(status: ClientStatus | null, ref: string) {
+export type ClientsHaving = 'reservation' | 'picked_up' | 'request' | 'look'
+
+export function useAdminClients(status: ClientStatus | null, having: ClientsHaving | null, ref: string) {
   const pages = useInfiniteQuery({
-    queryKey: ['admin', 'clients', status, ref],
+    queryKey: ['admin', 'clients', status, having, ref],
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET('/api/v1/admin/clients', {
-          params: { query: { status: status ?? undefined, ref, cursor: pageParam, limit: PAGE } },
+          params: {
+            query: {
+              status: status ?? undefined,
+              having: having ?? undefined,
+              ref,
+              cursor: pageParam,
+              limit: PAGE,
+            },
+          },
         }),
       ),
+    // Who has a reservation or a request changes without anyone pressing a button here.
+    refetchInterval: REFRESH_MS * 2,
     initialPageParam: 0,
     getNextPageParam: (last) => (last.next_cursor ? Number(last.next_cursor) : undefined),
   })
@@ -183,14 +183,6 @@ export function useAdminClient(id: string) {
     queryKey: ['admin', 'client', id],
     queryFn: () =>
       unwrap(api.GET('/api/v1/admin/clients/{client_id}', { params: { path: { client_id: id } } })),
-  })
-}
-
-export function useFlags() {
-  return useQuery({
-    queryKey: ['admin', 'flags'],
-    queryFn: () => unwrap(api.GET('/api/v1/admin/abuse-flags', { params: { query: { limit: PAGE } } })),
-    refetchInterval: REFRESH_MS,
   })
 }
 
@@ -236,14 +228,4 @@ export function useDemoClock() {
     queryFn: () => unwrap(api.GET('/api/v1/admin/demo-clock')),
     refetchInterval: REFRESH_MS,
   })
-}
-
-/** Saves text the browser already has as a file: the regression cases. */
-export function saveText(text: string, name: string, type: string): void {
-  const address = URL.createObjectURL(new Blob([text], { type }))
-  const link = document.createElement('a')
-  link.href = address
-  link.download = name
-  link.click()
-  URL.revokeObjectURL(address)
 }

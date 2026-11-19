@@ -21,6 +21,7 @@ from dawalink.db.models.identity import (
     EmailVerificationToken,
     Pharmacy,
     PharmacyHours,
+    SearchHistory,
     Session,
     User,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ProductIngredient",
     "Proposal",
     "RequestItem",
+    "SearchHistory",
     "Session",
     "SourcingRequest",
     "TravelTimeCache",

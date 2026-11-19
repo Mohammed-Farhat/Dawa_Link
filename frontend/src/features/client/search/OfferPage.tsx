@@ -5,10 +5,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/client'
 import { BackIcon, MapIcon, PhoneIcon, ShieldIcon } from '../../../components/icons'
-import { Banner } from '../../../components/layout'
+import { Banner, Screen } from '../../../components/layout'
 import { calendarDate, dayWord, directionsUrl, lbp, plainAmount } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
-import { placeBody, useSearchChoices } from './choices'
+import { MAX_DAYS_OF_USE, placeBody, useSearchChoices } from './choices'
 import { FitBadge, PrescriptionLine, PriceBlock } from './parts'
 import { openWords, travelWords } from './words'
 
@@ -38,20 +38,39 @@ export function OfferPage() {
   })
 
   if (found.isError) {
+    // Only "not found" means the box is gone. Anything else (the connection, a value the
+    // server refused) is said as what it is, with a way to try again that starts from
+    // clean choices: no error stays with the client from one offer to the next.
+    const code = found.error instanceof ApiFailure ? found.error.code : 'INTERNAL_ERROR'
+    const gone = code === 'NOT_FOUND'
     return (
-      <main className="screen screen--plain">
-        <Banner tone="amber">{o.gone}</Banner>
+      <Screen plain narrow>
+        <Banner tone="amber" alert>
+          {gone ? o.gone : errorMessage(code)}
+        </Banner>
+        {!gone && (
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() => {
+              choices.set({ daysOfUse: null, pickupDay: null })
+              void found.refetch()
+            }}
+          >
+            {strings.common.tryAgain}
+          </button>
+        )}
         <Link to="/search" className="pill-button pill-button--grey">
           {o.backToSearch}
         </Link>
-      </main>
+      </Screen>
     )
   }
   if (!found.data) {
     return (
-      <main className="screen screen--plain">
+      <Screen plain narrow>
         <p className="soft">{strings.common.loading}</p>
-      </main>
+      </Screen>
     )
   }
 
@@ -59,9 +78,11 @@ export function OfferPage() {
   const { pharmacy, product } = listing
   const canReserve = listing.pickup_days_allowed.length > 0
   return (
-    <main className="screen screen--plain" style={{ paddingBottom: 110 }}>
+    <Screen plain narrow>
       <Link
-        to={`/search?product=${product.id}`}
+        // Back to what the client was looking at: the results of the name they typed, or
+        // this medicine's own page.
+        to={choices.name.trim().length >= 2 ? '/search' : `/search?product=${product.id}`}
         className="round-button"
         aria-label={strings.common.back}
       >
@@ -125,6 +146,7 @@ export function OfferPage() {
         <span className="hint">{o.holds(pharmacy.pickup_days)}</span>
       </section>
 
+      <div className="pinned-space" aria-hidden="true" />
       <div className="pinned">
         <button type="button" className="pill-button pill-button--wide" onClick={() => setReserving(true)}>
           {o.reserve}
@@ -134,7 +156,7 @@ export function OfferPage() {
       <Modal opened={reserving} onClose={() => setReserving(false)} title={r.title} centered radius="xl">
         <ReserveSheet listing={listing} now={now} canReserve={canReserve} />
       </Modal>
-    </main>
+    </Screen>
   )
 }
 
@@ -253,8 +275,12 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
             label={s.otherDays}
             size="md"
             min={1}
-            max={365}
+            max={MAX_DAYS_OF_USE}
+            // A number over the most can't be typed at all, and the store would cut it
+            // down anyway (`tidy`).
+            clampBehavior="strict"
             allowDecimal={false}
+            allowNegative={false}
             value={choices.daysOfUse ?? ''}
             onChange={(value) => choices.set({ daysOfUse: typeof value === 'number' && value >= 1 ? value : null })}
           />

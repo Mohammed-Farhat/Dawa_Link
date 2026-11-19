@@ -52,7 +52,6 @@ function adminApi(more: Record<string, unknown> = {}) {
     [`GET ${PHARMACY}`]: APPROVED,
     'GET /api/v1/admin/clients': { items: [CLIENT_ROW], next_cursor: null },
     [`GET ${A_CLIENT}`]: CLIENT_DETAIL,
-    'GET /api/v1/admin/abuse-flags': { items: [FLAG], next_cursor: null },
     'GET /api/v1/admin/catalog/products': { items: [CATALOG_ROW], next_cursor: null },
     'GET /api/v1/admin/catalog/imports': {
       items: [
@@ -101,9 +100,13 @@ describe('Clients (AS-5)', () => {
     const user = userEvent.setup()
 
     const tabs = await screen.findByRole('navigation', { name: s.nav })
-    expect(await within(tabs).findByRole('link', { name: 'Clients (1)' })).toBeInTheDocument()
+    // One contested missed pickup and one flag wait: there is no tab of flags any more.
+    expect(await within(tabs).findByRole('link', { name: 'Clients (2)' })).toBeInTheDocument()
+    expect(within(tabs).queryByRole('link', { name: /Flags/ })).not.toBeInTheDocument()
     expect(await screen.findByText(c.contestWaiting)).toBeInTheDocument()
-    expect(screen.getByText(/1 open reservation · 0 open requests · 2 no-shows in 30 days/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/1 open reservation · 3 picked up · 1 open request · 2 missed pickups in 30 days/),
+    ).toBeInTheDocument()
     // No name anywhere: the contact endpoint was not called.
     expect(screen.queryByText(CLIENT.full_name)).not.toBeInTheDocument()
     expect(api.sent('GET', `${A_CLIENT}/contact`)).toEqual([])
@@ -113,6 +116,44 @@ describe('Clients (AS-5)', () => {
     await waitFor(() =>
       expect(api.sent('GET', '/api/v1/admin/clients').some((call) => call.path.includes('ref=R-7K3Q2F'))).toBe(true),
     )
+  })
+
+  it('keeps who has an open request, a reservation, or needs a look', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/clients' })
+    const user = userEvent.setup()
+
+    const everyone = await screen.findByRole('radio', { name: c.having.all })
+    expect(everyone).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: c.having.request }))
+
+    await waitFor(() =>
+      expect(api.sent('GET', '/api/v1/admin/clients').some((call) => call.path.includes('having=request'))).toBe(true),
+    )
+    expect(screen.getByRole('radio', { name: c.having.request })).toBeChecked()
+  })
+
+  it("lists on a client's page what they reserved, how each ended, and their requests", async () => {
+    const api = adminApi({ [`GET ${A_CLIENT}`]: { ...CLIENT_DETAIL, contested: [] } })
+    const { container } = renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
+
+    const reservations = await screen.findByRole('region', { name: c.reservations })
+    expect(within(reservations).getByText('R-3TAKEN')).toBeInTheDocument()
+    expect(within(reservations).getByText(c.orderStates.PICKED_UP)).toBeInTheDocument()
+    expect(within(reservations).getByText(/PANADOL 500MG · Hamra Pharmacy/)).toBeInTheDocument()
+    expect(within(reservations).getByText(c.orderStates.RESERVED)).toBeInTheDocument()
+    expect(within(reservations).getByText(/pick up by Mon 16 Nov 20:00/)).toBeInTheDocument()
+    expect(within(reservations).getByText(c.orderStates.EXPIRED_NO_SHOW)).toBeInTheDocument()
+    const requests = screen.getByRole('region', { name: c.requestsTitle })
+    expect(within(requests).getByText('Q-6BN2RA')).toBeInTheDocument()
+    expect(within(requests).getByText(c.secured(1, 2), { exact: false })).toBeInTheDocument()
+    // Nothing is contested and nothing is flagged: neither block is on the page.
+    expect(screen.queryByRole('heading', { name: c.contests })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: c.flags })).not.toBeInTheDocument()
+    // Still by an ID: the name was not asked for.
+    expect(screen.queryByText(CLIENT.full_name)).not.toBeInTheDocument()
+    expect(api.sent('GET', `${A_CLIENT}/contact`)).toEqual([])
+    expect(await accessibilityProblems(container)).toEqual([])
   })
 
   it('shows the contact details only when asked', async () => {
@@ -142,9 +183,10 @@ describe('Clients (AS-5)', () => {
     expect(await screen.findByText(c.contactLimit)).toBeInTheDocument()
   })
 
-  it('clears a contested no-show with a reason', async () => {
+  it('clears a contested missed pickup, asking why where the button is', async () => {
     const api = adminApi({
       [`POST /api/v1/admin/reservations/${CONTESTED_ID}/clear-no-show`]: {
+        ...CLIENT_DETAIL,
         client: { ...CLIENT_ROW, status: 'ACTIVE', paused_until: null, no_shows: 1, contested: 0 },
         contested: [],
       },
@@ -152,29 +194,50 @@ describe('Clients (AS-5)', () => {
     renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
     const user = userEvent.setup()
 
-    expect(await screen.findByText('R-7K3Q2F')).toBeInTheDocument()
-    const clear = screen.getByRole('button', { name: c.clear })
-    expect(clear).toBeDisabled()
-    await user.type(screen.getByLabelText(new RegExp(`^${s.reason}`)), 'The pharmacy confirmed.')
-    await user.click(clear)
+    expect(await screen.findByRole('heading', { name: c.contests })).toBeInTheDocument()
+    // No reason box waits somewhere else on the page: the button asks for it itself.
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: c.clear }))
+    const confirm = screen.getByRole('button', { name: c.clear })
+    expect(confirm).toBeDisabled()
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(c.clear)}`)), 'The pharmacy confirmed.')
+    await user.click(confirm)
 
     expect(await screen.findByText(c.cleared)).toBeInTheDocument()
     expect(api.sent('POST', `/api/v1/admin/reservations/${CONTESTED_ID}/clear-no-show`)[0].body).toEqual({
       reason: 'The pharmacy confirmed.',
     })
-    expect(screen.getByText(c.noContests)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: c.contests })).not.toBeInTheDocument()
     expect(screen.getByText(c.statuses.ACTIVE)).toBeInTheDocument()
+  })
+
+  it('lets a question be closed again without doing anything', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: c.suspend }))
+    await user.click(screen.getByRole('button', { name: s.cancel }))
+
+    expect(screen.getByRole('button', { name: c.suspend })).toBeEnabled()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(api.calls.every((call) => call.method === 'GET')).toBe(true)
   })
 
   it('suspends a client, saying first what that cancels', async () => {
     const api = adminApi({
-      [`POST ${A_CLIENT}/suspend`]: { client: { ...CLIENT_ROW, status: 'SUSPENDED', paused_until: null }, contested: [] },
+      [`POST ${A_CLIENT}/suspend`]: {
+        ...CLIENT_DETAIL,
+        client: { ...CLIENT_ROW, status: 'SUSPENDED', paused_until: null },
+        contested: [],
+      },
     })
     renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
     const user = userEvent.setup()
 
     expect(await screen.findByText(c.suspendHint)).toBeInTheDocument()
-    await user.type(screen.getByLabelText(new RegExp(`^${s.reason}`)), 'Abuse of the assistant.')
+    await user.click(screen.getByRole('button', { name: c.suspend }))
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(c.suspend)}`)), 'Abuse of the assistant.')
     await user.click(screen.getByRole('button', { name: c.suspend }))
 
     expect(await screen.findByText(c.suspended)).toBeInTheDocument()
@@ -192,22 +255,27 @@ describe('Clients (AS-5)', () => {
 })
 
 describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
-  it('handles a flag with a reason', async () => {
+  // A flag is on the page of the client it is about: the owner pressed "Open the
+  // client's page" on a flag and found nothing about it there (2026-11-19).
+  const FLAGGED = { ...CLIENT_DETAIL, client: { ...CLIENT_ROW, flags_open: 1 }, contested: [], flags: [FLAG] }
+
+  it("handles a flag on the client's own page, with a reason", async () => {
     const api = adminApi({
+      [`GET ${A_CLIENT}`]: FLAGGED,
       [`POST /api/v1/admin/abuse-flags/${FLAG.id}/act`]: { ...FLAG, state: 'ACTIONED', action: 'suspend' },
     })
-    const { container } = renderApp(<AppRoutes />, { path: '/admin/flags' })
+    const { container } = renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
     const user = userEvent.setup()
 
-    expect(await screen.findByRole('heading', { name: f.rules.guardrail_repeat })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: c.flags })).toBeInTheDocument()
+    expect(screen.getByText(f.rules.guardrail_repeat)).toBeInTheDocument()
     expect(screen.getByText(/attempts in 24 hours: 3/)).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
-    const suspend = screen.getByRole('button', { name: f.suspend })
-    expect(suspend).toBeDisabled()
-    await user.type(screen.getByLabelText(new RegExp(`^${s.reason}`)), 'Three attempts.')
-    await user.click(suspend)
+    await user.click(screen.getByRole('button', { name: f.suspend }))
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(f.suspend)}`)), 'Three attempts.')
+    await user.click(screen.getByRole('button', { name: f.suspend }))
 
-    expect(await screen.findByText(f.done)).toBeInTheDocument()
+    expect(await screen.findByText(c.suspended)).toBeInTheDocument()
     expect(api.sent('POST', `/api/v1/admin/abuse-flags/${FLAG.id}/act`)[0].body).toEqual({
       action: 'suspend',
       reason: 'Three attempts.',
@@ -216,14 +284,16 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
 
   it('notes a warning on a flag, and says that nothing is sent (Q52)', async () => {
     const api = adminApi({
+      [`GET ${A_CLIENT}`]: FLAGGED,
       [`POST /api/v1/admin/abuse-flags/${FLAG.id}/act`]: { ...FLAG, state: 'ACTIONED', action: 'warn' },
     })
-    renderApp(<AppRoutes />, { path: '/admin/flags' })
+    renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
     const user = userEvent.setup()
 
     expect(await screen.findByText(f.warnHint)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Warned' })).not.toBeInTheDocument()
-    await user.type(screen.getByLabelText(new RegExp(`^${s.reason}`)), 'Told by phone.')
+    await user.click(screen.getByRole('button', { name: 'Note a warning' }))
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(f.warn)}`)), 'Told by phone.')
     await user.click(screen.getByRole('button', { name: 'Note a warning' }))
 
     expect(await screen.findByText(f.done)).toBeInTheDocument()

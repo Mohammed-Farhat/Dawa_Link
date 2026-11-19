@@ -36,17 +36,17 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | ✔ | [Build plan and progress](build_plan.md) | The build steps in order, what is done, what is next, what was left for later | 🟡 living |
 | ✔ | [Requirements checklist](requirements_checklist.md) | Every course requirement → artifact, location, phase; Definition of Done | 🟡 living |
 | 00 | [Decision log](00_decision_log.md) | Every decision and when it was validated | ✅ A–W validated |
-| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.6 |
+| 01 | [Scope and features](01_scope_and_features.md) | Goal, the agent's two modes, features C1–C18, demo scenarios | ✅ v5.7 |
 | 02 | [Architecture](02_architecture.md) | Stack, components, agent graph and tools, routing, deployment | ✅ v3.6 |
-| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.17 |
-| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v5.11 |
-| 05 | [Database design](05_database.md) | ER diagram, 35 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.9 |
-| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components; the API as built (§12) | ✅ v1.18 |
+| 03 | [User flows](03_user_flows.md) | Screens and flows per role (what happens, not visual design) | ✅ v4.22 |
+| 04 | [Domain rules](04_domain_rules.md) | State machines, rules, **all numbers**, invariants | ✅ v5.15 |
+| 05 | [Database design](05_database.md) | ER diagram, 36 tables, constraints, triggers, indexes, concurrency, the clock check, retention, seeding | ✅ v3.13 |
+| 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components; the API as built (§12) | ✅ v1.22 |
 | 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 19 tools + reply, prompts, memory, guardrails, limits, observability; the agent as built | ✅ v1.17 |
-| 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E7 (understanding, 3-contender simulation, ablations, safety, models, constraints, conversations with a played client), targets, statistics, regular checks | ✅ v1.10 |
-| 09 | [Failure Matrix](09_failure_matrix.md) | 161 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.23 (living) |
-| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 63 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.13 (living) |
-| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.7 |
+| 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E7 (understanding, 3-contender simulation, ablations, safety, models, constraints, conversations with a played client), targets, statistics, regular checks | ✅ v1.11 |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 176 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.29 (living) |
+| 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 65 threats with mitigations, tests and residual risk, OWASP LLM Top 10, accepted risks | ✅ v1.18 (living) |
+| 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.12 |
 | 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.6 |
 
 **Supporting folders:**
@@ -71,8 +71,8 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | **Units** | All quantities are counted in units. Today 1 unit = 1 pack; box splitting comes later. |
 | **Equivalence group** | Same ingredient(s), strength and form ("same medicine, another brand"). XR never matches normal release. **Another brand is only ever shown**, with "ask the pharmacist first" and the pharmacy's phone: it is never reserved, planned or waited for automatically. |
 | **Inventory item** | A pharmacy's private stock of one product batch: on hand, reserved, expiry. The pharmacy keeps quantities current (edits or uploads). |
-| **Zone** | By days to expiry: *near-expiry* 0–180 (published automatically; no fixed minimum) · *early-release* 181–270 (private; the agent may ask) · *private* > 270. Computed live. |
-| **Listing** | An inventory item's publication state (visible when near-expiry, LIVE, in stock, pharmacy approved). Not a separate object. |
+| **Zone** | By days to expiry: *near-expiry* 0–180 (can be listed, and each pharmacy decides which; no fixed minimum) · *early-release* 181–270 (private; the agent may ask) · *private* > 270. Computed live. |
+| **Listing** | An inventory item's publication state. Visible when it is near-expiry, in stock, its pharmacy is approved, and the pharmacy lists it: by its own rule ("at 60 days left or fewer") or by hand. Not a separate object. |
 | **Order / reservation** | One quantity from one pharmacy. A tap **reserves it instantly** (no confirmation step). The client shows the **order number** (`R-…`) at the counter; the pharmacy presses **[Picked up]** or **[Not available]**. |
 | **Pickup time** | Set by each pharmacy: how far ahead a client may choose the pickup day (1–3 days, default 1). Not picked up by closing time that day → back to stock (a no-show). |
 | **Pickup day** | The day the client says they'll come: today (if the pharmacy stays open at least 1 h more) or a next open day within the pickup time, 3 open days at most. The same days everywhere: search, the reserve sheet and the agent. A later day leaves fewer days before the box expires. |
@@ -84,7 +84,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | **Claim** | **One need for one medicine**, waiting for stock: a client **watch** ([Notify me]) or a **waiting request item**. Matching and early release both work for the same claim; the first offer the client accepts wins. |
 | **Offer / hold** | Stock held for one claim for **2 hours**, after matching or after a pharmacy accepts an early release. The client taps to accept, which reserves it. |
 | **Priority rule** | Who gets scarce new stock first: **first come, first served** (the claim that started waiting first). Computed by code. **Nobody can change it**: not the AI, not an admin. |
-| **Early release** | The agent asks up to 3 **open** pharmacies to release **privately held** stock (181–270 days from expiry). They have 2 hours to answer. |
+| **Early release** | The agent asks up to 3 **open** pharmacies to release stock they keep off their listings: boxes 181–270 days from expiry, or nearer boxes their own rule holds back. They have 2 hours to answer, and set the price. |
 | **Prescription notice** | "Prescription needed: bring it to the pharmacy." The pharmacist checks it at the counter; DawaLink doesn't schedule or judge prescriptions. |
 | **Opening hours** | A pharmacy's weekly schedule. Used for "open now", pickup deadlines and the Open/Closed badge. |
 | **Clock check** | The worker loop that runs every few seconds and acts on overdue rows (offers, reservations, windows, asks, agent turns, emails). There is no jobs table. |

@@ -33,7 +33,7 @@ function Watching() {
   }
 
   return (
-    <section aria-label={s.watchingTitle} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <section aria-label={s.watchingTitle} className="cols cols--cards">
       {items.map((watch) => (
         <article key={watch.id} className="row-card">
           <div className="row-card__top">
@@ -99,6 +99,7 @@ export function MedicinesPage() {
           <span className="soft">{view === 'active' ? s.nothingActive : s.nothingBefore}</span>
         </div>
       )}
+      <div className="cols cols--cards">
       {items.map((item) => (
         <article key={item.id} className="row-card">
           <div className="row-card__top">
@@ -113,13 +114,23 @@ export function MedicinesPage() {
             <span className="order-ref hint">{item.ref}</span>
           </div>
           <span className={`status-pill status-pill--${TONE[item.state]}`}>{item.status_text}</span>
-          {item.state === 'RESERVED' && (
+          {item.state === 'RESERVED' ? (
             <Link to={`/reservations/${item.id}`} className="pill-button">
               {s.showTicket}
+            </Link>
+          ) : (
+            <Link
+              to={`/reservations/${item.id}`}
+              className="text-button"
+              style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}
+              aria-label={`${s.details}: ${item.ref}`}
+            >
+              {s.details}
             </Link>
           )}
         </article>
       ))}
+      </div>
     </Screen>
   )
 }

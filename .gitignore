@@ -28,6 +28,10 @@ backend/data/moph/
 # OpenStreetMap's raw answer: downloaded by fetch_osm_places, never committed (decision log BLD-D15)
 backend/data/osm/
 
+# Files made to try the website by hand (stock files with the Ministry's medicine names):
+# never committed, for the same reason as the Ministry's list
+local_test_files/
+
 # Tool caches and leftovers of long runs
 .mypy_cache/
 .pytest_cache/
