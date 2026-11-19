@@ -8,6 +8,11 @@ from datetime import time, timedelta
 # --- Expiry zones and prices ---
 NEAR_EXPIRY_MAX_DAYS = 180  # N-1: published when 0-180 days are left
 EARLY_RELEASE_MAX_DAYS = 270  # N-3: 181-270 days is the early-release zone
+# N-54: a pharmacy lists its boxes by themselves when they have this many days left
+# or fewer. It chooses one of these; 0 is "never by themselves, I list each box".
+# Nothing with more than N-1's days left is ever listed.
+AUTO_LIST_CHOICES = (0, 30, 60, 90, NEAR_EXPIRY_MAX_DAYS)
+DEFAULT_AUTO_LIST_DAYS = NEAR_EXPIRY_MAX_DAYS
 # N-4: (fewest days left, most days left, discount %), the same for every pharmacy
 DISCOUNT_TIERS: tuple[tuple[int, int, int], ...] = ((91, 180, 25), (31, 90, 40), (0, 30, 60))
 PRICE_STEP_LBP = 1_000  # SM-3, R-PR2: policy prices are rounded down to this

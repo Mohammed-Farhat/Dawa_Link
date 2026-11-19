@@ -36,6 +36,11 @@ class StockItem(Out):
     qty_reserved: int
     qty_available: int
     paused: bool
+    # The pharmacy listed this box by hand, whatever its own rule says ([List now]).
+    listed_by_hand: bool
+    # It could be listed today and isn't: the pharmacy's rule waits until it has
+    # `auto_list_days` left (`/pharmacy/me`). [List now] lists it; the agent may ask for it.
+    held_back: bool
     # Clients can find it right now (INV-16).
     visible: bool
     price: StockPrice
@@ -62,6 +67,9 @@ class StockItemChange(In):
     qty_on_hand: int | None = Field(default=None, ge=0, le=100_000)
     price_override_lbp: Lbp | None = None
     paused: bool | None = None
+    # true: list this box now, whatever the pharmacy's rule says. false: back to the rule.
+    # Never sent together with `paused`.
+    listed: bool | None = None
 
 
 class StockItemChanged(Out):

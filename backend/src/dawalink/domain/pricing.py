@@ -71,6 +71,25 @@ def early_release_suggested_price_lbp(public_price_lbp: int) -> int:
     return _discounted(public_price_lbp, EARLY_RELEASE_SUGGESTED_DISCOUNT_PCT)
 
 
+def release_suggested_price_lbp(
+    public_price_lbp: int,
+    override_lbp: int | None,
+    days_left: int,
+    tiers: Sequence[DiscountTier] = DEFAULT_TIERS,
+) -> int:
+    """What DawaLink suggests when a pharmacy is asked to release a box it doesn't list
+    (R-PR3, R-E6). The pharmacy sets the price itself; this is only where the box starts.
+
+    A box it holds back inside the published window: what a client would pay if it were
+    listed today (the pharmacy's own price if it set one, else the discount for its days
+    left). A box further from its expiry has no such price: the mildest discount.
+    """
+    listed = effective_price_lbp(public_price_lbp, override_lbp, days_left, tiers)
+    if listed is not None:
+        return listed
+    return early_release_suggested_price_lbp(public_price_lbp)
+
+
 def discount_shown_pct(public_price_lbp: int, price_lbp: int) -> int:
     """The saving to show next to a price, as a whole percentage."""
     if public_price_lbp <= 0:

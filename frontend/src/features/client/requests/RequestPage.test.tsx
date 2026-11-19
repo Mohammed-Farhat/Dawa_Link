@@ -151,6 +151,20 @@ describe("A request's page", () => {
     expect(sent.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/)
   })
 
+  it('says so when a released box comes with no discount (BLD-D44)', async () => {
+    requestApi({
+      'GET /api/v1/offers': {
+        items: [{ ...OFFER, saving: { lbp: 0, usd_approx: 0 } }],
+        server_now: NOW,
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/requests/${REQUEST_ID}` })
+
+    const offer = await screen.findByRole('article', { name: /CONCOR 5MG/ })
+    expect(within(offer).getByText(strings.offers.noSaving)).toBeInTheDocument()
+    expect(within(offer).queryByText(/^Save /)).not.toBeInTheDocument()
+  })
+
   it('declines an offer with one tap', async () => {
     const api = requestApi({ [`POST /api/v1/offers/${OFFER_ID}/decline`]: answer(204) })
     renderApp(<AppRoutes />, { path: `/requests/${REQUEST_ID}` })

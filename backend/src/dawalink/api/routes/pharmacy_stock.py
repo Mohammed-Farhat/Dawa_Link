@@ -30,11 +30,12 @@ from dawalink.api.schemas.stock import (
 from dawalink.db.models import InventoryUpload, Pharmacy
 from dawalink.domain.accounts import PharmacyStatus
 from dawalink.domain.expiry import Zone
-from dawalink.domain.inventory import ListingControl, is_visible
+from dawalink.domain.inventory import ListingControl, is_held_back, is_visible
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from dawalink.domain.pricing import discount_shown_pct
 from dawalink.services import inventory
 from dawalink.services.context import Tx
+from dawalink.services.errors import Code, ServiceError
 
 router = APIRouter(prefix="/pharmacy", tags=["pharmacy stock"])
 
@@ -52,7 +53,8 @@ def _download(text: str, file_name: str) -> Response:
 
 def _items(tx: Tx, pharmacy_id: uuid.UUID, lines: list[inventory.StockLine]) -> list[StockItem]:
     lbp_per_usd = present.rate(tx)
-    status = PharmacyStatus(tx.session.get_one(Pharmacy, pharmacy_id).status)
+    pharmacy = tx.session.get_one(Pharmacy, pharmacy_id)
+    status = PharmacyStatus(pharmacy.status)
     shown = []
     for line in lines:
         item, product = line.item, line.product
@@ -70,9 +72,18 @@ def _items(tx: Tx, pharmacy_id: uuid.UUID, lines: list[inventory.StockLine]) -> 
                 qty_reserved=item.qty_reserved,
                 qty_available=available,
                 paused=control is ListingControl.PAUSED,
+                listed_by_hand=control is ListingControl.LISTED,
+                held_back=is_held_back(
+                    zone=line.zone,
+                    control=control,
+                    days_left=line.days_left,
+                    auto_list_days=pharmacy.auto_list_days,
+                ),
                 visible=is_visible(
                     zone=line.zone,
                     control=control,
+                    days_left=line.days_left,
+                    auto_list_days=pharmacy.auto_list_days,
                     pharmacy_status=status,
                     qty_available=available,
                     controlled=product.controlled,
@@ -149,9 +160,20 @@ def add_stock_item(body: AddStockItem, pharmacy_id: OwnPharmacy, work: DoWork) -
 def change_stock_item(
     item_id: uuid.UUID, body: StockItemChange, pharmacy_id: OwnPharmacy, work: DoWork
 ) -> StockItemChanged:
-    """A quantity corrected after a sale in the shop, the pharmacy's own price, or a
-    pause. Reserved packs are never taken away here (R-U3)."""
+    """A quantity corrected after a sale in the shop, the pharmacy's own price, a pause,
+    or [List now]. Reserved packs are never taken away here (R-U3)."""
     sent = body.model_fields_set
+    pausing = "paused" in sent and body.paused is not None
+    listing = "listed" in sent and body.listed is not None
+    if pausing and listing:
+        raise ServiceError(
+            Code.VALIDATION_ERROR, "Pause a box or list it: one at a time.", field="listed"
+        )
+    control: ListingControl | None = None
+    if pausing:
+        control = ListingControl.PAUSED if body.paused else ListingControl.LIVE
+    if listing:
+        control = ListingControl.LISTED if body.listed else ListingControl.LIVE
     with work.tx() as tx:
         edited = inventory.edit_item(
             tx,
@@ -161,13 +183,7 @@ def change_stock_item(
             price_override_lbp=(
                 body.price_override_lbp if "price_override_lbp" in sent else inventory.UNSET
             ),
-            listing_control=(
-                None
-                if "paused" not in sent or body.paused is None
-                else ListingControl.PAUSED
-                if body.paused
-                else ListingControl.LIVE
-            ),
+            listing_control=control,
         )
         tx.session.flush()
         return StockItemChanged(

@@ -11,7 +11,14 @@ from dawalink.domain.expiry import Zone
 from dawalink.domain.inventory import ListingControl
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ClaimSource
-from dawalink.services import claims, controlled, inventory, orders
+from dawalink.services import (
+    claims,
+    controlled,
+    inventory,
+    orders,
+    pharmacies,
+    pharmacy_profile,
+)
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.orders import ReserveLine
 from dawalink.services.travel import shared_location
@@ -178,6 +185,136 @@ class TestTheManualForm:
             "SELECT 1 FROM visible_listings(:t) WHERE inventory_item_id = :i", t=TODAY, i=item
         )
         assert visible == []
+
+    def test_a_box_is_listed_by_hand_and_taken_back(self, store: Store, world: World) -> None:
+        """BLD-D44: the pharmacy lists at 30 days; a box with 90 days left waits, [List
+        now] lists it, and taking that back makes it wait again."""
+        seen = "SELECT count(*) FROM visible_listings(:t) WHERE inventory_item_id = :i"
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE pharmacies SET auto_list_days = 30 WHERE id = %s", (store.pharmacy,)
+            )
+        item = world.make.item(pharmacy_id=store.pharmacy, product_id=store.panadol, days_left=90)
+        waits = world.one(seen, t=TODAY, i=item)[0]
+
+        inventory.edit_item(world.tx(), store.pharmacy, item, listing_control=ListingControl.LISTED)
+        listed = world.one(seen, t=TODAY, i=item)[0]
+        inventory.edit_item(world.tx(), store.pharmacy, item, listing_control=ListingControl.LIVE)
+
+        assert (waits, listed, world.one(seen, t=TODAY, i=item)[0]) == (0, 1, 0)
+
+    def test_a_narrower_rule_takes_nothing_from_a_client_who_already_reserved(
+        self, store: Store, world: World
+    ) -> None:
+        """BLD-D44 (docs/09 FR-33): the pharmacy stops listing by itself; the box leaves
+        the listings, and the pack a client reserved is still theirs."""
+        client = world.make.client()
+        item = world.make.item(
+            pharmacy_id=store.pharmacy, product_id=store.panadol, days_left=60, qty_on_hand=3
+        )
+        tx = world.tx()
+        (order,) = orders.reserve(
+            tx,
+            client_id=client,
+            lines=[ReserveLine(item, 1, expected_price_lbp=600_000)],
+            pickup_day=TODAY,
+            source=OrderSource.SEARCH,
+            idempotency_key="before-the-rule",
+        )
+        world.settle(tx)
+
+        tx = world.tx()
+        pharmacy_profile.change_settings(
+            tx,
+            store.pharmacy,
+            pharmacies.weekly_hours(tx, [store.pharmacy])[store.pharmacy],
+            auto_list_days=0,
+        )
+        world.settle(tx)
+
+        row = world.one("SELECT state FROM orders WHERE id = :o", o=order.id)
+        box = world.one(
+            "SELECT qty_on_hand, qty_reserved FROM inventory_items WHERE id = :i", i=item
+        )
+        assert (row.state, box.qty_on_hand, box.qty_reserved) == ("RESERVED", 3, 1)
+        assert (
+            world.all(
+                "SELECT 1 FROM visible_listings(:t) WHERE inventory_item_id = :i", t=TODAY, i=item
+            )
+            == []
+        )
+
+    def test_a_wider_rule_offers_its_boxes_to_who_was_waiting(
+        self, store: Store, world: World
+    ) -> None:
+        """BLD-D44 (docs/09 FR-33), the other way: the pharmacy listed nothing by itself;
+        a client watches for the medicine; the pharmacy goes back to 180 days, and the
+        sweep offers the box."""
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE pharmacies SET auto_list_days = 0 WHERE id = %s", (store.pharmacy,)
+            )
+        world.make.item(pharmacy_id=store.pharmacy, product_id=store.panadol, days_left=60)
+        client = world.make.client()
+        tx = world.tx()
+        claim = claims.create_watch(
+            tx,
+            client_id=client,
+            product_id=store.panadol,
+            location=HAMRA,
+            source=ClaimSource.SEARCH,
+        )
+        world.settle(tx)
+        nothing_yet = world.clock_tasks().matching_sweep()
+
+        tx = world.tx()
+        pharmacy_profile.change_settings(
+            tx,
+            store.pharmacy,
+            pharmacies.weekly_hours(tx, [store.pharmacy])[store.pharmacy],
+            auto_list_days=180,
+        )
+        world.settle(tx)
+        offered = world.clock_tasks().matching_sweep()
+
+        assert (nothing_yet, offered) == (0, 1)
+        assert world.one("SELECT state FROM claims WHERE id = :c", c=claim.id) == ("OFFER_PENDING",)
+
+    def test_between_paused_and_listed_by_hand_a_box_goes_back_to_the_rule_first(
+        self, store: Store, world: World
+    ) -> None:
+        item = world.make.item(pharmacy_id=store.pharmacy, product_id=store.panadol, days_left=60)
+
+        def set_to(control: ListingControl) -> None:
+            inventory.edit_item(world.tx(), store.pharmacy, item, listing_control=control)
+
+        set_to(ListingControl.PAUSED)
+        paused_then_listed = refusal(lambda: set_to(ListingControl.LISTED))
+        set_to(ListingControl.LIVE)
+        set_to(ListingControl.LISTED)
+        listed_then_paused = refusal(lambda: set_to(ListingControl.PAUSED))
+
+        assert paused_then_listed.code is Code.VALIDATION_ERROR
+        assert listed_then_paused.code is Code.VALIDATION_ERROR
+        assert world.one("SELECT listing_control FROM inventory_items WHERE id = :i", i=item) == (
+            "LISTED",
+        )
+
+    def test_a_box_with_more_than_180_days_left_cant_be_listed_by_hand(
+        self, store: Store, world: World
+    ) -> None:
+        item = world.make.item(pharmacy_id=store.pharmacy, product_id=store.panadol, days_left=181)
+
+        error = refusal(
+            lambda: inventory.edit_item(
+                world.tx(), store.pharmacy, item, listing_control=ListingControl.LISTED
+            )
+        )
+
+        assert error.code is Code.VALIDATION_ERROR
+        assert world.one("SELECT listing_control FROM inventory_items WHERE id = :i", i=item) == (
+            "LIVE",
+        )
 
     def test_another_pharmacys_box_does_not_exist(self, store: Store, world: World) -> None:
         other = world.make.item()

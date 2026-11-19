@@ -252,6 +252,33 @@ describe("The pharmacy's settings (PS-10)", () => {
     expect(screen.getByLabelText(d.phone)).toHaveValue('+9611000000')
   })
 
+  it('chooses when its boxes are listed, and sends only that (BLD-D44)', async () => {
+    const api = portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': { ...PROFILE, auto_list_days: 30 },
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+    const page = s.settingsPage
+
+    const rule = await screen.findByRole('region', { name: page.ruleTitle })
+    // What every pharmacy starts with: everything within 180 days, as before.
+    expect(within(rule).getByRole('radio', { name: page.ruleChoice(180) })).toBeChecked()
+    expect(within(rule).getByRole('radio', { name: page.ruleChoice(0) })).toBeInTheDocument()
+    const save = within(rule).getByRole('button', { name: page.ruleSave })
+    expect(save).toBeDisabled()
+    await user.click(within(rule).getByRole('radio', { name: page.ruleChoice(30) }))
+    await user.click(save)
+
+    expect(await within(rule).findByText(page.ruleSaved)).toBeInTheDocument()
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me').map((call) => call.body)).toEqual([
+      { auto_list_days: 30 },
+    ])
+  })
+
   it('changes its own phone number (the owner, Q42)', async () => {
     const api = portalApi(
       {},

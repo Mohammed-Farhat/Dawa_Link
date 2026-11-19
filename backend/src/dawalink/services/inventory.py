@@ -25,8 +25,16 @@ from dawalink.db.models import (
     Product,
 )
 from dawalink.domain.accounts import PharmacyStatus, pharmacy_can_manage_inventory
-from dawalink.domain.expiry import AmbiguousDate, Zone, day_month_order, parse_expiry_cell
+from dawalink.domain.expiry import (
+    AmbiguousDate,
+    Zone,
+    day_month_order,
+    days_left,
+    parse_expiry_cell,
+    zone_of,
+)
 from dawalink.domain.inventory import ListingControl, Stock
+from dawalink.domain.numbers import NEAR_EXPIRY_MAX_DAYS
 from dawalink.domain.pharmacy_details import clean_batch
 from dawalink.domain.pricing import is_valid_override
 from dawalink.domain.state_machine import Actor
@@ -157,7 +165,8 @@ def edit_item(
     price_override_lbp: Any = UNSET,
     listing_control: ListingControl | None = None,
 ) -> Edited:
-    """A pharmacy corrects a quantity, sets or clears its own price, pauses or resumes."""
+    """A pharmacy corrects a quantity, sets or clears its own price, pauses or resumes a
+    box, or lists it by hand ([List now]) and takes that back."""
     can_manage(tx, pharmacy_id)
     item = orders.lock_items(tx, [item_id]).get(item_id)
     if item is None or item.pharmacy_id != pharmacy_id:
@@ -179,6 +188,26 @@ def edit_item(
         _check_price(product, price_override_lbp)
         item.price_override_lbp = price_override_lbp
     if listing_control is not None:
+        # Between "paused" and "listed by hand" the box goes back to the rule first
+        # (SM-3): each screen offers one way out of a state, and the API allows no other.
+        if {ListingControl(item.listing_control), listing_control} == {
+            ListingControl.PAUSED,
+            ListingControl.LISTED,
+        }:
+            raise ServiceError(
+                Code.VALIDATION_ERROR,
+                "Give the box back to your rule first.",
+                field="listed" if listing_control is ListingControl.LISTED else "paused",
+            )
+        if listing_control is ListingControl.LISTED:
+            # By hand as by itself: only a box of the published window (N-1), in date.
+            zone = zone_of(days_left(item.expiry_date, tx.today), eligible=not product.controlled)
+            if zone is not Zone.NEAR_EXPIRY:
+                raise ServiceError(
+                    Code.VALIDATION_ERROR,
+                    f"Only a box with {NEAR_EXPIRY_MAX_DAYS} days left or fewer can be listed.",
+                    field="listed",
+                )
         item.listing_control = listing_control.value
     item.last_edited_at = tx.now
     audit.record(

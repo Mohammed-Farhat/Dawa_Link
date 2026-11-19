@@ -1,6 +1,6 @@
 # DawaLink: Database Design
 
-**Version:** v3.12 · **Date:** 2026-11-18
+**Version:** v3.13 · **Date:** 2026-11-19
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
 **Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
@@ -171,6 +171,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | **lat / lon** | numeric(8,5) | NN: the **map pin** set at registration (`04` R-S2) |
 | location_checked_at / _by | timestamptz / uuid | set by the admin at approval; only an admin can move the pin afterwards |
 | **pickup_days** | smallint | NN, default 1, `CHECK (pickup_days BETWEEN 1 AND 3)` (`04` N-6) |
+| **auto_list_days** | smallint | NN, default 180, `CHECK (auto_list_days BETWEEN 0 AND 180)`. The pharmacy's own listing rule: its boxes are listed by themselves at this many days left or fewer; 0: never (`04` N-54, BLD-D44) |
 | status | text | `IN ('PENDING','APPROVED','REJECTED','SUSPENDED')` (`04` SM-1) |
 | info_requested | boolean | default false |
 | status_reason | text | reject or suspend reason |
@@ -237,7 +238,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | qty_on_hand | int | NN, ≥ 0 |
 | qty_reserved | int | NN, ≥ 0, **`CHECK (qty_reserved <= qty_on_hand)`** (INV-1) |
 | splittable | boolean | default false (`04` R-C4) |
-| listing_control | text | `IN ('LIVE','PAUSED')`, default `'LIVE'` |
+| listing_control | text | `IN ('LIVE','LISTED','PAUSED')`, default `'LIVE'`. LIVE: follows the pharmacy's rule · LISTED: listed by hand · PAUSED (`04` SM-3) |
 | price_override_lbp | bigint | nullable, ≥ 0; ≤ public price enforced by a **trigger** (INV-5) |
 | last_edited_at | timestamptz | the last upload or manual edit (stale-inventory reminder, N-16) |
 | created_at / updated_at | | |
@@ -522,10 +523,12 @@ CREATE FUNCTION visible_listings(p_today date) RETURNS TABLE (...) LANGUAGE sql 
   JOIN products p    ON p.id = ii.product_id
   JOIN pharmacies ph ON ph.id = ii.pharmacy_id
   WHERE ph.status = 'APPROVED'
-    AND ii.listing_control = 'LIVE'
     AND NOT p.controlled
     AND ii.qty_on_hand - ii.qty_reserved >= 1
     AND ii.expiry_date BETWEEN p_today AND p_today + 180        -- NEAR_EXPIRY (04 N-1): no fixed minimum
+    AND (ii.listing_control = 'LISTED'                          -- by hand, or by the pharmacy's own rule
+         OR (ii.listing_control = 'LIVE' AND ph.auto_list_days > 0
+             AND ii.expiry_date <= p_today + ph.auto_list_days)) -- (04 SM-3, N-54; the eighth migration)
 $$;
 
 -- Expiry fit (04 R-F1): the box is still valid on the last day of use
@@ -764,3 +767,7 @@ A request copies the point and its source; its thread also copies `loc_area_id`.
 **The seventh migration (2026-11-18, decision log BLD-D42):** `orders` gets `next_reminder_at`, and the index of reservations waiting for a reminder is now on it; the reservations open at that moment get one last reminder, 2 hours before their deadline. A new table, `search_history` (§3.1), the 36th; the app's login may delete its rows (a client clears their own list), and the clean-up's login deletes the old ones. `client_profiles.district_id` was already optional: a client who gives only a place on the map has none. Going back drops the column and the table.
 
 **Tested:** the table's check and the 36 tables (`tests/db/test_constraints.py`, `tests/db/test_schema.py`); the reminders' moments (`tests/unit/domain/test_reminders.py`, `tests/services/test_clock_check.py`); the last searches through the API, the purge included (`tests/api/test_search_by_name.py`).
+
+**The eighth migration (2026-11-19, decision log BLD-D44):** `pharmacies` gets `auto_list_days` (every pharmacy starts at 180, which is what happened before); `inventory_items.listing_control` may also be `LISTED`; `visible_listings` is replaced, with the same columns, so everything that reads it reads it as before. Going back turns the boxes listed by hand into ordinary ones and drops the column.
+
+**Tested:** the function against `domain/inventory.py` on every edge: the day a box reaches the pharmacy's number and the day before, 180 and 181 days, and "never" with a box that expires today (`tests/db/test_functions.py`); the new check (`tests/db/test_constraints.py`).

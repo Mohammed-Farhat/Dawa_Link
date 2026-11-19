@@ -3606,6 +3606,17 @@
             "title": "Address",
             "type": "string"
           },
+          "auto_list_choices": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Auto List Choices",
+            "type": "array"
+          },
+          "auto_list_days": {
+            "title": "Auto List Days",
+            "type": "integer"
+          },
           "closes_at": {
             "anyOf": [
               {
@@ -3717,6 +3728,8 @@
           "license_number",
           "location",
           "pickup_days",
+          "auto_list_days",
+          "auto_list_choices",
           "hours",
           "week",
           "open_now",
@@ -5583,6 +5596,19 @@
             ],
             "title": "Address"
           },
+          "auto_list_days": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto List Days"
+          },
           "district_id": {
             "anyOf": [
               {
@@ -5835,6 +5861,10 @@
             "title": "Expiry Date",
             "type": "string"
           },
+          "held_back": {
+            "title": "Held Back",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -5851,6 +5881,10 @@
               }
             ],
             "title": "Last Edited At"
+          },
+          "listed_by_hand": {
+            "title": "Listed By Hand",
+            "type": "boolean"
           },
           "paused": {
             "title": "Paused",
@@ -5901,6 +5935,8 @@
           "qty_reserved",
           "qty_available",
           "paused",
+          "listed_by_hand",
+          "held_back",
           "visible",
           "price",
           "last_edited_at"
@@ -5912,6 +5948,17 @@
         "additionalProperties": false,
         "description": "Only what is sent changes. `price_override_lbp: null` goes back to the system's\nprice.",
         "properties": {
+          "listed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listed"
+          },
           "paused": {
             "anyOf": [
               {
@@ -11510,7 +11557,7 @@
     },
     "/api/v1/pharmacy/inventory/items/{item_id}": {
       "patch": {
-        "description": "A quantity corrected after a sale in the shop, the pharmacy's own price, or a\npause. Reserved packs are never taken away here (R-U3).",
+        "description": "A quantity corrected after a sale in the shop, the pharmacy's own price, a pause,\nor [List now]. Reserved packs are never taken away here (R-U3).",
         "operationId": "change_stock_item",
         "parameters": [
           {

@@ -296,9 +296,12 @@ def _sold_out(tx: Tx, item: InventoryItem | None) -> bool:
         return False
     product = tx.session.get_one(Product, item.product_id)
     pharmacy = tx.session.get_one(Pharmacy, item.pharmacy_id)
+    left = days_left(item.expiry_date, tx.today)
     return is_visible(
-        zone=zone_of(days_left(item.expiry_date, tx.today)),
+        zone=zone_of(left),
         control=ListingControl(item.listing_control),
+        days_left=left,
+        auto_list_days=pharmacy.auto_list_days,
         pharmacy_status=PharmacyStatus(pharmacy.status),
         qty_available=1,
         controlled=product.controlled,

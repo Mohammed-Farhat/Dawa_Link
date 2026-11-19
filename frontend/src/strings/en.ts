@@ -358,6 +358,7 @@ export const strings = {
     title: 'An offer for you',
     validUntil: (when: string) => `Held for you until ${when}`,
     released: 'A pharmacy released it for you',
+    noSaving: 'No discount: the pharmacy offers it at the public price.',
     matched: 'It has just been listed',
     pickUpDay: 'When will you pick it up?',
     accept: 'Accept and reserve',
@@ -483,8 +484,8 @@ export const strings = {
       release: 'Release',
       packs: (count: number) => (count === 1 ? '1 pack' : `${count} packs`),
       price: 'Price each (LBP)',
-      suggested: (price: string, publicPrice: string) =>
-        `Suggested ${price} (25% off) · public price ${publicPrice}`,
+      suggested: (price: string, percent: number, publicPrice: string) =>
+        `Suggested ${price} (${percent}% off) · public price ${publicPrice}. The price is yours to set.`,
       accept: 'Accept and offer it',
       decline: 'Decline',
       declineTitle: 'Why not?',
@@ -584,11 +585,11 @@ export const strings = {
       title: 'Your stock',
       table: 'Your boxes, one per row',
       private:
-        'Private: only you see this list. Boxes within 6 months of their expiry are listed for clients automatically.',
+        'Private: only you see this list. Which boxes clients see follows your rule in Settings, never earlier than 6 months before their expiry.',
       search: 'Find a medicine or a batch',
       zones: {
         ALL: 'All',
-        NEAR_EXPIRY: 'Listed',
+        NEAR_EXPIRY: 'Within 6 months',
         EARLY_RELEASE: 'May be asked for',
         PRIVATE: 'Private',
         EXPIRED: 'Expired',
@@ -601,6 +602,8 @@ export const strings = {
         NOT_ELIGIBLE: 'Not listed on DawaLink',
       } as Record<string, string>,
       paused: 'Paused',
+      heldBack: 'Not listed yet',
+      listedByYou: 'Listed by you',
       outOfStock: 'None left',
       product: 'Medicine',
       batch: 'Batch',
@@ -673,13 +676,26 @@ export const strings = {
       failed: (reason: string) => `This file can't be used: ${reason}.`,
     },
     listing: {
-      title: 'What clients see',
+      title: 'Your boxes near their expiry',
       intro:
-        'Your boxes within 6 months of their expiry. The price follows the days left, unless you set your own.',
+        'Your boxes within 6 months of their expiry. You decide which of them clients see. The price follows the days left, unless you set your own.',
+      rule: (days: number) =>
+        days === 0
+          ? 'Your rule: you list each box yourself.'
+          : `Your rule: a box is listed by itself when it has ${days} days left or fewer.`,
+      changeRule: 'Change it in Settings',
+      heldBack: 'Not listed yet',
+      listedByYou: 'Listed by you',
+      waitsFor: (days: number) =>
+        days === 0
+          ? 'Clients don\'t see it until you list it.'
+          : `Clients will see it when it has ${days} days left, or now if you list it.`,
+      listNow: 'List now',
+      backToRule: 'Back to my rule',
       tiers: 'DawaLink prices',
       tier: (from: number, to: number, percent: number) =>
         `${from} to ${to} days left: ${percent}% off`,
-      none: 'Nothing is listed yet. A box is listed when it is within 6 months of its expiry.',
+      none: 'Nothing here yet. A box appears here when it is within 6 months of its expiry.',
       line: (batch: string, expiry: string, days: string) => `Batch ${batch} · expires ${expiry} · ${days}`,
       available: (available: number, reserved: number) =>
         `${available} available · ${reserved} reserved`,
@@ -701,6 +717,18 @@ export const strings = {
     },
     settingsPage: {
       title: 'Settings',
+      ruleTitle: 'When your boxes are listed',
+      ruleNote:
+        'You decide when clients can see a box. A box is never listed with more than 180 days left.',
+      ruleLabel: 'List my boxes by themselves',
+      ruleChoice: (days: number) =>
+        days === 0
+          ? 'Never: I list each box myself'
+          : `When they have ${days} days left or fewer`,
+      ruleHint:
+        'A box that is not listed stays private. When a client needs that medicine, DawaLink may ask you for one box: you say yes or no, and you set its price.',
+      ruleSave: 'Save this rule',
+      ruleSaved: 'Saved. Your listings follow it now.',
       hoursTitle: 'Opening hours, pickup time and phone',
       placeTitle: 'Your address and your place on the map',
       placeNote:

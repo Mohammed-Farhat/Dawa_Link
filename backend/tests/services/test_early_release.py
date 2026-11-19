@@ -188,6 +188,77 @@ class TestAsking:
 
         assert set(town.asks()) == set(in_zone)
 
+    def test_a_box_the_pharmacys_own_rule_holds_back_is_asked_for(self, town: Town) -> None:
+        """The owner, 2026-11-19 (BLD-D44). A pharmacy that lists at 30 days holds a box
+        with 90 days left: clients don't see it, and the agent may ask for it. With the
+        rule every pharmacy starts with, the same box is listed, and nobody is asked."""
+        held_back = town.pharmacy_holding(days_left=90, auto_list_days=30)
+        by_hand_only = town.pharmacy_holding(days_left=10, auto_list_days=0, metres_away=300)
+        town.pharmacy_holding(days_left=90, metres_away=500)  # listed: the rule is 180 days
+        town.pharmacy_holding(days_left=25, auto_list_days=30, metres_away=700)  # listed too
+
+        town.ask()
+
+        assert set(town.asks()) == {held_back, by_hand_only}
+
+    def test_a_box_the_pharmacy_paused_or_listed_itself_is_not_asked_for(
+        self, town: Town, world: World
+    ) -> None:
+        """A paused box was taken off on purpose; a box listed by hand is on the listings."""
+        paused = town.pharmacy_holding(days_left=90, auto_list_days=30)
+        by_hand = town.pharmacy_holding(days_left=90, auto_list_days=30, metres_away=300)
+        with world.as_owner():
+            for pharmacy, control in ((paused, "PAUSED"), (by_hand, "LISTED")):
+                world.connection.exec_driver_sql(
+                    "UPDATE inventory_items SET listing_control = %s WHERE pharmacy_id = %s",
+                    (control, pharmacy),
+                )
+
+        assert town.ask().pharmacies_asked == 0
+
+    def test_a_held_back_box_that_cant_last_the_clients_days_is_not_asked_for(
+        self, town: Town, world: World
+    ) -> None:
+        """R-F1 on the ask's path: a box with 10 days left is no use for 30 days of use,
+        and asking for it would end in an offer the client can't accept."""
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE claims SET days_of_use = 30 WHERE id = %s", (town.claim,)
+            )
+        town.pharmacy_holding(days_left=10, auto_list_days=0)
+        lasts = town.pharmacy_holding(days_left=60, auto_list_days=30, metres_away=300)
+
+        town.ask()
+
+        assert set(town.asks()) == {lasts}
+
+    def test_the_suggested_price_is_what_the_box_would_cost_if_it_were_listed(
+        self, town: Town, world: World
+    ) -> None:
+        """R-PR3. The medicine costs 1,000,000. A held-back box with 90 days left would be
+        listed at 40% off; one the pharmacy priced itself, at its price; a box further
+        from its expiry has no such price: 25% off, as always."""
+        ninety = town.pharmacy_holding(days_left=90, auto_list_days=30)
+        own_price = town.pharmacy_holding(days_left=90, auto_list_days=30, metres_away=300)
+        far = town.pharmacy_holding(days_left=200, metres_away=500)
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE inventory_items SET price_override_lbp = 450000 WHERE pharmacy_id = %s",
+                (own_price,),
+            )
+
+        town.ask()
+
+        suggested = {
+            pharmacy: world.one(
+                "SELECT payload->>'suggested_price_lbp' FROM notifications "
+                "WHERE user_id = :u AND type = 'PN-7'",
+                u=town.owners[pharmacy],
+            )[0]
+            for pharmacy in (ninety, own_price, far)
+        }
+        assert suggested == {ninety: "600000", own_price: "450000", far: "750000"}
+
     def test_closed_far_or_unapproved_pharmacies_are_not_asked(
         self, town: Town, world: World
     ) -> None:
@@ -346,6 +417,74 @@ class TestThePharmacysAnswer:
 
         assert answer.state == "WITHDRAWN"
         assert town.offers() == []
+
+
+class TestAHeldBackBoxFromAskToReservation:
+    def test_the_pharmacy_names_its_price_and_the_client_reserves(
+        self, town: Town, world: World
+    ) -> None:
+        """BLD-D44, the owner's choice: the pharmacy types the price, never above the
+        public price. The box itself stays off the listings."""
+        pharmacy = town.pharmacy_holding(days_left=90, auto_list_days=30)
+        town.ask()
+
+        too_dear = refusal(lambda: town.accept(pharmacy, qty=2, price_lbp=1_000_001))
+        town.accept(pharmacy, qty=2, price_lbp=900_000)
+        (offer,) = town.offers()
+        tx = world.tx()
+        orders.accept_offer(tx, town.client, offer.id, TODAY)
+        world.settle(tx)
+
+        assert too_dear.code is Code.PRICE_ABOVE_PUBLIC
+        order = world.one(
+            "SELECT state, price_snapshot_lbp, qty_locked FROM orders WHERE id = :o", o=offer.id
+        )
+        assert (order.state, order.price_snapshot_lbp, order.qty_locked) == ("RESERVED", 900_000, 2)
+        assert (
+            world.all(
+                "SELECT 1 FROM visible_listings(:t) WHERE pharmacy_id = :p", t=TODAY, p=pharmacy
+            )
+            == []
+        )
+
+
+class TestAnAskWhoseBoxIsListedMeanwhile:
+    def test_the_listed_box_is_offered_once_and_the_ask_is_thanked(
+        self, town: Town, world: World
+    ) -> None:
+        """BLD-D44: the pharmacy is asked for its one held-back pack, then lists it itself
+        before answering. The sweep offers the pack to the waiting client. When the
+        pharmacy then presses [Accept], nothing is held twice."""
+        pharmacy = town.pharmacy_holding(days_left=90, auto_list_days=30)
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE inventory_items SET qty_on_hand = 1 WHERE pharmacy_id = %s", (pharmacy,)
+            )
+            world.connection.exec_driver_sql(
+                "UPDATE claims SET qty = 1, qty_missing = 1 WHERE id = %s", (town.claim,)
+            )
+        town.ask()
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE inventory_items SET listing_control = 'LISTED' WHERE pharmacy_id = %s",
+                (pharmacy,),
+            )
+        offered = world.clock_tasks().matching_sweep()
+
+        try:
+            answer = town.accept(pharmacy, qty=1, price_lbp=600_000).state
+        except ServiceError as error:
+            answer = error.code.value
+
+        box = world.one(
+            "SELECT qty_on_hand, qty_reserved FROM inventory_items WHERE pharmacy_id = :p",
+            p=pharmacy,
+        )
+        assert offered == 1
+        assert (box.qty_on_hand, box.qty_reserved) == (1, 1)
+        assert len(town.offers()) == 1
+        # What the pharmacy is told: the need is being met, never a second hold.
+        assert answer == "WITHDRAWN", answer
 
 
 class TestHowItEnds:

@@ -327,6 +327,54 @@ describe("The pharmacy's listings (PS-7)", () => {
     expect(await screen.findByText(strings.errors.PRICE_ABOVE_PUBLIC)).toBeInTheDocument()
   })
 
+  it('says the rule the pharmacy chose, with the way to change it', async () => {
+    listedApi({ 'GET /api/v1/pharmacy/me': { ...PROFILE, auto_list_days: 30 } })
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+
+    expect(await screen.findByText(new RegExp(l.rule(30).slice(0, 40)))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: l.changeRule })).toHaveAttribute('href', '/pharmacy/settings')
+  })
+
+  it('lists now a box the rule still holds back (BLD-D44)', async () => {
+    const waiting = { ...BOX, days_left: 90, visible: false, held_back: true }
+    const api = listedApi({
+      'GET /api/v1/pharmacy/me': { ...PROFILE, auto_list_days: 30 },
+      'GET /api/v1/pharmacy/inventory': stockOf([waiting]),
+      [`PATCH /api/v1/pharmacy/inventory/items/${BOX.id}`]: changed,
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+    const user = userEvent.setup()
+
+    const listing = await screen.findByRole('article', { name: `${BOX.product.name} · A123` })
+    expect(within(listing).getByText(l.heldBack)).toBeInTheDocument()
+    expect(await within(listing).findByText(l.waitsFor(30))).toBeInTheDocument()
+    // One way out of this state: no [Pause] on a box nobody sees.
+    expect(within(listing).queryByRole('button', { name: l.pause })).not.toBeInTheDocument()
+    await user.click(within(listing).getByRole('button', { name: l.listNow }))
+
+    await waitFor(() =>
+      expect(api.sent('PATCH', '/api/v1/pharmacy/inventory/items')[0]?.body).toEqual({ listed: true }),
+    )
+  })
+
+  it('takes a box listed by hand back to the rule', async () => {
+    const byHand = { ...BOX, days_left: 90, listed_by_hand: true }
+    const api = listedApi({
+      'GET /api/v1/pharmacy/inventory': stockOf([byHand]),
+      [`PATCH /api/v1/pharmacy/inventory/items/${BOX.id}`]: changed,
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+    const user = userEvent.setup()
+
+    const listing = await screen.findByRole('article', { name: `${BOX.product.name} · A123` })
+    expect(within(listing).getByText(l.listedByYou)).toBeInTheDocument()
+    await user.click(within(listing).getByRole('button', { name: l.backToRule }))
+
+    await waitFor(() =>
+      expect(api.sent('PATCH', '/api/v1/pharmacy/inventory/items')[0]?.body).toEqual({ listed: false }),
+    )
+  })
+
   it('pauses a listing', async () => {
     const api = listedApi({ [`PATCH /api/v1/pharmacy/inventory/items/${BOX.id}`]: changed })
     renderApp(<AppRoutes />, { path: '/pharmacy/listings' })

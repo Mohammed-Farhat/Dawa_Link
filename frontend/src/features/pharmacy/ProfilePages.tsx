@@ -196,6 +196,8 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
         </section>
       )}
 
+      {approved && <ListingRule pharmacy={pharmacy} />}
+
       {approved && <PlaceSettings pharmacy={pharmacy} />}
 
       <section className="panel" aria-labelledby="details">
@@ -230,6 +232,79 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
  * that moves changes them here (the owner, 2026-11-16, Q45). Clients see the new place
  * at once; DawaLink's team then looks at the new pin, which holds nothing up.
  */
+/**
+ * The pharmacy's own listing rule (the owner, 2026-11-19, BLD-D44): its boxes are listed
+ * by themselves when they have this many days left or fewer, or never. The choices come
+ * from the server (docs/04 N-54). One box can always be listed by hand, on its card.
+ */
+function ListingRule({ pharmacy }: { pharmacy: Profile }) {
+  const queryClient = useQueryClient()
+  const [days, setDays] = useState(pharmacy.auto_list_days)
+  const [state, setState] = useState<'idle' | 'sending' | 'saved'>('idle')
+  const [failed, setFailed] = useState<Failure | null>(null)
+  // The longest wait first: it is what every pharmacy starts with.
+  const choices = [...pharmacy.auto_list_choices].sort((a, b) => (a === 0 ? 1 : b === 0 ? -1 : b - a))
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setFailed(null)
+    setState('sending')
+    try {
+      const saved = await unwrap(api.PATCH('/api/v1/pharmacy/me', { body: { auto_list_days: days } }))
+      queryClient.setQueryData(['pharmacy', 'me'], saved)
+      // The stock's lists say which boxes clients see: they are read again.
+      await queryClient.invalidateQueries({ queryKey: ['pharmacy', 'stock'] })
+      setState('saved')
+    } catch (error) {
+      setFailed(failureOf(error))
+      setState('idle')
+    }
+  }
+
+  return (
+    <section className="panel" aria-labelledby="listing-rule">
+      <div>
+        <h2 id="listing-rule" className="panel__title">
+          {s.ruleTitle}
+        </h2>
+        <span className="hint">{s.ruleNote}</span>
+      </div>
+      <form className="form" onSubmit={submit} noValidate>
+        <fieldset className="choice">
+          <legend>{s.ruleLabel}</legend>
+          {choices.map((choice) => (
+            <label key={choice} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}>
+              <input
+                type="radio"
+                name="auto-list-days"
+                checked={days === choice}
+                onChange={() => {
+                  setDays(choice)
+                  setState('idle')
+                }}
+              />
+              {s.ruleChoice(choice)}
+            </label>
+          ))}
+          <span className="hint">{s.ruleHint}</span>
+        </fieldset>
+        <div role="status" aria-live="polite">
+          {state === 'saved' && <Banner tone="green">{s.ruleSaved}</Banner>}
+          {failed && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+        </div>
+        <button
+          type="submit"
+          className="pill-button"
+          style={{ alignSelf: 'flex-start' }}
+          disabled={state === 'sending' || days === pharmacy.auto_list_days}
+        >
+          {s.ruleSave}
+        </button>
+      </form>
+    </section>
+  )
+}
+
 function PlaceSettings({ pharmacy }: { pharmacy: Profile }) {
   const queryClient = useQueryClient()
   const districts = useDistricts()

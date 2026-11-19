@@ -12,7 +12,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import time, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from dawalink.db.models import (
     Claim,
@@ -32,16 +32,18 @@ from dawalink.domain.early_release import (
     is_valid_acceptance,
     pharmacies_to_ask,
 )
+from dawalink.domain.expiry import Zone, days_left, fits, zone_of
+from dawalink.domain.inventory import ListingControl, is_held_back
 from dawalink.domain.numbers import (
     EARLY_RELEASE_DECLINE_MEMORY,
     EARLY_RELEASE_MAX_DAYS,
     MAX_OPEN_EARLY_RELEASE_REQUESTS,
-    NEAR_EXPIRY_MAX_DAYS,
     SAME_PRODUCT_EARLY_RELEASE_WAIT,
 )
 from dawalink.domain.opening_hours import is_open
 from dawalink.domain.orders import OrderSource
-from dawalink.domain.pricing import early_release_suggested_price_lbp
+from dawalink.domain.pickup import pharmacy_pickup_days
+from dawalink.domain.pricing import release_suggested_price_lbp
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.windows import early_release_respond_by
 from dawalink.services import (
@@ -94,25 +96,51 @@ def _move_ask(
 def _candidates(
     tx: Tx, claim: Claim, product: Product
 ) -> tuple[list[AskCandidate], dict[tuple[str, object], InventoryItem]]:
-    """Private boxes of the medicine near the client, as the selection rule sees them (R-E2)."""
+    """Boxes of the medicine that pharmacies near the client keep off their listings, as
+    the selection rule sees them (R-E2).
+
+    Two kinds of box may be asked for (the owner, 2026-11-19, BLD-D44):
+    - one in the early-release zone, 181 to 270 days left (N-3), as always;
+    - one inside the published window that the pharmacy's own rule holds back (N-54).
+      A box the pharmacy paused is never asked for: it took that one off on purpose.
+
+    **Only a box that lasts the client's days of use** from a day the pharmacy accepts
+    (R-F1): a held-back box may have a week left, and asking for it for a month's
+    treatment would end in an offer the client can't accept.
+    """
     location = matching.location_of(tx, claim)
     if location is None:
         return [], {}
     wanted = [product.id]  # never another brand (R-C10)
-    rows = tx.session.execute(
+    found = tx.session.execute(
         select(InventoryItem, Pharmacy)
         .join(Pharmacy, Pharmacy.id == InventoryItem.pharmacy_id)
         .where(
             InventoryItem.product_id.in_(wanted),
             Pharmacy.status == "APPROVED",
             InventoryItem.qty_on_hand - InventoryItem.qty_reserved >= 1,
-            # The early-release zone: 181 to 270 days left (N-3).
-            InventoryItem.expiry_date > tx.today + timedelta(days=NEAR_EXPIRY_MAX_DAYS),
+            InventoryItem.expiry_date >= tx.today,
             InventoryItem.expiry_date <= tx.today + timedelta(days=EARLY_RELEASE_MAX_DAYS),
         )
     ).all()
+    hours = pharmacies.weekly_hours(tx, list({pharmacy.id for _, pharmacy in found}))
+    rows = []
+    for item, pharmacy in found:
+        left = days_left(item.expiry_date, tx.today)
+        zone = zone_of(left)
+        held_back = is_held_back(
+            zone=zone,
+            control=ListingControl(item.listing_control),
+            days_left=left,
+            auto_list_days=pharmacy.auto_list_days,
+        )
+        if zone is not Zone.EARLY_RELEASE and not held_back:
+            continue
+        pickup_days = pharmacy_pickup_days(hours[pharmacy.id], pharmacy.pickup_days, tx.now)
+        if not any(fits(item.expiry_date, day, claim.days_of_use) for day in pickup_days):
+            continue
+        rows.append((item, pharmacy))
     pharmacy_ids = list({pharmacy.id for _, pharmacy in rows})
-    hours = pharmacies.weekly_hours(tx, pharmacy_ids)
     travels = travel.travel_to(tx, location, pharmacy_ids)
     start_of_today = at_beirut(tx.today, time.min)
 
@@ -271,8 +299,10 @@ def request_early_release(
                 "ask_id": str(ask.id),
                 "product": asked_product.moph_name,
                 "units": request.qty,
-                "suggested_price_lbp": early_release_suggested_price_lbp(
-                    asked_product.public_price_lbp
+                "suggested_price_lbp": release_suggested_price_lbp(
+                    asked_product.public_price_lbp,
+                    item.price_override_lbp,
+                    days_left(item.expiry_date, tx.today),
                 ),
                 "respond_by": ask.respond_by.isoformat(),
             },
@@ -321,11 +351,17 @@ def accept_ask(
     claim = needs.lock_claim(tx, request.claim_id)
     ask = _lock_ask(tx, ask_id)
 
+    # Already offered to this client: by another pharmacy's release, or **this very box**,
+    # which its pharmacy listed while the ask was open, so that matching offered it
+    # (BLD-D44). Either way the pharmacy is thanked, and nothing is held twice.
     already_offered = tx.session.execute(
         select(Order.id).where(
             Order.claim_id == claim.id,
             Order.state == "OFFERED",
-            Order.source == OrderSource.EARLY_RELEASE.value,
+            or_(
+                Order.source == OrderSource.EARLY_RELEASE.value,
+                Order.inventory_item_id == item.id,
+            ),
         )
     ).first()
     covered = (

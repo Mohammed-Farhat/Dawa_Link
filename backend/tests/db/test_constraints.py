@@ -260,6 +260,13 @@ class TestPeopleAndPlaces:
         """N-6."""
         refused(db, lambda: make.pharmacy(db, pickup_days=days), "pickup_days_range")
 
+    @pytest.mark.parametrize("days", [-1, 181])
+    def test_a_pharmacy_lists_by_itself_at_0_to_180_days_left(
+        self, db: Connection, days: int
+    ) -> None:
+        """N-54, and never past N-1's 180 days (BLD-D44)."""
+        refused(db, lambda: make.pharmacy(db, auto_list_days=days), "auto_list_days_range")
+
     def test_one_account_runs_one_pharmacy(self, db: Connection) -> None:
         owner = make.user(db, "pharmacist")
         make.pharmacy(db, owner_user_id=owner)

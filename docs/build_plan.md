@@ -1003,6 +1003,44 @@ Rounds 1 and 2 are pushed. The owner then went through the client's side once mo
 
 ---
 
+### After step 9: the owner tries the pharmacy's side (2026-11-19) 🔨
+
+Round 3 of the client's side is pushed. The owner registered a pharmacy, had it approved by his local admin, and uploaded a stock file. Three questions came from it, each asked back with an example (§5, Q63 to Q66; decision log BLD-D44).
+
+| What he asked | What was decided and done |
+|---|---|
+| "Can the pharmacy decide when to put the products in stock… instead of having a fixed expiry for all pharmacies… while also keeping the ability to keep it automatic" | **Each pharmacy decides what it lists.** In Settings: its boxes are listed by themselves when they have 180, 90, 60 or 30 days left, or never. On a box's card: "Not listed yet" with [List now]. Every pharmacy starts at 180, as before. Nothing is listed past 180 days |
+| What the agent may do with a box a pharmacy holds back | It may ask for it, as for a box at 181 to 270 days. **The pharmacy types the price** on [Accept] (his choice), never above the public price; the screen suggests what the box would cost if it were listed |
+| "The pharmacy must rewrite their entire database to match our medicine names… is this correct to do?" | It is how a file is read today: a row needs the Ministry's name. **Left as it is for now** (his choice), as a stated limitation; the planned answer is that DawaLink learns each pharmacy's names, confirmed once by the pharmacist |
+| "Why is there no day with month and year for the expiry?" | There is: a file reads `2027-03-31`, and adding a box by hand has a full date. A month alone is the last day of that month. The hint shows months because Excel rewrites a full date. **No change** (his choice) |
+
+**How it was built, in two stages.** First the rule and [List now] alone, then the whole suite and the free checks: with every pharmacy at 180 the planner stayed exact and the no-AI policy at 133, which shows the evaluation is untouched. Then the asks.
+
+**Found on the way, and fixed:**
+- **The ask's path never checked that a box lasts the client's days.** At 181 days it couldn't matter. A held-back box may have a week left: such a box is no longer asked for (`09` FI-34).
+- **The ask card said "25% off" in its own words,** whatever the suggestion was. It now says the discount the suggestion really is.
+- The stock page said boxes are "listed automatically"; it now says the listing follows the pharmacy's rule. The Listings page is titled "Your boxes near their expiry" (it was "What clients see", above boxes clients don't see), and the Inventory's filter says "Within 6 months".
+- **A pharmacy asked for a box that it then listed itself got "units must be between 1 and…" on [Accept].** Matching had already offered the box to the client. It is now thanked, as when another pharmacy was quicker (`09` FR-34).
+- **An offer at the full public price showed a price and nothing else.** It now says "No discount: the pharmacy offers it at the public price", so the client knows before accepting.
+- Between "paused" and "listed by hand" the API let a box jump; the screens never did. It is refused now.
+
+**Told to the owner, not asked:**
+- Through an ask, a box with few days left can reach a client at up to the public price, because the pharmacy sets it. The client sees the price and the expiry before accepting.
+- A box the pharmacy **paused** is never asked for: it took that one off on purpose. A box its rule merely waits for is.
+- A new rule counts at once and never touches what a client already reserved or was offered.
+- I also made two stock files to try the Inventory with, in `local_test_files/` (ignored by git: they carry the Ministry's medicine names).
+
+**Checks:** the backend suite (2,073 tests); the website's 182 tests; the planner exact on the P-set and the no-AI policy unchanged at 133 (`before_commit`).
+
+**Seen in the real app:**
+- as a demo pharmacy with 46 boxes within 180 days: the five choices in Settings, saved at "30 days"; Listings then said the rule in a line, with 8 boxes listed and 38 "Not listed yet", each saying when clients will see it; [List now] on one made it "Listed by you" with [Back to my rule];
+- **the whole path of an ask, live:** the pharmacy set to "Never"; a demo client asked the assistant for a medicine only that pharmacy holds (two turns on Haiku, under a cent): "no pharmacy has it", then a watch and "I also asked 1 nearby pharmacy to release a box it keeps private"; the pharmacy's card said "You hold 8 that are not listed yet… Suggested 846,000 (40% off) · public price 1,410,395. The price is yours to set"; accepted at the public price; the client's offer showed the price, the expiry and "No discount: the pharmacy offers it at the public price", was accepted, and gave a ticket at that price. The reservation was then cancelled and the pharmacy's rule put back to 180;
+- the eighth migration ran on the local database.
+
+**Not checked:** the pharmacy's Inventory table with the new states in the browser (the same words as Listings, tested in the website's tests); an ask for a box priced by the pharmacy itself, on the screen (the suggestion is tested); the admin's side.
+
+---
+
 ## 4. Left for a later step
 
 **For the agent's final evaluation (slice 6b), seen in the browser on 2026-11-16:** the agent offers quick replies that read like buttons: "Yes, start sourcing" next to the [Start sourcing] card, "Reserve at Pharmacy C" next to a [Reserve] card. A quick reply only sends its words as a message and never acts, so nothing wrong happens; but a client may think they reserved. To add as regression cases and to the prompt's rules then. Also: `03` PS-10 lets a pharmacy change its phone in its settings, while `10` TH-59 says only an admin changes it (the number is shown to clients). Claude follows TH-59, the newer and stricter one, in slice 7e.
@@ -1182,11 +1220,15 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q60 | **Where are the last searches kept?** In the account, on the server; or only in the browser. | **2026-11-18: "In the account, on the server".** Built; `10` RR-22 says what it leaves. |
 | Q61 | **[Directions] showed a destination and no start.** Open Google Maps, which fills the start itself from the client's device (recommended), or keep OpenStreetMap. | **2026-11-18: Google Maps.** Built (BLD-D43); the link still carries only the pharmacy's pin. |
 | Q62 | **Home with several reservations:** all the same dark ticket (recommended), or the first dark and the others smaller but complete. | **2026-11-18: all the same dark ticket.** Built. |
+| Q63 | **Should each pharmacy decide what it lists?** Recommended: one setting (listed by themselves at 30, 60, 90 or 180 days left, or never), [List now] on a box, and the 180-day ceiling kept. | **2026-11-19: "Yes go as you recommend".** Built (BLD-D44). |
+| Q64 | **When the agent asks for a held-back box, who sets the price?** The pharmacy types it, with DawaLink's discount suggested (recommended); or always DawaLink's discount. | **2026-11-19: the pharmacy types it.** Built. |
+| Q65 | **A stock file needs the Ministry's names.** Leave it; accept the Ministry's code alone; or let DawaLink learn each pharmacy's names. | **2026-11-19: "leave it for now".** A stated limitation; learned names are the planned answer. |
+| Q66 | **Show a full-date example in the template and the hint?** | **2026-11-19: "no its okay".** Unchanged. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
 
-**No question waits** (2026-11-18).
+**No question waits** (2026-11-19).
 
 The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070).
 

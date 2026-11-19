@@ -1482,8 +1482,8 @@ export interface paths {
         head?: never;
         /**
          * Change Stock Item
-         * @description A quantity corrected after a sale in the shop, the pharmacy's own price, or a
-         *     pause. Reserved packs are never taken away here (R-U3).
+         * @description A quantity corrected after a sale in the shop, the pharmacy's own price, a pause,
+         *     or [List now]. Reserved packs are never taken away here (R-U3).
          */
         patch: operations["change_stock_item"];
         trace?: never;
@@ -3373,6 +3373,10 @@ export interface components {
         PharmacyProfile: {
             /** Address */
             address: string;
+            /** Auto List Choices */
+            auto_list_choices: number[];
+            /** Auto List Days */
+            auto_list_days: number;
             /** Closes At */
             closes_at: string | null;
             /** District */
@@ -4064,6 +4068,8 @@ export interface components {
         SettingsChange: {
             /** Address */
             address?: string | null;
+            /** Auto List Days */
+            auto_list_days?: number | null;
             /** District Id */
             district_id?: number | null;
             /** Hours */
@@ -4151,6 +4157,8 @@ export interface components {
              * Format: date
              */
             expiry_date: string;
+            /** Held Back */
+            held_back: boolean;
             /**
              * Id
              * Format: uuid
@@ -4158,6 +4166,8 @@ export interface components {
             id: string;
             /** Last Edited At */
             last_edited_at: string | null;
+            /** Listed By Hand */
+            listed_by_hand: boolean;
             /** Paused */
             paused: boolean;
             price: components["schemas"]["StockPrice"];
@@ -4182,6 +4192,8 @@ export interface components {
          *     price.
          */
         StockItemChange: {
+            /** Listed */
+            listed?: boolean | null;
             /** Paused */
             paused?: boolean | null;
             /** Price Override Lbp */

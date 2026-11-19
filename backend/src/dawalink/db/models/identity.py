@@ -173,6 +173,7 @@ class Pharmacy(Base):
     __table_args__ = (
         values_check("status", PharmacyStatus),
         check("pickup_days_range", "pickup_days BETWEEN 1 AND 3"),
+        check("auto_list_days_range", "auto_list_days BETWEEN 0 AND 180"),
         check("pin_in_range", "lat BETWEEN -90 AND 90 AND lon BETWEEN -180 AND 180"),
         Index("ix_pharmacies_status", "status"),
     )
@@ -192,6 +193,9 @@ class Pharmacy(Base):
     location_checked_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, references("users.id"))
     # How many open days ahead a client may choose the pickup day (docs/04 N-6).
     pickup_days: Mapped[int] = mapped_column(SmallInteger, server_default=text("1"))
+    # The pharmacy's own rule: its boxes are listed by themselves when they have this many
+    # days left or fewer; 0: never by themselves (N-54). 180 is the most (N-1).
+    auto_list_days: Mapped[int] = mapped_column(SmallInteger, server_default=text("180"))
     status: Mapped[str] = mapped_column(Text, server_default=text("'PENDING'"))
     info_requested: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     status_reason: Mapped[str | None] = mapped_column(Text)

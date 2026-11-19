@@ -1,6 +1,6 @@
 # DawaLink: User Flows and Screens
 
-**Version:** v4.20 · **Date:** 2026-11-18
+**Version:** v4.21 · **Date:** 2026-11-19
 **Builds on:** `01` v5.1 · `04` v4.1 · ADR-004 · `10`
 **Status:** ✅ validated by the team (2026-10-20). **v4.15:** a pharmacy changes its own phone number, address and pin in its settings (the owner, Q42 and Q45; PS-10); a reply from DawaLink's team is shown as typed (Q46; AS-6); a stock file may carry a `code` column (the owner, Q44; PS-6); the admin's console as built (AS-2 to AS-12; CS-9), with [I picked it up] on an expired reservation (CS-10). Decision log BLD-D33, BLD-D34. **v4.14:** the pharmacy's side as built (PS-1, PS-6, PS-7, PS-10): stock files are CSV only, and after approval a pharmacy's phone is changed by DawaLink's team, like its name (decision log BLD-D32). **v4.13:** no request form and no cart: a sourcing request starts in the chat, from the agent's [Start sourcing] card, and search stays one medicine at a time (CS-5, CS-6, CS-15, CF-2; the owner, decision log BLD-D30). **v4.12:** the agent asks again, only for what an answer left out, until it knows the car, the day and the days of use; it no longer goes on with a guess (AF-5, RF-1; the owner, decision log BLD-D29). **v4.11:** the agent asks **before** it searches and waits for the answer (car or on foot, the day, the days of use), and a profile's home district needs no location question (AF-1, AF-5, RF-1; the owner, decision log BLD-D28, which replaces v4.10's "next to the first options"). **v4.10:** the agent asks whether the client has a car or goes on foot when it doesn't know, and asks for the area when only the home district is known (AF-5; the owner, decision log BLD-D27). **v4.9:** a request that already closed opens again when one of its boxes is marked not available before its 6 hours are over (RF-3; decision log BLD-D21). **v4.8:** another brand is shown only by the assistant, with "ask the pharmacist first" and [Call], never with [Reserve]; search shows only what was searched (CS-6, AF-13, RF-6; decision log BLD-D17). **v4.7:** AF-5 says what happens when a name exists in several districts (decision log BLD-D15), and a client can pick their place on a map (CS-6, BLD-D16). **v4.6:** AF-5 says how a named area works (decision log BLD-D14). **v4.5 applies the pickup-day decision** (decision log §W): the search filter and the reserve sheet offer the pharmacy's allowed pickup days (today or its next open days, 3 at most) instead of "today / tomorrow", and say when a later day would be too late for the box. **v4.4 adds the AI notice** (decision log UI-D14): the chat and the request thread always tell the client they're talking to an AI. **v4.3 applies the v2 design** (`11` v1.1, decision log UI-D13): the tabs are Home · Medicines · Ask · Me; "My medicines" shows one tracker per medicine (requests, reservations and watches together); search shows the medicine once, then one row per pharmacy.
 
@@ -418,7 +418,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 
 > **In short:**
 > - after admin approval, the pharmacy **uploads its inventory with the DawaLink template** and **keeps quantities up to date** (e.g. after a sale in the shop);
-> - near-expiry items are **published automatically** at the system discount (overridable per item);
+> - near-expiry items are **published by the pharmacy's own rule** (by themselves at 30, 60, 90 or 180 days left, or one by one; BLD-D44) at the system discount (overridable per item);
 > - **reservations arrive instantly**: the pharmacy puts the box aside, then presses **[Picked up]** when the client collects it, or **[Not available]** if it isn't there;
 > - it answers **early-release asks** from the agent;
 > - it never sees who the client is.
@@ -487,8 +487,10 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 5. **Quick edit** of a quantity in the table (e.g. after a sale in the shop), and a manual add form where the medicine is chosen from the catalog. Reserved units can't be removed here; use [Not available] on the reservation.
 
 #### PS-7 Listings
-- Live items (the boxes of the inventory that are within 6 months of their expiry): product, batch, days left, available and reserved, price (system tier or override), discount, and whether clients see it now (listed, paused, none left).
-- **[Override price]** (≤ public price, ≥ 0; 0 = donation) · [Back to system price] · **[Pause] / [Resume]**.
+- **The boxes within 6 months of their expiry, and whether clients see each one.** The page says the pharmacy's own rule in a line ("a box is listed by itself when it has 60 days left or fewer"), with the way to change it (PS-10; the owner, 2026-11-19, BLD-D44).
+- Each box: product, batch, days left, available and reserved, price (system tier or override), discount, and its state: **Listed**, **Listed by you**, **Not listed yet** (the rule waits for it: "clients will see it when it has 60 days left, or now if you list it"), **Paused**, **None left**.
+- **[Override price]** (≤ public price, ≥ 0; 0 = donation) · [Back to system price].
+- **One way out of each state:** [List now] on a box the rule holds back · [Back to my rule] on a box listed by hand · [Pause] / [Resume] on the others.
 - The system tiers are shown read-only: 25% / 40% / 60%.
 
 #### PS-9 Early-release asks
@@ -496,7 +498,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 ┌────────────────────────────────────────────────────┐
 │ A client needs 2 × Concor 5mg · 30 tabs today      │
 │ You have (private): 5 · batch X9 · exp 03 Jun 2027 │
-│ Release [ 2 ▾ ] at [ 436,000 LBP ] (suggested −25%; public 581,750) │
+│ Release [ 2 ▾ ] at [ 436,000 LBP ] (suggested 25% off; public 581,750) │
 │ Answer within 1h 42m                               │
 │ [ Accept & reserve ]   [ Decline ▾ ]               │
 └────────────────────────────────────────────────────┘
@@ -506,7 +508,7 @@ All are templates; the LLM never writes notifications. *(CN-2, CN-4 and CN-13 we
 - **Decline:** a reason from a list, no penalty. **No answer within 2 h** → expired.
 
 #### PS-10 Settings
-Weekly opening hours, **pickup time (1–3 days)**, **phone number**, **address, district and map pin**, change password. The pharmacy changes its phone and its place itself (the owner, 2026-11-16, Q42 and Q45): a new number is checked like the first one; a new address or pin shows to clients at once, and DawaLink's team then looks at the pin (nothing waits for that). Name and license are shown, and changed only by an admin (`10` TM-D2, TH-59; decision log BLD-D33).
+Weekly opening hours, **pickup time (1–3 days)**, **when its boxes are listed** (by themselves at 30, 60, 90 or 180 days left, or never: it then lists each box itself; BLD-D44), **phone number**, **address, district and map pin**, change password. The pharmacy changes its phone and its place itself (the owner, 2026-11-16, Q42 and Q45): a new number is checked like the first one; a new address or pin shows to clients at once, and DawaLink's team then looks at the pin (nothing waits for that). Name and license are shown, and changed only by an admin (`10` TM-D2, TH-59; decision log BLD-D33).
 
 #### PS-11 Notifications
 In-app list (§2.4).
@@ -514,7 +516,7 @@ In-app list (§2.4).
 ### 2.3 Main flows
 | ID | Flow |
 |---|---|
-| PF-1 | Register → pending → approved (PN-2) → download the template → upload → summary → [Apply] → eligible items go live. |
+| PF-1 | Register → pending → approved (PN-2) → download the template → upload → summary → [Apply] → the boxes its rule covers go live (every box within 180 days, unless it chose otherwise; BLD-D44). |
 | PF-2 | Keep stock current: quick-edit quantities after shop sales, or re-upload → summary → [Apply]; reserved stock protected. |
 | PF-3 | New reservation (PN-4) → put the box aside → the client comes and shows the number → [Picked up]; or [Not available]. |
 | PF-4 | Early-release ask (PN-7) → Accept (quantity, price) or Decline. |
@@ -556,7 +558,7 @@ In-app list (§2.4).
 | P-D1 | License document upload | **postponed** (§K) |
 | P-D2 | Inventory only after approval | ✅ |
 | P-D3 | ~~Partial confirmation~~ → partial **[Not available]** | ✅ (review #2) |
-| P-D4 | Auto-publish | ✅ **always on** (§K) |
+| P-D4 | Auto-publish | ✅ **the pharmacy's choice** since 2026-11-19 (BLD-D44): by itself at 30, 60, 90 or 180 days left, or by hand. It was "always on" (§K) |
 | P-D5 | One account per pharmacy | ✅ |
 | P-D6 | No client identity | ✅ |
 | P-D7 | Free listings (price 0) | ✅ |

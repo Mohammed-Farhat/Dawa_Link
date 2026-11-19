@@ -28,6 +28,10 @@ class PharmacyProfile(Out):
     license_number: str
     location: Pin
     pickup_days: int
+    # Its own listing rule: its boxes are listed by themselves when they have this many
+    # days left or fewer; 0: never by themselves. One of `auto_list_choices` (N-54).
+    auto_list_days: int
+    auto_list_choices: list[int]
     # Its weekly schedule as it was entered, for the forms.
     hours: list[OpeningRange]
     # Its opening hours for the next 7 days, today first.
@@ -59,6 +63,9 @@ class SettingsChange(In):
     DawaLink's team."""
 
     pickup_days: int | None = Field(default=None, ge=1, le=3)
+    # When its boxes are listed by themselves: at this many days left or fewer, one of
+    # `auto_list_choices`. 0: never by themselves (docs/04 N-54).
+    auto_list_days: int | None = Field(default=None, ge=0, le=180)
     phone: str | None = Field(default=None, min_length=1, max_length=30)
     address: str | None = Field(default=None, min_length=1, max_length=300)
     district_id: DistrictId | None = None

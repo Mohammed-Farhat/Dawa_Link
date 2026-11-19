@@ -8,7 +8,16 @@ from dawalink.domain.expiry import Zone
 
 
 class ListingControl(StrEnum):
+    """What the pharmacy decided for one box (SM-3).
+
+    - `LIVE`: it follows the pharmacy's own rule: listed by itself once it has the
+      pharmacy's number of days left, or fewer (N-54).
+    - `LISTED`: the pharmacy listed this box by hand, whatever its rule says.
+    - `PAUSED`: the pharmacy took it off the listings.
+    """
+
     LIVE = "LIVE"
+    LISTED = "LISTED"
     PAUSED = "PAUSED"
 
 
@@ -19,18 +28,47 @@ class NotEnoughStock(Exception):
         self.available = available
 
 
+def is_listed(*, control: ListingControl, days_left: int, auto_list_days: int) -> bool:
+    """Whether the pharmacy has this box on its listings: by its own rule, or by hand.
+
+    `auto_list_days` is the pharmacy's choice (N-54): 0 means it lists nothing by itself.
+    """
+    if control is ListingControl.LISTED:
+        return True
+    return control is ListingControl.LIVE and auto_list_days > 0 and days_left <= auto_list_days
+
+
+def is_held_back(
+    *, zone: Zone, control: ListingControl, days_left: int, auto_list_days: int
+) -> bool:
+    """A box that could be listed today and isn't, because the pharmacy's own rule waits
+    for it to be nearer its expiry. [List now] lists it; the agent may ask for it (R-E2).
+    A paused box is not held back: the pharmacy took it off on purpose."""
+    return (
+        zone is Zone.NEAR_EXPIRY
+        and control is ListingControl.LIVE
+        and not is_listed(control=control, days_left=days_left, auto_list_days=auto_list_days)
+    )
+
+
 def is_visible(
     *,
     zone: Zone,
     control: ListingControl,
+    days_left: int,
+    auto_list_days: int,
     pharmacy_status: PharmacyStatus,
     qty_available: int,
     controlled: bool,
 ) -> bool:
-    """The only definition of "visible to clients" (INV-16)."""
+    """The only definition of "visible to clients" (INV-16).
+
+    A box is never visible with more than 180 days left (N-1), whatever the pharmacy
+    chose: inside that, the pharmacy decides (the owner, 2026-11-19, BLD-D44).
+    """
     return (
         zone is Zone.NEAR_EXPIRY
-        and control is ListingControl.LIVE
+        and is_listed(control=control, days_left=days_left, auto_list_days=auto_list_days)
         and pharmacy_status is PharmacyStatus.APPROVED
         and qty_available >= 1
         and not controlled
