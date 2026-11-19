@@ -1,0 +1,12 @@
+Observed execution failure, preserved from the command tool result:
+
+Command (repository root):
+python3 eval/checkpoints/2026-11-18-readiness/check.py partial-review backend python ../eval/checkpoints/2026-11-18-readiness/review_partial.py
+
+The helper succeeded and wrote evidence/partial-review.json. The wrapper then
+attempted exclusive creation of its metadata file at that same name and exited 1:
+FileExistsError: [Errno 17] File exists: '.../evidence/partial-review.json'
+
+Fix: helper output changed to reviewed-answers.json. The original export and
+partial-review.txt remain. The retry used name partial-review-r2 and exited 0.
+No evaluation result or prior evidence was overwritten.

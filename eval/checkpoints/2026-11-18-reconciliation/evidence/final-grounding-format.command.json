@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "src/dawalink/evals/grounding.py",
+    "tests/unit/evals/test_grounding.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.052
+}

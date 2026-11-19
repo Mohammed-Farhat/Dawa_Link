@@ -1,0 +1,10 @@
+{
+  "command": [
+    "pytest",
+    "tests/unit/evals/test_grounding.py",
+    "-q"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 3.645
+}

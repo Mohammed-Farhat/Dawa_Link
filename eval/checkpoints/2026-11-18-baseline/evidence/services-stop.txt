@@ -1,0 +1,4 @@
+ Container dawalink-eval-20261118-postgres-1 Stopping 
+ Container dawalink-eval-20261118-mailpit-1 Stopping 
+ Container dawalink-eval-20261118-postgres-1 Stopped 
+ Container dawalink-eval-20261118-mailpit-1 Stopped 

@@ -1,0 +1,10 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "tests/agent/test_eval_multiturn.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.014
+}

@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python",
+    "../eval/checkpoints/2026-11-18-reconciliation/browser_fixture.py",
+    "clarify"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 2.365
+}

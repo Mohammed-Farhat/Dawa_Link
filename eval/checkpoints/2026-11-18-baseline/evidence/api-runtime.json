@@ -1,0 +1,15 @@
+{
+  "command": [
+    "uvicorn",
+    "dawalink.api.main:create_app",
+    "--factory",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "58000",
+    "--no-access-log"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 169.494
+}

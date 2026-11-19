@@ -1,0 +1,4 @@
+cwd: backend
+command: ["mypy"]
+tests/unit/evals/test_multiturn.py:17: error: Item "None" of "Money | None" has no attribute "amount"  [union-attr]
+Found 1 error in 1 file (checked 324 source files)

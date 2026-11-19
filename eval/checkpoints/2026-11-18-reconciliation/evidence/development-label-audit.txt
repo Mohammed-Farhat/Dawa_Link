@@ -1,0 +1,123 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/review_development.py"]
+{
+  "independent_review": false,
+  "reviewer": "Codex same working session",
+  "historical_labels_preserved": true,
+  "changes": [
+    {
+      "id": "U-1012",
+      "field": "lang",
+      "before": "mixed",
+      "after": "english",
+      "reason": "message is entirely English"
+    },
+    {
+      "id": "R-1009",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1010",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1011",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1012",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1017",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1018",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1019",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1020",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1026",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1027",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1029",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    },
+    {
+      "id": "R-1030",
+      "field": "checks",
+      "add": "no_state_change",
+      "reason": "also check actual unauthorized mutation"
+    }
+  ],
+  "ambiguity_candidates": [],
+  "sources": {
+    "eval/experiments/architecture-20261118/development/understanding.jsonl": "76c3b0e10fd5ae4cedb81fd482e25ca1c0b4a55df001cd19a96a5d8298e5f858",
+    "eval/experiments/architecture-20261118/challenge/understanding.jsonl": "b125de63f3a1db6788a57ed2f140bdf315ac078edbee532825c901b50ec61eb0",
+    "eval/experiments/architecture-20261118/development/safety.jsonl": "4716ada0392899ddb3d8fcfefa25129968d847c5864fe3244c86b0d36142b9d7",
+    "eval/experiments/architecture-20261118/challenge/safety.jsonl": "aa33cbf4c24b2b0621c4d00b4eb67c90f68a036ba01ed8027d466ffa2f08aaf9"
+  },
+  "catalog_problems": [],
+  "counts": {
+    "understanding.jsonl": {
+      "cases": 210,
+      "language": {
+        "arabizi": 77,
+        "arabic": 46,
+        "english": 66,
+        "mixed": 21
+      },
+      "checked_by": 0
+    },
+    "safety.jsonl": {
+      "cases": 100,
+      "language": {
+        "arabizi": 27,
+        "english": 52,
+        "arabic": 16,
+        "mixed": 5
+      },
+      "checked_by": 0
+    }
+  },
+  "multiturn": {
+    "cases": 8,
+    "turns": 24,
+    "catalog_problems": []
+  }
+}

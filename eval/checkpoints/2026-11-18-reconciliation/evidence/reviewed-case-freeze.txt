@@ -1,0 +1,6 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/freeze_cases.py"]
+understanding.jsonl 210 schema valid
+safety.jsonl 100 schema valid
+multiturn.jsonl 8 schema valid
+Separate reviewed-case freeze saved; original dataset-freeze.json unchanged

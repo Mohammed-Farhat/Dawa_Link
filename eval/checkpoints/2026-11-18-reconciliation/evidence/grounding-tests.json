@@ -1,0 +1,9 @@
+{
+  "command": [
+    "pytest",
+    "tests/unit/evals"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 4.783
+}

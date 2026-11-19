@@ -1,0 +1,9 @@
+{
+  "command": [
+    "npm",
+    "test"
+  ],
+  "cwd": "frontend",
+  "exit_code": 0,
+  "seconds": 8.787
+}

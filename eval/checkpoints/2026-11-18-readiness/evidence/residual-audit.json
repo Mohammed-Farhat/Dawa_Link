@@ -1,0 +1,32 @@
+{
+  "wrong_final_quantity_accepted": true,
+  "scanned_run_files": 25,
+  "privacy_findings": [
+    {
+      "file": "eval/experiments/architecture-20261118/runs/20261118T122213_e474d1ac62d5/completion.json",
+      "kind": "a phone number",
+      "match": "05.738193",
+      "context": "}, \"ended\": \"2026-11-18T12:24:05.738193+00:00\" }"
+    },
+    {
+      "file": "eval/experiments/architecture-20261118/runs/20261118T122259_955402f02a64/completion.json",
+      "kind": "a phone number",
+      "match": "05.422811",
+      "context": "}, \"ended\": \"2026-11-18T12:24:05.422811+00:00\" }"
+    }
+  ],
+  "ledger": [
+    {
+      "status": "settled",
+      "calls": 75,
+      "held_microusd": 45449,
+      "actual_microusd": 45449
+    },
+    {
+      "status": "uncertain",
+      "calls": 6,
+      "held_microusd": 3870000,
+      "actual_microusd": null
+    }
+  ]
+}

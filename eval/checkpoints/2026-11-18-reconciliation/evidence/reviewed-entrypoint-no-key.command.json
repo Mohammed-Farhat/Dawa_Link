@@ -1,0 +1,21 @@
+{
+  "command": [
+    "env",
+    "EVAL_DATASET=reviewed",
+    "python",
+    "-m",
+    "dawalink.evals.experiment",
+    "multiturn",
+    "--model",
+    "claude-haiku-5-5",
+    "--effort",
+    "medium",
+    "--max-usd",
+    "0.01",
+    "--limit",
+    "1"
+  ],
+  "cwd": "backend",
+  "exit_code": 1,
+  "seconds": 2.851
+}

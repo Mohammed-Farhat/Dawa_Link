@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/browser_fixture.py", "clarify"]
+clarify phase selected

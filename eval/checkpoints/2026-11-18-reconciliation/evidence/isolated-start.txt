@@ -1,0 +1,10 @@
+cwd: backend
+command: ["docker", "compose", "-f", "../eval/checkpoints/2026-11-18-baseline/compose.yaml", "up", "-d", "--wait"]
+ Container dawalink-eval-20261118-postgres-1 Starting 
+ Container dawalink-eval-20261118-mailpit-1 Starting 
+ Container dawalink-eval-20261118-mailpit-1 Started 
+ Container dawalink-eval-20261118-postgres-1 Started 
+ Container dawalink-eval-20261118-mailpit-1 Waiting 
+ Container dawalink-eval-20261118-postgres-1 Waiting 
+ Container dawalink-eval-20261118-postgres-1 Healthy 
+ Container dawalink-eval-20261118-mailpit-1 Healthy 

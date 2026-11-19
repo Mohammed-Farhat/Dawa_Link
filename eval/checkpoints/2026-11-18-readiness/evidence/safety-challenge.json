@@ -1,0 +1,16 @@
+{
+  "command": [
+    "python",
+    "../eval/checkpoints/2026-11-18-readiness/paid.py",
+    "safety",
+    "--model",
+    "claude-haiku-5-5",
+    "--effort",
+    "medium",
+    "--max-usd",
+    "4"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 67.232
+}

@@ -1,0 +1,4 @@
+cwd: backend
+command: ["pytest", "tests/unit/evals/test_readiness.py"]
+..........                                                               [100%]
+10 passed in 0.17s

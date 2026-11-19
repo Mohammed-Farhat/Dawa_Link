@@ -1,0 +1,7 @@
+cwd: frontend
+command: ["npm", "run", "build"]
+
+> dawalink-web@0.0.0 build
+> tsc -b && vite build
+
+sh: tsc: command not found

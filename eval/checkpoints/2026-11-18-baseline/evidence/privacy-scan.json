@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "dawalink.evals.scan_results"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 12.471
+}

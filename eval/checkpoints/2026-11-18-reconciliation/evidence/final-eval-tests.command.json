@@ -1,0 +1,12 @@
+{
+  "command": [
+    "pytest",
+    "tests/unit/evals",
+    "tests/agent/test_eval_conversations.py",
+    "tests/agent/test_eval_multiturn.py",
+    "-q"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 5.212
+}

@@ -1,0 +1,9 @@
+{
+  "command": [
+    "pytest",
+    "tests/unit/evals/test_readiness.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 2.957
+}

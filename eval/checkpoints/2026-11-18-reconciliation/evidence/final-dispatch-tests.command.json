@@ -1,0 +1,12 @@
+{
+  "command": [
+    "pytest",
+    "tests/unit/evals/test_readiness.py",
+    "tests/unit/evals/test_multiturn.py",
+    "tests/unit/evals/test_grounding.py",
+    "-q"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 3.241
+}

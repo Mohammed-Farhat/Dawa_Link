@@ -1,0 +1,43 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/audit_events.py"]
+{
+  "shared_conditional_draws": [
+    {
+      "a": "search",
+      "b": "rules",
+      "shared_draws": 105,
+      "different_shared_values": 0,
+      "only_a": 307,
+      "only_b": 496
+    },
+    {
+      "a": "search",
+      "b": "rules-asking",
+      "shared_draws": 105,
+      "different_shared_values": 0,
+      "only_a": 307,
+      "only_b": 542
+    },
+    {
+      "a": "rules",
+      "b": "rules-asking",
+      "shared_draws": 547,
+      "different_shared_values": 0,
+      "only_a": 54,
+      "only_b": 100
+    }
+  ],
+  "initial_inputs_identical": true,
+  "code_hashes_identical": true,
+  "actual_arrivals_identical": true,
+  "ledger_call_rows_unchanged": true,
+  "known_spend_microusd": 45449,
+  "committed_microusd": 3915449,
+  "limitations": [
+    "One seed; conditional event sets depend on contender actions.",
+    "No paid current-agent run; this is an infrastructure audit."
+  ]
+}
+search 20261118T173120_8802618a6095 603 events, 180 arrivals, 177 / 241 units
+rules 20261118T173119_c88ce825ede3 781 events, 180 arrivals, 133 / 241 units
+rules-asking 20261118T173119_bde18996e9e1 827 events, 180 arrivals, 133 / 241 units

@@ -1,0 +1,6 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/final_audit.py"]
+Paired saved parameters and reconstructed initial stock/demand/arrivals: equal
+Wrong final quantity accepted: True (remaining defect)
+New run files scanned: 25 heuristic findings: 2
+Ledger: [{"status": "settled", "calls": 75, "held_microusd": 45449, "actual_microusd": 45449}, {"status": "uncertain", "calls": 6, "held_microusd": 3870000, "actual_microusd": null}]

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "--check",
+    "."
+  ],
+  "cwd": "backend",
+  "exit_code": 1,
+  "seconds": 0.061
+}

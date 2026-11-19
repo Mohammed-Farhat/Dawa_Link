@@ -1,0 +1,9 @@
+{
+  "command": [
+    "python",
+    "../eval/checkpoints/2026-11-18-readiness/paired_free.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 181.376
+}

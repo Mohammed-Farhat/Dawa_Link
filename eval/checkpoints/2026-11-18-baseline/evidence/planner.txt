@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "-m", "dawalink.evals.plan_set"]
+50 baskets, 200 rankings: all exact

@@ -1,0 +1,4 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/verify_preservation.py"]
+Historical run files verified: 35
+Handoff checksum unchanged; current source/input hashes saved

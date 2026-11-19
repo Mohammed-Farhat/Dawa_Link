@@ -1,0 +1,15 @@
+cwd: frontend
+command: ["npm", "test", "--", "--run", "src/features/client/ClientExtras.test.tsx", "-t", "Logging"]
+
+> dawalink-web@0.0.0 test
+> vitest run --run src/features/client/ClientExtras.test.tsx -t Logging
+
+
+ RUN  v5.1.0 /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 15 skipped (17)
+   Start at  16:09:10
+   Duration  1.24s (environment 39%, import 35%, tests 12%, setup 7%, transform 7%)
+

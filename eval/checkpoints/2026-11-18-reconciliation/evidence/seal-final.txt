@@ -1,0 +1,6 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/seal_final.py"]
+Original run files verified: 35
+Agent/prompts/historical results/handoff preserved; ledger call rows unchanged.
+Configured credential scan passed; privacy candidates: [{"file": "eval/experiments/architecture-20261118/runs/20261118T122213_e474d1ac62d5/completion.json", "what": "a phone number", "candidate": "05.738193", "disposition": "timestamp false positive"}, {"file": "eval/experiments/architecture-20261118/runs/20261118T122259_955402f02a64/completion.json", "what": "a phone number", "candidate": "05.422811", "disposition": "timestamp false positive"}]
+Final source/input and all immutable run hashes saved.

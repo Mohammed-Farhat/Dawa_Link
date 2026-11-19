@@ -1,0 +1,7 @@
+cwd: frontend
+command: ["npm", "test"]
+
+> dawalink-web@0.0.0 test
+> vitest run
+
+sh: vitest: command not found

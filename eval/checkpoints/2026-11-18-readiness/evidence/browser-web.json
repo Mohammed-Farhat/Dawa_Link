@@ -1,0 +1,16 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "dev",
+    "--",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "55173",
+    "--strictPort"
+  ],
+  "cwd": "frontend",
+  "exit_code": 143,
+  "seconds": 1227.499
+}

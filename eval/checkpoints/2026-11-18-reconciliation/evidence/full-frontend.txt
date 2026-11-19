@@ -1,0 +1,23 @@
+cwd: frontend
+command: ["npm", "test"]
+
+> dawalink-web@0.0.0 test
+> vitest run
+
+
+ RUN  v5.1.0 /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/frontend
+
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: navigation to another Document
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+
+ Test Files  13 passed (13)
+      Tests  153 passed (153)
+   Start at  16:14:25
+   Duration  8.14s (tests 58%, import 19%, environment 18%, setup 3%, transform 3%)
+

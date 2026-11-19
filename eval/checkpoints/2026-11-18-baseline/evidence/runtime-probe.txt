@@ -1,0 +1,6 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-baseline/runtime_probe.py"]
+http://127.0.0.1:58000/api/v1/health 200
+http://127.0.0.1:55173 200
+Synthetic client login: 200 token present: True
+Mail catcher count: 1

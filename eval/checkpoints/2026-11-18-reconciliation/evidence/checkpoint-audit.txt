@@ -1,0 +1,40 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/audit_checkpoint.py"]
+{
+  "paired_inputs_identical": true,
+  "paired_code_hashes_identical": true,
+  "ledger_calls_unchanged": true,
+  "ledger_totals": {
+    "settled_calls": 75,
+    "uncertain_calls": 6,
+    "actual_microusd": 45449,
+    "committed_microusd": 3915449
+  },
+  "agent_diff_exit": 0,
+  "git_head": "1e17db0ea522622caaf8da41d60df4ef152ccec3",
+  "git_branch": "test/agent-evaluation",
+  "handoff_sha256": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13",
+  "old_integrity_structure": [
+    "reference_commit",
+    "branch",
+    "handoff_sha256",
+    "agent_frontend_historical_results_unchanged",
+    "diff_whitespace_check"
+  ],
+  "experiment_privacy_scan": {
+    "files": 46,
+    "candidates": 2,
+    "findings": [
+      {
+        "file": "eval/experiments/architecture-20261118/runs/20261118T122213_e474d1ac62d5/completion.json",
+        "what": "a phone number",
+        "text": "05.738193"
+      },
+      {
+        "file": "eval/experiments/architecture-20261118/runs/20261118T122259_955402f02a64/completion.json",
+        "what": "a phone number",
+        "text": "05.422811"
+      }
+    ]
+  }
+}

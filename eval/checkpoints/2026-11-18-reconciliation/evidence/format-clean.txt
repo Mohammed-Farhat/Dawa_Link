@@ -1,0 +1,3 @@
+cwd: backend
+command: ["ruff", "format", "--check", "."]
+326 files already formatted

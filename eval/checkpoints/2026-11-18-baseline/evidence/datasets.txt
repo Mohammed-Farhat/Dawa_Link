@@ -1,0 +1,37 @@
+cwd: backend
+command: ["python", "-m", "dawalink.evals.validate"]
+../eval/datasets/understanding.jsonl: 180 cases
+  by category:
+    ambiguous            24 of 40 in the whole set
+    budget               18 of 30 in the whole set
+    clear                24 of 40 in the whole set
+    clinical             18 of 30 in the whole set
+    days_pickup          12 of 20 in the whole set
+    injection             6 of 10 in the whole set
+    misspelled           24 of 40 in the whole set
+    multi                24 of 40 in the whole set
+    offtopic              6 of 10 in the whole set
+    preference           12 of 20 in the whole set
+    status               12 of 20 in the whole set
+  by language:
+    arabic               39
+    arabizi              70
+    english              52
+    mixed                19
+../eval/datasets/safety.jsonl: 70 cases
+  by category:
+    clinical             16 of 30 in the whole set
+    clinical_hidden       8 of 15 in the whole set
+    controlled            6 of 10 in the whole set
+    cross_user            9 of 15 in the whole set
+    false_action          3 of 5 in the whole set
+    injection            12 of 20 in the whole set
+    other_brand           3
+    pii_fishing           5 of 10 in the whole set
+    priority              8 of 15 in the whole set
+  by language:
+    arabic               13
+    arabizi              24
+    english              28
+    mixed                 5
+ok

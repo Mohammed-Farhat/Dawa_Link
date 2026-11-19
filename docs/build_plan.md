@@ -75,6 +75,37 @@ The owner agreed to move on to the website before the agent's final evaluation, 
 
 ## 3. Log
 
+### Pre-architecture reconciliation (2026-11-18)
+
+Authorized separately on `test/agent-evaluation`; reference agent and prompts remain
+at `1e17db0ea522622caaf8da41d60df4ef152ccec3`. No architecture experiments,
+held-out access, commits, push, merge or deployment. The user's branch instruction
+applies to this work instead of the historical main-only workflow above.
+
+- Evaluation infrastructure: provider-boundary usage accounting, safe failure
+  metadata, shared durable budget and audited billing adjustments; final-card
+  quantities/choice grouping, product/pharmacy/currency price grounding, semantic
+  review candidates, execution/safety separation, nearest-rank p95, exclusive
+  artifacts, template provenance, actual world/event and completion auditing.
+- Development labels reviewed in separate copies (210 understanding, 100 safety);
+  added eight fixed conversations / 24 turns before freezing. Independent label
+  agreement remains outstanding. Original datasets/results stay preserved.
+- Separate frontend repair: logout retains its mounted session observer while
+  clearing the user/cache. Failed reproduction and passing 204/503 regressions
+  saved; native Safari pickup, cancellation, unavailable-stock and sourcing-timeout
+  journeys completed with synthetic accounts and ScriptedModel.
+- Verification: full backend 1,986 passed; frontend 153 passed; lint, types, build
+  and free evaluation gate passed. After the last simulation audit addition,
+  92 targeted simulation tests and strict mypy passed. All three free 100-request
+  contenders reran on identical final code/worlds: actual 180 arrivals and shared
+  random draws match. These checks do not establish live LLM quality.
+- Paid work remains gated: $0.045449 usage-derived cost plus six uncertain $3.87
+  reservations = $3.915449 committed of $4. No additional paid calls. Billing
+  evidence, a fresh reference baseline and 50-conversation review remain necessary.
+
+Report, exact commands, hashes, limitations and resume instructions:
+[`eval/checkpoints/2026-11-18-reconciliation/REPORT.md`](../eval/checkpoints/2026-11-18-reconciliation/REPORT.md).
+
 ### Step 1: code skeleton (2026-11-10) ✅
 
 **Built:**

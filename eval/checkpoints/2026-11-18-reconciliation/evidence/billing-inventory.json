@@ -1,0 +1,73 @@
+{
+  "uncertain_calls": [
+    {
+      "id": "1e77799c15ec46d180396c329072caa3",
+      "run": "20261118T122213_e474d1ac62d5",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:04"
+    },
+    {
+      "id": "15574c9f6dc445c2a7027f77db57b75a",
+      "run": "20261118T122259_955402f02a64",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:05"
+    },
+    {
+      "id": "1dd6b76421c84e9d896357f9d4a597cc",
+      "run": "20261118T122208_1c154071862e",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:06"
+    },
+    {
+      "id": "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "run": "20261118T122218_796e9bf2b7bb",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:06"
+    },
+    {
+      "id": "68966be19b144896b7e6a2b1c5286928",
+      "run": "20261118T122213_e474d1ac62d5",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:20"
+    },
+    {
+      "id": "63c4a74e43a24681869c4d79e7733058",
+      "run": "20261118T122259_955402f02a64",
+      "stage": "baseline",
+      "held": 645000,
+      "actual": null,
+      "status": "uncertain",
+      "created": "2026-11-18 12:23:36"
+    }
+  ],
+  "totals": [
+    {
+      "status": "settled",
+      "calls": 75,
+      "committed_microusd": 45449,
+      "actual_microusd": 45449
+    },
+    {
+      "status": "uncertain",
+      "calls": 6,
+      "committed_microusd": 3870000,
+      "actual_microusd": null
+    }
+  ],
+  "billing_evidence": "not available; no holds released"
+}

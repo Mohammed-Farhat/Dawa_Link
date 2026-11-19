@@ -1,0 +1,32 @@
+cwd: frontend
+command: ["npm", "run", "build"]
+
+> dawalink-web@0.0.0 build
+> tsc -b && vite build
+
+vite v8.3.7 building client environment for production...
+transforming...
+✓ 1018 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                 0.62 kB │ gzip:   0.36 kB
+dist/assets/readex-pro-vietnamese-wght-normal-Do5Nl5oc.woff2   11.22 kB
+dist/assets/readex-pro-arabic-wght-normal-DiwT_uOQ.woff2       22.86 kB
+dist/assets/readex-pro-latin-ext-wght-normal-CsYMu49W.woff2    27.68 kB
+dist/assets/readex-pro-latin-wght-normal--ekFhJJC.woff2        31.42 kB
+dist/assets/PinMap-vh-t_kPv.css                                15.09 kB │ gzip:   6.36 kB
+dist/assets/index-D52v2Uxi.css                                276.08 kB │ gzip:  41.63 kB
+dist/assets/RegisterPharmacyPage-uf2ZoAUB.js                    2.59 kB │ gzip:   1.21 kB
+dist/assets/details-Z5Sm9uHU.js                                 5.66 kB │ gzip:   1.98 kB
+dist/assets/PharmacyPortal-RNQxx2IB.js                         34.54 kB │ gzip:   8.55 kB
+dist/assets/en-BIVxqwt9.js                                     47.36 kB │ gzip:  17.64 kB
+dist/assets/AdminPortal-BLoG5_M9.js                            49.38 kB │ gzip:  10.58 kB
+dist/assets/PinMap-H6jG68YG.js                                150.35 kB │ gzip:  44.11 kB
+dist/assets/index-SFl3NWiD.js                                 535.97 kB │ gzip: 161.68 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 486ms

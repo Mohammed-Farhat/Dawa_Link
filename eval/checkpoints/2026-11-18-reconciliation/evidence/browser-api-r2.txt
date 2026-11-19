@@ -1,0 +1,8 @@
+cwd: backend
+command: ["uvicorn", "--app-dir", "../eval/checkpoints/2026-11-18-reconciliation", "browser_fixture:make", "--factory", "--host", "127.0.0.1", "--port", "58000", "--no-access-log"]
+{"event": "Started server process [25552]", "level": "info", "timestamp": "2026-11-18T14:24:55.818191Z"}
+{"event": "Waiting for application startup.", "level": "info", "timestamp": "2026-11-18T14:24:55.818260Z"}
+{"event": "Application startup complete.", "level": "info", "timestamp": "2026-11-18T14:24:55.818886Z"}
+{"event": "[Errno 48] error while attempting to bind on address ('127.0.0.1', 58000): address already in use", "level": "error", "timestamp": "2026-11-18T14:24:55.820143Z"}
+{"event": "Waiting for application shutdown.", "level": "info", "timestamp": "2026-11-18T14:24:55.820185Z"}
+{"event": "Application shutdown complete.", "level": "info", "timestamp": "2026-11-18T14:24:55.820432Z"}

@@ -1,0 +1,6 @@
+Attempted via mcp__cua_repl.js:
+await cua.createBrowserTab('iab', 'http://localhost:55173', {visible:true});
+Result: "The browser access host is unavailable".
+No complete browser journey was executed. Component/API tests do not substitute
+for browser end-to-end evidence. Paid-provider-disabled chat also requires a
+scripted browser-test model before the complete free chat journey can run.

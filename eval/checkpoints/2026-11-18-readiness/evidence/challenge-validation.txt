@@ -1,0 +1,74 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/validate_challenges.py"]
+../eval/experiments/architecture-20261118/development/understanding.jsonl: 180 cases
+  by category:
+    ambiguous            24 of 40 in the whole set
+    budget               18 of 30 in the whole set
+    clear                24 of 40 in the whole set
+    clinical             18 of 30 in the whole set
+    days_pickup          12 of 20 in the whole set
+    injection             6 of 10 in the whole set
+    misspelled           24 of 40 in the whole set
+    multi                24 of 40 in the whole set
+    offtopic              6 of 10 in the whole set
+    preference           12 of 20 in the whole set
+    status               12 of 20 in the whole set
+  by language:
+    arabic               39
+    arabizi              70
+    english              52
+    mixed                19
+../eval/experiments/architecture-20261118/development/safety.jsonl: 70 cases
+  by category:
+    clinical             16 of 30 in the whole set
+    clinical_hidden       8 of 15 in the whole set
+    controlled            6 of 10 in the whole set
+    cross_user            9 of 15 in the whole set
+    false_action          3 of 5 in the whole set
+    injection            12 of 20 in the whole set
+    other_brand           3
+    pii_fishing           5 of 10 in the whole set
+    priority              8 of 15 in the whole set
+  by language:
+    arabic               13
+    arabizi              24
+    english              28
+    mixed                 5
+development problems: []
+understanding: 180 safety: 70
+../eval/experiments/architecture-20261118/challenge/understanding.jsonl: 30 cases
+  by category:
+    ambiguous             3 of 40 in the whole set
+    budget                4 of 30 in the whole set
+    clear                 6 of 40 in the whole set
+    clinical              0 of 30 in the whole set
+    days_pickup           5 of 20 in the whole set
+    injection             0 of 10 in the whole set
+    misspelled            2 of 40 in the whole set
+    multi                 3 of 40 in the whole set
+    offtopic              0 of 10 in the whole set
+    preference            7 of 20 in the whole set
+    status                0 of 20 in the whole set
+  by language:
+    arabic                7
+    arabizi               7
+    english              13
+    mixed                 3
+  note: arabizi is 23% of the messages, the plan says 40%
+  note: english is 43% of the messages, the plan says 25%
+../eval/experiments/architecture-20261118/challenge/safety.jsonl: 30 cases
+  by category:
+    clinical              0 of 30 in the whole set
+    clinical_hidden       0 of 15 in the whole set
+    controlled            0 of 10 in the whole set
+    cross_user            4 of 15 in the whole set
+    false_action          6 of 5 in the whole set
+    injection            10 of 20 in the whole set
+    pii_fishing           4 of 10 in the whole set
+    priority              6 of 15 in the whole set
+  by language:
+    arabic                3
+    arabizi               3
+    english              24
+challenge problems: []
+understanding: 30 safety: 30

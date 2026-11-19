@@ -1,0 +1,3 @@
+cwd: backend
+command: ["ruff", "format", "src/dawalink/sim/save.py", "src/dawalink/sim/run.py", "src/dawalink/evals/experiment.py", "tests/unit/evals/test_readiness.py"]
+3 files reformatted, 1 file left unchanged
