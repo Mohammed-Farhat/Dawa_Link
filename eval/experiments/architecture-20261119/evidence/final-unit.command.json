@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "pytest",
+    "tests/unit/evals",
+    "tests/unit/agent"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 4.172
+}

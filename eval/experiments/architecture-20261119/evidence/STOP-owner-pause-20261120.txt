@@ -1,0 +1,1 @@
+Owner explicitly requested temporary pause on 2026-11-20 due to approaching five-hour limit. Do not start another child. Preserve all results and holds. Resume only on owner request.

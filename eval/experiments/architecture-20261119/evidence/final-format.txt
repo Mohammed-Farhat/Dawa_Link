@@ -1,0 +1,2 @@
+command: ["ruff", "format", "--check", "."]
+344 files already formatted

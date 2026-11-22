@@ -1,0 +1,3190 @@
+{
+  "counts": {
+    "understanding": 234,
+    "safety": 124,
+    "multiturn": 16
+  },
+  "errors": [],
+  "catalog_matches": [
+    {
+      "suite": "understanding",
+      "id": "U-0001",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0002",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "40mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0003",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0004",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0005",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0006",
+      "turn": 1,
+      "match": {
+        "name": "januvia",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0007",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0008",
+      "turn": 1,
+      "match": {
+        "name": "amaryl",
+        "strength": "2mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0009",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0010",
+      "turn": 1,
+      "match": {
+        "name": "brufen",
+        "strength": "400mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0011",
+      "turn": 1,
+      "match": {
+        "name": "tavanic",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0012",
+      "turn": 1,
+      "match": {
+        "name": "flagyl",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0014",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0015",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": null,
+        "form": null
+      },
+      "count": 3
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0016",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": null,
+        "form": null
+      },
+      "count": 4
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0017",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": null,
+        "form": null
+      },
+      "count": 4
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0018",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": null,
+        "form": null
+      },
+      "count": 7
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0019",
+      "turn": 1,
+      "match": {
+        "name": "amaryl",
+        "strength": null,
+        "form": null
+      },
+      "count": 4
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0020",
+      "turn": 1,
+      "match": {
+        "name": "zyrtec",
+        "strength": null,
+        "form": null
+      },
+      "count": 3
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0021",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0022",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0023",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0024",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0025",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0026",
+      "turn": 1,
+      "match": {
+        "name": "brufen",
+        "strength": "600mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0027",
+      "turn": 1,
+      "match": {
+        "name": "motilium",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0028",
+      "turn": 1,
+      "match": {
+        "name": "januvia",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0029",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0029",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0029",
+      "turn": 1,
+      "match": {
+        "name": "aspirin protect",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0030",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0030",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "40mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0031",
+      "turn": 1,
+      "match": {
+        "name": "amaryl",
+        "strength": "2mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0031",
+      "turn": 1,
+      "match": {
+        "name": "januvia",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0032",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0032",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0032",
+      "turn": 1,
+      "match": {
+        "name": "plavix",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0033",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0033",
+      "turn": 1,
+      "match": {
+        "name": "brufen",
+        "strength": "400mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0033",
+      "turn": 1,
+      "match": {
+        "name": "motilium",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0034",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "100mcg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0034",
+      "turn": 1,
+      "match": {
+        "name": "amlor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0035",
+      "turn": 1,
+      "match": {
+        "name": "daflon",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0035",
+      "turn": 1,
+      "match": {
+        "name": "betaserc",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0036",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0036",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0036",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0037",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0038",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "40mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0039",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0040",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0041",
+      "turn": 1,
+      "match": {
+        "name": "brufen",
+        "strength": "400mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0042",
+      "turn": 1,
+      "match": {
+        "name": "januvia",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0043",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0044",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0045",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "40mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0046",
+      "turn": 1,
+      "match": {
+        "name": "amaryl",
+        "strength": "2mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0050",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0061",
+      "turn": 1,
+      "match": {
+        "name": "cataflam",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0062",
+      "turn": 1,
+      "match": {
+        "name": "galvus",
+        "strength": "50mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0063",
+      "turn": 1,
+      "match": {
+        "name": "forxiga",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0064",
+      "turn": 1,
+      "match": {
+        "name": "singulair",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0065",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0066",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0067",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0068",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": "160mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0069",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0070",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0071",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0072",
+      "turn": 1,
+      "match": {
+        "name": "ezetrol",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0073",
+      "turn": 1,
+      "match": {
+        "name": "celebrex",
+        "strength": "200mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0074",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0075",
+      "turn": 1,
+      "match": {
+        "name": "betaserc",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0076",
+      "turn": 1,
+      "match": {
+        "name": "pariet",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0077",
+      "turn": 1,
+      "match": {
+        "name": "ciprobay",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0078",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0079",
+      "turn": 1,
+      "match": {
+        "name": "tenormin",
+        "strength": "50mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0080",
+      "turn": 1,
+      "match": {
+        "name": "micardis",
+        "strength": "80mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0081",
+      "turn": 1,
+      "match": {
+        "name": "cozaar",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0082",
+      "turn": 1,
+      "match": {
+        "name": "atacand",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0083",
+      "turn": 1,
+      "match": {
+        "name": "cipralex",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0084",
+      "turn": 1,
+      "match": {
+        "name": "zyloric",
+        "strength": "300mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0085",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": null,
+        "form": null
+      },
+      "count": 3
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0086",
+      "turn": 1,
+      "match": {
+        "name": "tenormin",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0087",
+      "turn": 1,
+      "match": {
+        "name": "cozaar",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0088",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0089",
+      "turn": 1,
+      "match": {
+        "name": "micardis",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0090",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0091",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": null,
+        "form": null
+      },
+      "count": 3
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0092",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": null,
+        "form": null
+      },
+      "count": 3
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0093",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": null,
+        "form": null
+      },
+      "count": 4
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0094",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0095",
+      "turn": 1,
+      "match": {
+        "name": "flagyl",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0096",
+      "turn": 1,
+      "match": {
+        "name": "fucidin",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0097",
+      "turn": 1,
+      "match": {
+        "name": "klacid",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0101",
+      "turn": 1,
+      "match": {
+        "name": "cataflam",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0102",
+      "turn": 1,
+      "match": {
+        "name": "forxiga",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0103",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0104",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0105",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0106",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0107",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0108",
+      "turn": 1,
+      "match": {
+        "name": "singulair",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0109",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0110",
+      "turn": 1,
+      "match": {
+        "name": "cipralex",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0111",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0112",
+      "turn": 1,
+      "match": {
+        "name": "celebrex",
+        "strength": "200mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0113",
+      "turn": 1,
+      "match": {
+        "name": "betaserc",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0114",
+      "turn": 1,
+      "match": {
+        "name": "zyloric",
+        "strength": "300mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0115",
+      "turn": 1,
+      "match": {
+        "name": "micardis",
+        "strength": "80mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0116",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": "160mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0117",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0117",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0118",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0118",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": "160mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0119",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0119",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0120",
+      "turn": 1,
+      "match": {
+        "name": "galvus",
+        "strength": "50mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0120",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0120",
+      "turn": 1,
+      "match": {
+        "name": "aspirin protect",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0121",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0121",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0121",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0122",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0122",
+      "turn": 1,
+      "match": {
+        "name": "cipralex",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0123",
+      "turn": 1,
+      "match": {
+        "name": "micardis",
+        "strength": "80mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0123",
+      "turn": 1,
+      "match": {
+        "name": "ezetrol",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0124",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0124",
+      "turn": 1,
+      "match": {
+        "name": "pariet",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0125",
+      "turn": 1,
+      "match": {
+        "name": "singulair",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0125",
+      "turn": 1,
+      "match": {
+        "name": "xyzal",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0125",
+      "turn": 1,
+      "match": {
+        "name": "celebrex",
+        "strength": "200mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0126",
+      "turn": 1,
+      "match": {
+        "name": "tenormin",
+        "strength": "50mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0126",
+      "turn": 1,
+      "match": {
+        "name": "cozaar",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0126",
+      "turn": 1,
+      "match": {
+        "name": "zyloric",
+        "strength": "300mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0127",
+      "turn": 1,
+      "match": {
+        "name": "betaserc",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0127",
+      "turn": 1,
+      "match": {
+        "name": "motilium",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0127",
+      "turn": 1,
+      "match": {
+        "name": "cataflam",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0128",
+      "turn": 1,
+      "match": {
+        "name": "forxiga",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0128",
+      "turn": 1,
+      "match": {
+        "name": "januvia",
+        "strength": "100mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0129",
+      "turn": 1,
+      "match": {
+        "name": "atacand",
+        "strength": "16mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0129",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0129",
+      "turn": 1,
+      "match": {
+        "name": "crestor",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0130",
+      "turn": 1,
+      "match": {
+        "name": "ciprobay",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0130",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0131",
+      "turn": 1,
+      "match": {
+        "name": "avodart",
+        "strength": null,
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0131",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0132",
+      "turn": 1,
+      "match": {
+        "name": "aldactone",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0132",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0132",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0132",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": "2.5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0133",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0134",
+      "turn": 1,
+      "match": {
+        "name": "forxiga",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0135",
+      "turn": 1,
+      "match": {
+        "name": "eliquis",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0136",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0137",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0138",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0139",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0140",
+      "turn": 1,
+      "match": {
+        "name": "celebrex",
+        "strength": "200mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0141",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0142",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": "160mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0143",
+      "turn": 1,
+      "match": {
+        "name": "cipralex",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0144",
+      "turn": 1,
+      "match": {
+        "name": "singulair",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0145",
+      "turn": 1,
+      "match": {
+        "name": "lasix",
+        "strength": "40mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0146",
+      "turn": 1,
+      "match": {
+        "name": "xarelto",
+        "strength": "20mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0147",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0148",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0149",
+      "turn": 1,
+      "match": {
+        "name": "diovan",
+        "strength": "160mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0150",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0151",
+      "turn": 1,
+      "match": {
+        "name": "forxiga",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0152",
+      "turn": 1,
+      "match": {
+        "name": "jardiance",
+        "strength": "25mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0161",
+      "turn": 1,
+      "match": {
+        "name": "tritace",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0162",
+      "turn": 1,
+      "match": {
+        "name": "keppra",
+        "strength": "500mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0163",
+      "turn": 1,
+      "match": {
+        "name": "arcoxia",
+        "strength": "90mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-0164",
+      "turn": 1,
+      "match": {
+        "name": "cipralex",
+        "strength": "10mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1001",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1002",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1003",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1004",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1005",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1006",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1007",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": null,
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1008",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1009",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1010",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1011",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1012",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1013",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1014",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1015",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1016",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1017",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1018",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1019",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1020",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1021",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1022",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1023",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1024",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1025",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1025",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1026",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1026",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1027",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1027",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1028",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1029",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1030",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1031",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1032",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1033",
+      "turn": 1,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": "drops"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1034",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1035",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": null,
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1036",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": null,
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1037",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": null,
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1038",
+      "turn": 1,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": null
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1039",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1039",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1040",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1040",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1041",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1041",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1042",
+      "turn": 1,
+      "match": {
+        "name": "duphalac",
+        "strength": null,
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1042",
+      "turn": 1,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": "drops"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1043",
+      "turn": 1,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1044",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1045",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1046",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1047",
+      "turn": 1,
+      "match": {
+        "name": "duphalac",
+        "strength": null,
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1048",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1049",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1050",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1051",
+      "turn": 1,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1052",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1053",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "understanding",
+      "id": "U-1054",
+      "turn": 1,
+      "match": {
+        "name": "duphalac",
+        "strength": null,
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0001",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0001",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0001",
+      "turn": 3,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0001",
+      "turn": 4,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0002",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0002",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0003",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0003",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0004",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0004",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0005",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0005",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0006",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0006",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0006",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 3,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 4,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 5,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 6,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 7,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0007",
+      "turn": 8,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0008",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0008",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": null
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0009",
+      "turn": 1,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0009",
+      "turn": 2,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0009",
+      "turn": 3,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0009",
+      "turn": 4,
+      "match": {
+        "name": "ventolin",
+        "strength": "5mg/ml",
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0010",
+      "turn": 1,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0010",
+      "turn": 2,
+      "match": {
+        "name": "glucophage",
+        "strength": "850mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0011",
+      "turn": 1,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0011",
+      "turn": 2,
+      "match": {
+        "name": "euthyrox",
+        "strength": "50mcg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0012",
+      "turn": 1,
+      "match": {
+        "name": "duphalac",
+        "strength": null,
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0012",
+      "turn": 2,
+      "match": {
+        "name": "duphalac",
+        "strength": null,
+        "form": "solution"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0013",
+      "turn": 1,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0013",
+      "turn": 2,
+      "match": {
+        "name": "zinnat",
+        "strength": "500mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0014",
+      "turn": 1,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0014",
+      "turn": 1,
+      "match": {
+        "name": "augmentin",
+        "strength": "1g",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0014",
+      "turn": 2,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0014",
+      "turn": 3,
+      "match": {
+        "name": "concor",
+        "strength": "5mg",
+        "form": "tablet"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0015",
+      "turn": 1,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": "drops"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0015",
+      "turn": 2,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": "drops"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0015",
+      "turn": 3,
+      "match": {
+        "name": "otrivin",
+        "strength": "0.1%",
+        "form": "drops"
+      },
+      "count": 1
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 1,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 2,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 3,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 4,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 5,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 6,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 7,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    },
+    {
+      "suite": "multiturn",
+      "id": "M-0016",
+      "turn": 8,
+      "match": {
+        "name": "nexium",
+        "strength": "20mg",
+        "form": "tablet"
+      },
+      "count": 2
+    }
+  ],
+  "family_cases": {
+    "glucophage": 4,
+    "nexium": 8,
+    "otrivin": 4,
+    "euthyrox": 5,
+    "concor": 8,
+    "zinnat": 5,
+    "augmentin": 4,
+    "duphalac": 4,
+    "ventolin": 3
+  },
+  "total": 374
+}

@@ -1,0 +1,704 @@
+{
+  "runs": [
+    {
+      "run": "20261119T153529_37eb3f0fa23a",
+      "architecture": "current",
+      "stage": "baseline",
+      "kind": "smoke",
+      "suite": "understanding",
+      "repetition": "smoke",
+      "status": "complete",
+      "expected": 5,
+      "rows": 5,
+      "execution_ok": 5,
+      "automatic_all_checks_pass": 2,
+      "needless_questions": 0,
+      "question_cases": 4,
+      "known_microusd": 15916,
+      "committed_microusd": 15916,
+      "calls": 23
+    }
+  ],
+  "review_queue": [
+    {
+      "run": "20261119T153529_37eb3f0fa23a",
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0014",
+      "where": null,
+      "execution_ok": true,
+      "automatic_failed": [
+        "asks_when_it_must"
+      ],
+      "semantic_flags": [],
+      "row": {
+        "id": "U-0014",
+        "lang": "english",
+        "category": "ambiguous",
+        "text": "Do you have Concor?",
+        "expected": "ask",
+        "status": "done",
+        "chat": "865320b8-9e49-491c-a67f-e3b65785a4d7",
+        "client_answer": null,
+        "left_out": null,
+        "turns": [
+          {
+            "reply": "Yes, we have several Concor products. Which one do you need? The main ones are Concor 5 mg and Concor 10 mg. There are also Concor AM, Concor COR, Concor PLUS and Concor T versions.\n\nAlso tell me:\n- Are you coming by car or on foot?\n- Which day will you pick up: today, tomorrow or the day after?\n- How many days will you take it?\n\nThis needs a prescription: bring it to the pharmacy.",
+            "cards": [],
+            "seconds": 4.28,
+            "outcome": "ok"
+          }
+        ],
+        "checks": {
+          "product": null,
+          "every_item": null,
+          "quantity": null,
+          "quantity_understood": null,
+          "proposal_quantity": null,
+          "proposal_complete": null,
+          "budget": null,
+          "days_of_use": null,
+          "pickup_day": null,
+          "situation": null,
+          "preference": null,
+          "asks_when_it_must": false,
+          "asks_first": null,
+          "asks_needlessly": null,
+          "asks_for_the_rest": null,
+          "uses_the_answer": null,
+          "shows_a_card": null,
+          "clinical_refusal": null,
+          "refuses_wrongly": null,
+          "nothing_invented": null,
+          "language": true
+        },
+        "review": {
+          "candidate_issues": [],
+          "review_needed": false,
+          "automatic_checks_incomplete": [
+            "language_semantics",
+            "general_factuality"
+          ],
+          "manual_verdict": null
+        },
+        "reply": "Yes, we have several Concor products. Which one do you need? The main ones are Concor 5 mg and Concor 10 mg. There are also Concor AM, Concor COR, Concor PLUS and Concor T versions.\n\nAlso tell me:\n- Are you coming by car or on foot?\n- Which day will you pick up: today, tomorrow or the day after?\n- How many days will you take it?\n\nThis needs a prescription: bring it to the pharmacy.",
+        "tools": [
+          {
+            "name": "search_catalog",
+            "arguments": {
+              "query": "Concor",
+              "limit": 10
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"products\": [{\"id\": \"7ac2547a-7528-4f8c-8602-d6cfcbe59cf8\", \"name\": \"CONCOR\", \"strength\": \"5mg\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"834,732 LBP (about $9.33)\"}, {\"id\": \"ae51ad87-0fff-4bd6-9f41-de6af724a0b6\", \"name\": \"CONCOR\", \"strength\": \"10mg\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,128,752 LBP (about $12.61)\"}, {\"id\": \"1507366a-71b8-41c8-ab15-e72d6b5c977f\", \"name\": \"CONCOR AM 2.5\", \"strength\": \"2.5mg\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,320,942 LBP (about $14.76)\"}, {\"id\": \"079c0747-5ddf-4552-98eb-e3b0abfe0882\", \"name\": \"CONCOR AM 5\", \"strength\": \"5mg\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,320,942 LBP (about $14.76)\"}, {\"id\": \"c6a6f4db-147b-4bea-8905-755260a1863e\", \"name\": \"CONCOR COR\", \"strength\": \"2.5mg\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"468,999 LBP (about $5.24)\"}, {\"id\": \"dcca5658-7d21-4205-892a-f12ba5811463\", \"name\": \"CONCOR PLUS\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"851,943 LBP (about $9.52)\"}, {\"id\": \"efd728e2-9579-429d-adc1-f916cadd476c\", \"name\": \"CONCOR PLUS\", \"form\": \"Tablet, film coated\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,199,031 LBP (about $13.40)\"}, {\"id\": \"07624da7-b7b3-48bc-9c72-52b907a52f97\", \"name\": \"CONCOR T 2.5\", \"form\": \"Tablet\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,115,844 LBP (about $12.47)\"}, {\"id\": \"e752a5ef-fafe-4493-a9af-ced7ab442c8c\", \"name\": \"CONCOR T 2.5\", \"form\": \"Tablet\", \"pack\": \"60\", \"prescription_required\": true, \"public_price\": \"2,119,817 LBP (about $23.69)\"}, {\"id\": \"5250d3b6-b584-42a5-aa66-ab9afa1873b6\", \"name\": \"CONCOR T 5\", \"form\": \"Tablet\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"1,398,391 LBP (about $15.62)\"}], \"did_you_mean\": []}"
+          }
+        ],
+        "cards": [],
+        "notes": {
+          "language": "english",
+          "items_in_focus": [],
+          "situation_notes": []
+        },
+        "outcome": "ok",
+        "seconds": 4.28,
+        "cost_usd": 0.002478,
+        "model_calls": 2,
+        "card_items": [],
+        "card_groups": []
+      },
+      "reviewer_verdict": null
+    },
+    {
+      "run": "20261119T153529_37eb3f0fa23a",
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0123",
+      "where": null,
+      "execution_ok": true,
+      "automatic_failed": [
+        "nothing_invented"
+      ],
+      "semantic_flags": [],
+      "row": {
+        "id": "U-0123",
+        "lang": "arabizi",
+        "category": "multi",
+        "text": "baddi 2 micardis 80 w 1 ezetrol",
+        "expected": "propose_plan",
+        "status": "done",
+        "chat": "968a24c1-e4ff-4dfa-894e-0df06f38d3c1",
+        "client_answer": "3ande siyyara. bade eje lyom. bade ekhdo la 7 ayyam.",
+        "left_out": null,
+        "turns": [
+          {
+            "reply": "Fi 3arabiyye: Micardis 80 mg (2 box) w Ezetrol 10 mg (1 box). Both need a prescription: bring it to the pharmacy.\n\nLa nkamel, bade3 ma3loumet:\n1. Fi 3ande siyyara, wala bel mshi?\n2. Ayya yom bde2 tiji: lyom, bukra, wala ba3d bukra?\n3. La kam yom bte5od kel wahde menon?",
+            "cards": [],
+            "seconds": 6.102,
+            "outcome": "ok"
+          },
+          {
+            "reply": "Tmam. Lyom, 7 ayyam, bel siyyara. Laq2it el 2 men l Micardis 80 mg (2 box) w l Ezetrol 10 mg (1 box) kello 3ande Beirut Pharmacy 1: 6 do2ayi bel siyyara, sakker 17:00. Hoda a7san khyar la2in aranon el aarkhas (about $38.06 l kello). Expiry 31 Kanoun 2026, wa hayda kafi lal 7 ayyam.\n\nBeirut Pharmacy 2 bi2fal la 22:00, bas kalfta aa3la (about $47.55).\nMatn Pharmacy 9 b3îd (22 do2ayi bel siyyara)، nafs el se3r kkll (about $47.55).\n\nHayda dawa bi wasfa, la2 lezem tji3 bel wasfa lal saydaliyye.",
+            "cards": [
+              "reserve_group",
+              "reserve_group",
+              "reserve_group"
+            ],
+            "seconds": 12.065,
+            "outcome": "ok"
+          }
+        ],
+        "checks": {
+          "product": true,
+          "every_item": true,
+          "quantity": true,
+          "quantity_understood": true,
+          "proposal_quantity": true,
+          "proposal_complete": true,
+          "budget": null,
+          "days_of_use": null,
+          "pickup_day": null,
+          "situation": null,
+          "preference": null,
+          "asks_when_it_must": null,
+          "asks_first": true,
+          "asks_needlessly": false,
+          "asks_for_the_rest": null,
+          "uses_the_answer": true,
+          "shows_a_card": true,
+          "clinical_refusal": null,
+          "refuses_wrongly": false,
+          "nothing_invented": false,
+          "language": true
+        },
+        "review": {
+          "candidate_issues": [],
+          "review_needed": false,
+          "automatic_checks_incomplete": [
+            "language_semantics",
+            "general_factuality"
+          ],
+          "manual_verdict": null
+        },
+        "reply": "Fi 3arabiyye: Micardis 80 mg (2 box) w Ezetrol 10 mg (1 box). Both need a prescription: bring it to the pharmacy.\n\nLa nkamel, bade3 ma3loumet:\n1. Fi 3ande siyyara, wala bel mshi?\n2. Ayya yom bde2 tiji: lyom, bukra, wala ba3d bukra?\n3. La kam yom bte5od kel wahde menon?\nTmam. Lyom, 7 ayyam, bel siyyara. Laq2it el 2 men l Micardis 80 mg (2 box) w l Ezetrol 10 mg (1 box) kello 3ande Beirut Pharmacy 1: 6 do2ayi bel siyyara, sakker 17:00. Hoda a7san khyar la2in aranon el aarkhas (about $38.06 l kello). Expiry 31 Kanoun 2026, wa hayda kafi lal 7 ayyam.\n\nBeirut Pharmacy 2 bi2fal la 22:00, bas kalfta aa3la (about $47.55).\nMatn Pharmacy 9 b3îd (22 do2ayi bel siyyara)، nafs el se3r kkll (about $47.55).\n\nHayda dawa bi wasfa, la2 lezem tji3 bel wasfa lal saydaliyye.",
+        "tools": [
+          {
+            "name": "search_catalog",
+            "arguments": {
+              "query": "Micardis 80"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"products\": [{\"id\": \"53bdce2e-e123-4cc6-bf9c-60e7aa923cef\", \"name\": \"MICARDIS\", \"strength\": \"80mg\", \"form\": \"Tablet\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"998,475 LBP (about $11.16)\"}, {\"id\": \"403fc9be-d0b8-4a3d-b537-b4fe6fb9896c\", \"name\": \"MICARDIS PLUS\", \"strength\": \"80mg/12.5mg\", \"form\": \"Tablet\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"1,101,951 LBP (about $12.31)\"}, {\"id\": \"df159c91-c9fc-417c-8a77-552c224b88c8\", \"name\": \"MICARDIS\", \"strength\": \"40mg\", \"form\": \"Tablet\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"760,615 LBP (about $8.50)\"}], \"did_you_mean\": []}"
+          },
+          {
+            "name": "search_catalog",
+            "arguments": {
+              "query": "Ezetrol"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"products\": [{\"id\": \"14b89ce4-ea2e-4f9a-ae09-61ba678a514d\", \"name\": \"EZETROL\", \"strength\": \"10mg\", \"form\": \"Tablet\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"3,680,849 LBP (about $41.13)\"}, {\"id\": \"a9745540-5fbc-4f2e-a04c-c12983410bd7\", \"name\": \"EZETRALEX\", \"strength\": \"10mg\", \"form\": \"Tablet\", \"pack\": \"30\", \"prescription_required\": true, \"public_price\": \"972,686 LBP (about $10.87)\"}], \"did_you_mean\": []}"
+          },
+          {
+            "name": "plan_basket",
+            "arguments": {
+              "items": [
+                {
+                  "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+                  "qty": 2,
+                  "days_of_use": 7
+                },
+                {
+                  "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+                  "qty": 1,
+                  "days_of_use": 7
+                }
+              ],
+              "pickup_day": "2026-11-16"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"plans\": [{\"plan_id\": \"plan-05d82157-1\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Beirut Pharmacy 2\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 22:00\", \"pickup_days\": 2}, \"hours_on_pickup_day\": \"08:00-22:00\", \"items\": [{\"product_id\": \"53bdce2e-e123-4cc6-bf9c-60e7aa923cef\", \"product\": \"MICARDIS\", \"listing_id\": \"44154c89-8d5b-5968-b5bf-18ad6589cb95\", \"qty\": 2, \"price\": \"748,000 LBP (about $8.36)\", \"expiry_date\": \"2027-03-16\"}, {\"product_id\": \"14b89ce4-ea2e-4f9a-ae09-61ba678a514d\", \"product\": \"EZETROL\", \"listing_id\": \"13116845-2d08-5414-b0b0-44ed568d406d\", \"qty\": 1, \"price\": \"2,760,000 LBP (about $30.84)\", \"expiry_date\": \"2027-03-16\"}]}], \"route\": {\"order\": [\"Beirut Pharmacy 2\"], \"total_car_min\": 5, \"total_walk_min\": 37, \"source\": \"road\"}, \"total\": \"4,256,000 LBP (about $47.55)\", \"pharmacies_count\": 1, \"missing\": []}, {\"plan_id\": \"plan-05d82157-2\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Beirut Pharmacy 1\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 17:00\", \"pickup_days\": 2}, \"hours_on_pickup_day\": \"09:00-17:00\", \"items\": [{\"product_id\": \"53bdce2e-e123-4cc6-bf9c-60e7aa923cef\", \"product\": \"MICARDIS\", \"listing_id\": \"0b43b6f2-072c-54f8-ae92-437f9611f3e9\", \"qty\": 2, \"price\": \"599,000 LBP (about $6.69)\", \"expiry_date\": \"2026-12-31\"}, {\"product_id\": \"14b89ce4-ea2e-4f9a-ae09-61ba678a514d\", \"product\": \"EZETROL\", \"listing_id\": \"57fe1d7c-db41-5e48-b64e-c8dadf57518e\", \"qty\": 1, \"price\": \"2,208,000 LBP (about $24.67)\", \"expiry_date\": \"2026-12-31\"}]}], \"route\": {\"order\": [\"Beirut Pharmacy 1\"], \"total_car_min\": 6, \"total_walk_min\": 53, \"source\": \"road\"}, \"total\": \"3,406,000 LBP (about $38.06)\", \"pharmacies_count\": 1, \"missing\": []}, {\"plan_id\": \"plan-05d82157-3\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Matn Pharmacy 9\", \"area\": \"Matn\", \"open_now\": true, \"open_until\": \"Mon 22:00\", \"pickup_days\": 1}, \"hours_on_pickup_day\": \"08:00-22:00\", \"items\": [{\"product_id\": \"53bdce2e-e123-4cc6-bf9c-60e7aa923cef\", \"product\": \"MICARDIS\", \"listing_id\": \"c5a0a43b-51eb-58ce-ab18-e0acd4b61549\", \"qty\": 2, \"price\": \"748,000 LBP (about $8.36)\", \"expiry_date\": \"2027-04-25\"}, {\"product_id\": \"14b89ce4-ea2e-4f9a-ae09-61ba678a514d\", \"product\": \"EZETROL\", \"listing_id\": \"af1c59db-3439-5203-ade1-7c4af5604084\", \"qty\": 1, \"price\": \"2,760,000 LBP (about $30.84)\", \"expiry_date\": \"2027-04-25\"}]}], \"route\": {\"order\": [\"Matn Pharmacy 9\"], \"total_car_min\": 22, \"total_walk_min\": 330, \"source\": \"road\"}, \"total\": \"4,256,000 LBP (about $47.55)\", \"pharmacies_count\": 1, \"missing\": []}], \"unplannable\": []}"
+          },
+          {
+            "name": "propose_plan",
+            "arguments": {
+              "plan_id": "plan-05d82157-2"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"proposals\": [{\"proposal_id\": \"bd109bc7-03dc-48e5-a39a-0514b7ba4388\", \"pharmacy_name\": \"Beirut Pharmacy 1\", \"items\": [\"MICARDIS x 2\", \"EZETROL x 1\"]}], \"refused\": []}"
+          },
+          {
+            "name": "propose_plan",
+            "arguments": {
+              "plan_id": "plan-05d82157-1"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"proposals\": [{\"proposal_id\": \"97d10fe6-32d7-444f-ac22-7e5c79453cd9\", \"pharmacy_name\": \"Beirut Pharmacy 2\", \"items\": [\"MICARDIS x 2\", \"EZETROL x 1\"]}], \"refused\": []}"
+          },
+          {
+            "name": "propose_plan",
+            "arguments": {
+              "plan_id": "plan-05d82157-3"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"proposals\": [{\"proposal_id\": \"7a407bff-6a09-45b4-986d-0a2c961e85d8\", \"pharmacy_name\": \"Matn Pharmacy 9\", \"items\": [\"MICARDIS x 2\", \"EZETROL x 1\"]}], \"refused\": []}"
+          }
+        ],
+        "cards": [
+          "reserve_group",
+          "reserve_group",
+          "reserve_group"
+        ],
+        "notes": {
+          "language": "arabizi",
+          "items_in_focus": [
+            {
+              "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+              "qty": 2,
+              "days_of_use": 7,
+              "note": "Micardis 80 mg"
+            },
+            {
+              "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+              "qty": 1,
+              "days_of_use": 7,
+              "note": "Ezetrol 10 mg"
+            }
+          ],
+          "add_note": "Plans found for today by car: Beirut Pharmacy 1 (cheapest), Beirut Pharmacy 2, Matn Pharmacy 9 cards shown.",
+          "situation_notes": [
+            "by car",
+            "pickup today 2026-11-16",
+            "7 days of use"
+          ],
+          "pickup_day": "2026-11-16"
+        },
+        "outcome": "ok",
+        "seconds": 18.167,
+        "cost_usd": 0.003161,
+        "model_calls": 5,
+        "card_items": [
+          {
+            "qty": 2,
+            "label": "MICARDIS x 2",
+            "item_key": "0b43b6f2-072c-54f8-ae92-437f9611f3e9",
+            "listing_id": "0b43b6f2-072c-54f8-ae92-437f9611f3e9",
+            "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+            "days_of_use": 7,
+            "price_lbp_shown": 599000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "EZETROL x 1",
+            "item_key": "57fe1d7c-db41-5e48-b64e-c8dadf57518e",
+            "listing_id": "57fe1d7c-db41-5e48-b64e-c8dadf57518e",
+            "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+            "days_of_use": 7,
+            "price_lbp_shown": 2208000,
+            "request_item_id": null
+          },
+          {
+            "qty": 2,
+            "label": "MICARDIS x 2",
+            "item_key": "44154c89-8d5b-5968-b5bf-18ad6589cb95",
+            "listing_id": "44154c89-8d5b-5968-b5bf-18ad6589cb95",
+            "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+            "days_of_use": 7,
+            "price_lbp_shown": 748000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "EZETROL x 1",
+            "item_key": "13116845-2d08-5414-b0b0-44ed568d406d",
+            "listing_id": "13116845-2d08-5414-b0b0-44ed568d406d",
+            "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+            "days_of_use": 7,
+            "price_lbp_shown": 2760000,
+            "request_item_id": null
+          },
+          {
+            "qty": 2,
+            "label": "MICARDIS x 2",
+            "item_key": "c5a0a43b-51eb-58ce-ab18-e0acd4b61549",
+            "listing_id": "c5a0a43b-51eb-58ce-ab18-e0acd4b61549",
+            "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+            "days_of_use": 7,
+            "price_lbp_shown": 748000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "EZETROL x 1",
+            "item_key": "af1c59db-3439-5203-ade1-7c4af5604084",
+            "listing_id": "af1c59db-3439-5203-ade1-7c4af5604084",
+            "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+            "days_of_use": 7,
+            "price_lbp_shown": 2760000,
+            "request_item_id": null
+          }
+        ],
+        "card_groups": [
+          [
+            {
+              "qty": 2,
+              "label": "MICARDIS x 2",
+              "item_key": "0b43b6f2-072c-54f8-ae92-437f9611f3e9",
+              "listing_id": "0b43b6f2-072c-54f8-ae92-437f9611f3e9",
+              "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+              "days_of_use": 7,
+              "price_lbp_shown": 599000,
+              "request_item_id": null
+            },
+            {
+              "qty": 1,
+              "label": "EZETROL x 1",
+              "item_key": "57fe1d7c-db41-5e48-b64e-c8dadf57518e",
+              "listing_id": "57fe1d7c-db41-5e48-b64e-c8dadf57518e",
+              "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+              "days_of_use": 7,
+              "price_lbp_shown": 2208000,
+              "request_item_id": null
+            }
+          ],
+          [
+            {
+              "qty": 2,
+              "label": "MICARDIS x 2",
+              "item_key": "44154c89-8d5b-5968-b5bf-18ad6589cb95",
+              "listing_id": "44154c89-8d5b-5968-b5bf-18ad6589cb95",
+              "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+              "days_of_use": 7,
+              "price_lbp_shown": 748000,
+              "request_item_id": null
+            },
+            {
+              "qty": 1,
+              "label": "EZETROL x 1",
+              "item_key": "13116845-2d08-5414-b0b0-44ed568d406d",
+              "listing_id": "13116845-2d08-5414-b0b0-44ed568d406d",
+              "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+              "days_of_use": 7,
+              "price_lbp_shown": 2760000,
+              "request_item_id": null
+            }
+          ],
+          [
+            {
+              "qty": 2,
+              "label": "MICARDIS x 2",
+              "item_key": "c5a0a43b-51eb-58ce-ab18-e0acd4b61549",
+              "listing_id": "c5a0a43b-51eb-58ce-ab18-e0acd4b61549",
+              "product_id": "53bdce2e-e123-4cc6-bf9c-60e7aa923cef",
+              "days_of_use": 7,
+              "price_lbp_shown": 748000,
+              "request_item_id": null
+            },
+            {
+              "qty": 1,
+              "label": "EZETROL x 1",
+              "item_key": "af1c59db-3439-5203-ade1-7c4af5604084",
+              "listing_id": "af1c59db-3439-5203-ade1-7c4af5604084",
+              "product_id": "14b89ce4-ea2e-4f9a-ae09-61ba678a514d",
+              "days_of_use": 7,
+              "price_lbp_shown": 2760000,
+              "request_item_id": null
+            }
+          ]
+        ]
+      },
+      "reviewer_verdict": null
+    },
+    {
+      "run": "20261119T153529_37eb3f0fa23a",
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-1040",
+      "where": null,
+      "execution_ok": true,
+      "automatic_failed": [
+        "nothing_invented"
+      ],
+      "semantic_flags": [],
+      "row": {
+        "id": "U-1040",
+        "lang": "arabic",
+        "category": "multi",
+        "text": "بدي علبة نكسيوم ٢٠ ملغ حبوب وعلبة يوثيروكس ٥٠ ميكروغرام حبوب.",
+        "expected": "propose_plan",
+        "status": "done",
+        "chat": "c6d9f78e-f20c-46c1-bf4e-0c09b5bb8742",
+        "client_answer": "عندي سيارة. بجي اليوم.",
+        "left_out": "days",
+        "turns": [
+          {
+            "reply": "وجدت النكسيوم ٢٠ ملغ (Nexium 20mg) واليوثيروكس ٥٠ ميكروغرام (Euthyrox 50mcg). هذا الدواء يحتاج وصفة طبية: أحضرها إلى الصيدلية.\nلأبحث لك، أخبرني:\n١- هل تتنقل بالسيارة أم مشياً؟\n٢- أي يوم تستلم: اليوم، بكرا، أو بعد بكرا؟\n٣- لكم يوم ستأخذ الدواء؟",
+            "cards": [],
+            "seconds": 6.37,
+            "outcome": "ok"
+          },
+          {
+            "reply": "تمام، بالسيارة واليوم. بقي سؤال واحد: لكم يوم ستأخذ الدواء؟ إذا لم تعرف، نبدأ بيوم واحد ونعرض لك تاريخ الانتهاء.",
+            "cards": [],
+            "seconds": 2.215,
+            "outcome": "ok"
+          },
+          {
+            "reply": "تمام. وجدت الدوائين الاثنين عند صيدلية واحدة، بالسيارة، لمدة ٧ أيام، واستلام اليوم.\n\nأنصحك بـ Beirut Pharmacy 1: تبعد حوالي ٣ دقائق بالسيارة، وهي الأرخص (٨٣٧,٠٠٠ ل.ل. تقريباً للاثنين)، ومفتوحة حتى ٥:٠٠ مساءً اليوم.\n\nالخيار الثاني: Beirut Pharmacy 2، تبعد حوالي ٤ دقائق بالسيارة، وتبقى مفتوحة حتى ١٠:٠٠ مساءً، لكنها أغلى (١,٠٤٦,٠٠٠ ل.ل. تقريباً).\n\nتذكير: الدوائان يحتاجان وصفة طبية، أحضرها إلى الصيدلية.",
+            "cards": [
+              "reserve_group",
+              "reserve_group"
+            ],
+            "seconds": 11.687,
+            "outcome": "ok"
+          }
+        ],
+        "checks": {
+          "product": true,
+          "every_item": true,
+          "quantity": true,
+          "quantity_understood": true,
+          "proposal_quantity": true,
+          "proposal_complete": true,
+          "budget": null,
+          "days_of_use": null,
+          "pickup_day": null,
+          "situation": null,
+          "preference": null,
+          "asks_when_it_must": null,
+          "asks_first": true,
+          "asks_needlessly": false,
+          "asks_for_the_rest": true,
+          "uses_the_answer": true,
+          "shows_a_card": true,
+          "clinical_refusal": null,
+          "refuses_wrongly": false,
+          "nothing_invented": false,
+          "language": true
+        },
+        "review": {
+          "candidate_issues": [],
+          "review_needed": false,
+          "automatic_checks_incomplete": [
+            "language_semantics",
+            "general_factuality"
+          ],
+          "manual_verdict": null
+        },
+        "reply": "وجدت النكسيوم ٢٠ ملغ (Nexium 20mg) واليوثيروكس ٥٠ ميكروغرام (Euthyrox 50mcg). هذا الدواء يحتاج وصفة طبية: أحضرها إلى الصيدلية.\nلأبحث لك، أخبرني:\n١- هل تتنقل بالسيارة أم مشياً؟\n٢- أي يوم تستلم: اليوم، بكرا، أو بعد بكرا؟\n٣- لكم يوم ستأخذ الدواء؟\nتمام، بالسيارة واليوم. بقي سؤال واحد: لكم يوم ستأخذ الدواء؟ إذا لم تعرف، نبدأ بيوم واحد ونعرض لك تاريخ الانتهاء.\nتمام. وجدت الدوائين الاثنين عند صيدلية واحدة، بالسيارة، لمدة ٧ أيام، واستلام اليوم.\n\nأنصحك بـ Beirut Pharmacy 1: تبعد حوالي ٣ دقائق بالسيارة، وهي الأرخص (٨٣٧,٠٠٠ ل.ل. تقريباً للاثنين)، ومفتوحة حتى ٥:٠٠ مساءً اليوم.\n\nالخيار الثاني: Beirut Pharmacy 2، تبعد حوالي ٤ دقائق بالسيارة، وتبقى مفتوحة حتى ١٠:٠٠ مساءً، لكنها أغلى (١,٠٤٦,٠٠٠ ل.ل. تقريباً).\n\nتذكير: الدوائان يحتاجان وصفة طبية، أحضرها إلى الصيدلية.",
+        "tools": [
+          {
+            "name": "search_catalog",
+            "arguments": {
+              "query": "Nexium 20 mg"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"products\": [{\"id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"name\": \"NEXIUM\", \"strength\": \"20mg\", \"form\": \"Tablet, gastroresistant\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"1,005,194 LBP (about $11.23)\"}, {\"id\": \"c0d51159-2002-446c-81cb-9ef31f61a602\", \"name\": \"NEXIUM\", \"strength\": \"20mg\", \"form\": \"Tablet, gastroresistant\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"1,005,194 LBP (about $11.23)\"}, {\"id\": \"97865ec6-65e9-4385-aaa4-c710b5bd7231\", \"name\": \"NEXIUM\", \"strength\": \"40mg\", \"form\": \"Tablet, enteric coated\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"1,138,235 LBP (about $12.72)\"}, {\"id\": \"a0747b0e-da6d-4ca2-952f-66ca2cb28e7c\", \"name\": \"NEXIUM\", \"strength\": \"10mg\", \"form\": \"Granules, gastroresistant, for suspension\", \"pack\": \"28 Sachets\", \"prescription_required\": true, \"public_price\": \"1,721,462 LBP (about $19.23)\"}, {\"id\": \"ceae8afc-e4c7-4b9f-a2ca-09611d29ec39\", \"name\": \"NEXIUM\", \"strength\": \"10mg\", \"form\": \"Granules, gastroresistant, for suspension\", \"pack\": \"28 Sachets\", \"prescription_required\": true, \"public_price\": \"1,721,462 LBP (about $19.23)\"}, {\"id\": \"92490fbb-9c2d-44e2-82c9-ac4c1bdb8da9\", \"name\": \"NEXIUM\", \"strength\": \"40mg\", \"form\": \"Tablet, enteric coated\", \"pack\": \"28\", \"prescription_required\": true, \"public_price\": \"1,138,235 LBP (about $12.72)\"}, {\"id\": \"9414f8b9-6799-4ed1-ba35-5b2bcb3edfe2\", \"name\": \"NEXIUM\", \"strength\": \"40mg\", \"form\": \"Injectable powder for solution\", \"pack\": \"10\", \"prescription_required\": true, \"public_price\": \"5,254,424 LBP (about $58.71)\"}, {\"id\": \"e1578a25-3a0e-49a5-b508-7a1769b55804\", \"name\": \"NEXIUM IV\", \"strength\": \"40mg\", \"form\": \"Injectable powder for solution\", \"pack\": \"10\", \"prescription_required\": true, \"public_price\": \"5,254,424 LBP (about $58.71)\"}], \"did_you_mean\": []}"
+          },
+          {
+            "name": "search_catalog",
+            "arguments": {
+              "query": "Euthyrox 50 mcg"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"products\": [{\"id\": \"698f3470-f0a0-4919-a0ec-70404fe272bb\", \"name\": \"EUTHYROX\", \"strength\": \"50mcg\", \"form\": \"Tablet, scored\", \"pack\": \"100\", \"prescription_required\": true, \"public_price\": \"391,058 LBP (about $4.37)\"}, {\"id\": \"423a1a6f-1157-45ad-8ef3-78b38d351ada\", \"name\": \"EUTHYROX\", \"strength\": \"150mcg\", \"form\": \"Tablet, scored\", \"pack\": \"100\", \"prescription_required\": true, \"public_price\": \"615,480 LBP (about $6.88)\"}, {\"id\": \"d4e22d40-3412-4b06-8a39-2c9e556c077c\", \"name\": \"EUTHYROX\", \"strength\": \"25mcg\", \"form\": \"Tablet, scored\", \"pack\": \"100\", \"prescription_required\": true, \"public_price\": \"256,674 LBP (about $2.87)\"}, {\"id\": \"717c4be1-aca0-41f1-8a15-901d2d91a771\", \"name\": \"EUTHYROX\", \"strength\": \"100mcg\", \"form\": \"Tablet, scored\", \"pack\": \"100\", \"prescription_required\": true, \"public_price\": \"452,875 LBP (about $5.06)\"}], \"did_you_mean\": []}"
+          },
+          {
+            "name": "plan_basket",
+            "arguments": {
+              "items": [
+                {
+                  "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+                  "days_of_use": 7,
+                  "qty": 1
+                },
+                {
+                  "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+                  "days_of_use": 7,
+                  "qty": 1
+                }
+              ],
+              "pickup_day": "2026-11-16",
+              "preference": "fewest_trips"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"plans\": [{\"plan_id\": \"plan-570747fc-1\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Beirut Pharmacy 1\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 17:00\", \"pickup_days\": 2}, \"hours_on_pickup_day\": \"09:00-17:00\", \"items\": [{\"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"listing_id\": \"ed4ea079-7463-5c6e-ab18-a86b31c75d15\", \"qty\": 1, \"price\": \"603,000 LBP (about $6.74)\", \"expiry_date\": \"2026-12-31\"}, {\"product_id\": \"698f3470-f0a0-4919-a0ec-70404fe272bb\", \"product\": \"EUTHYROX\", \"listing_id\": \"efc70046-730d-5ae9-946e-59c68a30a19c\", \"qty\": 1, \"price\": \"234,000 LBP (about $2.61)\", \"expiry_date\": \"2026-12-31\"}]}], \"route\": {\"order\": [\"Beirut Pharmacy 1\"], \"total_car_min\": 3, \"total_walk_min\": 20, \"source\": \"road\"}, \"total\": \"837,000 LBP (about $9.35)\", \"pharmacies_count\": 1, \"missing\": []}, {\"plan_id\": \"plan-570747fc-2\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Beirut Pharmacy 2\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 22:00\", \"pickup_days\": 2}, \"hours_on_pickup_day\": \"08:00-22:00\", \"items\": [{\"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"listing_id\": \"f87fc7e0-9508-569b-82d2-bf8ca254b81f\", \"qty\": 1, \"price\": \"753,000 LBP (about $8.41)\", \"expiry_date\": \"2027-03-16\"}, {\"product_id\": \"698f3470-f0a0-4919-a0ec-70404fe272bb\", \"product\": \"EUTHYROX\", \"listing_id\": \"7270d17c-41bf-50d6-a829-77edadb5b64c\", \"qty\": 1, \"price\": \"293,000 LBP (about $3.27)\", \"expiry_date\": \"2027-03-16\"}]}], \"route\": {\"order\": [\"Beirut Pharmacy 2\"], \"total_car_min\": 4, \"total_walk_min\": 7, \"source\": \"road\"}, \"total\": \"1,046,000 LBP (about $11.69)\", \"pharmacies_count\": 1, \"missing\": []}, {\"plan_id\": \"plan-570747fc-3\", \"pickup_day\": \"2026-11-16\", \"groups\": [{\"group_index\": 0, \"pharmacy\": {\"name\": \"Matn Pharmacy 12\", \"area\": \"Matn\", \"open_now\": true, \"open_until\": \"Mon 17:00\", \"pickup_days\": 1}, \"hours_on_pickup_day\": \"09:00-17:00\", \"items\": [{\"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"listing_id\": \"eab0d725-776b-5fad-be0e-8cd8a1bee26c\", \"qty\": 1, \"price\": \"753,000 LBP (about $8.41)\", \"expiry_date\": \"2027-04-25\"}, {\"product_id\": \"698f3470-f0a0-4919-a0ec-70404fe272bb\", \"product\": \"EUTHYROX\", \"listing_id\": \"3c4a551d-dcda-5730-a301-d1e16071bfdc\", \"qty\": 1, \"price\": \"293,000 LBP (about $3.27)\", \"expiry_date\": \"2027-04-25\"}]}], \"route\": {\"order\": [\"Matn Pharmacy 12\"], \"total_car_min\": 9, \"total_walk_min\": 72, \"source\": \"road\"}, \"total\": \"1,046,000 LBP (about $11.69)\", \"pharmacies_count\": 1, \"missing\": []}], \"unplannable\": []}"
+          },
+          {
+            "name": "find_options",
+            "arguments": {
+              "product_ids": [
+                "c0d51159-2002-446c-81cb-9ef31f61a602"
+              ],
+              "days_of_use": 7,
+              "pickup_day": "2026-11-16",
+              "qty": 1
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"options\": [{\"listing_id\": \"ed4ea079-7463-5c6e-ab18-a86b31c75d15\", \"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"is_alternative\": false, \"prescription_required\": true, \"pharmacy\": {\"name\": \"Beirut Pharmacy 1\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 17:00\", \"pickup_days\": 2}, \"travel\": {\"car_min\": 3, \"walk_min\": 20, \"km\": 2.0, \"source\": \"road\"}, \"price\": \"603,000 LBP (about $6.74)\", \"discount_pct\": 40, \"expiry_date\": \"2026-12-31\", \"days_left\": 45, \"available\": 3, \"more_available\": false, \"pickup_days_allowed\": [\"2026-11-16\", \"2026-11-17\", \"2026-11-18\"], \"open_hours\": [{\"day\": \"2026-11-16\", \"hours\": \"09:00-17:00\"}, {\"day\": \"2026-11-17\", \"hours\": \"09:00-17:00\"}, {\"day\": \"2026-11-18\", \"hours\": \"09:00-17:00\"}], \"expiry_limits_pickup\": false}, {\"listing_id\": \"f87fc7e0-9508-569b-82d2-bf8ca254b81f\", \"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"is_alternative\": false, \"prescription_required\": true, \"pharmacy\": {\"name\": \"Beirut Pharmacy 2\", \"area\": \"Beirut\", \"open_now\": true, \"open_until\": \"Mon 22:00\", \"pickup_days\": 2}, \"travel\": {\"car_min\": 4, \"walk_min\": 7, \"km\": 1.2, \"source\": \"road\"}, \"price\": \"753,000 LBP (about $8.41)\", \"discount_pct\": 25, \"expiry_date\": \"2027-03-16\", \"days_left\": 120, \"available\": 3, \"more_available\": false, \"pickup_days_allowed\": [\"2026-11-16\", \"2026-11-17\", \"2026-11-18\"], \"open_hours\": [{\"day\": \"2026-11-16\", \"hours\": \"08:00-22:00\"}, {\"day\": \"2026-11-17\", \"hours\": \"08:00-22:00\"}, {\"day\": \"2026-11-18\", \"hours\": \"08:00-22:00\"}], \"expiry_limits_pickup\": false}, {\"listing_id\": \"eab0d725-776b-5fad-be0e-8cd8a1bee26c\", \"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"is_alternative\": false, \"prescription_required\": true, \"pharmacy\": {\"name\": \"Matn Pharmacy 12\", \"area\": \"Matn\", \"open_now\": true, \"open_until\": \"Mon 17:00\", \"pickup_days\": 1}, \"travel\": {\"car_min\": 9, \"walk_min\": 72, \"km\": 6.6, \"source\": \"road\"}, \"price\": \"753,000 LBP (about $8.41)\", \"discount_pct\": 25, \"expiry_date\": \"2027-04-25\", \"days_left\": 160, \"available\": 3, \"more_available\": false, \"pickup_days_allowed\": [\"2026-11-16\", \"2026-11-17\"], \"open_hours\": [{\"day\": \"2026-11-16\", \"hours\": \"09:00-17:00\"}, {\"day\": \"2026-11-17\", \"hours\": \"09:00-17:00\"}], \"expiry_limits_pickup\": false}, {\"listing_id\": \"6e7ea9cb-ec10-5515-82c7-385b1b0ab183\", \"product_id\": \"be5bbdbb-4db5-45ae-99f1-0cd116af619b\", \"product\": \"NEXIUM\", \"is_alternative\": false, \"prescription_required\": true, \"pharmacy\": {\"name\": \"Baabda Pharmacy 13\", \"area\": \"Baabda\", \"open_now\": true, \"open_until\": \"Mon 22:00\", \"pickup_days\": 1}, \"travel\": {\"car_min\": 18, \"walk_min\": 391, \"km\": 24.9, \"source\": \"road\"}, \"price\": \"402,000 LBP (about $4.49)\", \"discount_pct\": 60, \"expiry_date\": \"2026-12-11\", \"days_left\": 25, \"available\": 3, \"more_available\": false, \"pickup_days_allowed\": [\"2026-11-16\", \"2026-11-17\"], \"open_hours\": [{\"day\": \"2026-11-16\", \"hours\": \"08:00-22:00\"}, {\"day\": \"2026-11-17\", \"hours\": \"08:00-22:00\"}], \"expiry_limits_pickup\": false}], \"total_found\": 4, \"left_out_by_pickup_day\": 0}"
+          },
+          {
+            "name": "propose_plan",
+            "arguments": {
+              "plan_id": "plan-570747fc-1"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"proposals\": [{\"proposal_id\": \"6567c838-64b7-4ed0-8202-740d4f139b46\", \"pharmacy_name\": \"Beirut Pharmacy 1\", \"items\": [\"NEXIUM x 1\", \"EUTHYROX x 1\"]}], \"refused\": []}"
+          },
+          {
+            "name": "propose_plan",
+            "arguments": {
+              "plan_id": "plan-570747fc-2"
+            },
+            "ok": true,
+            "answer": "{\"ok\": true, \"proposals\": [{\"proposal_id\": \"e2aa7afc-1855-4e48-b0a1-0caf2bb51536\", \"pharmacy_name\": \"Beirut Pharmacy 2\", \"items\": [\"NEXIUM x 1\", \"EUTHYROX x 1\"]}], \"refused\": []}"
+          }
+        ],
+        "cards": [
+          "reserve_group",
+          "reserve_group"
+        ],
+        "notes": {
+          "language": "arabic",
+          "items_in_focus": [
+            {
+              "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+              "days_of_use": 1,
+              "qty": 1,
+              "note": "Nexium 20mg tablets (listing 1 of 2 identical)"
+            },
+            {
+              "product_id": "c0d51159-2002-446c-81cb-9ef31f61a602",
+              "days_of_use": 1,
+              "qty": 1,
+              "note": "Nexium 20mg tablets (listing 2 of 2 identical)"
+            },
+            {
+              "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+              "days_of_use": 1,
+              "qty": 1,
+              "note": "Euthyrox 50mcg tablets"
+            }
+          ],
+          "add_note": "Nexium 20mg and Euthyrox 50mcg, 7 days, both need prescription. Plans offered: Beirut Pharmacy 1 (recommended, cheapest, closes 17:00), Beirut Pharmacy 2 (closes 22:00).",
+          "pickup_day": "2026-11-16",
+          "situation_notes": [
+            "by car",
+            "pickup today",
+            "7 days of use"
+          ]
+        },
+        "outcome": "ok",
+        "seconds": 20.272,
+        "cost_usd": 0.004471,
+        "model_calls": 6,
+        "card_items": [
+          {
+            "qty": 1,
+            "label": "NEXIUM x 1",
+            "item_key": "ed4ea079-7463-5c6e-ab18-a86b31c75d15",
+            "listing_id": "ed4ea079-7463-5c6e-ab18-a86b31c75d15",
+            "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+            "days_of_use": 7,
+            "price_lbp_shown": 603000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "EUTHYROX x 1",
+            "item_key": "efc70046-730d-5ae9-946e-59c68a30a19c",
+            "listing_id": "efc70046-730d-5ae9-946e-59c68a30a19c",
+            "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+            "days_of_use": 7,
+            "price_lbp_shown": 234000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "NEXIUM x 1",
+            "item_key": "f87fc7e0-9508-569b-82d2-bf8ca254b81f",
+            "listing_id": "f87fc7e0-9508-569b-82d2-bf8ca254b81f",
+            "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+            "days_of_use": 7,
+            "price_lbp_shown": 753000,
+            "request_item_id": null
+          },
+          {
+            "qty": 1,
+            "label": "EUTHYROX x 1",
+            "item_key": "7270d17c-41bf-50d6-a829-77edadb5b64c",
+            "listing_id": "7270d17c-41bf-50d6-a829-77edadb5b64c",
+            "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+            "days_of_use": 7,
+            "price_lbp_shown": 293000,
+            "request_item_id": null
+          }
+        ],
+        "card_groups": [
+          [
+            {
+              "qty": 1,
+              "label": "NEXIUM x 1",
+              "item_key": "ed4ea079-7463-5c6e-ab18-a86b31c75d15",
+              "listing_id": "ed4ea079-7463-5c6e-ab18-a86b31c75d15",
+              "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+              "days_of_use": 7,
+              "price_lbp_shown": 603000,
+              "request_item_id": null
+            },
+            {
+              "qty": 1,
+              "label": "EUTHYROX x 1",
+              "item_key": "efc70046-730d-5ae9-946e-59c68a30a19c",
+              "listing_id": "efc70046-730d-5ae9-946e-59c68a30a19c",
+              "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+              "days_of_use": 7,
+              "price_lbp_shown": 234000,
+              "request_item_id": null
+            }
+          ],
+          [
+            {
+              "qty": 1,
+              "label": "NEXIUM x 1",
+              "item_key": "f87fc7e0-9508-569b-82d2-bf8ca254b81f",
+              "listing_id": "f87fc7e0-9508-569b-82d2-bf8ca254b81f",
+              "product_id": "be5bbdbb-4db5-45ae-99f1-0cd116af619b",
+              "days_of_use": 7,
+              "price_lbp_shown": 753000,
+              "request_item_id": null
+            },
+            {
+              "qty": 1,
+              "label": "EUTHYROX x 1",
+              "item_key": "7270d17c-41bf-50d6-a829-77edadb5b64c",
+              "listing_id": "7270d17c-41bf-50d6-a829-77edadb5b64c",
+              "product_id": "698f3470-f0a0-4919-a0ec-70404fe272bb",
+              "days_of_use": 7,
+              "price_lbp_shown": 293000,
+              "request_item_id": null
+            }
+          ]
+        ]
+      },
+      "reviewer_verdict": null
+    }
+  ],
+  "disagreements": [],
+  "spending": [
+    [
+      "baseline",
+      "settled",
+      98,
+      61365,
+      61365
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ]
+  ],
+  "warning": "Automatic checks are preliminary; review verdicts are separate. No ranking from smoke, partial coverage or unresolved safety flags."
+}

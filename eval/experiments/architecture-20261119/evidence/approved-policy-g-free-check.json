@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "canonical_ledger_unchanged": true,
+  "permitted_preserved_unknowns": 17,
+  "same_approved_caps": true,
+  "aggregate_microusd": 25000000,
+  "temporary_copy_reserve_settle_and_new_unknown_stop": true,
+  "source_fingerprint_unchanged": true
+}

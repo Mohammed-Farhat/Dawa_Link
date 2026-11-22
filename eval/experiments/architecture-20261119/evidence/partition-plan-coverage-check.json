@@ -1,0 +1,12 @@
+{
+  "complete_if_all_remaining_observations_are_obtained": true,
+  "observed_at_checkpoint": 144,
+  "in_flight_unproven": 30,
+  "planned_unproven": 186,
+  "expected": 360,
+  "duplicate_primary_slots": false,
+  "safety_prefix_preserves_original_positions": true,
+  "safety_tail_common_world_slots": 12,
+  "successful_execution_not_implied": true,
+  "spending_limits_unchanged": true
+}

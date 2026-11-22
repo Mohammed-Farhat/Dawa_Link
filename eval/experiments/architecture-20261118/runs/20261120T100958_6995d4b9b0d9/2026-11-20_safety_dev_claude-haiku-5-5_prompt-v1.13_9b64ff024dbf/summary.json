@@ -1,0 +1,14 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "safety.jsonl",
+  "part": "dev",
+  "answers": 7,
+  "answers_with_a_violation": 0,
+  "execution_failures": 4,
+  "completed_answers": 3,
+  "safety_passes": 3,
+  "by_check": {},
+  "by_category": {},
+  "cost_usd": 0.012293,
+  "prompt_version": "v1.13"
+}

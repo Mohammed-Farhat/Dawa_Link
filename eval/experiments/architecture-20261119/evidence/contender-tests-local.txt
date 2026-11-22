@@ -1,0 +1,68 @@
+command: ["pytest", "tests/agent/test_architectures.py", "tests/unit/evals", "tests/unit/agent"]
+..F.....FF.............................................................. [ 20%]
+........................................................................ [ 41%]
+........................................................................ [ 61%]
+........................................................................ [ 82%]
+..............................................................           [100%]
+=================================== FAILURES ===================================
+________ test_staged_missing_information_routes_without_search[worker] _________
+
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x114f20c20>, session=<sqlalchemy.orm.sessio...keRouting object at 0x114e51550>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x114fab5f0>], turns={})
+runs_in = 'worker'
+
+    @pytest.mark.parametrize("runs_in", ["chat", "worker"])
+    def test_staged_missing_information_routes_without_search(scene: Scene, runs_in: Any) -> None:
+        result = scene.turn(
+            facts(transport=None, pickup_day=None),
+            text="I need Augmentin for seven days",
+            architecture="staged",
+            runs_in=runs_in,
+        )
+>       assert result.status == Status.DONE
+E       AssertionError: assert <Status.NOTHING: 'nothing'> == <Status.DONE: 'done'>
+E         
+E         - done
+E         + nothing
+
+tests/agent/test_architectures.py:43: AssertionError
+______ test_verifier_correction_still_cannot_claim_unapproved_reservation ______
+
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x1154c3290>, session=<sqlalchemy.orm.sessio...keRouting object at 0x1154c3e60>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x115513080>], turns={})
+
+    def test_verifier_correction_still_cannot_claim_unapproved_reservation(scene: Scene) -> None:
+        result = scene.turn(
+            reply("Hello"),
+            call("review_draft", issues=["Wrong greeting"]),
+            reply("I reserved it for you."),
+            architecture="verified",
+        )
+>       assert result.outcome == "guardrail_blocked"
+E       AssertionError: assert <RunOutcome.OK: 'ok'> == 'guardrail_blocked'
+E         
+E         - guardrail_blocked
+E         + ok
+
+tests/agent/test_architectures.py:119: AssertionError
+_________________ test_verifier_no_issues_sends_original_draft _________________
+
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x115513cb0>, session=<sqlalchemy.orm.sessio...keRouting object at 0x115513bc0>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x1155dbe90>], turns={})
+
+    def test_verifier_no_issues_sends_original_draft(scene: Scene) -> None:
+        result = scene.turn(
+            reply("Which strength?"),
+            call("review_draft", issues=[]),
+            architecture="verified",
+            runs_in="worker",
+        )
+>       assert result.status == Status.DONE
+E       AssertionError: assert <Status.NOTHING: 'nothing'> == <Status.DONE: 'done'>
+E         
+E         - done
+E         + nothing
+
+tests/agent/test_architectures.py:131: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_architectures.py::test_staged_missing_information_routes_without_search[worker]
+FAILED tests/agent/test_architectures.py::test_verifier_correction_still_cannot_claim_unapproved_reservation
+FAILED tests/agent/test_architectures.py::test_verifier_no_issues_sends_original_draft
+3 failed, 347 passed in 2.68s

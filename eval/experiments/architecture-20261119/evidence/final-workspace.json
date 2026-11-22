@@ -1,0 +1,7 @@
+{
+  "branch": "test/agent-evaluation",
+  "head": "8e689a583b69a399598f557ac8a2310571c1dbb1",
+  "handoff_exists": true,
+  "handoff_sha256": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13",
+  "preservation_note": "Original untracked handoff never edited by this task. All81 historical ledger records independently compared with HEAD and unchanged."
+}

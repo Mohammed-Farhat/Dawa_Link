@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "pytest",
+    "--junitxml=../eval/experiments/architecture-20261119/evidence/backend-2.xml"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 151.706
+}

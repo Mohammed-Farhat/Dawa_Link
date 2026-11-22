@@ -1,0 +1,49 @@
+{
+  "authorization": {
+    "owner_reply": "Authorize these revised stage ceilings",
+    "caps_microusd": {
+      "baseline": 4000000,
+      "screening": 9000000,
+      "expanded": 7000000,
+      "heldout": 3000000,
+      "retries": 2000000
+    },
+    "aggregate_microusd": 25000000,
+    "committed_before_by_stage": {
+      "baseline": 3963178,
+      "screening": 6000346
+    },
+    "known_before_microusd": 933524,
+    "ledger_sha256_before": "6dd30ce96d50699a0972553ef2cc77d3a9cc165ec284782829b832af9dd86f4c",
+    "existing_uncertain_ids": [
+      "0d32bd6e7e0249ed90567dcbdb988f48",
+      "0fb9a2c9f3ec4810946477c8457e8036",
+      "15574c9f6dc445c2a7027f77db57b75a",
+      "1dd6b76421c84e9d896357f9d4a597cc",
+      "1e77799c15ec46d180396c329072caa3",
+      "423795542bd240c4bd40bdf814083a21",
+      "63c4a74e43a24681869c4d79e7733058",
+      "679655cfaea34bb0bd377616507fb074",
+      "68966be19b144896b7e6a2b1c5286928",
+      "aff138f531b24e47a0be330ac1e43bf0",
+      "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "c922644bdebb4a298753525e504bd41d",
+      "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "e515f0ffaffc42e889990d289e1ffdd6"
+    ],
+    "stop_on_new_uncertainty": true,
+    "billing_holds_released": false,
+    "reallocation_only": true
+  },
+  "authorization_sha256": "be638efbbe3df51c8117e48164cca8eba47e3d33fe7f776c9e86d13df18e9ccb",
+  "bootstrap_sha256": "27448d94fa723600840844c26ec6f8239f19a2c699b7f3c732e89f55a99b2a33",
+  "effective_caps_microusd": {
+    "baseline": 4000000,
+    "screening": 9000000,
+    "expanded": 7000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_cap_microusd": 25000000,
+  "stop_on_new_uncertain_call": true
+}

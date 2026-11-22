@@ -17,9 +17,9 @@ from dawalink.agent.llm.base import LLMRejected, ModelReply, Prompt
 from dawalink.agent.llm.claude import ClaudeModel
 
 CAPS = {
-    "baseline": 4_000_000,
+    "baseline": 6_000_000,
     "screening": 6_000_000,
-    "expanded": 10_000_000,
+    "expanded": 8_000_000,
     "heldout": 3_000_000,
     "retries": 2_000_000,
 }
@@ -167,6 +167,33 @@ class _RecordedMessages:
         # Request construction and budget refusal happen before transmission.
         call = self.ledger.reserve(self.run, self.stage)
         started = time.monotonic()
+        import hashlib
+        import json
+
+        names = [t.get("name") for t in kwargs.get("tools", [])]
+        purpose = (
+            "extraction"
+            if names == ["record_facts"]
+            else "verification"
+            if names == ["review_draft"]
+            else "played_client"
+            if "write_message" in names
+            else "workflow"
+        )
+        # Hash the request, never store credentials or arbitrary SDK error bodies.
+        self.ledger.record(
+            call,
+            "request",
+            {
+                "model": kwargs.get("model"),
+                "purpose": purpose,
+                "architecture": os.environ.get("DAWALINK_ARCHITECTURE", "current"),
+                "effort": kwargs.get("output_config", {}).get("effort"),
+                "request_sha256": hashlib.sha256(
+                    json.dumps(kwargs, sort_keys=True, default=str).encode()
+                ).hexdigest(),
+            },
+        )
         try:
             response = self.messages.create(**kwargs)
             used = response.usage

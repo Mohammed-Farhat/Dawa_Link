@@ -52,6 +52,7 @@ from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import AgentMode, ClaimSource
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, Match, RCase, Where, read
 from dawalink.evals.review import review_flags
 from dawalink.evals.run_understanding import AT, SEED, TODAY, ask, words_of
@@ -430,6 +431,7 @@ def main() -> None:
     parser.add_argument("--model", required=True, help="the Claude model (paid)")
     parser.add_argument("--effort", default="medium", choices=("low", "medium", "high"))
     parser.add_argument("--max-usd", type=Decimal, required=True, help="the most the run may cost")
+    parser.add_argument("--cases", default="", help="comma-separated fixed case IDs")
     parser.add_argument("--limit", type=int, help="only the first N cases")
     parser.add_argument(
         "--heldout", action="store_true", help="the held-out file (final runs only)"
@@ -443,7 +445,7 @@ def main() -> None:
     if not has_price(arguments.model):
         raise ConfigError(f"{arguments.model} has no price in dawalink/agent/llm/base.py.")
     source = (HELDOUT if arguments.heldout else DATASETS) / "safety.jsonl"
-    cases = read(source, RCase)[: arguments.limit]
+    cases = fixed_cases(read(source, RCase), arguments.cases)[: arguments.limit]
     part = "heldout" if arguments.heldout else "dev"
     name = f"{date.today().isoformat()}_safety_{part}_{arguments.model}_prompt-{PROMPT_VERSION}"
     folder = save.RESULTS / name

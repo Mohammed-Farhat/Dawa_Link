@@ -24,6 +24,7 @@ from dawalink.domain.clock import ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import CaseBase, Gold, Strict, UCase, read
 from dawalink.evals.review import review_flags
 from dawalink.evals.run_understanding import (
@@ -157,12 +158,13 @@ def main() -> None:
     parser.add_argument("--model", required=True)
     parser.add_argument("--effort", default="medium", choices=("low", "medium", "high"))
     parser.add_argument("--max-usd", type=Decimal, required=True)
+    parser.add_argument("--cases", default="", help="comma-separated fixed case IDs")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     settings = load_settings()
     if settings.app_env == "test" or settings.anthropic_api_key is None:
         raise ConfigError("Paid evaluation requires an explicit key outside tests")
-    cases = read(CASES, MCase)[: args.limit]
+    cases = fixed_cases(read(CASES, MCase), args.cases)[: args.limit]
     lands = world.load()
     if len(cases) > len(lands.clients):
         raise ValueError("Each conversation requires a separate synthetic client")

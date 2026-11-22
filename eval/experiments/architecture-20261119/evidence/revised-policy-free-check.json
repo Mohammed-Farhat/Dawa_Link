@@ -1,0 +1,9 @@
+{
+  "authorized_caps_sum_to_25": true,
+  "historical_holds_retained": true,
+  "successful_settlement_allows_next_attempt": true,
+  "new_uncertainty_blocks_further_attempts": true,
+  "canonical_ledger_mutated": false,
+  "commands": 68,
+  "plan_sha256": "ed2bede91c03ed7ae155c79a20c2c0f22c7f6016bb06bb3c8bd3137ccd9043bf"
+}

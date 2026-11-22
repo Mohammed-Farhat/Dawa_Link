@@ -1,0 +1,17 @@
+{
+  "project": "dawalink-eval-20261118",
+  "containers": {
+    "postgres": {
+      "state": "exited",
+      "exit_code": 0
+    },
+    "mailpit": {
+      "state": "exited",
+      "exit_code": 0
+    }
+  },
+  "volume": "dawalink-eval-20261118_evaluation-data",
+  "volume_preserved": true,
+  "stop_exit_code": 0,
+  "approval_note": "Initial automatic approval review timed out; one permitted retry succeeded. Subsequent read-only Docker inspection confirmed both stopped and volume present."
+}

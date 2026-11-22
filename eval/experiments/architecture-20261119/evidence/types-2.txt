@@ -1,0 +1,3 @@
+command: ["mypy"]
+src/dawalink/evals/experiment.py:138: error: Module has no attribute "DATASETS"  [attr-defined]
+Found 1 error in 1 file (checked 340 source files)

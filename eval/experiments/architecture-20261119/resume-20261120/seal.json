@@ -1,0 +1,26 @@
+{
+  "sha256": {
+    "eval/experiments/architecture-20261119/resume-20261120/REPORT.md": "e387134e6e5f1e7f87c7bed18ac236f68b9b6c949e778190daea1ba2e404267d",
+    "eval/experiments/architecture-20261119/resume-20261120/disagreement-review.json": "2ee947db239bcae5d3d6ab6ed66fadf57d672959dc353f12f29cbf359e6608ca",
+    "eval/experiments/architecture-20261119/resume-20261120/PROGRESS.md": "b3aacecd8060e53732d3081d215122561745030c886163d98fd192f72770c195",
+    "eval/experiments/architecture-20261119/resume-20261120/manual-review.jsonl": "311de8acd7a9c45643385292bd7ef4b5518de874f9979eda2b7d43b5a8266c12",
+    "eval/experiments/architecture-20261119/resume-20261120/budget.sqlite": "01d58eec2ea86a0a8779e4216684c62a1ed2b5f865dfdb386efe1d98af5823ef",
+    "eval/experiments/architecture-20261119/resume-20261120/integrity.json": "ab4b81d80e418bf0da9dbba8330c1f4775e47286d1440d8f3211ef181ad8384b",
+    "eval/experiments/architecture-20261119/resume_paid_20261120.py": "fa0b5501127f0e22fb54341cc8824c4d56b0caf6512dc5867be3bd5d5e9278cb",
+    "eval/experiments/architecture-20261119/STOP_ALLOWANCE_20261120": "9078e613253d4800eb41cd831934784dc6220753b6ccf427fc31746cd50b1f95",
+    "eval/experiments/architecture-20261119/evidence/owner-allowance-20261120.json": "2088bfc1bd495bfa4c433e7f0619e16d2d46528fa64e7425e09c340afabf33a5",
+    "eval/experiments/architecture-20261119/evidence/allowance-free-check.json": "03ea4e72f9914c326996cb6d796a055be5c848cd653538f50128036777f8a7bf",
+    "eval/experiments/architecture-20261119/evidence/resume-analysis-20261120.json": "a70ca2f54dac3d60d74c99fb83d7d70906fccda178f0ccd1db5ec32b811f5d00",
+    "eval/experiments/architecture-20261119/evidence/resume-20261120-C1-safety.txt": "50f423f706a1f1188e5dddd18451399ff2b193003d4a76d33332f358624d82ba",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/source.tar.gz": "6da0b85d91e31ca4ae5b2dd93ef380826c6cdcc0a66b76c1635b30ee48b69525",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/owner-allowance.json": "7840aecaa3a9992f7be980eb3723267b53ca7d8600c752bd00831ec304f32c11",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/manifest.json": "4bacb0400af88387557a3dd4e359ad065f74dc85e384b4172f0ed64b90cc69f2",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/code.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/completion.json": "dbb39733f4ebf6872a6d24edbffd2ddba37dd32813a0f84b70b8792e992698b5",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/2026-11-20_safety_dev_claude-haiku-5-5_prompt-v1.13_f06cc291ea71/summary.json": "149b3e95ca338abe158684dd43f00dbc74a8571b58e2398140bd6b73616334d5",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/2026-11-20_safety_dev_claude-haiku-5-5_prompt-v1.13_f06cc291ea71/turns.jsonl": "4b91c6bb0094dbc33f17e67439d4efd9f7e798d9cb8fbcc9571212e13782213d",
+    "eval/experiments/architecture-20261118/runs/20261120T094710_31138f2a43a0/2026-11-20_safety_dev_claude-haiku-5-5_prompt-v1.13_f06cc291ea71/answers.jsonl": "76fa62f4672cf16993234a0482b64b2589b77339771ed39620cf6b41aa2b3482"
+  },
+  "status": "saved incomplete evidence, not an achieved comparison",
+  "canonical_ledger_sha256": "6dd30ce96d50699a0972553ef2cc77d3a9cc165ec284782829b832af9dd86f4c"
+}

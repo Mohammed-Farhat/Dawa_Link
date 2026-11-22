@@ -1,0 +1,64 @@
+{
+  "authorization": {
+    "owner_reply": "Authorize screening $10, expanded $6; total $25",
+    "caps_microusd": {
+      "baseline": 4000000,
+      "screening": 10000000,
+      "expanded": 6000000,
+      "heldout": 3000000,
+      "retries": 2000000
+    },
+    "aggregate_microusd": 25000000,
+    "past_calls_moved_or_reset": false,
+    "uncertain_holds_released": false,
+    "apply_at_next_child_boundary": true,
+    "existing_uncertain_ids": [
+      "0d32bd6e7e0249ed90567dcbdb988f48",
+      "0fb9a2c9f3ec4810946477c8457e8036",
+      "15574c9f6dc445c2a7027f77db57b75a",
+      "1dd6b76421c84e9d896357f9d4a597cc",
+      "1e77799c15ec46d180396c329072caa3",
+      "2f0b789684804da1afa8a19c4b7009c3",
+      "423795542bd240c4bd40bdf814083a21",
+      "53fcb90399824e1a915f114ec2898160",
+      "63c4a74e43a24681869c4d79e7733058",
+      "679655cfaea34bb0bd377616507fb074",
+      "68966be19b144896b7e6a2b1c5286928",
+      "aff138f531b24e47a0be330ac1e43bf0",
+      "ba1ff9400a1042c1a95c6832c351dafe",
+      "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "c922644bdebb4a298753525e504bd41d",
+      "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "e515f0ffaffc42e889990d289e1ffdd6"
+    ],
+    "stop_on_new_uncertainty": true,
+    "authorization_source_sha256": "6c334bd3ef3875f3e4fb523b315f20e0efa56fa66f80eafc2e607bb9b023fb11",
+    "created": "2026-11-20T15:11:53.636683+00:00",
+    "ledger_sha256_before": "ef2946f0234a13f6addb7c9fb9b42cc344ce28e51a631aaa8336f7114d57f4d7",
+    "committed_before_by_stage": {
+      "baseline": 3963178,
+      "screening": 8845728
+    },
+    "known_before_microusd": 1843906,
+    "prior_execution": "revised-20261120f",
+    "prior_execution_terminal": true,
+    "next_untouched_step": 51,
+    "controlled_boundary_no_calls": true,
+    "authorization_note": "Same owner-approved4/10/6/3/2 caps and25total. No cap change. Preserve newly inspected APIConnectionError hold, do not replay failed M0005. Continue untouched comparison cases only.",
+    "remaining_case_invocations": 27,
+    "rough_remaining_known_usd": 0.24,
+    "twice_measured_forecast_plus_next_reservation_usd": 1.125,
+    "screening_headroom_usd": 1.154272
+  },
+  "authorization_sha256": "074d28462a01a0c8df0bbbd429f38f3a83fc17c7dd402a4167e918a29363f82a",
+  "bootstrap_sha256": "23f73ae062e13a0e47e8f380303d2a378bffa4209bec852a842d43cef121deeb",
+  "effective_caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_cap_microusd": 25000000,
+  "stop_on_new_uncertain_call": true
+}

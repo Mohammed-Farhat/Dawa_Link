@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "mypy"
+  ],
+  "cwd": "backend",
+  "exit_code": 1,
+  "seconds": 2.401
+}

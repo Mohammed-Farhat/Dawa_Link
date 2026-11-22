@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "seal": "final-seal.json",
+      "noncanonical_files_verified": 240,
+      "mismatches": []
+    },
+    {
+      "seal": "resume-20261120/seal.json",
+      "noncanonical_files_verified": 20,
+      "mismatches": []
+    }
+  ],
+  "canonical_ledger": "Expected appends; every oldcall/event compared against HEAD and3historic snapshots by completed-integrity.json",
+  "git_diff_check_exit_code": 0,
+  "branch": "test/agent-evaluation",
+  "created": "2026-11-20T15:36:16.893454+00:00"
+}

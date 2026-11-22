@@ -1,0 +1,8 @@
+{
+  "source_pin_matches": true,
+  "original_cap_refused": true,
+  "authorized_cap_reserved": true,
+  "second_uncertain_attempt_refused": true,
+  "aggregate_preserved": true,
+  "canonical_ledger_mutated": false
+}

@@ -333,17 +333,27 @@ def test_a_saved_home_place_and_a_date_of_birth_never_reach_the_model(scene: Sce
     scene.stock()
     tracer = RecordingTracer()
 
-    scene.turn(
+    result = scene.turn(
         calls(
             ("search_catalog", {"query": "augmentin"}),
             ("find_options", {"product_ids": [str(scene.augmentin)]}),
         ),
         reply("Here is what I found."),
+        reply("Hamra Pharmacy has options to review."),
         text="I was born on 07/05/1990, and on 7 May 1990 too. I need Augmentin near my home.",
         tracer=tracer,
     )
 
-    traced = json.dumps([dataclasses.asdict(trace) for trace in tracer.traces], default=str)
+    assert result.status == "done"
+    # Numeric timer fractions can contain the four digits "1990" by chance. Only
+    # those structural timing fields are excluded; all prompt/result payloads remain.
+    trace_payloads = [dataclasses.asdict(trace) for trace in tracer.traces]
+    for payload in trace_payloads:
+        payload.pop("_zero")
+        for span in payload["spans"]:
+            span.pop("started")
+            span.pop("ended")
+    traced = json.dumps(trace_payloads, default=str)
     assert tracer.traces
     sent = scene.model.everything_sent() + traced
     # The tools did count from the saved place: the pharmacy is found with a travel time.

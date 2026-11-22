@@ -133,6 +133,13 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
             if isinstance(shop, dict):
                 shop = shop.get("name")
             pharmacy = str(shop) if isinstance(shop, str) else pharmacy
+            # plan_basket puts the total on the plan, while its pharmacy is inside
+            # groups. Attribute a basket total only when it has exactly one group.
+            groups = value.get("groups")
+            if isinstance(groups, list) and len(groups) == 1 and isinstance(groups[0], dict):
+                group_shop = groups[0].get("pharmacy")
+                if isinstance(group_shop, dict) and isinstance(group_shop.get("name"), str):
+                    pharmacy = group_shop["name"]
             # The guarded proposal tools return Preview(title, lines), rather than
             # FindOptions' structured option rows. Keep those price associations too.
             title, lines = value.get("title"), value.get("lines")

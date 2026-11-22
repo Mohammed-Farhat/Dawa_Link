@@ -7,6 +7,8 @@ that says "yes" to everything would be worse than none.
 from datetime import date
 from typing import Any
 
+import pytest
+
 from dawalink.evals.datasets import UCase
 from dawalink.evals.score_understanding import (
     CHECKS,
@@ -431,3 +433,35 @@ def test_what_a_reply_asks_about_is_read_from_its_questions() -> None:
     assert asks_about("3andak siyyara aw mashi?") == ["transport"]
     assert asks_about("Your order is ready today. Anything else?") == []
     assert asks_about("I can't put you first. Which medicine do you need?") == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "بس بدي أعرف لكم يوم بتاخد الدوا",
+        "بس بدي اعرف لأد كم يوم بتاخد الدوا",
+        "خبرني لكم يوم بدك الدوا",
+        "أخبرني أي يوم بدك تستلم",
+    ],
+)
+def test_indirect_arabic_questions_without_punctuation_keep_the_client_answering(text: str) -> None:
+    from dawalink.evals.score_understanding import asked_a_question
+
+    assert asked_a_question(Seen(text))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "أنا بعرف الدوا",
+        "بدي ساعدك تلاقي الدوا",
+        "عرفت إنك بالسيارة واليوم",
+        "الدواء بوصفة",
+        "الصيدلي أخبرني أن الدواء متوفر",
+        "الصيدلي خبرني عن الدواء",
+    ],
+)
+def test_arabic_statements_do_not_become_questions(text: str) -> None:
+    from dawalink.evals.score_understanding import asked_a_question
+
+    assert not asked_a_question(Seen(text))

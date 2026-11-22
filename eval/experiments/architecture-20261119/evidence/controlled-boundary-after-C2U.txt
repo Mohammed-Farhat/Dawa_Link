@@ -1,0 +1,1 @@
+Controlled boundary after current C2 U; stop next child before setup/payment to load the symmetric safety tail-case partition. This does not stop the already-running suite.

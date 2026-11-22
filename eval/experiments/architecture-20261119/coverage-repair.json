@@ -1,0 +1,15 @@
+{
+  "reason": "Existing fixed-conversation runner stops after one non-ok case. B1 left M0015 unattempted. Shared execution partitioning repair, before any C comparative scores.",
+  "primary_excluded_runs": {
+    "20261119T160514_fb0c053439a6": "A1 batched multiturn; superseded by equal-world per-case execution for all contenders. Costs and all observed successes/failures retained as ancillary evidence.",
+    "20261119T162014_65ed7c271544": "B1 batched multiturn; failed M0014 and skipped M0015. Retain as operational failure evidence; primary comparison uses identical per-case worlds for all."
+  },
+  "per_case_multiturn": true,
+  "source_unchanged": true,
+  "sample_unchanged": true,
+  "targets_unchanged": true,
+  "no_retry_of_primary_failure": true,
+  "common_start": "Each invocation selects one fixed case; same synthetic first client, fixed clock, world seed and case-specific shelves across architecture/repetition. Failure ends only its conversation and remains a primary failure.",
+  "new_plan_sha256": "07da492bad0c2f46807581097c61cac44e46e67c8379610ef80cfca3ce4e5588",
+  "supplemental_prior_runs": "Both batched runs stay in report with original outcomes, including B schema failure, regardless of new outcomes."
+}

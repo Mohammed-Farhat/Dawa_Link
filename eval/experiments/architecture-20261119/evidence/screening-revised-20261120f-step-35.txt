@@ -1,0 +1,3 @@
+[".venv/bin/python", "../eval/experiments/architecture-20261119/revised_paid_20261120e.py", "multiturn", "--architecture", "staged", "--stage", "screening", "--kind", "comparison", "--repetition", "1", "--cases", "M-0012", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "2"]
+saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T145819_d00e056699d6/multiturn_471e4f6a5340
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T145819_d00e056699d6 status: complete

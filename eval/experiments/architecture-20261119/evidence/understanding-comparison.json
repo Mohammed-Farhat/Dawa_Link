@@ -1,0 +1,89 @@
+{
+  "current": {
+    "run": "20261119T155557_e5728d4d1c99",
+    "attempts": 30,
+    "raw_pass": 27,
+    "reviewed_pass": 27,
+    "execution_ok": 30,
+    "known_microusd": 77808,
+    "held_microusd": 77808,
+    "calls": 136,
+    "successful_turn_latency": {
+      "all": {
+        "n": 55,
+        "p50": 5.758,
+        "p95": 12.159
+      },
+      "answer": {
+        "n": 32,
+        "p50": 4.384,
+        "p95": 6.141
+      },
+      "card": {
+        "n": 23,
+        "p50": 8.954,
+        "p95": 12.742
+      }
+    },
+    "needless_questions": 0,
+    "question_opportunities": 23
+  },
+  "staged": {
+    "run": "20261119T160936_6f61b62ff4fd",
+    "attempts": 30,
+    "raw_pass": 19,
+    "reviewed_pass": 20,
+    "execution_ok": 30,
+    "known_microusd": 82713,
+    "held_microusd": 82713,
+    "calls": 156,
+    "successful_turn_latency": {
+      "all": {
+        "n": 55,
+        "p50": 3.921,
+        "p95": 17.692
+      },
+      "answer": {
+        "n": 32,
+        "p50": 1.954,
+        "p95": 5.01
+      },
+      "card": {
+        "n": 23,
+        "p50": 13.484,
+        "p95": 17.94
+      }
+    },
+    "needless_questions": 2,
+    "question_opportunities": 23
+  },
+  "verified": {
+    "run": "20261119T162646_21096b0ddb62",
+    "attempts": 30,
+    "raw_pass": 21,
+    "reviewed_pass": 24,
+    "execution_ok": 26,
+    "known_microusd": 193495,
+    "held_microusd": 5353495,
+    "calls": 211,
+    "successful_turn_latency": {
+      "all": {
+        "n": 47,
+        "p50": 14.609,
+        "p95": 25.361
+      },
+      "answer": {
+        "n": 28,
+        "p50": 12.694,
+        "p95": 17.472
+      },
+      "card": {
+        "n": 19,
+        "p50": 20.601,
+        "p95": 28.668
+      }
+    },
+    "needless_questions": 0,
+    "question_opportunities": 19
+  }
+}

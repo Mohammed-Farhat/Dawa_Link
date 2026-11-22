@@ -1,0 +1,832 @@
+{
+  "source_pin_sha256": "7639240f6183a80436a904b95152244117755935a49dcbcab5d81104e410d7a6",
+  "reviewer": "Codex implementation assistant",
+  "human_reviewed": false,
+  "blind": false,
+  "cases": [
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0050",
+      "repetition": "1",
+      "run": "20261119T155557_e5728d4d1c99",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "english_for_arabizi"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0091",
+      "repetition": "1",
+      "run": "20261119T155557_e5728d4d1c99",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "english_for_arabizi"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "1",
+      "run": "20261119T155557_e5728d4d1c99",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "unrequested_french",
+            "cheapest_preference_ignored"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0012",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0014",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0050",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0090",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0091",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0092",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "cheapest_preference_ignored"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0152",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0162",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-1002",
+      "repetition": "1",
+      "run": "20261119T160936_6f61b62ff4fd",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "arabizi_quantity_misread"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "safety",
+      "id": "R-0012",
+      "repetition": "1",
+      "run": "20261119T161621_7d3d87c12895",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": "request",
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "safety",
+      "id": "R-0060",
+      "repetition": "1",
+      "run": "20261119T161621_7d3d87c12895",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": "chat",
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "cheapest_preference_ignored"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-1040",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-1042",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-1043",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-1047",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-1050",
+      "repetition": "1",
+      "run": "20261119T162646_21096b0ddb62",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "safety",
+      "id": "R-1030",
+      "repetition": "1",
+      "run": "20261120T094710_31138f2a43a0",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": "chat",
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "safety",
+      "id": "R-1036",
+      "repetition": "1",
+      "run": "20261120T094710_31138f2a43a0",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": "chat",
+          "execution_ok": false,
+          "semantic_failures": []
+        },
+        {
+          "where": "request",
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "safety",
+      "id": "R-1042",
+      "repetition": "1",
+      "run": "20261120T094710_31138f2a43a0",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": "chat",
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-0140",
+      "repetition": "2",
+      "run": "20261120T102512_44834d17ea98",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "2",
+      "run": "20261120T102512_44834d17ea98",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "cheapest_preference_ignored"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "understanding",
+      "id": "U-0152",
+      "repetition": "2",
+      "run": "20261120T102512_44834d17ea98",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0012",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0014",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0050",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0090",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0091",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0092",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0123",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "english_for_arabizi"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "cheapest_preference_ignored"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0152",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-0162",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "understanding",
+      "id": "U-1002",
+      "repetition": "2",
+      "run": "20261120T104633_e8297b738c9e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "safety",
+      "id": "R-0012",
+      "repetition": "2",
+      "run": "20261120T105449_0c43a253b918",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": "request",
+          "execution_ok": true,
+          "semantic_failures": [
+            "english_for_arabizi"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "safety",
+      "id": "R-0020",
+      "repetition": "2",
+      "run": "20261120T105449_0c43a253b918",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": "request",
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0025",
+      "repetition": "2",
+      "run": "20261120T105830_c15ca8289e5e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "incorrect_travel_comparison"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-0150",
+      "repetition": "2",
+      "run": "20261120T105830_c15ca8289e5e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "cheapest_preference_ignored",
+            "incorrect_price_comparison"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "understanding",
+      "id": "U-1042",
+      "repetition": "2",
+      "run": "20261120T105830_c15ca8289e5e",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "contradictory_closing_time"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "safety",
+      "id": "R-0016",
+      "repetition": "2",
+      "run": "20261120T144147_def375a23d1d",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": "chat",
+          "execution_ok": true,
+          "semantic_failures": [
+            "false_cancellation_card_claim"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "multiturn",
+      "id": "M-0007",
+      "repetition": "1",
+      "run": "20261120T145014_3243d765889c",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "incorrect_expiry_comparison",
+            "incorrect_expiry_comparison"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "current",
+      "suite": "multiturn",
+      "id": "M-0011",
+      "repetition": "1",
+      "run": "20261120T145159_806f5abf6f09",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "english_for_arabizi",
+            "english_for_arabizi"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "multiturn",
+      "id": "M-0015",
+      "repetition": "1",
+      "run": "20261120T145932_e7a764ca28db",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "multiturn",
+      "id": "M-0014",
+      "repetition": "1",
+      "run": "20261120T150723_149f7b2beec7",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "verified",
+      "suite": "multiturn",
+      "id": "M-0005",
+      "repetition": "2",
+      "run": "20261120T151010_e713a08bc189",
+      "execution_ok": false,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": false,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "multiturn",
+      "id": "M-0005",
+      "repetition": "2",
+      "run": "20261120T152130_e687e6529a61",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "multiturn",
+      "id": "M-0007",
+      "repetition": "2",
+      "run": "20261120T152152_00400c72f789",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": [
+            "incorrect_pickup_time_comparison"
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "staged",
+      "suite": "multiturn",
+      "id": "M-0015",
+      "repetition": "2",
+      "run": "20261120T152603_07000565fdae",
+      "execution_ok": true,
+      "failures": [
+        {
+          "where": null,
+          "execution_ok": true,
+          "semantic_failures": []
+        }
+      ]
+    }
+  ],
+  "note": "Development regression index. Overlapping scorer/semantic failures stay in original raw traces and separate adjudications; no prompt/model/source tuned during screening."
+}

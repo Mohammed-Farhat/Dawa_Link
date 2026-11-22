@@ -1,0 +1,16 @@
+{
+  "measured_smoke_cost_per_case_usd": {
+    "verified": 0.0071572,
+    "staged": 0.0027242,
+    "current": 0.0035638
+  },
+  "conversation_average_turns": 3.0,
+  "assumed_understanding_average_turns": 2,
+  "screening_expected_usd": 1.747876,
+  "planning_multiplier": 2,
+  "screening_planning_usd": 3.495752,
+  "existing_screening_usd": 0.049695,
+  "call_reservation_usd": 0.645,
+  "fits_screening_ceiling": true,
+  "note": "Only five understanding cases/architecture; safety and long-dialogue costs are estimates. Per-call canonical ledger enforces actual ceilings."
+}

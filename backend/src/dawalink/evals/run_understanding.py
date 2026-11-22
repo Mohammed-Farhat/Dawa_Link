@@ -43,6 +43,7 @@ from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, UCase, read
 from dawalink.evals.review import review_flags
 from dawalink.evals.score_understanding import (
@@ -452,6 +453,7 @@ def main() -> None:
     parser.add_argument("--rescore", type=Path, help="score a saved run again (free)")
     parser.add_argument("--effort", default="medium", choices=("low", "medium", "high"))
     parser.add_argument("--max-usd", type=Decimal, help="the most the run may cost")
+    parser.add_argument("--cases", default="", help="comma-separated fixed case IDs")
     parser.add_argument("--limit", type=int, help="only the first N cases")
     parser.add_argument(
         "--heldout", action="store_true", help="the held-out file (final runs only)"
@@ -482,7 +484,7 @@ def main() -> None:
     if not has_price(arguments.model):
         raise ConfigError(f"{arguments.model} has no price in dawalink/agent/llm/base.py.")
     source = (HELDOUT if arguments.heldout else DATASETS) / "understanding.jsonl"
-    cases = read(source, UCase)[: arguments.limit]
+    cases = fixed_cases(read(source, UCase), arguments.cases)[: arguments.limit]
     part = "heldout" if arguments.heldout else "dev"
     name = f"{date.today().isoformat()}_understanding_{part}_{arguments.model}"
     effort = "" if arguments.effort == "medium" else f"_effort-{arguments.effort}"

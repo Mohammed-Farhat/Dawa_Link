@@ -1,0 +1,10 @@
+{
+  "status": "incomplete",
+  "error_type": null,
+  "ledger_after": {
+    "known_spend_microusd": 858027,
+    "committed_microusd": 9888027,
+    "calls": 1286
+  },
+  "ended": "2026-11-19T16:46:29.276849+00:00"
+}

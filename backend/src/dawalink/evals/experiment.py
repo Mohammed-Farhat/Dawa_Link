@@ -4,6 +4,7 @@ New run directory every time. Paid runners share one durable ledger. Only develo
 cases are allowed in this stage. A completion manifest is required for comparison.
 """
 
+import argparse
 import hashlib
 import importlib
 import json
@@ -104,27 +105,42 @@ def main() -> None:
     if len(sys.argv) < 2 or sys.argv[1] not in MODULES:
         raise SystemExit("suite: understanding, safety, conversations, simulation")
     suite, args = sys.argv[1], sys.argv[2:]
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument(
+        "--architecture", choices=("current", "staged", "verified"), default="current"
+    )
+    parser.add_argument(
+        "--stage", choices=("baseline", "screening", "expanded"), default="baseline"
+    )
+    parser.add_argument("--repetition", default="1")
+    parser.add_argument("--kind", choices=("smoke", "comparison", "pilot"), default="comparison")
+    managed, args = parser.parse_known_args(args)
+    os.environ["DAWALINK_ARCHITECTURE"] = managed.architecture
     if any(x.split("=")[0] in ("--heldout", "--rescore") for x in args):
         raise SystemExit("Held-out/rescoring is outside this development protocol")
+    from dawalink.evals.dataset_selection import select_dataset
+
+    dataset = os.environ.get("EVAL_DATASET", "development")
+    frozen, multiturn_path = select_dataset(dataset)
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + "_" + uuid.uuid4().hex[:12]
     folder = EXPERIMENT / "runs" / run_id
     folder.mkdir(parents=True, exist_ok=False)
     os.environ["EVAL_LEDGER"] = str(EXPERIMENT / "budget.sqlite")
     os.environ["EVAL_RUN_ID"] = run_id
-    os.environ["EVAL_STAGE"] = "baseline"
+    os.environ["EVAL_STAGE"] = managed.stage
     save.RESULTS = folder
     # Freeze development cases independently; do not modify the historical datasets.
-    dataset = os.environ.get("EVAL_DATASET", "development")
-    if dataset not in ("development", "challenge", "reviewed"):
-        raise ValueError("invalid development dataset")
-    frozen = EXPERIMENT / ("reviewed-development" if dataset == "reviewed" else dataset)
     if frozen.exists():
         datasets.DATASETS = frozen
+    # Runner modules import DATASETS by value; update already imported modules too.
+    for name in MODULES.values():
+        if name in sys.modules and hasattr(sys.modules[name], "DATASETS"):
+            sys.modules[name].__dict__["DATASETS"] = datasets.DATASETS
     freeze = json.loads((EXPERIMENT / "dataset-freeze.json").read_text())
     for relative, expected_hash in freeze.items():
         if hashlib.sha256((EXPERIMENT / relative).read_bytes()).hexdigest() != expected_hash:
             raise ValueError("Frozen development cases changed")
-    if dataset == "reviewed" or suite == "multiturn":
+    if dataset == "reviewed" or (suite == "multiturn" and dataset != "expanded"):
         revised_freeze = json.loads((EXPERIMENT / "reconciliation-freeze.json").read_text())
         for relative, expected_hash in revised_freeze.items():
             if hashlib.sha256((ROOT / relative).read_bytes()).hexdigest() != expected_hash:
@@ -139,15 +155,17 @@ def main() -> None:
         return default
 
     if suite != "simulation":
+        from dawalink.evals.dataset_selection import fixed_cases
         from dawalink.evals.datasets import RCase, UCase, read
 
         if suite == "multiturn":
-            from dawalink.evals.run_multiturn import CASES, MCase
+            from dawalink.evals import run_multiturn
 
-            multi = read(CASES, MCase)
+            run_multiturn.CASES = multiturn_path
+            multi = fixed_cases(read(multiturn_path, run_multiturn.MCase), option("--cases"))
             expected = len(multi[: int(option("--limit", str(len(multi))))])
         elif suite == "safety":
-            cases = read(datasets.DATASETS / "safety.jsonl", RCase)
+            cases = fixed_cases(read(datasets.DATASETS / "safety.jsonl", RCase), option("--cases"))
             selected = cases[: int(option("--limit", str(len(cases))))]
             expected = sum(len(c.where) for c in selected)
         else:
@@ -155,6 +173,7 @@ def main() -> None:
 
             understanding = read(datasets.DATASETS / "understanding.jsonl", UCase)
             if suite == "understanding":
+                understanding = fixed_cases(understanding, option("--cases"))
                 expected = len(understanding[: int(option("--limit", str(len(understanding))))])
             else:
                 people = personas(understanding)
@@ -175,7 +194,15 @@ def main() -> None:
         "run_id": run_id,
         "suite": suite,
         "argv": args,
-        "architecture": "current",
+        "architecture": managed.architecture,
+        "stage": managed.stage,
+        "repetition": managed.repetition,
+        "kind": managed.kind,
+        "reference": json.loads(
+            (ROOT / "eval/experiments/architecture-20261119/reference.json").read_text()
+        ),
+        "model": option("--model"),
+        "effort": option("--effort", "medium"),
         "expected": expected,
         "dataset": dataset,
         "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
@@ -185,9 +212,7 @@ def main() -> None:
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
             for p in datasets.DATASETS.glob("*.jsonl")
         },
-        "multiturn_sha256": hashlib.sha256(
-            (ROOT / "eval/datasets/multiturn.jsonl").read_bytes()
-        ).hexdigest()
+        "multiturn_sha256": hashlib.sha256(multiturn_path.read_bytes()).hexdigest()
         if suite == "multiturn"
         else None,
     }

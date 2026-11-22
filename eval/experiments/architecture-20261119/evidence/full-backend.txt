@@ -1,0 +1,139 @@
+command: ["pytest", "--junitxml=../eval/experiments/architecture-20261119/evidence/backend.xml"]
+........................................................................ [  3%]
+..............................F......................................... [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 54%]
+........................................................................ [ 57%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 77%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+.....................................                                    [100%]
+=================================== FAILURES ===================================
+______ test_a_saved_home_place_and_a_date_of_birth_never_reach_the_model _______
+
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x1154449e0>, session=<sqlalchemy.orm.sessio...keRouting object at 0x1154457f0>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x114d72d50>], turns={})
+
+    def test_a_saved_home_place_and_a_date_of_birth_never_reach_the_model(scene: Scene) -> None:
+        """INV-10, INV-24, decision log BLD-D40 (docs/10 TH-64). The client saved a place on
+        the map and gave a date of birth. A chat with no location of its own starts from that
+        place: the tools count from it, and the model is told a town's name and nothing more,
+        although the client typed the date themselves."""
+        world = scene.world
+        (town, town_name) = world.one(
+            "SELECT id, name FROM areas WHERE district_id = 1 AND NOT whole_district "
+            "ORDER BY id LIMIT 1"
+        )
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "UPDATE client_profiles SET birth_date = '1990-05-07', home_area_id = %s, "
+                "home_lat = 33.912, home_lon = 35.587 WHERE user_id = %s",
+                (town, scene.client),
+            )
+            # The chat has no location of its own: it starts from the client's home.
+            world.connection.exec_driver_sql(
+                "UPDATE conversations SET loc_lat = NULL, loc_lon = NULL, loc_source = NULL, "
+                "loc_set_at = NULL WHERE id = %s",
+                (scene.chat,),
+            )
+        world.session.expire_all()
+        scene.stock()
+        tracer = RecordingTracer()
+    
+        scene.turn(
+            calls(
+                ("search_catalog", {"query": "augmentin"}),
+                ("find_options", {"product_ids": [str(scene.augmentin)]}),
+            ),
+            reply("Here is what I found."),
+            text="I was born on 07/05/1990, and on 7 May 1990 too. I need Augmentin near my home.",
+            tracer=tracer,
+        )
+    
+        traced = json.dumps([dataclasses.asdict(trace) for trace in tracer.traces], default=str)
+        assert tracer.traces
+        sent = scene.model.everything_sent() + traced
+        # The tools did count from the saved place: the pharmacy is found with a travel time.
+        assert "car_min" in sent
+        # The model is told that a place is saved, and no name it could take for where it
+        # is: the place may be far from the town of the profile.
+        assert "Home area: a place the client saved on the map" in sent
+        assert f"Home area: {town_name}" not in sent
+        for private in ("33.912", "35.587", "33.91", "35.58", "1990", "07/05", "7 May"):
+>           assert private not in sent, private
+E           AssertionError: 1990
+E           assert '1990' not in 'You are Daw....070104541}]'
+E             
+E             '1990' is contained here:
+E             ?           ^^^^^^^^^^^^^^^
+E               0.02894829199067317, "ended": 0.03039112500846386, "input": null, "output": null, "metadata": {"violations": ["no_card"], "repair_used": false}}, {"name": "llm", "kind": "generation", "started": 0.03260487501393072, "ended": 0.032609542016871274, "input": null, "output": null, "metadata": {"model": "scripted"}}], "output": null, "_zero": 202377.070104541}]
+E             ?           ^^^^^^^^^^^^^^^^^^^
+
+tests/agent/test_privacy.py:356: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"run_id": "16836979-8158-40ea-911f-a290523b4758", "event": "agent_turn_crashed", "level": "error", "timestamp": "2026-11-19T15:29:18.854145Z", "exception": "  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 1071, in run_turn\n    GRAPH.invoke({\"work\": work}, config={\"recursion_limit\": _STEPS})\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 4023, in invoke\n    for chunk in self.stream(\n                 ^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 3083, in stream\n    for _ in runner.tick(\n             ^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_runner.py\", line 204, in tick\n    run_with_retry(\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_retry.py\", line 637, in run_with_retry\n    return task.proc.invoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py\", line 794, in invoke\n    input = context.run(step.invoke, input, config, **kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py\", line 479, in invoke\n    ret = self.func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 452, in _agent\n    answer = _ask(work, prompt)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 363, in _ask\n    return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/llm/scripted.py\", line 56, in complete\n    raise AssertionError(\"The script has no step left for this model call.\")\nAssertionError: The script has no step left for this model call.\nDuring task with name 'agent' and id '663802ee-5b20-64fd-9cb1-c6d051215cbc'"}
+------------------------------ Captured log call -------------------------------
+ERROR    dawalink.agent.turn:turn.py:1075 {'run_id': '16836979-8158-40ea-911f-a290523b4758', 'exc_info': True, 'event': 'agent_turn_crashed', 'level': 'error', 'timestamp': '2026-11-19T15:29:18.854145Z'}
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 1071, in run_turn
+    GRAPH.invoke({"work": work}, config={"recursion_limit": _STEPS})
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py", line 4023, in invoke
+    for chunk in self.stream(
+                 ^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py", line 3083, in stream
+    for _ in runner.tick(
+             ^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_runner.py", line 204, in tick
+    run_with_retry(
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_retry.py", line 637, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py", line 794, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py", line 479, in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 452, in _agent
+    answer = _ask(work, prompt)
+             ^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 363, in _ask
+    return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/llm/scripted.py", line 56, in complete
+    raise AssertionError("The script has no step left for this model call.")
+AssertionError: The script has no step left for this model call.
+During task with name 'agent' and id '663802ee-5b20-64fd-9cb1-c6d051215cbc'
+=============================== warnings summary ===============================
+tests/api/test_fuzz.py: 2139 warnings
+  /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/starlette/testclient.py:518: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+tests/api/test_fuzz.py: 158 warnings
+  /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/httpx2/_models.py:424: DeprecationWarning: Use 'content=<...>' to upload raw bytes/text content.
+    headers, stream = encode_request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/agent/test_privacy.py::test_a_saved_home_place_and_a_date_of_birth_never_reach_the_model
+1 failed, 2124 passed, 2297 warnings in 145.74s (0:02:25)

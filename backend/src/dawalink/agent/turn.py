@@ -35,7 +35,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.orm import Session, sessionmaker
 
-from dawalink.agent import context, limits, state
+from dawalink.agent import architectures, context, limits, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
@@ -119,6 +119,7 @@ class Agent:
     # business deadline use the app clock instead (R-T11).
     monotonic: Callable[[], float] = time.monotonic
     sleep: Callable[[float], None] = time.sleep
+    architecture: architectures.Architecture = field(default_factory=architectures.selected)
 
 
 class Status(StrEnum):
@@ -180,6 +181,9 @@ class _Work:
     candidate_call_id: str | None = None
     pending_results: list[ToolResult] = field(default_factory=list)
     repaired: bool = False
+    staged: bool = False
+    verified: bool = False
+    facts: architectures.Facts | None = None
     final: Reply | None = None
     outcome: RunOutcome = RunOutcome.OK
     failure: LLMError | None = None
@@ -365,10 +369,72 @@ def _ask(work: _Work, prompt: Prompt) -> ModelReply:
     raise AssertionError("unreachable")
 
 
+def _auxiliary(work: _Work, prompt: Prompt, name: str, kind: type[Any]) -> Any:
+    """Use the same model, retry policy, deadline, caps, tracing and accounting."""
+    assert work.trace is not None
+    if work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
+        raise LLMUnavailable("architecture call limit reached")
+    with work.trace.span(name, "generation", model=work.agent.model.name) as span:
+        answer = _ask(work, prompt)
+        work.llm_calls += 1
+        usage = answer.usage
+        work.tokens_in += usage.input_tokens
+        work.tokens_out += usage.output_tokens
+        work.tokens_cached += usage.cached_tokens
+        amount = cost_usd(work.agent.model.name, usage)
+        work.cost += amount
+        span.input = _last_input(list(prompt.messages))
+        span.output = {
+            "text": answer.text,
+            "tool_calls": [{"name": c.name, "arguments": c.arguments} for c in answer.tool_calls],
+        }
+        span.metadata.update(
+            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cost_usd=str(amount)
+        )
+        return architectures.decode(answer, kind, name)
+
+
+def _stage_facts(work: _Work) -> None:
+    assert work.loaded is not None
+    work.staged = True
+    prompt = architectures.structured_prompt(
+        architectures.EXTRACT, work.loaded.block, architectures.Facts, "record_facts"
+    )
+    work.facts = cast(
+        architectures.Facts, _auxiliary(work, prompt, "record_facts", architectures.Facts)
+    )
+    facts = work.facts
+    # A full replacement snapshot makes corrections and removals visible; no business
+    # state is updated by the extractor. Existing tools still resolve catalog ambiguity.
+    facts.items = facts.current_items()
+    if facts.missing() and work.loaded.trigger is TurnTrigger.CLIENT_MESSAGE:
+        work.candidate = Reply(text=architectures.clarification(facts))
+        work.candidate_call_id = None
+        work.route = "guard_output"
+    else:
+        work.messages.append(
+            UserText(
+                "Structured client facts (unknown=null; latest corrections replace old values): "
+                + facts.model_dump_json()
+                + " Use these current facts, never removed items or earlier values. "
+                "Resolve ambiguous products with search_catalog. Active request changes "
+                "still require the existing client approval cards."
+            )
+        )
+
+
 def _agent(graph_state: _State) -> _State:
     work = graph_state["work"]
     assert work.loaded is not None
     assert work.trace is not None
+    if work.agent.architecture == "staged" and not work.staged:
+        try:
+            _stage_facts(work)
+        except LLMError as error:
+            work.failure, work.route = error, "fallback"
+            return graph_state
+        if work.candidate is not None:
+            return graph_state
     if work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
         # The model never ended the turn: our own words, with this turn's cards (FA-4).
         _use_template(work, Fixed.NEUTRAL, NO_REPLY)
@@ -495,6 +561,21 @@ def _tools(graph_state: _State) -> _State:
                 )
             )
             continue
+        if (
+            work.facts is not None
+            and work.facts.missing()
+            and work.loaded.trigger is TurnTrigger.CLIENT_MESSAGE
+            and call.name != "search_catalog"
+        ):
+            work.pending_results.append(
+                _error(
+                    call.id,
+                    call.name,
+                    ToolError.INVALID_ARGUMENTS,
+                    "Clarify missing client facts before the business workflow.",
+                )
+            )
+            continue
         tool = tools.get(call.name)
         if tool is not None and tool.progress and work.on_progress is not None:
             work.on_progress(tool.progress)
@@ -547,12 +628,75 @@ def _found_something(work: _Work) -> bool:
     return False
 
 
+def _verify_draft(work: _Work) -> bool:
+    """One read-only review; one correction shared with the existing guard repair."""
+    assert work.loaded is not None
+    assert work.candidate is not None
+    work.verified = True
+    evidence = {
+        "application_rules": system_parts(work.loaded.mode),
+        "context": work.loaded.block,
+        "draft": work.candidate.model_dump(mode="json"),
+        "tool_history": [
+            {"calls": [{"name": c.name, "arguments": c.arguments} for c in m.reply.tool_calls]}
+            if isinstance(m, AssistantTurn)
+            else {"results": [{"name": r.name, "content": r.content} for r in m.results]}
+            for m in work.messages
+            if isinstance(m, (AssistantTurn, ToolResults))
+        ],
+        "latest_results": [
+            {"name": o.name, "content": o.content, "ok": o.ok} for o in work.outcomes
+        ],
+    }
+    verdict = cast(
+        architectures.Verdict,
+        _auxiliary(
+            work,
+            architectures.structured_prompt(
+                architectures.VERIFY,
+                json.dumps(evidence, default=str),
+                architectures.Verdict,
+                "review_draft",
+            ),
+            "review_draft",
+            architectures.Verdict,
+        ),
+    )
+    if not verdict.issues:
+        return True
+    work.guardrails.append("verifier_issues")
+    if work.repaired or work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
+        work.outcome = RunOutcome.GUARDRAIL_BLOCKED
+        _use_template(work, Fixed.NEUTRAL, None)
+        return False
+    work.repaired = True
+    feedback = "Read-only review found: " + "; ".join(verdict.issues)
+    feedback += ". Correct once through the existing tools/guards. Do not assume actions occurred."
+    if work.candidate_call_id is None:
+        work.messages.append(UserText(feedback))
+    else:
+        work.pending_results.append(
+            _error(work.candidate_call_id, REPLY, ToolError.INVALID_ARGUMENTS, feedback)
+        )
+        work.messages.append(ToolResults(tuple(work.pending_results)))
+    work.candidate = None
+    work.route = "agent"
+    return False
+
+
 def _guard_output(graph_state: _State) -> _State:
     """Checks the reply. One chance to fix it, then our own words (docs/07 §7.2, AG-D9)."""
     work = graph_state["work"]
     assert work.loaded is not None
     assert work.candidate is not None
     assert work.trace is not None
+    if work.agent.architecture == "verified" and not work.verified:
+        try:
+            if not _verify_draft(work):
+                return graph_state
+        except LLMError as error:
+            work.failure, work.route = error, "fallback"
+            return graph_state
     with work.trace.span("guard_output") as span:
         with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
             checked = output_guard.check(

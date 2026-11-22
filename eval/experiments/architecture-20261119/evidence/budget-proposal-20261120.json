@@ -1,0 +1,45 @@
+{
+  "status": "PROPOSED ONLY; not authorized or applied",
+  "current_caps_microusd": {
+    "baseline": 6000000,
+    "screening": 6645000,
+    "expanded": 8000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "proposed_caps_microusd": {
+    "baseline": 4000000,
+    "screening": 9000000,
+    "expanded": 7000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_ceiling_microusd": 25000000,
+  "current_committed_by_stage_microusd": {
+    "baseline": 3963178,
+    "screening": 6000346
+  },
+  "current_known_microusd": 933524,
+  "uncertain_hold_microusd": 9030000,
+  "forecast_usd": {
+    "remaining_understanding_repetition_2": 0.354016,
+    "remaining_safety_repetition_2": 0.1517642857142857,
+    "all_60_normalized_conversations": 0.5948236426845569,
+    "separate_C_understanding_recovery_4_cases": 0.02976846153846154,
+    "separate_C_safety_recovery_5_cases": 0.025165666666666663
+  },
+  "expected_remaining_known_usage_usd": 1.1555380566039708,
+  "twofold_sensitivity_usd": 2.3110761132079416,
+  "post_revision_screening_capacity_after_next_reservation_usd": 2.354654,
+  "assumptions": [
+    "One remaining repetition of U and S for each architecture.",
+    "All 60 normalized conversation invocations still outstanding; costs estimated from prior ancillary batches.",
+    "B batch cost divided by only 8 completed conversations conservatively includes its failed attempt.",
+    "C conversation cost estimated using measured C/A understanding cost ratio; no C conversation pilot exists.",
+    "Safety extrapolates the C partial run to 24 contexts; charged calls that failed to finish context coverage remain included.",
+    "Provider-failed C understanding and budget-blocked/unrun C safety recovery are separate evidence, never replacements or silent pooling.",
+    "Actual future failures and cold-cache costs can exceed estimates; reserve before every transmission and stop before limits.",
+    "No known spending or unresolved holds are reclassified, released, reset or moved.",
+    "Held-out and retry allocations unchanged; expanded comparison remains conditional on complete screening and an earned challenger."
+  ]
+}

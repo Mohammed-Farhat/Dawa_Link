@@ -114,3 +114,21 @@ def test_actual_tool_shapes_keep_option_and_proposal_price_associations() -> Non
     assert invented("Aspirin at Hamra Pharmacy costs $8.", facts) == []
     assert invented("Aspirin at Verdun Pharmacy costs $9.", facts) == []
     assert invented("Aspirin at Verdun Pharmacy costs $6.", facts) == ["$6"]
+
+
+def test_single_pharmacy_basket_totals_are_grounded_without_reassigning_item_prices() -> None:
+    plan = (
+        '{"plans":[{"groups":[{"pharmacy":{"name":"Hamra Pharmacy"},"items":'
+        '[{"product":"Concor","price":"$5"},{"product":"Aspirin","price":"$8"}]}],'
+        '"total":"$13"}]}'
+    )
+    assert invented("Hamra Pharmacy: $13 for the basket.", [plan]) == []
+    assert invented("Hamra Pharmacy: $14 for the basket.", [plan]) == ["$14"]
+    assert invented("Verdun Pharmacy: $13 for the basket.", [plan]) != []
+    assert invented("Concor at Hamra Pharmacy is $13.", [plan]) == ["$13"]
+    split = (
+        '{"plans":[{"groups":[{"pharmacy":{"name":"Hamra Pharmacy"},"items":'
+        '[{"product":"Concor","price":"$5"}]},{"pharmacy":{"name":"Verdun Pharmacy"},'
+        '"items":[{"product":"Aspirin","price":"$8"}]}],"total":"$13"}]}'
+    )
+    assert invented("Hamra Pharmacy: $13 for the basket.", [split]) == ["$13"]

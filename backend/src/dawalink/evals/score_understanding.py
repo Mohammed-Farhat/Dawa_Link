@@ -43,7 +43,9 @@ REFERS = re.compile(
 )
 # A question, or a request for something the agent needs: "write me its name".
 QUESTION = re.compile(
-    r"[?؟]|\b(?:tell me|write|send me|let me know)\b|اكتب|قل ?لي|قلّي|\b(?:2e?lle|ktob|ektob)\b",
+    r"[?؟]|\b(?:tell me|write|send me|let me know)\b|اكتب|قل ?لي|قلّي|"
+    r"(?:بدّي|بدي)\s+(?:أعرف|اعرف)|(?:^|[.!?؟\n])\s*(?:أخبرني|اخبرني|خبرني)|"
+    r"\b(?:2e?lle|ktob|ektob)\b",
     re.IGNORECASE,
 )
 # What a question is about. Rules of thumb, read in the sentences that ask something.

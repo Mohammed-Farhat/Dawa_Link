@@ -1,0 +1,19 @@
+{
+  "owner_request": "Resume your work now that my usage is reset",
+  "time": "2026-11-20T14:41:25.933335+00:00",
+  "canonical_ledger_sha256": "5a3da832e619ef995698554dfedaa72f3394857cbec2f3d0274758622e34afaa",
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_microusd": 25000000,
+  "unknown_ids_unchanged": true,
+  "active_reservations": 0,
+  "execution": "revised-20261120f",
+  "start_step": 5,
+  "previous_execution_terminal": true,
+  "completed_suites_repeated": false
+}

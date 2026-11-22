@@ -1,0 +1,134 @@
+command: ["pytest", "tests/unit/evals", "tests/unit/agent"]
+...........................F............................................ [ 21%]
+.................................................................FF..... [ 42%]
+........................................................................ [ 63%]
+........................................................................ [ 85%]
+..................................................                       [100%]
+=================================== FAILURES ===================================
+___________ test_freeze_gates_human_coverage_and_preserves_originals ___________
+
+tmp_path = PosixPath('/private/var/folders/9m/j5r1h4jn0sbbzhtmrh72tgzr0000gn/T/pytest-of-ajkanaan/pytest-31/test_freeze_gates_human_covera0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x112f41610>
+
+    def test_freeze_gates_human_coverage_and_preserves_originals(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fixture-only human decisions test acceptance; no actual review records change."""
+        import shutil
+    
+        folder = tmp_path / "version"
+        shutil.copytree(development_review.VERSION, folder)
+        queue = json.loads((folder / "review/human-queue.json").read_text())
+        ids = queue["required_flagged"] + queue["agreed_sample"]
+        checks = [
+            {
+                "id": ident,
+                "human_reviewed": True,
+                "reviewer": "unit-test fixture",
+                "decision": "exclude" if ident == "M-0016" else "include",
+                "reason": "Synthetic decision used only to test the freeze gate.",
+            }
+            for ident in ids
+        ]
+        target = folder / "review/human-checks.jsonl"
+        development_review.jsonl(target, checks[:-1])
+>       with pytest.raises(ValueError, match="need human checks"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'need human checks'
+E         Actual message: 'a freeze already exists; create a new version instead'
+
+tests/unit/evals/test_development_review.py:180: AssertionError
+______ test_budget_refusal_does_not_transmit_or_create_an_uncertain_call _______
+
+tmp_path = PosixPath('/private/var/folders/9m/j5r1h4jn0sbbzhtmrh72tgzr0000gn/T/pytest-of-ajkanaan/pytest-31/test_budget_refusal_does_not_t0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1132d3e60>
+
+    def test_budget_refusal_does_not_transmit_or_create_an_uncertain_call(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from types import SimpleNamespace
+        from typing import Any
+    
+        from dawalink.agent.llm.base import Prompt
+        from dawalink.evals.budget import EvaluationModel
+    
+        monkeypatch.setenv("EVAL_LEDGER", str(tmp_path / "ledger.sqlite"))
+        monkeypatch.setenv("EVAL_RUN_ID", "blocked")
+    
+        def forbidden(**kwargs: Any) -> Any:
+            pytest.fail("Budget refusal must occur before transmitting a request")
+    
+        model = EvaluationModel(
+            api_key="synthetic",
+            model="claude-haiku-5-5",
+            effort="medium",
+            client=SimpleNamespace(messages=SimpleNamespace(create=forbidden)),
+        )
+        model.ledger.reserve("already-held", "baseline", 4_000_000)
+        with pytest.raises(LLMRejected):
+>           model.complete(Prompt((), (), ()), timeout_s=1)
+
+tests/unit/evals/test_readiness.py:363: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/dawalink/evals/budget.py:159: in complete
+    return super().complete(prompt, timeout_s=timeout_s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/dawalink/agent/llm/claude.py:109: in complete
+    response = self._client.messages.create(**self.request(prompt), timeout=timeout_s)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/dawalink/evals/budget.py:198: in create
+    response = self.messages.create(**kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+kwargs = {'model': 'claude-haiku-5-5', 'max_tokens': 8000, 'system': [], 'tools': [], ...}
+
+    def forbidden(**kwargs: Any) -> Any:
+>       pytest.fail("Budget refusal must occur before transmitting a request")
+E       Failed: Budget refusal must occur before transmitting a request
+
+tests/unit/evals/test_readiness.py:353: Failed
+_______ test_failure_metadata_excludes_provider_message_and_retains_hold _______
+
+tmp_path = PosixPath('/private/var/folders/9m/j5r1h4jn0sbbzhtmrh72tgzr0000gn/T/pytest-of-ajkanaan/pytest-31/test_failure_metadata_excludes0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1132d2180>
+
+    def test_failure_metadata_excludes_provider_message_and_retains_hold(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from types import SimpleNamespace
+        from typing import Any
+    
+        from dawalink.agent.llm.base import Prompt
+        from dawalink.evals.budget import EvaluationModel
+    
+        monkeypatch.setenv("EVAL_LEDGER", str(tmp_path / "ledger.sqlite"))
+        monkeypatch.setenv("EVAL_RUN_ID", "failed")
+    
+        class ProviderError(RuntimeError):
+            status_code = 429
+            request_id = "req_synthetic"
+    
+        def failed(**kwargs: Any) -> Any:
+            raise ProviderError("private@example.test credential-sensitive body")
+    
+        model = EvaluationModel(
+            api_key="synthetic",
+            model="claude-haiku-5-5",
+            effort="medium",
+            client=SimpleNamespace(messages=SimpleNamespace(create=failed)),
+        )
+        with pytest.raises(ProviderError):
+            model.complete(Prompt((), (), ()), timeout_s=1)
+        with model.ledger.connect() as db:
+            details = db.execute("SELECT details FROM call_events").fetchone()[0]
+>       assert '"status": 429' in details
+E       assert '"status": 429' in '{"architecture": "current", "effort": "medium", "model": "claude-haiku-5-5", "purpose": "workflow", "request_sha256": "c4285b4b973a0b996b572d0af00b6af0b6eed45db8bc6a6116e447d5008026fc"}'
+
+tests/unit/evals/test_readiness.py:397: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/evals/test_development_review.py::test_freeze_gates_human_coverage_and_preserves_originals
+FAILED tests/unit/evals/test_readiness.py::test_budget_refusal_does_not_transmit_or_create_an_uncertain_call
+FAILED tests/unit/evals/test_readiness.py::test_failure_metadata_excludes_provider_message_and_retains_hold
+3 failed, 335 passed in 2.07s

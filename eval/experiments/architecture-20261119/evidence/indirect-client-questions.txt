@@ -1,0 +1,28 @@
+command: ["pytest", "tests/agent", "tests/unit/evals", "tests/unit/agent"]
+
+==================================== ERRORS ====================================
+_____________ ERROR collecting tests/unit/evals/test_readiness.py ______________
+tests/unit/evals/test_readiness.py:16: in <module>
+    from tests.unit.evals.test_score_understanding import CONCOR, OTHER, case, checked, find
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:185: in exec_module
+    exec(co, module.__dict__)
+tests/unit/evals/test_score_understanding.py:436: in <module>
+    @pytest.mark.parametrize(
+     ^^^^^^
+E   NameError: name 'pytest' is not defined
+________ ERROR collecting tests/unit/evals/test_score_understanding.py _________
+tests/unit/evals/test_score_understanding.py:436: in <module>
+    @pytest.mark.parametrize(
+     ^^^^^^
+E   NameError: name 'pytest' is not defined
+=========================== short test summary info ============================
+ERROR tests/unit/evals/test_readiness.py - NameError: name 'pytest' is not de...
+ERROR tests/unit/evals/test_score_understanding.py - NameError: name 'pytest'...
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 0.32s

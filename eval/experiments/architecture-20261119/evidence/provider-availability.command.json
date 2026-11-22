@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "python",
+    "../eval/checkpoints/2026-11-18-readiness/provider_check.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 2.036
+}

@@ -1,0 +1,13 @@
+{
+  "status": "draft_human_checks_pending",
+  "blind_reviewed": 76,
+  "remaining_reviewed": 298,
+  "disagreements": 62,
+  "flagged_cases": 106,
+  "human_agreed_sample": 38,
+  "human_checks_completed": 0,
+  "human_checks_required": 144,
+  "evaluation_api_spend_usd": 0,
+  "scored_use_allowed": false,
+  "freeze_completed": false
+}

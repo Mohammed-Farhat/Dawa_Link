@@ -182,9 +182,9 @@ def test_atomic_shared_stage_cap_and_restart(tmp_path: Path) -> None:
             return False
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        assert sum(pool.map(attempt, range(12))) == 4
+        assert sum(pool.map(attempt, range(12))) == 6
     restarted = Ledger(ledger.path)
-    assert restarted.totals()["committed_microusd"] == 4_000_000
+    assert restarted.totals()["committed_microusd"] == 6_000_000
     with pytest.raises(LLMRejected):
         restarted.reserve("retry", "baseline", 1)
 
@@ -358,11 +358,11 @@ def test_budget_refusal_does_not_transmit_or_create_an_uncertain_call(
         effort="medium",
         client=SimpleNamespace(messages=SimpleNamespace(create=forbidden)),
     )
-    model.ledger.reserve("already-held", "baseline", 4_000_000)
+    model.ledger.reserve("already-held", "baseline", 6_000_000)
     with pytest.raises(LLMRejected):
         model.complete(Prompt((), (), ()), timeout_s=1)
     assert model.ledger.totals()["calls"] == 1
-    assert model.ledger.totals()["committed_microusd"] == 4_000_000
+    assert model.ledger.totals()["committed_microusd"] == 6_000_000
 
 
 def test_failure_metadata_excludes_provider_message_and_retains_hold(
@@ -393,9 +393,68 @@ def test_failure_metadata_excludes_provider_message_and_retains_hold(
     with pytest.raises(ProviderError):
         model.complete(Prompt((), (), ()), timeout_s=1)
     with model.ledger.connect() as db:
-        details = db.execute("SELECT details FROM call_events").fetchone()[0]
+        details = db.execute(
+            "SELECT details FROM call_events WHERE kind='provider_failure'"
+        ).fetchone()[0]
     assert '"status": 429' in details
     assert "req_synthetic" in details
     assert "private@" not in details
     assert "credential-sensitive" not in details
     assert model.ledger.totals()["committed_microusd"] == 645000
+
+
+@pytest.mark.parametrize(
+    ("tool", "purpose"),
+    [
+        ("record_facts", "extraction"),
+        ("review_draft", "verification"),
+        ("write_message", "played_client"),
+        ("reply", "workflow"),
+    ],
+)
+def test_all_architecture_calls_share_ledger_and_origin_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tool: str, purpose: str
+) -> None:
+    from types import SimpleNamespace
+    from typing import Any
+
+    from dawalink.agent.llm.base import Prompt, ToolSpec
+    from dawalink.evals.budget import EvaluationModel
+
+    monkeypatch.setenv("EVAL_LEDGER", str(tmp_path / "ledger.sqlite"))
+    monkeypatch.setenv("EVAL_RUN_ID", "one-run")
+    monkeypatch.setenv("EVAL_STAGE", "screening")
+    monkeypatch.setenv("DAWALINK_ARCHITECTURE", "verified")
+
+    def response(**kwargs: Any) -> Any:
+        return SimpleNamespace(
+            usage=SimpleNamespace(
+                input_tokens=100,
+                output_tokens=20,
+                cache_read_input_tokens=0,
+                cache_creation_input_tokens=0,
+            ),
+            content=[SimpleNamespace(type="text", text="{}")],
+            stop_reason="end_turn",
+        )
+
+    model = EvaluationModel(
+        api_key="synthetic",
+        model="claude-haiku-5-5",
+        effort="medium",
+        client=SimpleNamespace(messages=SimpleNamespace(create=response)),
+    )
+    model.complete(Prompt((), (), (ToolSpec(tool, "result", {}),)), timeout_s=1)
+    with model.ledger.connect() as db:
+        assert db.execute("SELECT stage,status,actual FROM calls").fetchone() == (
+            "screening",
+            "settled",
+            20,
+        )
+        details = json.loads(
+            db.execute("SELECT details FROM call_events WHERE kind='request'").fetchone()[0]
+        )
+    assert details["purpose"] == purpose
+    assert details["architecture"] == "verified"
+    assert details["effort"] == "medium"
+    assert len(details["request_sha256"]) == 64
