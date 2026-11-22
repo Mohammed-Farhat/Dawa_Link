@@ -120,3 +120,23 @@ def test_decimal_prices_do_not_break_comparison_subject_associations() -> None:
 def test_spoken_closing_half_hour_must_use_exact_numeric_tool_hours() -> None:
     assert comparison_errors("Pharmacy One btsakker 5 w noss (17:00).", options())
     assert not comparison_errors("Pharmacy One closes at 17:00.", options())
+
+
+def test_pronoun_refers_to_single_previous_pharmacy_but_not_multiple() -> None:
+    assert not comparison_errors("Pharmacy Two is available. It is closest.", options())
+    assert comparison_errors("Pharmacy One is available. It has the latest expiry.", options())
+    unknown = comparison_errors(
+        "Pharmacy One and Pharmacy Two are available. It is closest.", options()
+    )
+    assert unknown
+    assert all(e.startswith("Unresolved ") for e in unknown)
+
+
+def test_explicit_geographic_subset_and_equal_price_comparison() -> None:
+    rows = json.loads(options()[0])
+    rows["options"][0]["pharmacy"]["area"] = "Beirut"
+    rows["options"][1]["pharmacy"]["area"] = "Matn"
+    assert not comparison_errors("Pharmacy One is cheapest in Beirut.", [json.dumps(rows)])
+    assert comparison_errors("Pharmacy One is cheapest.", [json.dumps(rows)])
+    rows["options"][1]["price"] = rows["options"][0]["price"]
+    assert comparison_errors("Pharmacy One is cheaper than Pharmacy Two.", [json.dumps(rows)])

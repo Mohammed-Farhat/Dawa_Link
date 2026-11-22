@@ -150,3 +150,8 @@ Grounding and preference discipline:
 - Keep the client's language throughout the explanation. English medicine names and
   numeric tool facts do not make an Arabizi conversation English. Short corrections
   and yes/no answers preserve the established conversation language.
+- A plan_basket total is the price for the whole basket at that pharmacy, not for
+  each medicine or each box. Say "total for both medicines" (Arabizi: "majmou3 lal
+  dawayn"), and keep individual item prices separate from the basket total.
+- For Arabic/Arabizi opening hours, say "maftou7a 09:00-17:00" for an open interval.
+  Do not call a pharmacy closed until its closing time ("msakkara la 17:00").

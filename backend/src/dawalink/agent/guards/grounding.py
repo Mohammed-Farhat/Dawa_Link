@@ -78,42 +78,71 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
             else None
         )
 
-    for sentence in re.split(r"(?<!\d)\.|\.(?!\d)|[!?؟\n]+", text):
-        for metric, pattern in _METRICS.items():
-            if not pattern.search(sentence):
-                continue
-            # Match the closest named pharmacy before the comparison; if the name
-            # follows it, use the first following name. Never borrow a different row.
-            at = pattern.search(sentence)
-            assert at is not None
+    for paragraph in re.split(r"\n\s*\n", text):
+        previous: dict[str, Any] | None = None
+        for sentence in re.split(r"(?<!\d)\.|\.(?!\d)|[!?؟\n]+", paragraph):
             named = []
             for option in options:
                 name = option.get("pharmacy", {}).get("name", "")
                 if name and name.casefold() in sentence.casefold():
-                    pos = sentence.casefold().find(name.casefold())
-                    named.append((pos, option))
-            before = [(pos, o) for pos, o in named if pos < at.start()]
-            subject = (
-                max(before, key=lambda x: x[0])[1]
-                if before
-                else (min(named, key=lambda x: x[0])[1] if named else None)
-            )
-            values = [value(o, metric) for o in options]
-            if subject is None or any(v is None for v in values):
-                errors.append(f"Unsupported {metric} comparison; use exact tool facts instead.")
-                continue
-            actual = value(subject, metric)
-            # A named cheaper-than comparison is pairwise; a superlative covers all.
-            peers = (
-                [value(o, metric) for _, o in named if o is not subject]
-                if re.search(r"cheaper|quicker|faster", sentence, re.I)
-                else []
-            )
-            candidates = peers or values
-            if actual is None or any(
-                actual < peer if metric == "expiry" else actual > peer
-                for peer in candidates
-                if peer is not None
-            ):
-                errors.append(f"The {metric} comparison contradicts the tool options.")
+                    named.append((sentence.casefold().find(name.casefold()), option))
+            for metric, pattern in _METRICS.items():
+                at = pattern.search(sentence)
+                if at is None:
+                    continue
+                before = [(pos, o) for pos, o in named if pos < at.start()]
+                subject = (
+                    max(before, key=lambda x: x[0])[1]
+                    if before
+                    else (min(named, key=lambda x: x[0])[1] if named else None)
+                )
+                if subject is None and re.match(
+                    r"\s*(?:it|this|that|hayda|hayde|هيدا|هذا|هذه)\b", sentence, re.I
+                ):
+                    subject = previous
+                scope = options
+                explicit_scope = False
+                # Explicit geographic qualifiers define a subset. Never invent what
+                # "nearby" means, or compare Beirut-only prices with another district.
+                for option in options:
+                    area = option.get("pharmacy", {}).get("area")
+                    if area and re.search(
+                        r"\b(?:in|bi|fi)\s+" + re.escape(area) + r"\b", sentence, re.I
+                    ):
+                        scope = [o for o in options if o.get("pharmacy", {}).get("area") == area]
+                        explicit_scope = True
+                        break
+                if not explicit_scope and re.search(
+                    r"nearby|open all day|that (?:is|are)", sentence, re.I
+                ):
+                    errors.append(
+                        f"Unresolved {metric} comparison: qualified option subset needs review."
+                    )
+                    continue
+                values = [value(o, metric) for o in scope]
+                if subject is None or not values or any(v is None for v in values):
+                    errors.append(
+                        f"Unresolved {metric} comparison: evidence association incomplete."
+                    )
+                    continue
+                actual = value(subject, metric)
+                pairwise = bool(re.search(r"cheaper|quicker|faster", sentence, re.I))
+                peers = [value(o, metric) for _, o in named if o is not subject] if pairwise else []
+                if pairwise and not peers:
+                    errors.append(f"Unresolved {metric} comparison: no explicit comparison peer.")
+                    continue
+                candidates = peers or values
+                if actual is None or any(
+                    actual < peer
+                    if metric == "expiry"
+                    else (actual >= peer if pairwise else actual > peer)
+                    for peer in candidates
+                    if peer is not None
+                ):
+                    errors.append(f"The {metric} comparison contradicts the tool options.")
+            unique_names = {o.get("pharmacy", {}).get("name") for _, o in named}
+            if len(unique_names) == 1:
+                previous = named[0][1]
+            elif named:
+                previous = None  # A pronoun after multiple pharmacies is ambiguous.
     return errors

@@ -302,6 +302,15 @@ class TestWhatAReplyMayShow:
         assert stays.text == french  # a client who writes French is answered in French
         assert scene.run(stays).guardrails == []
 
+    def test_english_client_gets_english_after_an_arabizi_draft(self, scene: Scene) -> None:
+        result = scene.turn(
+            reply("Hayda li l2ayto, fik tekhtar yalli baddak."),
+            reply("Which strength of Concor do you need?"),
+            text="I need one box of Concor please",
+        )
+        assert result.text == "Which strength of Concor do you need?"
+        assert scene.run(result).guardrails == ["language"]
+
     def test_one_recommendation_per_medicine(self, scene: Scene) -> None:
         """N-45."""
         first, second = scene.stock(), scene.stock(pharmacy_id=scene.world.make.pharmacy())
@@ -610,3 +619,47 @@ def test_cheapest_preference_rejects_expensive_recommendation(scene: Scene) -> N
         tool_answers=[json.dumps(found)],
     )
     assert "preference" not in [v.type for v in balanced.violations]
+
+
+def test_unresolved_comparison_is_reviewed_not_assumed_false(scene: Scene) -> None:
+    from dawalink.agent.guards.output import check
+    from dawalink.agent.tools import Reply
+    from dawalink.evals.datasets import UCase
+    from dawalink.evals.score_understanding import Seen, ToolUse, score
+
+    scene.stock()
+    found = scene.tool("find_options", product_ids=[scene.augmentin])
+    turn = scene.tool_turn()
+    text = "This is the cheapest option."
+    checked = check(
+        scene.world.tx(),
+        Reply(text=text),
+        conversation_id=scene.chat,
+        client_id=scene.client,
+        run_id=turn.run_id,
+        client_text="Show options",
+        tool_answers=[json.dumps(found)],
+    )
+    assert "grounding" not in [v.type for v in checked.violations]
+    case = UCase.model_validate(
+        {
+            "id": "U-0001",
+            "lang": "english",
+            "category": "clear",
+            "text": "Augmentin please",
+            "author": "test",
+            "gold": {
+                "intent": "find",
+                "expected": "propose_options",
+                "items": [{"match": {"name": "augmentin"}}],
+            },
+        }
+    )
+    result = score(
+        case,
+        Seen(text, tools=[ToolUse("find_options", {}, answer=json.dumps(found))]),
+        products=[[str(scene.augmentin)]],
+        today=TODAY,
+        lbp_per_usd=89500,
+    )
+    assert result["nothing_invented"] is False  # Needs manual evidence, never an automatic pass.

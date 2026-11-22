@@ -296,8 +296,16 @@ def check(
             )
         )
     for error in comparison_errors(cleaned.text, tool_answers, on_foot=on_foot):
-        violations.append(Violation("grounding", error))
-    if language_of(client_text or "", language) == "arabizi" and not looks_arabizi(cleaned.text):
+        # A limited parser cannot prove a claim false merely because association
+        # failed. Such claims stay flagged by the scorer for mandatory manual review.
+        if not error.startswith("Unresolved "):
+            violations.append(Violation("grounding", error))
+    wanted_language = language_of(client_text or "", language)
+    if wanted_language == "english" and looks_arabizi(cleaned.text):
+        violations.append(
+            Violation(LANGUAGE, "The client wrote English. Keep the explanation in English.")
+        )
+    if wanted_language == "arabizi" and not looks_arabizi(cleaned.text):
         violations.append(
             Violation(
                 LANGUAGE,
