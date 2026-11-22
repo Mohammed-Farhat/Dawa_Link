@@ -1,0 +1,12 @@
+{
+  "paid_calls": 0,
+  "checks": [
+    "valid shared world; action-dependent absent keys allowed; one-seed interval absent",
+    "incomplete attempt retained but excluded from complete-pair estimates",
+    "changed starting world rejected",
+    "contradictory shared external draw rejected",
+    "changed source rejected",
+    "duplicate contender/seed rejected"
+  ],
+  "limitations": "Synthetic helper checks; not evidence of actual contender comparability or product outcomes."
+}

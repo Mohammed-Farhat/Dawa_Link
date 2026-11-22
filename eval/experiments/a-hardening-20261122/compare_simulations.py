@@ -35,7 +35,8 @@ def read(run):
     latency=sorted(spans)
     secured_times=sorted(n['minutes_to_secure'] for n in needs if n.get('minutes_to_secure') is not None)
     return dict(run=run,contender=config['contender'],seed=config['seed'],
-                complete=len(needs)==100, cost_complete=not unsettled,
+                request_coverage_complete=len(needs)==100 and len({n['n'] for n in needs})==100,
+                complete=len(needs)==100 and completion['status']=='complete', cost_complete=not unsettled,
                 execution_coverage_status=completion['status'],initial=initial,
                 source_hashes=manifest['hashes'],
                 arrivals=[{k:v for k,v in e.items() if k!='applied'} for e in events if e['kind']=='stock_arrival'],
@@ -57,7 +58,11 @@ def compare(run_ids):
     rows=[read(r) for r in run_ids]
     groups={}
     for r in rows:
-        if 'seed' in r:groups.setdefault(r['seed'],{})[r['contender']]=r
+        if 'seed' in r:
+            contenders=groups.setdefault(r['seed'],{})
+            if r['contender'] in contenders:
+                raise ValueError('Duplicate contender/seed attempt: report attempts separately')
+            contenders[r['contender']]=r
     pairs=[];differences={}
     for seed,contenders in groups.items():
         a=contenders.get('agent')
@@ -79,7 +84,9 @@ def compare(run_ids):
         estimates.append(dict(baseline=name,metric=metric,seeds=len(values),paired_mean=statistics.mean(values),paired_95pct_bootstrap_interval=[boot[249],boot[9749]] if boot else None))
     for r in rows:
         for key in ('draws','arrivals','source_hashes'):r.pop(key,None)
-    return dict(runs=rows,pairs=pairs,paired_seed_estimates=estimates,limitations=['One seed has no cross-world uncertainty estimate.','Simulation behavior is assumption-based, not measured pharmacy/client behavior.','Incomplete runs are excluded from complete-pair estimates.'])
+    return dict(runs=rows,pairs=pairs,paired_seed_estimates=estimates,limitations=['One seed has no cross-world uncertainty estimate.','Simulation behavior is assumption-based, not measured pharmacy/client behavior.','Incomplete runs are retained in run tables and excluded from complete-pair estimates.',
+'Units secured are locks obtained within each six-hour window, not proof of dispensing; the simulation includes no-shows.',
+'Turn latency sums recorded spans and omits untraced overhead; simulated minutes to fulfillment are a separate measure.'])
 
 
 if __name__=='__main__':

@@ -51,7 +51,7 @@ def settings():
     original=environment()
     urls=database.addresses(original).on(NAME)
     return original.model_copy(update=dict(database_admin_url=urls.admin,
-        database_migrator_url=urls.migrator,database_url=urls.app,database_retention_url=urls.retention))
+        database_migrator_url=urls.migrator,database_url=urls.app,database_retention_url=urls.retention,website_url="http://localhost:55173"))
 
 
 class FileClock:
@@ -98,6 +98,7 @@ def main():
             ).order_by(InventoryItem.id)).first()
             empty=session.scalars(select(Product).where(Product.controlled.is_(False),Product.id.not_in(select(InventoryItem.product_id))).order_by(Product.moph_code)).first()
             state=dict(now=NOW.isoformat(),listing_id=str(listing.id),product=product.moph_name,
+                       strength=product.dosage_text,form=product.form_text,pack=product.presentation_text,
                        empty_product_id=str(empty.id),empty_product=empty.moph_name,
                        run_id='browser_'+uuid.uuid4().hex,evidence='evidence/browser_'+uuid.uuid4().hex[:12])
         folder=HERE/state['evidence'];folder.mkdir()

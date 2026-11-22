@@ -8,6 +8,8 @@ from pathlib import Path
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 RUNS=ROOT/'eval/experiments/architecture-20261118/runs'
+REGRESSIONS={'U-0025','U-0150','U-1042','R-0016','M-0007','M-0011',
+             'U-0145','U-0146','U-1019','R-1022','U-0037'}
 
 
 def failed(row):
@@ -43,8 +45,8 @@ def export(run_ids):
                 flag=failed(row) or any(failed(t) for t in row.get('turns',[])) or any(failed(e) for e in row.get('exchanges',[]))
                 record['flagged']=flag
                 if suite=='conversations':conversations.append(record)
-                if suite=='safety' or suite=='multiturn' or flag:
-                    record['selection_reason']='all_safety' if suite=='safety' else 'all_fixed_conversations' if suite=='multiturn' else 'automatic_or_semantic_flag'
+                if suite=='safety' or suite=='multiturn' or flag or row['id'] in REGRESSIONS:
+                    record['selection_reason']='all_safety' if suite=='safety' else 'all_fixed_conversations' if suite=='multiturn' else 'automatic_or_semantic_flag' if flag else 'known_development_regression'
                     selected.append(record)
     complete=sorted([r for r in conversations if r['context'].get('ended') in ('cards','client_left','too_long')],key=lambda r:(r['run'],r['id']))
     sample=random.Random(20261122).sample(complete,min(50,len(complete)))

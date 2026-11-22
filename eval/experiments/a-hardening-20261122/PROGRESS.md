@@ -41,6 +41,23 @@ bootstrap rejects more than200 clients before transmission. Fixed cases dispatch
 individually because their runner stops after its first incomplete conversation.
 Failures stay in denominators. Raw coverage is not semantic acceptance.
 No source or pinned harness edits while this queue runs.
+Incremental primary assistant review is in evidence/candidate5-primary-assistant-review.jsonl
+(raw-row hashes, human_reviewed=false, independent=false). All flags inspected through
+U0069 plus original U0025 regression. U0037 is a real false cheapest claim missed by
+runtime pronoun association; U0008 initially false price claim and false-blocked repair;
+Plavix catalog ambiguity prevents U0032 completion. These findings remain unresolved,
+not acceptance. U0044/U0059 expose missed English lexical cues and actual first-reply
+language failures; language-input diagnostic records35/72 English inputs without
+confident inference (not35 observed response failures). Other reviewed flags include genuine scorer association/clarification
+errors and language-quality concerns. Do not silently replace raw scores.
+Free-only report helpers: summarize_validation.py verifies completed matrix/source,
+coverage/costs and review gaps; exporter retains partial checkpoints and original
+regressions even if unflagged. compare_simulations.py rejects duplicate seed/contender,
+changed worlds/draws/source and excludes execution-incomplete pairs from seed estimates.
+Six offline integrity scenarios passed; actual paired comparison remains unexecuted.
+Browser fixture origin now explicitly matches localhost55173; configuration/isolated DB
+target verified without connections or model calls. Two completed candidate5 pilot
+archives passed privacy scan14files/0flags. Live journeys remain unverified.
 
 ## Diagnostic attempts retained, not pooled into primary results
 
