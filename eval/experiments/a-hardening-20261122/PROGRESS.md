@@ -36,12 +36,32 @@ review-correction-mixed-U1042.json. No results rewritten and no final acceptance
 
 RUNNING NOW session29257: full230understanding on fixedcandidate4.
 Run20261122T142220_8b5e802698ef; started22Nov14:22:20UTC.
+Latest observed74completed cases (not full230); process handle verified live.
 Log evidence/candidate4-full-understanding.txt. Do not duplicate or edit source while
 active. Command from backend:
 .venv/bin/python -u ../eval/experiments/a-hardening-20261122/paid_v4.py understanding
 --architecture current --stage expanded --model claude-haiku-5-5 --effort medium
 --max-usd 1.50
-Inspect terminal/completion and case-checkpoints before safety107 and fixed15.
+Sequential queue ALREADY RUNNING session29971 (finish_development.py); do NOT manually
+start safety/fixed or rerun the queue. It waits for current understanding completion,
+requires all230 raw rows and no exception, then invokes safety107(allcontexts) --max-usd0.80,
+then fixed15 --max-usd0.50. Each gets a unique run and unchanged paid_v4 pin/ledger.
+Queue state evidence/development-queue.json and log development-queue-log.txt.
+Failed scored/guard outcomes remain failures; queue checks coverage, not acceptance.
+It stops on incomplete raw coverage, active reservation/new uncertainty, STOP_PAID or error.
+After queue terminal, review outputs before played/simulation/browser work.
+
+Checkpoint commit3c4b562 preserves hardening protocols/evidence (not canonical active
+run/ledger or unrelated handoff). Incremental assistant review evidence/
+candidate4-understanding-assistant-review.jsonl now18 flagged-case records throughU0070.
+Original scores unchanged. Findings: spelling/context scorer misses and supported
+comparisons flagged; U0032 missingPlavix andU0035 no groupedbasket; U0043strayChinese/
+garbledphrasing; U0045/U0063/U0064duration-sufficiency wording lacks dose evidence;
+U0068harness failed to recognize missing-duration question, withholding follow-up.
+No independent/human acceptance. Continue every new flag, not only these examples.
+Latest inflight audit evidence/understanding-inflight-audit.json passes: known$2.496448,
+committed$14.106448 including17unknown historicalholds$10.965 and1active$0.645call.
+Those are a snapshot, not final costs; no holds released. Bothprocess handles verifiedlive.
 
 Next sequentially:
 1 Review all five pilot replies/tools/cards. Then fixed-source full230understanding,
