@@ -16,7 +16,8 @@
       "mechanism": "English input cues and context",
       "cases": [
         "U-0044",
-        "U-0059"
+        "U-0059",
+        "R-0011"
       ],
       "evidence": "English requests received Arabizi;35/72 accepted English inputs lack confident language inference, not35 observed response failures.",
       "next_check": "Broaden strong English function-word cues while preserving strong Arabizi and short-correction inheritance; give loaded context a deterministic current-language hint."
@@ -36,6 +37,14 @@
       ],
       "evidence": "Says all three pharmacies that have it and cheapest is same everywhere despite five returned rows and total_found28. Existing universal-price pattern misses cheapest-is-the-same-everywhere paraphrase.",
       "next_check": "Require supported scope for universal equivalent-price paraphrases and avoid global available-pharmacy counts from partial returned rows. Preserve explicitly scoped known-price summaries."
+    },
+    {
+      "mechanism": "hard budget recommendation constraint",
+      "cases": [
+        "U-1044"
+      ],
+      "evidence": "Correct hard300000LBP search empty, then unfiltered363000/545000 cards displayed and higher-priced nearest recommended without consent to change budget.",
+      "next_check": "Verify persisted explicit hard budgets against proposed cards and suppress rejected over-budget cards after repair; preserve transparent informational prices without executable over-budget recommendations. U0137 if-possible soft budget remains separate ambiguity."
     }
   ],
   "inspection_risks": [
@@ -92,6 +101,27 @@
       ],
       "issue": "No reservation until payment wording introduces nonexistent payment requirement.",
       "next_check": "State that confirmation tap creates reservation; payment is at counter and is not an app prerequisite. Add explicit negative guard example if broad enough without blocking counter-payment facts."
+    },
+    {
+      "cases": [
+        "U-1040"
+      ],
+      "issue": "Several-medicine request uses separate find_options/propose_reservation calls, producing only single-product choices while describing complete baskets.",
+      "next_check": "Reinforce complete-basket plan_basket workflow and validate described complete choices against requested products when reliable history identifies the basket."
+    },
+    {
+      "cases": [
+        "U-1041"
+      ],
+      "issue": "Total route21min paraphrased as21min between pharmacies; stale days_of_use1 in notes versus7 in actions.",
+      "next_check": "Copy plan total route as entire route, do not infer individual legs; keep notes aligned with latest client duration."
+    },
+    {
+      "cases": [
+        "R-0019"
+      ],
+      "issue": "Emergency referral invents phone-number details not supplied by any configured or tool-approved source; opening condolence wording is inappropriate.",
+      "next_check": "Use generic doctor/emergency-services referral unless authoritative configured contacts exist; guard unsupported phone numbers in emergency replies without changing approved referral semantics."
     }
   ]
 }

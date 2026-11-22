@@ -3,8 +3,12 @@
 **Working report — final validation incomplete.** No independent acceptance, final
 held-out evaluation or live-model browser verification has yet occurred.
 
-A/current is retained because the sealed architecture screening assistant review
-favored A (111/120) over B (91/120) and C (106/120), with execution coverage120/118/111.
+A/current is retained because neither challenger earned advancement under the sealed
+screening rule. Assistant-reviewed quality was A111/120, B91/120, C106/120; successful
+execution120/118/111. C-minus-A paired quality interval spans zero (-10.83 to+2.50 pp),
+and concentrated provider incidents confound reliability attribution. A also met the
+original saved-span latency targets (cards p95 14.08s, answers7.06s); B/C missed them.
+Retention supports keeping the default, not general superiority or held-out readiness.
 These are original-source screening results, not measurements of repaired A. Full
 original report: ../architecture-20261119/revised-20261120/REPORT.md. Architecture
 implementation/evidence preserved separately in commitbdc5c16; all1481 sealed hashes
@@ -46,15 +50,31 @@ separate; no claim of full candidate4 acceptance is made.
 
 Candidate5 source a6c231c fixes reference-ID language classification, universal
 same-price scope and history-based explicit nearest/cheapest recommendations. Rejected
-preference cards cannot reappear in fallback. Its517 affected tests, Ruff and mypy10
+preference cards are suppressed in the guard-failure fallback; other fallback paths
+remain an inspection risk pending scripted reproduction. Its517 affected tests, Ruff and mypy10
 files passed. Three targeted understanding cases and one safety context executed
 successfully; assistant judgments retain scorer false flags and ambiguous wording.
 Candidate5 primary pin SHA256
 fb8da0d66a6147e393f6b1e2608d3c9d91f792e8866196107757b7dd384a86c1.
 The pre-outcome matrix uses fresh understanding200+30, safety100+24 contexts, and15
 separate fixed-case invocations. Bootstrap rejects oversized batches before spending.
-Primary validation is currently running; results are not yet acceptance. Played
-conversations, paired simulation and live-model browser results remain pending. Ambiguous comparisons are unresolved manual-review
+The first200-case primary batch has200 raw rows,199 execution-ok and one blocked
+U0008; known cost$0.518497 with no unsettled calls in that run. Its execution manifest
+remains incomplete. All60 flagged rows plus required original regressions have62
+assistant records and no missing required reviews. These are not60 confirmed agent
+failures: supported comparisons, clarification questions and normalized budgets expose
+scorer errors. Real findings include wrong pickup dates, missed English matching, a
+partial basket proposal, false cheapest/universal scope, and a false payment prerequisite.
+Both understanding batches now cover230 unique cases:229 execution-ok, one blocked,
+known$0.629025 and no unsettled run calls. Every required understanding review is
+present in the reviewed-summary snapshot. Safety is running; reviewed contexts include
+a safe prompt-exfiltration refusal in the wrong language and an emergency referral with
+unconfigured contact numbers. Full validation and repairs remain incomplete.
+
+Played conversations, paired simulation and live-model browser results remain pending.
+SIMULATION_METHODS.md predefines a separate full-world analysis that retains turn
+failures, alongside strict completed-pair estimates; interrupted worlds stay excluded.
+Synthetic helper checks do not establish actual comparability. Ambiguous comparisons are unresolved manual-review
 flags; regex passes are not semantic acceptance. Assistant review files explicitly
 set human_reviewed=false and independent=false. REVIEW_GUIDE.md defines the required
 owner/teammate review; no independent findings have been accepted yet.
