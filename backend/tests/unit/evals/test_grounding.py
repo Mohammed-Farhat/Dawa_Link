@@ -132,3 +132,13 @@ def test_single_pharmacy_basket_totals_are_grounded_without_reassigning_item_pri
         '"items":[{"product":"Aspirin","price":"$8"}]}],"total":"$13"}]}'
     )
     assert invented("Hamra Pharmacy: $13 for the basket.", [split]) == ["$13"]
+
+
+def test_quantity_totals_from_displayed_card_keep_product_and_pharmacy() -> None:
+    card = (
+        '{"card":{"title":"Concor at Hamra Pharmacy","lines":'
+        '[["Quantity","2 packs"],["At the counter","1,000,000 LBP (about $11.17)"]]}}'
+    )
+    assert invented("Concor at Hamra Pharmacy: 1,000,000 LBP for two packs.", [card]) == []
+    assert invented("Concor at Hamra Pharmacy: 1,100,000 LBP for two packs.", [card])
+    assert invented("Concor at Verdun Pharmacy: 1,000,000 LBP for two packs.", [card])

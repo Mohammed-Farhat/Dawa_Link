@@ -149,6 +149,8 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
                 elif group := re.fullmatch(r"(.+) · \d+ medicines?", title):
                     pharmacy = group.group(1)
                 for line in lines:
+                    if isinstance(line, list) and len(line) == 2:
+                        line = ": ".join(str(part) for part in line)
                     if not isinstance(line, str):
                         continue
                     item = re.match(r"(.+) x \d+: (.+)", line)

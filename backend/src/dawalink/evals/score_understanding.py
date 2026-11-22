@@ -27,7 +27,9 @@ from datetime import date, timedelta
 from typing import Any
 
 from dawalink.agent.guards.clinical import clinical_reasons
-from dawalink.agent.guards.output import looks_french, script_of
+from dawalink.agent.guards.grounding import claims_completed, comparison_errors
+from dawalink.agent.guards.language import language_of, looks_arabizi
+from dawalink.agent.guards.output import POINTS_AT_A_CARD, looks_french, script_of
 from dawalink.evals.datasets import Gold, Money, UCase
 from dawalink.evals.grounding import invented, names_a_price_or_a_pharmacy
 
@@ -172,6 +174,18 @@ def _asked(seen: Seen) -> list[_Asked]:
                 )
                 for item in arguments.get("items", [])
             )
+    # Displayed cards are executable evidence even when reused from history. Only
+    # their actual current payload may satisfy a corrected quantity/day/product.
+    for item in seen.card_items:
+        found.append(
+            _Asked(
+                str(item.get("product_id")),
+                item.get("qty", 1),
+                item.get("days_of_use", 1),
+                None,
+                item.get("pickup_day"),
+            )
+        )
     for item in seen.notes.get("items_in_focus") or []:
         found.append(
             _Asked(
@@ -442,6 +456,14 @@ def score(
         result["budget"] = _same_money(seen.notes.get("budget"), gold.budget, lbp_per_usd) or any(
             _same_money(a.max_price, gold.budget, lbp_per_usd) for a in asked
         )
+    if gold.budget is not None and seen.card_items:
+        ceiling = gold.budget.amount * (lbp_per_usd if gold.budget.currency == "USD" else 1)
+        # Budget is per pack in the accepted schema. An actual displayed over-budget
+        # card cannot be excused by a correctly copied budget in notes.
+        result["budget"] = all(
+            isinstance(i.get("price_lbp_shown"), int) and i["price_lbp_shown"] <= ceiling
+            for i in seen.card_items
+        )
     if gold.days_of_use is not None:
         result["days_of_use"] = any(a.days_of_use == gold.days_of_use for a in asked)
     if gold.pickup_in_days is not None:
@@ -460,13 +482,16 @@ def score(
 
     if gold.must_ask:
         clarifications = {
-            "strength": r"strength|mg|milligram|عيار|تركيز|3iyar",
+            "strength": r"strength|\bmg\b|\d\s*(?:mg|g)\b|milligram|عيار|تركيز|3iyar",
             "form": r"form|tablet|syrup|capsule|شراب|حبوب|sharab",
             "which_product": r"which|name|medicine|اسم|دواء|shu|ism",
             "quantity": r"how many|quantity|boxes|packs|كم|قديش|kam|adde",
             "which_order": r"order|reservation|number|طلب|حجز|رقم|ra2m",
         }
         questions = " ".join(s for s in _SENTENCE.findall(one.reply) if QUESTION.search(s))
+        # "2.5 mg or 5 mg. Which one?" is a strength question across sentences.
+        if re.search(r"which one|ayy(?:a)? (?:wa7ad|we7de)|أي واحد|اي واحد", questions, re.I):
+            questions = one.reply
         result["asks_when_it_must"] = asked_a_question(one) and all(
             re.search(clarifications[field], questions, re.IGNORECASE) is not None
             for field in gold.must_ask
@@ -507,15 +532,30 @@ def score(
         # The client's own budget is theirs, however they wrote it ("300 alf").
         budget = [f"{gold.budget.amount:.0f}"] if gold.budget is not None else []
         result["nothing_invented"] = not invented(
-            seen.reply, [tool.answer for tool in seen.tools], client_said=[case.text, *budget]
+            seen.reply,
+            [*[tool.answer for tool in seen.tools], json.dumps(list(seen.card_items))],
+            client_said=[case.text, *budget],
         )
+
+    comparisons = comparison_errors(
+        seen.reply,
+        [t.answer for t in seen.tools if t.ok],
+        on_foot=gold.preference == "walkable" or "no_car" in gold.situation,
+    )
+    if comparisons or (not seen.cards and POINTS_AT_A_CARD.search(seen.reply)):
+        result["nothing_invented"] = False
+    if claims_completed(seen.reply):
+        result["nothing_invented"] = False
 
     mine, theirs = script_of(seen.reply), script_of(case.text)
     if mine is not None and theirs is not None:
         # The same script, and not French to someone who wrote Arabizi or English. It
         # still can't tell English from Arabizi: the manual review does.
         french = looks_french(seen.reply) and not looks_french(case.text)
-        result["language"] = mine == theirs and not french
+        wanted = language_of(case.text, case.lang if case.lang != "mixed" else None)
+        result["language"] = (
+            mine == theirs and not french and (wanted != "arabizi" or looks_arabizi(seen.reply))
+        )
     return result
 
 

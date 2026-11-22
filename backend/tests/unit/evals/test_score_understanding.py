@@ -465,3 +465,41 @@ def test_arabic_statements_do_not_become_questions(text: str) -> None:
     from dawalink.evals.score_understanding import asked_a_question
 
     assert not asked_a_question(Seen(text))
+
+
+def test_strength_choices_before_a_short_question_are_valid_but_not_a_guess() -> None:
+    which = case("Concor please", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("2.5 mg or 5 mg. Which one?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Which one?"))["asks_when_it_must"]
+    assert not checked(which, Seen("I chose the 5 mg."))["asks_when_it_must"]
+
+
+def test_current_history_card_satisfies_facts_but_old_constraints_do_not() -> None:
+    wanted = case(days_of_use=7, pickup_in_days=1, budget={"amount": 10, "currency": "USD"})
+    item = {
+        "product_id": CONCOR,
+        "qty": 1,
+        "days_of_use": 7,
+        "pickup_day": "2026-11-17",
+        "price_lbp_shown": 500000,
+    }
+    good = checked(wanted, Seen("Here is the current card.", cards=["reserve"], card_items=[item]))
+    assert all(good[k] for k in ("product", "quantity", "days_of_use", "pickup_day", "budget"))
+    bad = checked(
+        wanted,
+        Seen(
+            "Here is the old card.",
+            cards=["reserve"],
+            card_items=[
+                item | {"days_of_use": 1, "pickup_day": "2026-11-16", "price_lbp_shown": 999999}
+            ],
+        ),
+    )
+    assert all(bad[k] is False for k in ("days_of_use", "pickup_day", "budget"))
+
+
+def test_arabizi_requires_substantive_language_and_false_card_claims_fail() -> None:
+    arabizi = case("baddi concor w ana 3ande siyyara")
+    assert checked(arabizi, Seen("Hayda li l2ayto, fik tekhtar yalli baddak."))["language"]
+    assert not checked(arabizi, Seen("I found several options for your medicine."))["language"]
+    assert not checked(case(), Seen("Here is the cancellation card."))["nothing_invented"]
