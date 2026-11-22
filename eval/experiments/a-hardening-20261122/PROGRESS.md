@@ -141,3 +141,19 @@ note conflicts and expire after their date. Ambiguous dates/budget totals remain
 work. Clear French switches use the existing French detector before inheriting Arabizi.
 No live-model or independent acceptance claimed. Next: comparison association/scope,
 basket/prompt repairs, then separate scorer work and integrated checks.
+
+## Candidate6 partial comparison repair
+
+70 grounding tests pass; Ruff check/format2 files and mypy grounding.py pass.
+Exact test: from backend, .venv/bin/pytest tests/unit/agent/test_grounding.py -q.
+Evidence candidate6-comparison-{checks,replay}.json and test/lint/type logs.
+Pronoun association recognizes observed hiyye/Enssa7a context; explicit than/men/mn
+peers no longer replace the subject. Bullet boundaries prevent unrelated subject
+inheritance. Questions, search-intent prefaces and spelling matches are distinguished
+from factual ranking claims. Cheapest-is-same-everywhere and all/only pharmacy-count
+claims require supported total scope. Scope/product/travel-mode constraints retained.
+Offline preserved-reply replay checks U0008 initial false cheapest rejection plus
+corrected nearest acceptance, U0037 false cheapest rejection and U1019 false stock scope.
+These are diagnostic checks, not rewritten original evaluation results. No paid calls.
+Next: remaining basket/prompt repairs, then separately committed scorer repairs and
+one integrated full backend/free validation, review pack, simulations and report.

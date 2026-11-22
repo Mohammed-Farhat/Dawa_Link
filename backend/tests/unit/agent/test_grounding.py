@@ -195,3 +195,49 @@ def test_explicit_preference_from_client_history(messages: list[str], expected: 
     from dawalink.agent.guards.preferences import explicit_preference
 
     assert explicit_preference(messages) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "wrong"),
+    [
+        ("Pharmacy One: 500,000 LBP. Enssa7a 3ashan hiyye el arkhas.", True),
+        ("Pharmacy Two: 333,000 LBP. Enssa7a 3ashan hiyye el arkhas.", False),
+        ("Pharmacy Two: 3 min by car. It is a2rab men Pharmacy One.", False),
+        ("Pharmacy Two: 3 min by car. Hayda l 2a2rab w arkhass mn Pharmacy One.", False),
+        ("Pharmacy One: 4 min by car. It is a2rab men Pharmacy Two.", True),
+        ("Pharmacy Two is closer than Pharmacy One.", False),
+        ("Pharmacy One is closer than Pharmacy Two.", True),
+        ("Pharmacy One is available. It is cheaper than Pharmacy Two.", True),
+        ("Pharmacy Two is available. It is cheaper than Pharmacy One.", False),
+        ("To find the cheapest option, tell me your pickup day.", False),
+        ("Which pharmacy is cheapest?", False),
+        ("The closest spelling match is Augmentin.", False),
+    ],
+)
+def test_comparison_subject_peer_and_search_intent(text: str, wrong: bool) -> None:
+    assert bool(comparison_errors(text, options())) is wrong
+
+
+def test_global_stock_count_and_cheapest_paraphrase_need_full_scope() -> None:
+    found = json.loads(options()[0])
+    for option in found["options"]:
+        option["price"] = "333,000 LBP"
+    found["total_found"] = 28
+    assert comparison_errors("The cheapest is the same everywhere.", [json.dumps(found)])
+    assert comparison_errors(
+        "All three pharmacies that have it charge 333,000 LBP.", [json.dumps(found)]
+    )
+    assert not comparison_errors(
+        "The two pharmacies shown charge 333,000 LBP.", [json.dumps(found)]
+    )
+    found["total_found"] = 2
+    assert not comparison_errors(
+        "All two pharmacies that have it charge 333,000 LBP.", [json.dumps(found)]
+    )
+    assert not comparison_errors("The cheapest is the same everywhere.", [json.dumps(found)])
+
+
+def test_new_bullet_does_not_inherit_a_different_pharmacy_subject() -> None:
+    errors = comparison_errors("Pharmacy Two is available.\n- It is cheapest.", options())
+    assert errors
+    assert all(e.startswith("Unresolved ") for e in errors)

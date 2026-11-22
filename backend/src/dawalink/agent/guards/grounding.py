@@ -22,14 +22,22 @@ _NEGATED = re.compile(
 )
 _METRICS = {
     "price": re.compile(r"cheapest|cheaper|lowest price|أرخص|ارخص|arkhas", re.I),
-    "travel": re.compile(r"closest|nearest|shortest|quicker|faster|أقرب|اقرب|a2rab", re.I),
+    "travel": re.compile(r"closest|closer|nearest|shortest|quicker|faster|أقرب|اقرب|a2rab", re.I),
     "expiry": re.compile(
         r"latest expiry|latest expiration|expires? (?:the )?latest|أبعد صلاحية", re.I
     ),
 }
 _GLOBAL_SAME_PRICE = re.compile(
     r"\b(?:every|all) pharmac(?:y|ies)[^.!?\n]{0,80}(?:same price|price is the same)|"
-    r"\bprice is the same everywhere\b",
+    r"\b(?:price|cheapest) is (?:the )?same everywhere\b",
+    re.I,
+)
+_PEER = re.compile(r"\b(?:than|men|mn|من)\b", re.I)
+_PRONOUN = re.compile(r"\b(?:it|this|that|hayda|hayde|hiyye|hiyyi|huwe|هيدا|هذا|هذه|هي)\b", re.I)
+_SEARCH_INTENT = re.compile(r"\b(?:to|will|can|let me)\s+(?:find|search|look for)\b", re.I)
+_GLOBAL_STOCK_COUNT = re.compile(
+    r"\b(?:all|only)\s+(\d+|one|two|three|four|five)\s+pharmac(?:y|ies)\s+"
+    r"(?:(?:that\s+)?have\b|with\s+(?:it|stock)\b)",
     re.I,
 )
 
@@ -96,29 +104,59 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
                 "The tool did not establish every pharmacy's price. Limit the equal-price "
                 "claim to the returned options instead of saying everywhere."
             )
+    for counted in _GLOBAL_STOCK_COUNT.finditer(text):
+        words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+        reported = words.get(counted[1].lower())
+        if reported is None:
+            reported = int(counted[1])
+        if total_found is None or reported != total_found:
+            errors.append(
+                "The claimed total number of pharmacies with stock is not established by the tool."
+            )
 
-    for paragraph in re.split(r"\n\s*\n", text):
+    for paragraph in re.split(r"\n\s*\n|\n(?=\s*(?:[-*•]|\d+[.)])\s+)", text):
         previous: dict[str, Any] | None = None
-        for sentence in re.split(r"(?<!\d)\.|\.(?!\d)|[!?؟\n]+", paragraph):
+        for sentence in re.split(r"(?<!\d)\.|\.(?!\d)|(?<=[!?؟\n])", paragraph):
+            if re.match(r"\s*(?:[-*•]|\d+[.)])\s+", sentence):
+                previous = None  # A new list item must not inherit the preceding subject.
             named = []
             for option in options:
                 name = option.get("pharmacy", {}).get("name", "")
                 if name and name.casefold() in sentence.casefold():
                     named.append((sentence.casefold().find(name.casefold()), option))
+            resolved_subject = None
             for metric, pattern in _METRICS.items():
                 at = pattern.search(sentence)
                 if at is None:
                     continue
-                before = [(pos, o) for pos, o in named if pos < at.start()]
+                if metric == "price" and _GLOBAL_SAME_PRICE.search(sentence):
+                    continue  # Equal-price scope was checked above.
+                if (
+                    "?" in sentence
+                    or "؟" in sentence
+                    or _SEARCH_INTENT.search(sentence[: at.start()])
+                ):
+                    continue
+                if metric == "travel" and re.match(
+                    r"\s+spelling\s+match", sentence[at.end() :], re.I
+                ):
+                    continue
+                peer_names = [
+                    (pos, o)
+                    for pos, o in named
+                    if pos > at.end() and _PEER.search(sentence[at.end() : pos])
+                ]
+                subjects = [(pos, o) for pos, o in named if (pos, o) not in peer_names]
+                before = [(pos, o) for pos, o in subjects if pos < at.start()]
                 subject = (
                     max(before, key=lambda x: x[0])[1]
                     if before
-                    else (min(named, key=lambda x: x[0])[1] if named else None)
+                    else (min(subjects, key=lambda x: x[0])[1] if subjects else None)
                 )
-                if subject is None and re.match(
-                    r"\s*(?:it|this|that|hayda|hayde|هيدا|هذا|هذه)\b", sentence, re.I
-                ):
+                if subject is None and _PRONOUN.search(sentence):
                     subject = previous
+                if subject is not None:
+                    resolved_subject = subject
                 scope = options
                 explicit_scope = False
                 # Explicit geographic qualifiers define a subset. Never invent what
@@ -145,7 +183,9 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
                     )
                     continue
                 actual = value(subject, metric)
-                pairwise = bool(re.search(r"cheaper|quicker|faster", sentence, re.I))
+                pairwise = bool(
+                    peer_names or re.search(r"cheaper|closer|quicker|faster", sentence, re.I)
+                )
                 peers = [value(o, metric) for _, o in named if o is not subject] if pairwise else []
                 if pairwise and not peers:
                     errors.append(f"Unresolved {metric} comparison: no explicit comparison peer.")
@@ -159,9 +199,13 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
                     if peer is not None
                 ):
                     errors.append(f"The {metric} comparison contradicts the tool options.")
+            # Named peers don't replace a pronoun's established subject.
             unique_names = {o.get("pharmacy", {}).get("name") for _, o in named}
-            if len(unique_names) == 1:
-                previous = named[0][1]
+            if resolved_subject is not None:
+                previous = resolved_subject
+            elif len(unique_names) == 1:
+                if not _PEER.search(sentence[: named[0][0]]):
+                    previous = named[0][1]
             elif named:
                 previous = None  # A pronoun after multiple pharmacies is ambiguous.
     return errors
