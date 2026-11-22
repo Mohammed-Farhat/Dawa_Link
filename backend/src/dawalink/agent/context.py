@@ -14,13 +14,14 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 
 from dawalink.agent import display, state
+from dawalink.agent.guards.language import language_of
 from dawalink.agent.guards.redact import Identity, redact
-from dawalink.agent.state import CaseState
+from dawalink.agent.state import CaseState, Language
 from dawalink.agent.tools.base import rate
 from dawalink.agent.tools.read import request_status
 from dawalink.db.models import (
@@ -327,6 +328,9 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     trigger, client_text = _trigger(messages, followup, case.read_up_to)
     if trigger is None:
         return None
+    # Current client wording outranks stale model notes. Short/ambiguous corrections
+    # still inherit the established language; this modifies only the loaded copy.
+    case.language = cast(Language | None, language_of(client_text or "", case.language))
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
     case.open_proposal_ids = [
         proposal_id

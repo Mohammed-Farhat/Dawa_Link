@@ -3,7 +3,7 @@
 import re
 
 _REFERENCE = re.compile(
-    r"\b(?:R|REQ|W)-[A-Z0-9]{4,}\b|"
+    r"\b(?:R|REQ|W|Q)-[A-Z0-9]{4,}\b|"
     r"\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b",
     re.I,
 )
@@ -42,7 +42,9 @@ def language_of(text: str, noted: str | None = None) -> str | None:
         and len(
             re.findall(
                 r"\b(?:i|you|the|need|want|would|like|please|have|will|for|cancel|"
-                r"without|their|another|order|no|more|than|only)\b",
+                r"without|their|another|order|no|more|than|only|"
+                r"a|an|and|or|to|of|with|by|it|is|are|this|that|my|me|"
+                r"can|could|do|does|not|show|print|every|all|above|before|after)\b",
                 text,
                 re.I,
             )

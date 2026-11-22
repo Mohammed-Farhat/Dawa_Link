@@ -3,6 +3,15 @@
 Goal active. Work sequentially on test/agent-evaluation; preserve checkout. No push,
 deployment or main merge. Unrelated handoff remains untracked and unchanged.
 
+## Candidate6 free repairs in progress
+
+Language repair implemented: expanded high-confidence English cues; opaque Q request
+references excluded from Arabizi inference; current client language hint overrides stale
+notes in loaded context while short corrections inherit. Unit grounding/language and
+DB context suites passed, Ruff/format and mypy2files passed. Exact evidence and hashes:
+evidence/candidate6-language-checks.json. No live-model validation, no final pin yet.
+Remaining consolidated runtime/scorer repairs and integrated tests still required.
+
 ## Completed
 
 - Historical architecture preserved separately in bdc5c16; A retained, no B/C tuning.
@@ -104,7 +113,7 @@ No evaluation process remains live; DB tests may now run sequentially.
 
 ## Next actions
 
-1 Implement consolidated distinct A repairs plus positive/incorrect regressions; separate
+1 Continue distinct A repairs (language partial done) plus positive/incorrect regressions; separate
   scorer repairs without label changes. Targeted checks, then one integrated fullbackend.
 2 Run free search/rules/rules_asking seed1 n100 after final source, same initial worlds/
   events and source. Record paid A/played/browser as pending while STOP_PAID remains.
