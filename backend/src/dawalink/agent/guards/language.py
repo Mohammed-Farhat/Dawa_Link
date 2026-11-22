@@ -17,6 +17,25 @@ _ARABIZI = re.compile(
 )
 
 
+# Words French can't do without, and that English and Arabizi don't use.
+_FRENCH = re.compile(
+    r"\b(?:vous|nous|est|sont|les|des|une|pour|avec|dans|chez|votre|vos|pas|je|peux|"
+    r"quel(?:le)?s?|jours?|ordonnance|pharmacien(?:ne)?|médecin|disponible)\b",
+    re.IGNORECASE,
+)
+
+
+def looks_french(text: str) -> bool:
+    """Is this written in French? Several French words, and a fair share of all words.
+
+    A rule of thumb for one case: a client who writes Arabizi or English, answered in
+    French (seen in the evaluation). A French word here and there is how people write.
+    """
+    words = re.findall(r"[A-Za-zÀ-ÿ']+", text)
+    french = len(_FRENCH.findall(text))
+    return french >= 4 and french * 8 >= len(words)
+
+
 def looks_arabizi(text: str) -> bool:
     # Opaque references such as R-YEM2GH are identifiers, not language cues.
     text = _REFERENCE.sub("", text)
@@ -36,6 +55,8 @@ def language_of(text: str, noted: str | None = None) -> str | None:
         return "arabic"
     if looks_arabizi(text):
         return "arabizi"
+    if looks_french(text):
+        return "mixed"
     # Short corrections ("yes", "2 boxes") do not reset an established language.
     if (
         len(re.findall(r"[a-z]+", text, re.I)) >= 3

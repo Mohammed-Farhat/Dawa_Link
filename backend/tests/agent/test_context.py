@@ -5,7 +5,7 @@ for each kind of thing a conversation can hold.
 """
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +24,20 @@ from dawalink.services.events import Decision
 from tests.agent.conftest import Scene
 from tests.conftest import logged
 from tests.db.factories import TODAY
+
+
+def test_relative_pickup_is_anchored_once_and_expires_after_that_day(scene: Scene) -> None:
+    scene.turn(reply("Which medicine?"), text="I want pickup tomorrow")
+    scene.world.clock.advance(timedelta(days=1))
+    scene.say("Augmentin")
+    loaded = context.load(scene.world.tx(), scene.chat)
+    assert loaded is not None
+    assert loaded.case_state.client_pickup_day == TODAY + timedelta(days=1)
+    # Reading yesterday's "tomorrow" again must not move pickup to the next day.
+    scene.world.clock.advance(timedelta(days=1))
+    loaded = context.load(scene.world.tx(), scene.chat)
+    assert loaded is not None
+    assert loaded.case_state.client_pickup_day is None
 
 
 def block(scene: Scene, conversation: uuid.UUID | None = None) -> str:

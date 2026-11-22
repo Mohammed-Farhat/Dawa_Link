@@ -1,0 +1,65 @@
+................F..........................                              [100%]
+=================================== FAILURES ===================================
+________ TestWhatAReplyMayShow.test_french_is_not_the_answer_to_arabizi ________
+
+self = <tests.agent.test_cards.TestWhatAReplyMayShow object at 0x1124c9100>
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x112f56c30>, session=<sqlalchemy.orm.sessio...ted.ScriptedModel object at 0x11304b980>, <dawalink.agent.llm.scripted.ScriptedModel object at 0x11304ba70>], turns={})
+
+    def test_french_is_not_the_answer_to_arabizi(self, scene: Scene) -> None:
+        """Seen in suite E1: \"bade motiliom\" answered entirely in French."""
+        french = (
+            "Augmentin est disponible chez plusieurs pharmacies. Je ne peux pas vous "
+            "conseiller sur la posologie: un pharmacien peut vous dire combien en prendre."
+        )
+        result = scene.turn(
+            reply(french), reply("Augmentin mawjoud bi kaza saydaliyye."), text="baddi augmentin"
+        )
+        stays = scene.turn(
+            reply(french),
+            text="Bonjour, je voudrais Augmentin pour ma mère, est-ce que vous l'avez ?",
+        )
+    
+        assert result.text == "Augmentin mawjoud bi kaza saydaliyye."
+        assert scene.run(result).guardrails == ["language"]
+>       assert stays.text == french  # a client who writes French is answered in French
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert None == 'Augmentin est disponible chez plusieurs pharmacies. Je ne peux pas vous conseiller sur la posologie: un pharmacien peut vous dire combien en prendre.'
+E        +  where None = TurnResult(status=<Status.UNAVAILABLE: 'unavailable'>, outcome=<RunOutcome.ERROR: 'error'>, run_id=UUID('f92b39c5-3a91-4cb8-b8e5-9558fa79ca0c'), message_seq=None, text=None, proposal_ids=(), quick_replies=(), until=None).text
+
+tests/agent/test_cards.py:302: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"run_id": "f92b39c5-3a91-4cb8-b8e5-9558fa79ca0c", "event": "agent_turn_crashed", "level": "error", "timestamp": "2026-11-22T20:53:24.032608Z", "exception": "  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 1096, in run_turn\n    GRAPH.invoke({\"work\": work}, config={\"recursion_limit\": _STEPS})\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 4023, in invoke\n    for chunk in self.stream(\n                 ^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py\", line 3083, in stream\n    for _ in runner.tick(\n             ^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_runner.py\", line 204, in tick\n    run_with_retry(\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_retry.py\", line 637, in run_with_retry\n    return task.proc.invoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py\", line 794, in invoke\n    input = context.run(step.invoke, input, config, **kwargs)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py\", line 479, in invoke\n    ret = self.func(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 456, in _agent\n    answer = _ask(work, prompt)\n             ^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py\", line 364, in _ask\n    return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/llm/scripted.py\", line 56, in complete\n    raise AssertionError(\"The script has no step left for this model call.\")\nAssertionError: The script has no step left for this model call.\nDuring task with name 'agent' and id 'eb98d822-2086-ea4a-e01d-09f435aa4a72'"}
+------------------------------ Captured log call -------------------------------
+ERROR    dawalink.agent.turn:turn.py:1100 {'run_id': 'f92b39c5-3a91-4cb8-b8e5-9558fa79ca0c', 'exc_info': True, 'event': 'agent_turn_crashed', 'level': 'error', 'timestamp': '2026-11-22T20:53:24.032608Z'}
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 1096, in run_turn
+    GRAPH.invoke({"work": work}, config={"recursion_limit": _STEPS})
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py", line 4023, in invoke
+    for chunk in self.stream(
+                 ^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/main.py", line 3083, in stream
+    for _ in runner.tick(
+             ^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_runner.py", line 204, in tick
+    run_with_retry(
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/pregel/_retry.py", line 637, in run_with_retry
+    return task.proc.invoke(task.input, config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py", line 794, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/.venv/lib/python3.12/site-packages/langgraph/_internal/_runnable.py", line 479, in invoke
+    ret = self.func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 456, in _agent
+    answer = _ask(work, prompt)
+             ^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/turn.py", line 364, in _ask
+    return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/agent/llm/scripted.py", line 56, in complete
+    raise AssertionError("The script has no step left for this model call.")
+AssertionError: The script has no step left for this model call.
+During task with name 'agent' and id 'eb98d822-2086-ea4a-e01d-09f435aa4a72'
+=========================== short test summary info ============================
+FAILED tests/agent/test_cards.py::TestWhatAReplyMayShow::test_french_is_not_the_answer_to_arabizi

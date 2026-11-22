@@ -712,6 +712,8 @@ def _guard_output(graph_state: _State) -> _State:
                 tool_answers=[o.as_json() for o in work.outcomes if o.ok],
                 language=work.loaded.case_state.language,
                 preference=work.turn.state.preference if work.turn else None,
+                budget=work.turn.state.budget if work.turn else None,
+                client_pickup_day=work.turn.state.client_pickup_day if work.turn else None,
                 on_foot=work.turn is not None and work.turn.state.preference == "walkable",
             )
         kinds = [violation.type for violation in checked.violations]
@@ -735,10 +737,13 @@ def _guard_output(graph_state: _State) -> _State:
         clinical = any(v.type == output_guard.CLINICAL for v in blocking)
         work.outcome = RunOutcome.GUARDRAIL_BLOCKED
         # A rejected recommendation must not reappear on the fallback card.
-        preference_failed = "preference" in work.guardrails
+        preference_failed = bool({"preference", "budget", "pickup_day"} & set(work.guardrails))
         template = (
-            Fixed.CLINICAL_REFUSAL if clinical else Fixed.TRY_AGAIN
-            if preference_failed else Fixed.NEUTRAL
+            Fixed.CLINICAL_REFUSAL
+            if clinical
+            else Fixed.TRY_AGAIN
+            if preference_failed
+            else Fixed.NEUTRAL
         )
         _use_template(work, template, None)
         return graph_state
@@ -775,6 +780,9 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
     if note and note not in work.guardrails:
         work.guardrails.append(note)
     cards: list[uuid.UUID] = []
+    # A refusal/error during repair must not undo a rejected card constraint.
+    if which is Fixed.NEUTRAL and {"preference", "budget", "pickup_day"} & set(work.guardrails):
+        which = Fixed.TRY_AGAIN
     if which is Fixed.NEUTRAL:
         with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
             known = proposals.of_conversation(tx, work.conversation_id, work.turn.created_proposals)
@@ -783,6 +791,42 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
                 for proposal_id in work.turn.created_proposals
                 if proposal_id in known and proposals.state_of(tx, known[proposal_id]) == "open"
             ][:5]
+            # A model can refuse immediately after creating a card, before its first
+            # reply is checked. Validate fallback cards too; fixed wording alone
+            # cannot establish that their price/day/recommendation fits the client.
+            if cards and work.loaded is not None:
+                checked = output_guard.check(
+                    tx,
+                    Reply(text=fixed(which, _language(work)), proposal_ids=cards),
+                    conversation_id=work.loaded.conversation_id,
+                    client_id=work.loaded.client_id,
+                    run_id=work.run_id,
+                    client_text=work.loaded.client_text,
+                    client_history=work.loaded.client_history,
+                    tool_answers=[o.as_json() for o in work.outcomes if o.ok],
+                    language=work.loaded.case_state.language,
+                    preference=work.turn.state.preference,
+                    budget=work.turn.state.budget,
+                    client_pickup_day=work.turn.state.client_pickup_day,
+                    on_foot=work.turn.state.preference == "walkable",
+                )
+                failed = {
+                    v.type
+                    for v in checked.violations
+                    if v.type
+                    in (
+                        output_guard.CARD,
+                        output_guard.RECOMMENDED,
+                        "preference",
+                        "budget",
+                        "pickup_day",
+                    )
+                }
+                for kind in sorted(failed):
+                    if kind not in work.guardrails:
+                        work.guardrails.append(kind)
+                if failed:
+                    cards = []
         if not cards:
             which = Fixed.TRY_AGAIN
     work.final = Reply(text=fixed(which, _language(work)), proposal_ids=cards)

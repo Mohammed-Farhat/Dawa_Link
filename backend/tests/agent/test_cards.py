@@ -6,13 +6,16 @@ Also the output guard, on whole turns: one chance to fix a reply, then our own w
 
 import json
 import uuid
+from datetime import timedelta
 from typing import Any
 
 import pytest
 
 from dawalink.agent.llm import LLMRefused, ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, calls, reply, say
+from dawalink.agent.state import Money
 from dawalink.agent.turn import Status
+from dawalink.db.models import Conversation, Pharmacy
 from dawalink.services import proposals
 from dawalink.services.errors import Code, ServiceError
 from tests.agent.conftest import Scene
@@ -738,3 +741,168 @@ def test_preference_survives_clarification_and_model_notes(scene: Scene) -> None
     assert result.outcome == "guardrail_blocked"
     assert not result.proposal_ids
     assert result.text != "Here it is."
+
+
+def test_model_refusal_cannot_restore_rejected_preference_card(scene: Scene) -> None:
+    costly = scene.stock(price_override_lbp=700_000)
+    scene.stock(price_override_lbp=500_000)
+    result = scene.turn(
+        call("find_options", product_ids=[str(scene.augmentin)]),
+        call(
+            "propose_reservation", listing_id=str(costly), pickup_day=str(TODAY), recommended=True
+        ),
+        proposal_from(scene),
+        LLMRefused("declined repair"),
+        text="I want the cheapest option",
+    )
+    assert "preference" in scene.run(result).guardrails
+    assert "model_refusal" in scene.run(result).guardrails
+    assert not result.proposal_ids
+
+
+def test_model_refusal_preserves_unrejected_proposal(scene: Scene) -> None:
+    box = scene.stock()
+    result = scene.turn(
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY)),
+        LLMRefused("declined wording"),
+    )
+    assert len(result.proposal_ids) == 1
+    assert scene.world.one("SELECT count(*) AS n FROM orders").n == 0
+
+
+@pytest.mark.parametrize("offset", [0, 1, 2])
+def test_reservation_card_honors_explicit_pickup_day(scene: Scene, offset: int) -> None:
+    pharmacy = scene.world.session.get_one(Pharmacy, scene.pharmacy)
+    pharmacy.pickup_days = 3
+    scene.world.session.flush()
+    box = scene.stock()
+    result = scene.turn(
+        call(
+            "propose_reservation",
+            listing_id=str(box),
+            pickup_day=str(TODAY + timedelta(days=offset)),
+        ),
+        proposal_from(scene),
+        LLMRefused("cannot repair"),
+        text="I want pickup the day after tomorrow",
+    )
+    if offset == 2:
+        assert len(result.proposal_ids) == 1
+        assert "pickup_day" not in scene.run(result).guardrails
+    else:
+        assert "pickup_day" in scene.run(result).guardrails
+        assert not result.proposal_ids
+    assert scene.world.one("SELECT count(*) AS n FROM orders").n == 0
+
+
+@pytest.mark.parametrize("price", [299_000, 300_000, 363_000])
+def test_reservation_card_honors_budget_even_on_model_refusal(scene: Scene, price: int) -> None:
+    row = scene.world.session.get_one(Conversation, scene.chat)
+    row.case_state = {"budget": Money(amount=300_000, currency="LBP").model_dump()}
+    scene.world.session.flush()
+    box = scene.stock(price_override_lbp=price)
+    result = scene.turn(
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY)),
+        proposal_from(scene),
+        LLMRefused("cannot repair"),
+        text="I need Augmentin; my budget is 300,000 LBP",
+    )
+    if price <= 300_000:
+        assert len(result.proposal_ids) == 1
+        assert "budget" not in scene.run(result).guardrails
+    else:
+        assert "budget" in scene.run(result).guardrails
+        assert not result.proposal_ids
+
+
+@pytest.mark.parametrize("price", [358_000, 363_000])
+def test_usd_budget_uses_configured_rate(scene: Scene, price: int) -> None:
+    scene.world.make.catalog_import()  # 89,500 LBP/USD, not a model-provided rate.
+    row = scene.world.session.get_one(Conversation, scene.chat)
+    row.case_state = {"budget": Money(amount=4, currency="USD").model_dump()}
+    scene.world.session.flush()
+    box = scene.stock(price_override_lbp=price)
+    result = scene.turn(
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY)),
+        proposal_from(scene),
+        LLMRefused("cannot repair"),
+        text="I need Augmentin; my budget is $4",
+    )
+    assert bool(result.proposal_ids) == (price <= 358_000)
+    assert ("budget" in scene.run(result).guardrails) == (price > 358_000)
+
+
+def test_usd_budget_without_rate_does_not_invent_affordability(
+    scene: Scene, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("dawalink.agent.guards.output.rate", lambda tx: None)
+    row = scene.world.session.get_one(Conversation, scene.chat)
+    row.case_state = {"budget": Money(amount=4, currency="USD").model_dump()}
+    scene.world.session.flush()
+    box = scene.stock(price_override_lbp=1)
+    result = scene.turn(
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY)),
+        proposal_from(scene),
+        LLMRefused("cannot repair"),
+    )
+    assert "budget" in scene.run(result).guardrails
+    assert not result.proposal_ids
+
+
+@pytest.mark.parametrize("constraint", ["budget", "pickup_day", "preference"])
+def test_refusal_before_first_reply_cannot_bypass_card_constraints(
+    scene: Scene, constraint: str
+) -> None:
+    box = scene.stock(price_override_lbp=700_000)
+    scene.stock(price_override_lbp=500_000)
+    client_text = {
+        "budget": "I need Augmentin, my budget is 600,000 LBP",
+        "pickup_day": "I need Augmentin for pickup tomorrow",
+        "preference": "I want the cheapest option",
+    }[constraint]
+    result = scene.turn(
+        call("find_options", product_ids=[str(scene.augmentin)]),
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY), recommended=True),
+        LLMRefused("cannot write a reply"),
+        text=client_text,
+    )
+    assert constraint in scene.run(result).guardrails
+    assert not result.proposal_ids
+    assert scene.world.one("SELECT count(*) AS n FROM orders").n == 0
+
+
+def test_client_budget_revision_survives_clarification(scene: Scene) -> None:
+    scene.turn(reply("Which medicine?"), text="My budget is 300k LBP")
+    scene.turn(reply("Which medicine?"), text="Actually my budget is 500k LBP")
+    box = scene.stock(price_override_lbp=400_000)
+    result = scene.turn(
+        call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY)),
+        proposal_from(scene),
+        text="I need Augmentin today",
+    )
+    assert len(result.proposal_ids) == 1
+    assert "budget" not in scene.run(result).guardrails
+
+
+@pytest.mark.parametrize("offset", [0, 1])
+def test_explicit_pickup_survives_clarification_and_conflicting_model_notes(
+    scene: Scene, offset: int
+) -> None:
+    scene.turn(
+        reply("Which medicine?", case_notes={"pickup_day": str(TODAY)}),
+        text="I want pickup tomorrow",
+    )
+    assert scene.conversation().case_state["client_pickup_day"] == str(TODAY + timedelta(days=1))
+    box = scene.stock()
+    result = scene.turn(
+        call(
+            "propose_reservation",
+            listing_id=str(box),
+            pickup_day=str(TODAY + timedelta(days=offset)),
+        ),
+        proposal_from(scene),
+        LLMRefused("cannot repair"),
+        text="I need Augmentin",
+    )
+    assert bool(result.proposal_ids) == (offset == 1)
+    assert ("pickup_day" in scene.run(result).guardrails) == (offset != 1)

@@ -10,16 +10,23 @@ import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 
+from dawalink.agent import display
+from dawalink.agent.guards.budget import explicit_budget
 from dawalink.agent.guards.clinical import clinical_reasons
 from dawalink.agent.guards.grounding import claims_completed, comparison_errors
-from dawalink.agent.guards.language import language_of, looks_arabizi
+from dawalink.agent.guards.language import language_of, looks_arabizi, looks_french
+from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.preferences import explicit_preference
 from dawalink.agent.guards.redact import has_personal_details
+from dawalink.agent.state import Money
 from dawalink.agent.tools import ALL, Reply
+from dawalink.agent.tools.base import rate
 from dawalink.domain.vocabulary import ProposalKind
 from dawalink.services import proposals
 from dawalink.services.context import Tx
+from dawalink.services.errors import ServiceError
 
 CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS, NO_CARD = (
     "card",
@@ -93,25 +100,6 @@ def plain(text: str) -> str:
     return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
-# Words French can't do without, and that English and Arabizi don't use.
-_FRENCH = re.compile(
-    r"\b(?:vous|nous|est|sont|les|des|une|pour|avec|dans|chez|votre|vos|pas|je|peux|"
-    r"quel(?:le)?s?|jours?|ordonnance|pharmacien(?:ne)?|médecin|disponible)\b",
-    re.IGNORECASE,
-)
-
-
-def looks_french(text: str) -> bool:
-    """Is this written in French? Several French words, and a fair share of all words.
-
-    A rule of thumb for one case: a client who writes Arabizi or English, answered in
-    French (seen in the evaluation). A French word here and there is how people write.
-    """
-    words = re.findall(r"[A-Za-zÀ-ÿ']+", text)
-    french = len(_FRENCH.findall(text))
-    return french >= 4 and french * 8 >= len(words)
-
-
 def script_of(text: str) -> str | None:
     """ "arabic" or "latin": the script most of the letters are in. None: no letters."""
     arabic, latin = len(_ARABIC.findall(text)), len(_LATIN.findall(text))
@@ -134,6 +122,8 @@ def check(
     language: str | None = None,
     on_foot: bool = False,
     preference: str | None = None,
+    budget: Money | None = None,
+    client_pickup_day: date | None = None,
 ) -> Checked:
     """The reply with links removed, and everything that is wrong with it."""
     cleaned = reply.model_copy(
@@ -219,6 +209,47 @@ def check(
                 "themselves after calling the pharmacy.",
             )
         )
+
+    pickup_day = explicit_pickup_day(client_text or "", tx.today) or client_pickup_day
+    card_budget = explicit_budget(client_history or (client_text or "",)) or (
+        cleaned.case_notes.budget if cleaned.case_notes and cleaned.case_notes.budget else budget
+    )
+    limit = None
+    budget_unknown = False
+    if card_budget is not None:
+        try:
+            limit = display.in_lbp(card_budget, rate(tx))
+        except ServiceError:
+            budget_unknown = True
+    for proposal_id in usable:
+        proposal = known[proposal_id]
+        if proposal.kind not in (ProposalKind.RESERVE.value, ProposalKind.RESERVE_GROUP.value):
+            continue
+        payload = proposal.payload
+        if pickup_day is not None and payload.get("pickup_day") != pickup_day.isoformat():
+            violations.append(
+                Violation(
+                    "pickup_day",
+                    f"The client explicitly requested pickup on {pickup_day}. "
+                    "Do not show a reservation card for a different day. Correct the card "
+                    "or explain that this day is unavailable.",
+                )
+            )
+        # The existing search/card contract uses a per-pack price cap. Do not infer
+        # a total-basket cap from an ambiguous budget or compare group totals to it.
+        items = payload.get("items", [payload])
+        if budget_unknown or any(
+            limit is not None and item.get("price_lbp_shown", 0) > limit for item in items
+        ):
+            violations.append(
+                Violation(
+                    "budget",
+                    "The reservation card exceeds the client's per-pack budget, "
+                    "or its USD cap cannot be verified without a configured exchange rate. "
+                    "Show an affordable card, or explain the constraint and ask before "
+                    "offering a more expensive reservation. Do not invent a conversion.",
+                )
+            )
 
     # An explicit preference cannot be silently replaced by a balanced recommendation.
     chosen_preference = explicit_preference(client_history or (client_text or "",)) or (

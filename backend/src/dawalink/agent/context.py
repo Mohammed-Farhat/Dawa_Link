@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 
 from dawalink.agent import display, state
 from dawalink.agent.guards.language import language_of
+from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.redact import Identity, redact
 from dawalink.agent.state import CaseState, Language
 from dawalink.agent.tools.base import rate
@@ -331,6 +332,10 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     # Current client wording outranks stale model notes. Short/ambiguous corrections
     # still inherit the established language; this modifies only the loaded copy.
     case.language = cast(Language | None, language_of(client_text or "", case.language))
+    requested_day = explicit_pickup_day(client_text or "", tx.today)
+    if requested_day is not None:
+        case.client_pickup_day = requested_day
+        case.pickup_day = requested_day
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
     case.open_proposal_ids = [
         proposal_id

@@ -129,6 +129,11 @@ def test_walking_rank_differs_from_driving_and_latest_search_supersedes() -> Non
         ("Q-YEM2GH", "english", "english"),
         ("Concor 5mg one box", "arabizi", "arabizi"),
         ("2 boxes please", "arabizi", "arabizi"),
+        (
+            "Bonjour, je voudrais Augmentin pour ma mère, est-ce que vous avez ça ?",
+            "arabizi",
+            "mixed",
+        ),
         ("print l talab, ana bade shoufo", "english", "arabizi"),
     ],
 )

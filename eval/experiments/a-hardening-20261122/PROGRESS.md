@@ -72,8 +72,8 @@ and false negatives remain distinct from real agent defects. Garbled Arabizi and
 limits remain visible. No tuning on held-out content.
 
 Next source may now change only as a distinct candidate. Keep runtime and scorer commits
-separate. Central fallback-card suppression after rejected constraints still needs a
-scripted refusal/timeout reproduction. Candidate5 affected tests517 passed previously;
+separate. Central fallback-card suppression is now repaired for preference/budget/pickup
+constraints, including refusal before the first candidate reply; see candidate6 checks. Candidate5 affected tests517 passed previously;
 new integrated changes justify one full backend run after targeted checks.
 
 Offline helpers: summarize_validation.py checks coverage/accounting/review gaps;
@@ -123,3 +123,21 @@ No evaluation process remains live; DB tests may now run sequentially.
   needs suitable provenance, resolved development regressions and independent review.
 5 Update report/reproduction/hashes/costs/demo/handoff with all limitations. No push,
   deployment or main merge. Do not mark goal complete while feasible free work remains.
+
+## Candidate6 partial card/date/budget repair
+
+167 targeted tests passed: tests/agent/test_cards.py tests/agent/test_context.py
+and tests/unit/agent/{test_pickup,test_budget,test_grounding}.py (from backend after
+sourcing isolated local.env). Ruff check/format12 files and mypy7 source files passed.
+Commands/results/source hashes: evidence/candidate6-card-constraints-checks.json,
+with raw test/lint/type logs alongside it. No paid calls; STOP_PAID remains armed.
+
+Central fallback checks now prevent rejected cards reappearing after model refusal,
+including refusal before a first candidate reply. Valid fallback cards remain usable.
+Per-pack budget cards use explicit client cap/revision before model notes and the
+configured USD rate; missing rate cannot establish affordability. Relative pickup days
+are anchored to current Beirut date in code-owned state, survive clarification/model
+note conflicts and expire after their date. Ambiguous dates/budget totals remain review
+work. Clear French switches use the existing French detector before inheriting Arabizi.
+No live-model or independent acceptance claimed. Next: comparison association/scope,
+basket/prompt repairs, then separate scorer work and integrated checks.
