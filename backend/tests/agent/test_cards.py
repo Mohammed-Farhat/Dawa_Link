@@ -588,6 +588,19 @@ def test_completed_action_claim_is_repaired_without_executing(scene: Scene) -> N
     assert "grounding" in scene.run(result).guardrails
 
 
+def test_arabizi_failed_cancel_repairs_card_claim_in_arabizi(scene: Scene) -> None:
+    result = scene.turn(
+        call("propose_cancellation", order_ref="R-CX9785"),
+        reply("Hay bitaa el talab R-CX9785 ma3 zer el ilghe2."),
+        reply("Ma l2it 7ajz faal 3al hesab mta3ak. Fik tet2akkad mn el ra2m?"),
+        text="elghi l talab R-CX9785, hayda la khayye",
+    )
+    assert result.outcome == "ok"
+    assert result.text.startswith("Ma l2it")
+    assert not result.proposal_ids
+    assert "card" in scene.run(result).guardrails
+
+
 def test_cheapest_preference_rejects_expensive_recommendation(scene: Scene) -> None:
     from dawalink.agent.guards.output import check
     from dawalink.agent.tools import Reply

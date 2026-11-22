@@ -50,6 +50,7 @@ POINTS_AT_A_CARD = re.compile(
     r"\bcards?\b[^.!?\n]{0,40}\b(?:below|underneath|ta7e?t|taht)\b|"
     r"\b(?:below|here(?: is|'s| are))\b[^.!?\n]{0,30}\bcards?\b|"
     r"\bhere(?: is|'s| are)\b[^.!?\n]{0,45}\b(?:cancellation|reservation) card\b|"
+    r"\b(?:hay|hayda|hayde)\s+(?:l\s+|el\s+)?(?:bita[2a]+|bitaa|card|kart)\b|"
     r"(?:البطاقة|البطاقات|الكرت)[^.!?؟\n]{0,40}(?:أدناه|تحت|بالأسفل)",
     re.IGNORECASE,
 )

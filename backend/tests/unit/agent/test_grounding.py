@@ -99,6 +99,11 @@ def test_walking_rank_differs_from_driving_and_latest_search_supersedes() -> Non
         ("baddi concor w ana 3ande siyyara", None, "arabizi"),
         ("yes, 2 boxes", "arabizi", "arabizi"),
         ("I would like two boxes tomorrow", "arabizi", "english"),
+        ("elghi l talab R-CX9785, hayda la khayye", None, "arabizi"),
+        ("krestor 20 mawjoud?", None, "arabizi"),
+        ("Hay bitaa el talab ma3 zer el ilghe2", "arabizi", "arabizi"),
+        ("I need Concor", "arabizi", "english"),
+        ("Concor 5 mg two boxes", "arabizi", "arabizi"),
         ("بدي علبتين من الدواء", "english", "arabic"),
     ],
 )
