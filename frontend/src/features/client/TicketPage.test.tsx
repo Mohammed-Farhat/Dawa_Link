@@ -40,7 +40,8 @@ describe('The pickup ticket', () => {
     pretendApi({ 'GET /api/v1/auth/me': CLIENT, [`GET /api/v1${PATH}`]: RESERVATION })
     renderApp(<AppRoutes />, { path: PATH })
 
-    const link = await screen.findByRole('link', { name: s.directions })
+    // Its spoken name starts with its visible word, and says that it opens a new tab.
+    const link = await screen.findByRole('link', { name: `${s.directions} ${strings.common.opensNewTab}` })
 
     // Google Maps, with the pharmacy as the destination and nothing else (BLD-D43):
     // the map fills "from" itself, on the client's own device.
@@ -74,6 +75,54 @@ describe('The pickup ticket', () => {
 
     expect(await screen.findByText('Cancelled by you')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: s.cancel })).not.toBeInTheDocument()
+  })
+
+  it('names what the page is in its heading (A#39)', async () => {
+    loggedIn()
+    pretendApi({ 'GET /api/v1/auth/me': CLIENT, [`GET /api/v1${PATH}`]: RESERVATION })
+    renderApp(<AppRoutes />, { path: PATH })
+
+    expect(await screen.findByRole('heading', { level: 1, name: s.header })).toBeInTheDocument()
+    expect(screen.getByText(s.pay)).toBeInTheDocument()
+  })
+
+  it('says first that a reservation is no longer waiting, with no "show this at the counter" (A#36)', async () => {
+    loggedIn()
+    // The server's older words: the page calls it a missed pickup all the same (B#13).
+    const missed = {
+      ...RESERVATION,
+      state: 'EXPIRED_NO_SHOW',
+      status_text: "Expired: it wasn't picked up in time",
+      deadline: null,
+    }
+    pretendApi({ 'GET /api/v1/auth/me': CLIENT, [`GET /api/v1${PATH}`]: missed })
+    const { container } = renderApp(<AppRoutes />, { path: PATH })
+
+    expect(await screen.findByRole('heading', { level: 1, name: s.ended.EXPIRED_NO_SHOW })).toBeInTheDocument()
+    expect(screen.getByText(s.missedPickup)).toBeInTheDocument()
+    expect(screen.queryByText(/^Expired/)).not.toBeInTheDocument()
+    expect(screen.queryByText(s.header)).not.toBeInTheDocument()
+    expect(screen.queryByText(s.pay)).not.toBeInTheDocument()
+    expect(screen.queryByText(s.youSave)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: s.cancel })).not.toBeInTheDocument()
+    // Directions and Call are still there, as plain buttons.
+    expect(screen.getByRole('link', { name: new RegExp(`^${s.directions}`) })).toHaveClass('pill-button--dark')
+    expect(screen.getByRole('link', { name: s.call })).toHaveClass('pill-button--dark')
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('goes Home on Close when the ticket was opened straight from a link', async () => {
+    loggedIn()
+    pretendApi({
+      'GET /api/v1/auth/me': CLIENT,
+      [`GET /api/v1${PATH}`]: RESERVATION,
+      'GET /api/v1/reservations': { items: [], next_cursor: null, server_now: CONFIG.server_now },
+    })
+    renderApp(<AppRoutes />, { path: PATH })
+
+    await userEvent.click(await screen.findByRole('button', { name: strings.common.close }))
+
+    expect(await screen.findByRole('heading', { name: strings.home.title })).toBeInTheDocument()
   })
 
   it("says so when the reservation isn't the client's", async () => {

@@ -183,6 +183,10 @@ class TestTheCounter:
         assert listed.json()["items"] == []
 
     def test_today_in_numbers(self, counter: Counter) -> None:
+        make = counter.api.world.make
+        make.item(pharmacy_id=counter.pharmacy, days_left=90, qty_on_hand=4)
+        # Kept private (more than 180 days left): clients don't see these packs.
+        make.item(pharmacy_id=counter.pharmacy, days_left=250, qty_on_hand=6)
         counter.reserve(qty=2)
 
         numbers = counter.get("/dashboard").json()
@@ -190,7 +194,8 @@ class TestTheCounter:
         assert numbers["new_reservations"] == 1
         assert numbers["due_today"] == 1
         assert numbers["units_reserved"] == 2
-        assert numbers["live_listings"] == 1
+        # Packs clients can see (B#53): 5 - 2 reserved, and 4 of another box.
+        assert numbers["live_listings"] == 7
         assert numbers["open_asks"] == 0
 
 

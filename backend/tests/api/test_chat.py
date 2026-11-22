@@ -2,6 +2,8 @@
 §6.6, §6.7; docs/04 R-AG2, R-AG7, INV-21; docs/09 FA-5, FS-7)."""
 
 import json
+import threading
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import timedelta
@@ -9,12 +11,16 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx2 import Response
+from starlette.concurrency import iterate_in_threadpool
 
 from dawalink.agent.chat import post_client_message
 from dawalink.agent.llm import ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, reply
+from dawalink.agent.turn import Status, TurnResult
 from dawalink.api import chat_stream
 from dawalink.api.limits import Limiter
+from dawalink.api.main import CHAT_TURNS_AT_ONCE
 from dawalink.api.routes import conversations as conversations_routes
 from tests.api.conftest import HAMRA, Api, code_of, events_of
 from tests.db.factories import TODAY
@@ -95,6 +101,37 @@ class TestAMessageAndItsAnswer:
         assert card["action_label"] == "Reserve"
         assert card["title"] == "AUGMENTIN 1G at Hamra Pharmacy"
         assert dict(events)["turn_completed"]["outcome"] == "ok"
+
+    def test_a_card_shows_its_box_as_search_does(self, chat: Chat) -> None:
+        """B#5, B#31, A#37: the saving, the fit, the day's hours and the trip, as facts
+        the website words. The lines it shows are the screen's own."""
+        http = chat.api.http(*chat.reserve_turn())
+
+        (card,) = dict(events_of(chat.say(http)))["message"]["cards"]
+
+        box = card["box"]
+        # The public price is 1,000,000 LBP: what the box costs and what it saves.
+        assert box["price"]["lbp"] + box["saving"]["lbp"] == 1_000_000
+        assert box["saving"]["lbp"] > 0
+        assert box["price"]["usd_approx"] is not None
+        assert (box["days_of_use"], box["expiry_date"]) == (1, str(TODAY + timedelta(days=60)))
+        assert box["hours_on_pickup_day"]
+        assert set(box["travel"]) == {"car_min", "walk_min", "km", "source"}
+        assert [line["label"] for line in card["lines"]] == ["Pharmacy", "Quantity", "Pick up"]
+
+    def test_a_card_made_before_its_box_was_stored_shows_its_lines(self, chat: Chat) -> None:
+        http = chat.api.http(*chat.reserve_turn())
+        chat.say(http)
+        with chat.api.world.as_owner():
+            chat.api.world.connection.exec_driver_sql(
+                "UPDATE proposals SET payload = payload #- '{card,box}' #- '{card,screen_lines}'"
+            )
+
+        page = http.get(chat.path(), headers=chat.headers).json()
+
+        (card,) = [card for message in page["messages"] for card in message["cards"]]
+        assert card["box"] is None
+        assert {"At the counter", "Travel"} <= {line["label"] for line in card["lines"]}
 
     def test_a_card_never_carries_a_coordinate_or_an_internal_field(self, chat: Chat) -> None:
         http = chat.api.http(*chat.reserve_turn())
@@ -249,6 +286,28 @@ class TestWhenTheAssistantCantAnswer:
         written = world.all("SELECT author FROM chat_messages ORDER BY seq")
         assert [row.author for row in written] == ["client", "agent"]
         assert http.get(chat.path(), headers=chat.headers).json()["busy"] is False
+
+    def test_when_every_turn_thread_is_taken_a_message_is_busy_and_nothing_is_kept(
+        self, chat: Chat
+    ) -> None:
+        """A#6: a turn never waits in a queue behind the others; the page sends the same
+        message again after `retry_after_ms`, and it is answered once a thread is free."""
+        http = chat.api.http(reply("Which strength?"))
+        pool: chat_stream.TurnPool = http.app.state.turn_pool  # type: ignore[attr-defined]
+        taken = [pool.try_take() for _ in range(CHAT_TURNS_AT_ONCE)]
+        same = str(uuid.uuid4())
+
+        busy = chat.say(http, client_message_id=same)
+        stored_while_busy = chat.api.world.all("SELECT 1 FROM chat_messages")
+        for _ in taken:
+            pool.give_back()
+        answered = chat.say(http, client_message_id=same)
+
+        assert all(taken)
+        assert (busy.status_code, code_of(busy)) == (409, "CONVERSATION_BUSY")
+        assert busy.json()["error"]["details"]["retry_after_ms"] > 0
+        assert stored_while_busy == []
+        assert dict(events_of(answered))["message"]["text"] == "Which strength?"
 
     def test_a_client_may_write_only_so_fast(self, chat: Chat) -> None:
         http = chat.api.http(reply("Yes?"))
@@ -457,3 +516,64 @@ class TestTheChatsLocation:
         assert chat.api.world.one(
             "SELECT status FROM conversations WHERE id = :id", id=chat.chat
         ) == ("ARCHIVED",)
+
+
+class TestManyChatsAtOnce:
+    """A#6: an open answer stream holds no thread while it waits for its turn, so a burst
+    of chats never starves the other endpoints, the load balancer's health check first."""
+
+    def test_the_health_check_answers_at_once_with_60_streams_open(
+        self, api: Api, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        http = api.http()
+        app = http.app
+        release = threading.Event()
+
+        def a_slow_turn(*_: Any, on_progress: Any, **__: Any) -> TurnResult:
+            on_progress("Searching")
+            release.wait(30)
+            return TurnResult(Status.DONE)
+
+        async def read_all(stream: Any) -> list[bytes]:
+            # What Starlette's StreamingResponse does with the stream it is given.
+            if not hasattr(stream, "__aiter__"):
+                stream = iterate_in_threadpool(stream)
+            return [chunk async for chunk in stream]
+
+        monkeypatch.setattr(chat_stream, "run_turn", a_slow_turn)
+        portal = http.portal
+        assert portal is not None
+        http.get("/api/v1/health")  # the first connection to the database is made here
+        try:
+            readers = [
+                portal.start_task_soon(
+                    read_all,
+                    chat_stream.answer(
+                        app.state.turn_pool,  # type: ignore[attr-defined]
+                        app.state.agent,  # type: ignore[attr-defined]
+                        uuid.uuid4(),
+                        client_message_seq=1,
+                        request_id="r",
+                    ),
+                )
+                for _ in range(60)
+            ]
+            time.sleep(0.5)  # every stream is open and waiting
+            started = time.monotonic()
+            health = http.get("/api/v1/health")
+            took = time.monotonic() - started
+        finally:
+            release.set()
+        streams = [reader.result(timeout=30) for reader in readers]
+
+        assert health.json()["db"] == "ok"
+        assert took < 1.0
+        for chunks in streams:
+            names = [name for name, _ in events_of_bytes(chunks)]
+            assert names == ["turn_started", "progress", "turn_completed"]
+
+
+def events_of_bytes(chunks: list[bytes]) -> list[tuple[str, Any]]:
+    """The events of a stream read chunk by chunk, as `events_of` reads a response."""
+    response = Response(200, content=b"".join(chunks))
+    return events_of(response)

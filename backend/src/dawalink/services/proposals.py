@@ -10,12 +10,15 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from dawalink.db.models import Conversation, Order, Pharmacy, Proposal, SourcingRequest
+from dawalink.domain.geo import Travel
+from dawalink.domain.money import usd_approx
 from dawalink.domain.numbers import PROPOSAL_VALIDITY
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ProposalKind
@@ -28,21 +31,82 @@ from dawalink.services.requests import RequestLine
 
 
 @dataclass(frozen=True)
+class BoxFacts:
+    """What the screen shows of a card's boxes, as search shows a box (B#5): the price with
+    its saving, whether it lasts the client's days, the opening hours on the pickup day,
+    how far the pharmacy is. Written by code with the card (R-AG7). **The model never reads
+    these**: it reads the card's lines, which stay as they always were."""
+
+    price_lbp: int  # at the counter, for every pack on the card
+    saving_lbp: int  # against the public price, for every pack on the card
+    expiry_date: date  # the box's, or the soonest of the card's boxes
+    # The client's days of use, the same for every box on the card. None when the boxes
+    # are for different days: each lasts its own, which the tool checked.
+    days_of_use: int | None
+    hours_on_pickup_day: str | None = None  # "08:00-13:00, 16:00-21:00"
+    travel: Travel | None = None
+
+    def stored(self) -> dict[str, Any]:
+        return {
+            "price_lbp": self.price_lbp,
+            "saving_lbp": self.saving_lbp,
+            "expiry_date": self.expiry_date.isoformat(),
+            "days_of_use": self.days_of_use,
+            "hours_on_pickup_day": self.hours_on_pickup_day,
+            "travel": (
+                {
+                    "car_min": self.travel.car_min,
+                    "walk_min": self.travel.walk_min,
+                    "km": round(self.travel.km, 1),
+                    "source": self.travel.source,
+                }
+                if self.travel is not None
+                else None
+            ),
+        }
+
+
+@dataclass(frozen=True)
 class CardText:
-    """What a card shows. Written by code when the card is created, and stored with it."""
+    """What a card shows. Written by code when the card is created, and stored with it.
+
+    `lines` are also what the model reads of the card, so their words never change (the
+    saved evaluation runs compare them). `screen_lines`, when set, are what the website
+    shows instead: the same facts in the website's own words, without those `box` shows.
+    """
 
     title: str
     lines: Sequence[tuple[str, str]]  # (label, value)
     prescription_notice: bool = False
     recommended: bool = False
+    screen_lines: Sequence[tuple[str, str]] | None = None
+    box: BoxFacts | None = None
 
     def stored(self) -> dict[str, Any]:
-        return {
+        stored: dict[str, Any] = {
             "title": self.title,
             "lines": [list(line) for line in self.lines],
             "prescription_notice": self.prescription_notice,
             "recommended": self.recommended,
         }
+        if self.screen_lines is not None:
+            stored["screen_lines"] = [list(line) for line in self.screen_lines]
+        if self.box is not None:
+            stored["box"] = self.box.stored()
+        return stored
+
+
+def screen_money(amount_lbp: int, lbp_per_usd: Decimal | None) -> str:
+    """ "716,000 LBP (about $8.0)": an amount on a card's screen line, with the dollars
+    rounded as the website rounds them (docs/11 §8, B#31). The model's own copy of the
+    line keeps `agent.display.money`, two decimals."""
+    amount = f"{amount_lbp:,} LBP"
+    if not lbp_per_usd:
+        return amount
+    # The exact value of the float, half up: what the website's toFixed(1) does.
+    usd = usd_approx(amount_lbp, int(lbp_per_usd))
+    shown = Decimal(usd).quantize(Decimal("0.1"), ROUND_HALF_UP)
+    return f"{amount} (about ${shown:,})"
 
 
 @dataclass(frozen=True)

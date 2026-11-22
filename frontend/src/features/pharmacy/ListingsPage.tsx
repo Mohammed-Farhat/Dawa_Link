@@ -1,14 +1,16 @@
+import { NumberInput, TextInput } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
-import { calendarDate, lbp } from '../../format'
+import { Placeholder } from '../../components/Placeholder'
+import { calendarDate, lbp, plainAmount } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
 import { usePublicConfig } from '../client/data'
 import { Link } from 'react-router-dom'
 
-import { usePharmacy, useStock } from './data'
+import { SEARCH_MAX, usePharmacy, useStock } from './data'
 
 const s = strings.pharmacy.listing
 const stockWords = strings.pharmacy.stock
@@ -22,7 +24,10 @@ type Item = Schemas['StockItem']
  * pharmacy sets its own price for one, pauses it, or lists one its rule still holds back.
  */
 export function ListingsPage() {
-  const listed = useStock('NEAR_EXPIRY', '')
+  // Forty tall cards are too many to scroll through for one box: the list endpoint
+  // takes the same words as the inventory's search.
+  const [typed, setTyped] = useState('')
+  const listed = useStock('NEAR_EXPIRY', typed.trim())
   const config = usePublicConfig()
   const pharmacy = usePharmacy()
   const rule = pharmacy.data?.auto_list_days
@@ -42,7 +47,17 @@ export function ListingsPage() {
             </p>
           )}
         </div>
-        {listed.loaded && items.length === 0 && <div className="empty">{s.none}</div>}
+        <TextInput
+          label={stockWords.search}
+          size="md"
+          maxLength={SEARCH_MAX}
+          value={typed}
+          onChange={(event) => setTyped(event.currentTarget.value)}
+        />
+        {listed.pending && <Placeholder height={160} />}
+        {listed.loaded && items.length === 0 && (
+          <div className="empty">{typed.trim() ? stockWords.noneFound : s.none}</div>
+        )}
         {items.map((item) => (
           <Listing key={item.id} item={item} rule={rule ?? 0} />
         ))}
@@ -73,9 +88,30 @@ export function ListingsPage() {
 function Listing({ item, rule }: { item: Item; rule: number }) {
   const queryClient = useQueryClient()
   const [pricing, setPricing] = useState(false)
-  const [typed, setTyped] = useState('')
+  const [typed, setTyped] = useState<number | ''>('')
   const [failed, setFailed] = useState<string | null>(null)
   const price = item.price
+  const publicPrice = item.product.public_price.lbp
+  const setPriceButton = useRef<HTMLButtonElement>(null)
+  const backToButton = useRef(false)
+  // Above the public price is said, never cut down in silence: a missing zero would
+  // otherwise sell the box at a tenth of what the pharmacist meant.
+  const outOfRange = typed === '' || typed > publicPrice
+  // The box opens with the price clients see now. Saved untouched, the DawaLink price
+  // would become the pharmacy's own and stop following the days left: nothing to save.
+  const unchanged = typed !== '' && typed === price.effective?.lbp
+
+  // Saved or cancelled: the focus goes back to [Set my price], not to the page's top.
+  useEffect(() => {
+    if (pricing || !backToButton.current) return
+    backToButton.current = false
+    setPriceButton.current?.focus()
+  }, [pricing])
+
+  function closePrice() {
+    backToButton.current = true
+    setPricing(false)
+  }
 
   async function change(body: Schemas['StockItemChange']) {
     setFailed(null)
@@ -86,7 +122,7 @@ function Listing({ item, rule }: { item: Item; rule: number }) {
           body,
         }),
       )
-      setPricing(false)
+      if (pricing) closePrice()
       await queryClient.invalidateQueries({ queryKey: ['pharmacy'] })
     } catch (error) {
       setFailed(error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR')
@@ -95,7 +131,7 @@ function Listing({ item, rule }: { item: Item; rule: number }) {
 
   function savePrice(event: FormEvent) {
     event.preventDefault()
-    if (/^\d+$/.test(typed)) void change({ price_override_lbp: Number(typed) })
+    if (!outOfRange && !unchanged) void change({ price_override_lbp: Number(typed) })
   }
 
   const state = item.paused
@@ -139,33 +175,53 @@ function Listing({ item, rule }: { item: Item; rule: number }) {
         </Banner>
       )}
       {pricing ? (
-        <form onSubmit={savePrice} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-          <input
-            className="quantity-input quantity-input--wide"
-            type="text"
-            inputMode="numeric"
-            aria-label={s.priceOf(item.product.name)}
+        <form onSubmit={savePrice} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <NumberInput
+            label={s.priceLabel}
+            description={s.priceHint}
+            size="md"
+            min={0}
+            max={publicPrice}
+            clampBehavior="none"
+            allowDecimal={false}
+            allowNegative={false}
+            allowLeadingZeros={false}
+            thousandSeparator=","
+            autoFocus
+            style={{ maxWidth: 260 }}
             value={typed}
-            onChange={(event) => setTyped(event.currentTarget.value.replace(/\D/g, ''))}
+            onChange={(value) => setTyped(typeof value === 'number' ? value : '')}
+            error={typed !== '' && typed > publicPrice ? s.priceRange(plainAmount(publicPrice)) : null}
           />
-          <button type="submit" className="pill-button" disabled={!typed}>
-            {s.savePrice}
-          </button>
-          <button type="button" className="text-button" onClick={() => setPricing(false)}>
-            {s.cancel}
-          </button>
-          <span className="hint" style={{ flexBasis: '100%' }}>
-            {s.priceHint}
+          {/* What the clients will read, before it is saved. */}
+          <span className="soft" aria-live="polite" style={{ fontSize: 15 }}>
+            {typed === ''
+              ? s.priceRange(plainAmount(publicPrice))
+              : typed > publicPrice
+                ? null
+                : typed === 0
+                  ? s.priceFree(lbp(publicPrice))
+                  : s.priceLive(Math.round((1 - typed / publicPrice) * 100), lbp(publicPrice))}
           </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            <button type="submit" className="pill-button" disabled={outOfRange || unchanged}>
+              {s.savePrice}
+            </button>
+            <button type="button" className="text-button" onClick={closePrice}>
+              {s.cancel}
+            </button>
+          </div>
         </form>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           <button
+            ref={setPriceButton}
             type="button"
             className="text-button"
             style={{ paddingInlineStart: 0 }}
             onClick={() => {
-              setTyped(price.override ? String(price.override.lbp) : '')
+              // The price clients see now, to correct rather than to type again.
+              setTyped(price.effective ? price.effective.lbp : '')
               setPricing(true)
             }}
           >

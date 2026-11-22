@@ -34,9 +34,25 @@ export function PriceBlock({
 
 /** Whether the box lasts the client's days. Never a color alone: an icon and words. */
 export function FitBadge({ listing, daysOfUse }: { listing: Listing; daysOfUse: number | null }) {
+  return <Fit fits={listing.fits} expiryDate={listing.expiry_date} daysOfUse={daysOfUse} />
+}
+
+/**
+ * The same line for any box: a search's, an assistant's card's, an offer's (B#5).
+ * `fits` null, or no days said: the expiry date, to check. False: it doesn't last.
+ */
+export function Fit({
+  fits,
+  expiryDate,
+  daysOfUse,
+}: {
+  fits: boolean | null
+  expiryDate: string
+  daysOfUse: number | null
+}) {
   const o = strings.offer
-  const expiry = calendarDate(listing.expiry_date)
-  if (daysOfUse === null || listing.fits === null) {
+  const expiry = calendarDate(expiryDate)
+  if (daysOfUse === null || fits === null) {
     return (
       <span className="card__note card__note--amber">
         <AlertIcon small />
@@ -44,7 +60,7 @@ export function FitBadge({ listing, daysOfUse }: { listing: Listing; daysOfUse: 
       </span>
     )
   }
-  if (!listing.fits) {
+  if (!fits) {
     return (
       <span className="card__note" style={{ color: 'var(--red)', fontWeight: 500 }}>
         <AlertIcon small />

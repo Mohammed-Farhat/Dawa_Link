@@ -134,6 +134,9 @@ _OF_A_REGISTRATION = (
     "DELETE FROM pharmacy_hours WHERE pharmacy_id IN "
     "(SELECT id FROM pharmacies WHERE owner_user_id = ANY(:users))",
     "DELETE FROM email_verification_tokens WHERE user_id = ANY(:users)",
+    # An unconfirmed account never gets a reset link (R-AU9): this is only so that the
+    # user row can go whatever happened.
+    "DELETE FROM password_reset_tokens WHERE user_id = ANY(:users)",
     "DELETE FROM email_outbox WHERE user_id = ANY(:users)",
     "DELETE FROM notifications WHERE user_id = ANY(:users)",
     "DELETE FROM sessions WHERE user_id = ANY(:users)",
@@ -169,6 +172,49 @@ def purge_unconfirmed_registrations(tx: Tx) -> int:
         for statement in _OF_A_REGISTRATION:
             tx.session.execute(text(statement), {"users": users})
     return len(users)
+
+
+# An account its client deleted (R-AU10), and not yet emptied. Found by the columns that
+# say so and nothing else: the clean-up's login reads no other column of the profile.
+DELETED_NOT_EMPTIED = """
+    SELECT user_id FROM client_profiles
+    WHERE user_id = :user AND status = 'DELETED' AND emptied_at IS NULL
+    FOR UPDATE SKIP LOCKED
+"""
+# What the app's login may not delete, and the deletion left for this login. A chat's
+# messages and cards go with it; an escalation and the agent's measurements stay, and
+# only lose their link to the chat (their key is emptied, as after 30 days).
+_OF_A_DELETED_ACCOUNT = (
+    "DELETE FROM conversations WHERE client_id = :user",
+    "DELETE FROM notifications WHERE user_id = :user",
+    "DELETE FROM email_outbox WHERE user_id = :user",
+    "DELETE FROM sessions WHERE user_id = :user",
+    "DELETE FROM email_verification_tokens WHERE user_id = :user",
+    "DELETE FROM password_reset_tokens WHERE user_id = :user",
+    "DELETE FROM search_history WHERE client_id = :user",
+)
+
+
+def empty_deleted_account(tx: Tx, user_id: Any) -> bool:
+    """Erases what is left of an account its client deleted: their chats and request
+    threads, their notifications, the emails queued or sent to them, their ended logins and
+    links (R-AU10). Run with the retention login, within seconds of the deletion (a task of
+    the clock check), one account per transaction. False if there was nothing to do.
+
+    The reservations, the requests and watches (without their location), the audit log,
+    the agent's measurements and the copy kept with a reported answer stay: they name
+    nobody any more.
+    """
+    found = tx.session.execute(text(DELETED_NOT_EMPTIED), {"user": user_id}).scalar()
+    if found is None:
+        return False
+    for statement in _OF_A_DELETED_ACCOUNT:
+        tx.session.execute(text(statement), {"user": user_id})
+    tx.session.execute(
+        text("UPDATE client_profiles SET emptied_at = :now WHERE user_id = :user"),
+        {"now": tx.real_now, "user": user_id},
+    )
+    return True
 
 
 def purge(tx: Tx) -> dict[str, int]:
@@ -212,6 +258,10 @@ def purge(tx: Tx) -> dict[str, int]:
         ),
         "verification_tokens": (
             "DELETE FROM email_verification_tokens WHERE expires_at < :now OR used_at IS NOT NULL",
+            {"now": tx.real_now},
+        ),
+        "reset_tokens": (
+            "DELETE FROM password_reset_tokens WHERE expires_at < :now OR used_at IS NOT NULL",
             {"now": tx.real_now},
         ),
         "travel_times": (

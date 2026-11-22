@@ -398,6 +398,23 @@ class TestStockFiles:
             assert (answer.status_code, code_of(answer)) == (422, "UPLOAD_FAILED"), answer.text
         assert shop.api.world.all("SELECT 1 FROM inventory_upload_rows") == []
 
+    def test_a_barcode_in_the_quantity_column_is_a_row_error_never_a_crash(
+        self, shop: Shop
+    ) -> None:
+        """A#9: the number used to reach the database and fail the whole file with a
+        500. A row's problem never blocks the others (R-U5)."""
+        answer = shop.upload(
+            HEADER + "Panadol,,A1,2027-03,6281086011234\nPanadol,,A2,2027-03,500000\n"
+            "Panadol,,A3,2027-03,4\n"
+        )
+
+        assert answer.status_code == 201, answer.text
+        read = answer.json()
+        assert (read["rows_ok"], read["rows_error"]) == (1, 2)
+        assert [error["problem"] for error in read["errors"]] == [
+            "the quantity must be 100,000 or fewer"
+        ] * 2
+
 
 class TestTheSizeOfWhatIsSent:
     """docs/10 TH-34: a file is refused by its announced size before a byte of it is

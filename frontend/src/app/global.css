@@ -9,6 +9,9 @@
   --ink-raised: #262946;
   --ink-on-dark: #d6d9ee;
   --field: #8a8ea6;
+  /* One field everywhere (B#18): the library's boxes and ours. */
+  --field-height: 46px;
+  --field-radius: 14px;
   --line: #e4e6f0;
   --page: #f4f5fa;
   --white: #ffffff;
@@ -45,6 +48,53 @@ body {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
+/* Its buttons (a dialog's ×, the eye of a password, a checkbox) draw their own ring in
+   the action blue: they get the one ring too (B#42, B#45). */
+.mantine-focus-auto:focus-visible,
+.mantine-focus-always:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+/* --- Fields (docs/11 §2.1, B#18) -----------------------------------------------------------
+   The library's grey edge was 1.5:1 on white: a field's edge is the field colour (3.2:1).
+   Its error rule is more specific than this one, so a field in error stays red. Height
+   and radius are the same as the boxes made by hand (.quantity-input, .time-input,
+   .text-area). The order-number box of the counter and the chat's box keep the canvas's
+   own, larger shapes: each is the one box of its screen. */
+.mantine-Input-wrapper.mantine-Input-wrapper {
+  --input-height-sm: var(--field-height);
+  --input-height-md: var(--field-height);
+  --input-radius: var(--field-radius);
+}
+[data-mantine-color-scheme='light'] .mantine-Input-wrapper[data-variant='default'] {
+  --input-bd: var(--field);
+}
+.mantine-Checkbox-input:not(:checked, [data-indeterminate], [data-error]) {
+  border-color: var(--field);
+}
+/* A choice of the browser's own, one per line, 44 px tall for a finger (B#41). */
+.radio-row {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.radio-row input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+/* A checkbox of the browser's own, beside the library's (Search's "Open now"). */
+.native-check {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin: 0;
+  accent-color: var(--blue);
+}
 
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -60,6 +110,23 @@ body {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* "Skip to content": out of sight until the keyboard reaches it, first on every page. */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 1000;
+  padding: 12px 18px;
+  border-radius: 24px;
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 12px;
 }
 
 .icon {
@@ -226,18 +293,35 @@ body {
   background: var(--red-tint);
   color: var(--red);
 }
+/* The line grey, not the page's: a grey pill stays visible on a grey row. */
 .status-pill--grey {
-  background: var(--page);
+  background: var(--line);
   color: var(--ink-soft);
 }
+/* What you save: one size everywhere (B#40), and a bigger one on the ticket. */
 .saving {
   align-self: flex-start;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 12px;
   background: var(--sun);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
+}
+.saving--big {
+  font-size: 16px;
+  padding: 4px 12px;
+}
+
+/* A list that is loading: its cards' shapes, still (docs/11 §7, B#43). */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.placeholder__card {
+  border-radius: 24px;
+  background: var(--line);
 }
 
 /* --- Banners and notices ------------------------------------------------------------- */
@@ -650,8 +734,9 @@ body {
   border-radius: 22px 22px 22px 6px;
   background: var(--white);
 }
+/* Still sending: lighter, but still readable (white on this blue stays above 4.5:1). */
 .bubble--waiting {
-  opacity: 0.7;
+  opacity: 0.85;
 }
 .progress-line {
   align-self: flex-start;
@@ -677,6 +762,31 @@ body {
   font: inherit;
   font-size: 15px;
   cursor: pointer;
+}
+
+/* The chat's parts inside its scroller (B#11): the messages, which are read out as they
+   arrive; what the page says after a send; the quick replies under their line. */
+.chat__log,
+.chat__status,
+.chat__report,
+.chat__replies {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Nothing to say: no second gap in the scroller. */
+.chat__log:empty,
+.chat__status:empty {
+  margin-top: -12px;
+}
+.chat__replies {
+  gap: 6px;
+}
+/* A quick reply writes words for the client and does nothing else: it looks like a
+   phrase to say, never like a card's button (B#8). */
+.chip--reply {
+  border-color: var(--field);
+  color: var(--ink);
 }
 
 /* --- Cards (docs/11 §4) -------------------------------------------------------------- */
@@ -925,9 +1035,21 @@ body {
   align-items: flex-start;
   gap: 8px;
 }
+/* A selected choice is the action blue in every picker (B#46), as a chip is. Real tabs
+   (role=tablist) are drawn as the Medicines board draws them: a white segment on a grey
+   track. A row of pills one of which is chosen (role=radiogroup) has no track. */
 .tabs {
   display: flex;
   gap: 8px;
+}
+.tabs[role='tablist'] {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 26px;
+  background: var(--line);
 }
 .tabs__tab {
   min-height: 44px;
@@ -941,9 +1063,17 @@ body {
   font-weight: 500;
   cursor: pointer;
 }
-.tabs__tab[aria-selected='true'],
+.tabs[role='tablist'] .tabs__tab {
+  background: transparent;
+}
+.tabs[role='tablist'] .tabs__tab[aria-selected='true'] {
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--float);
+}
 .tabs__tab[aria-checked='true'] {
-  background: var(--ink);
+  background: var(--blue);
   color: var(--white);
   font-weight: 600;
 }
@@ -1360,10 +1490,10 @@ body {
 .time-input,
 .quantity-input {
   box-sizing: border-box;
-  height: 44px;
+  height: var(--field-height);
   padding: 0 10px;
   border: 1.5px solid var(--field);
-  border-radius: 12px;
+  border-radius: var(--field-radius);
   background: var(--white);
   color: var(--ink);
   font: inherit;
@@ -1394,6 +1524,13 @@ body {
 .map-pin {
   background: transparent;
   border: 0;
+}
+/* The map's zoom buttons are 44 px for a finger (docs/11 §9, B#41). Written more precisely
+   than the map's own style, which is downloaded with the map, after this file. */
+.map.leaflet-container .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
 }
 .plain-steps {
   margin: 0;
@@ -1441,6 +1578,61 @@ body {
 .stock-table td .banner {
   white-space: normal;
 }
+/* The pharmacy's stock on a phone: the medicine's name stays in place while the
+   quantities scroll, and the right edge fades while there is more to the side. */
+.stock-table--pinned thead th:first-child,
+.stock-table--pinned tbody th:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--white);
+}
+.table-scroll--fade {
+  background:
+    linear-gradient(to left, var(--white) 30%, rgba(255, 255, 255, 0)) 100% 0 / 40px 100% no-repeat local,
+    linear-gradient(to left, rgba(20, 22, 43, 0.14), rgba(20, 22, 43, 0)) 100% 0 / 16px 100% no-repeat scroll;
+}
+@media (max-width: 600px) {
+  .stock-table--pinned tbody th {
+    min-width: 132px;
+  }
+}
+/* A stock file's preview (docs/11 §5): four counts before [Apply]; "Set to 0" in red. */
+.upload-tiles {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.upload-tile {
+  border-radius: 16px;
+  background: var(--white);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.upload-tile dt {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.upload-tile dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.upload-tile--red {
+  background: var(--red-tint);
+}
+.upload-tile--red dt,
+.upload-tile--red dd {
+  color: var(--red);
+}
+@media (max-width: 480px) {
+  .upload-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
 /* --- The admin's console (docs/11 §3.3): a navy bar, the same panels ------------------- */
 .bar--admin {
@@ -1455,6 +1647,44 @@ body {
   background: var(--white);
   color: var(--ink);
 }
+/* Tabs a little tighter, so that they keep to one line at 1280 px with counts showing.
+   [Log out] stands outside the tabs: when they need a second line they take it inside
+   their own box, and [Log out] never drops to a line of its own. */
+.bar--admin .bar__tab {
+  padding: 0 12px;
+}
+.bar--admin .bar__logout {
+  flex: none;
+}
+/* On a phone the brand and [Log out] share the first line, and the tabs fill the lines
+   under them, several to a line: squeezed beside the brand they took one line each. */
+@media (max-width: 600px) {
+  .bar--admin .bar__logout {
+    margin-inline-start: auto;
+  }
+  .bar--admin .bar__tabs {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+/* A row of choices that wraps on a narrow screen instead of widening the page, each
+   choice on one line, under a visible name ("Account", "Show"). */
+.tabs--wrap {
+  flex-wrap: wrap;
+}
+.tabs--wrap .tabs__tab {
+  white-space: nowrap;
+}
+.admin-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-filter__label {
+  font-size: 15px;
+  font-weight: 600;
+}
 .row-link {
   color: inherit;
   text-decoration: none;
@@ -1462,8 +1692,8 @@ body {
   flex-direction: column;
   gap: 6px;
 }
+/* The one 2 px green ring (B#45), a little out from the row. */
 .row-link:focus-visible {
-  outline: 3px solid var(--blue);
   outline-offset: 4px;
   border-radius: 12px;
 }
@@ -1491,13 +1721,18 @@ body {
   border-radius: 16px;
   padding: 12px 14px;
 }
+/* The reported reply is the last line of its row: `.thread-line:last-child` took its
+   bottom edge away, and the frame stood open. */
+.thread-line--reported:last-child {
+  border-bottom: 2px solid var(--amber);
+}
 .text-area {
   box-sizing: border-box;
   width: 100%;
   min-height: 96px;
   padding: 12px 14px;
-  border: 1px solid var(--field);
-  border-radius: 16px;
+  border: 1.5px solid var(--field);
+  border-radius: var(--field-radius);
   background: var(--white);
   color: var(--ink);
   font: inherit;
@@ -1511,6 +1746,14 @@ body {
   font-size: 13px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+/* The audit log's short ID button: one unbroken line inside its own column. With the
+   wrapping style of `.audit-change` it ran into the next column. */
+.audit-id {
+  padding: 0 8px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
 }
 /* The audit log: its two wordy columns keep a width worth reading, and the table
    scrolls sideways on a narrow screen. */
@@ -1707,6 +1950,10 @@ body {
 .chat-list__item[aria-current='true'] {
   background: var(--blue-tint);
 }
+/* A hint on the blue tint is darker, to stay above 4.5:1 (B#18). */
+.chat-list__item[aria-current='true'] .hint {
+  color: var(--ink-soft);
+}
 .chat-list__title {
   font-size: 15px;
   font-weight: 500;
@@ -1716,10 +1963,10 @@ body {
 }
 .chat__new {
   flex: none;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 22px;
   background: var(--blue-tint);
   color: var(--blue);
   font: inherit;
@@ -1733,11 +1980,11 @@ body {
   white-space: nowrap;
 }
 .chat__tool {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex: none;
   border: 0;
-  border-radius: 20px;
+  border-radius: 22px;
   background: var(--page);
   color: var(--ink);
   display: inline-flex;
@@ -2239,4 +2486,35 @@ form.search-pill:focus-within {
   .medicine-group .search-row__initial {
     display: none;
   }
+}
+
+/* A long unbroken word, such as a name typed in Search, wraps where it must instead of
+   widening the page past a phone's screen (B#29). */
+.empty,
+.medicine-group__name,
+.card__title,
+.banner__text,
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+.empty,
+.medicine-group__name,
+.card__title,
+.wrap-anywhere {
+  min-width: 0;
+}
+
+/* The ticket's header is the page's heading (A#39), with the look the line had. */
+.ticket-screen__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink-on-dark);
+  text-align: center;
+}
+/* A reservation that is no longer waiting: what happened, said first (A#36). */
+.ticket-screen__title--ended {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--white);
 }

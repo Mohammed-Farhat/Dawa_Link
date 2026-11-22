@@ -746,6 +746,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot Password
+         * @description Always the same answer, whatever the email (R-AU9, R-AU7): nobody can find out
+         *     here who uses DawaLink. A link goes only to an account that could log in today.
+         */
+        post: operations["forgot_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register/client": {
         parameters: {
             query?: never;
@@ -801,7 +839,9 @@ export interface paths {
         put?: never;
         /**
          * Verify Email
-         * @description The link of the confirmation email. It also logs the user in (R-AU4).
+         * @description The link of the confirmation email. It confirms the address and logs nobody in
+         *     (R-AU4): every earlier session of the account has ended, and the person logs in with
+         *     their password.
          */
         post: operations["verify_email"];
         delete?: never;
@@ -1127,6 +1167,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/delete-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete Account */
+        post: operations["delete_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/home-place": {
         parameters: {
             query?: never;
@@ -1295,7 +1352,8 @@ export interface paths {
         /**
          * Accept Offer
          * @description The offer becomes a reservation; the need's other offers are withdrawn at once
-         *     (O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once.
+         *     (O9). An offer is accepted once: a second tap answers with the reservation the first
+         *     one made, as it is (its pickup day included), and reserves nothing more.
          */
         post: operations["accept_offer"];
         delete?: never;
@@ -1894,8 +1952,9 @@ export interface paths {
         /**
          * Contest No Show
          * @description [I picked it up] on an expired reservation: the pharmacy forgot to press
-         *     [Picked up] (R-N3). Once per reservation, while the no-show still counts. A person
-         *     from DawaLink looks at it: nothing changes until they do.
+         *     [Picked up] (R-N3). Once per missed trip, while it still counts: the boxes of a plan
+         *     card are contested together. A person from DawaLink looks at it: nothing changes
+         *     until they do.
          */
         post: operations["contest_no_show"];
         delete?: never;
@@ -2080,7 +2139,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED";
+            status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED" | "DELETED";
         };
         /** AdminClients */
         AdminClients: {
@@ -2401,6 +2460,7 @@ export interface components {
         Card: {
             /** Action Label */
             action_label: string | null;
+            box?: components["schemas"]["CardBox"] | null;
             /** Call Number */
             call_number: string | null;
             /** Card Id */
@@ -2433,6 +2493,25 @@ export interface components {
             title: string;
             /** Type */
             type: string;
+        };
+        /**
+         * CardBox
+         * @description What a reserve, plan or "another brand" card shows of its boxes, as search shows a
+         *     box (B#5). Written by code when the card was made; the model never reads it.
+         */
+        CardBox: {
+            /** Days Of Use */
+            days_of_use: number | null;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /** Hours On Pickup Day */
+            hours_on_pickup_day: string | null;
+            price: components["schemas"]["Money"];
+            saving: components["schemas"]["Money"];
+            travel: components["schemas"]["Travel"] | null;
         };
         /** CardLine */
         CardLine: {
@@ -2710,6 +2789,8 @@ export interface components {
              * Format: date-time
              */
             contested_at: string;
+            /** Counts As No Show */
+            counts_as_no_show: boolean;
             /** Expired At */
             expired_at: string | null;
             /**
@@ -2779,6 +2860,14 @@ export interface components {
              * @enum {string}
              */
             reason: "keeping_it" | "no_longer_in_stock" | "price" | "other";
+        };
+        /**
+         * DeleteAccount
+         * @description A client deletes their own account (R-AU10): their password, typed again.
+         */
+        DeleteAccount: {
+            /** Password */
+            password: string;
         };
         /**
          * DemoClock
@@ -2956,6 +3045,11 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /** ForgotPassword */
+        ForgotPassword: {
+            /** Email */
+            email: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3312,6 +3406,8 @@ export interface components {
              */
             kind: "matching" | "early_release";
             pharmacy: components["schemas"]["PharmacyCard"];
+            /** Pickup Day Hours */
+            pickup_day_hours?: components["schemas"]["DayHours"][];
             /** Pickup Days Allowed */
             pickup_days_allowed: string[];
             price_each: components["schemas"]["Money"];
@@ -3959,6 +4055,16 @@ export interface components {
             /** Qty */
             qty: number;
         };
+        /**
+         * ResetPassword
+         * @description The form of a "set a new password" link: the link's token and the new password.
+         */
+        ResetPassword: {
+            /** New Password */
+            new_password: string;
+            /** Token */
+            token: string;
+        };
         /** Resolve */
         Resolve: {
             /**
@@ -4441,6 +4547,44 @@ export interface components {
              */
             state: "ACTIVE" | "OFFER_PENDING" | "FULFILLED" | "EXPIRED" | "CANCELLED";
         };
+        /** WatchStarted */
+        WatchStarted: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Days Of Use */
+            days_of_use: number;
+            /** District */
+            district: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            max_price: components["schemas"]["Money"] | null;
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Qty Missing */
+            qty_missing: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ACTIVE" | "OFFER_PENDING" | "FULFILLED" | "EXPIRED" | "CANCELLED";
+        };
         /** Watches */
         Watches: {
             /** Items */
@@ -4821,7 +4965,7 @@ export interface operations {
     list_clients: {
         parameters: {
             query?: {
-                status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED") | null;
+                status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED" | "DELETED") | null;
                 having?: ("reservation" | "picked_up" | "request" | "look") | null;
                 ref?: string;
                 cursor?: number;
@@ -5791,6 +5935,70 @@ export interface operations {
             };
         };
     };
+    forgot_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     register_client: {
         parameters: {
             query?: never;
@@ -5871,13 +6079,11 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["LoggedIn"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -6391,6 +6597,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ListingDetail"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_account: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccount"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -7929,7 +8168,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Watch"];
+                    "application/json": components["schemas"]["WatchStarted"];
                 };
             };
             /** @description Validation Error */

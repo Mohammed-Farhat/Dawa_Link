@@ -1,6 +1,6 @@
 """Every table model, in the seven areas of docs/05 §3.
 
-Importing this package registers all 34 tables on `Base.metadata`, which Alembic and the
+Importing this package registers all 37 tables on `Base.metadata`, which Alembic and the
 tests read.
 """
 
@@ -19,6 +19,7 @@ from dawalink.db.models.identity import (
     ClientProfile,
     District,
     EmailVerificationToken,
+    PasswordResetToken,
     Pharmacy,
     PharmacyHours,
     SearchHistory,
@@ -68,6 +69,7 @@ __all__ = [
     "InventoryUploadRow",
     "Notification",
     "Order",
+    "PasswordResetToken",
     "Pharmacy",
     "PharmacyHours",
     "PricingTier",

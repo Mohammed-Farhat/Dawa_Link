@@ -131,7 +131,9 @@ export function WhereYouLive({
         <HomeArea value={value.area} onChange={(area) => onChange({ ...value, area })} />
       )}
       {problem && (
-        <span className="field-problem" role="alert">
+        // `data-problem`: after a refused submit the focus comes here, like to a box in
+        // error (components/FormProblems.tsx), and the sentence is read.
+        <span className="field-problem" role="alert" data-problem tabIndex={-1}>
           {problem}
         </span>
       )}

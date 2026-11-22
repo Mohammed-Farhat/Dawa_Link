@@ -24,6 +24,11 @@ from dawalink.domain.numbers import (
 from dawalink.domain.vocabulary import RunOutcome
 from dawalink.services.context import Tx
 
+# The note on a run that fell back because the turn ran out of time while no model call
+# had failed (`agent_runs.guardrails`). The run's outcome stays "fallback", which is what
+# the client got; this note keeps it out of the circuit breaker.
+TIME_LIMIT = "time_limit"
+
 
 def _today_starts(tx: Tx) -> datetime:
     return at_beirut(tx.today, time(0, 0))
@@ -79,11 +84,19 @@ def breaker_open(tx: Tx) -> bool:
 
     While it is open no model call is made, so nothing new fails; when the two minutes
     are over the next turn is tried, and one more failure opens it again at once.
+
+    A turn that only ran out of its own time, with no model call failing, isn't counted
+    (`TIME_LIMIT`): its time went elsewhere (a slow routing service, a slow database), and
+    switching the assistant off for everyone would not bring it back (A#25).
     """
     ended = (
         tx.session.execute(
             select(AgentRun.ended_at)
-            .where(AgentRun.outcome == RunOutcome.FALLBACK.value, AgentRun.ended_at.is_not(None))
+            .where(
+                AgentRun.outcome == RunOutcome.FALLBACK.value,
+                AgentRun.ended_at.is_not(None),
+                ~AgentRun.guardrails.contains([TIME_LIMIT]),
+            )
             .order_by(AgentRun.ended_at.desc())
             .limit(BREAKER_FAILURES)
         )

@@ -12,6 +12,7 @@ starts an agent turn: the agent reads it, cleaned of personal details, as part o
 conversation the next time the client writes.
 """
 
+import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from typing import Any
 from sqlalchemy import case, func, select
 
 from dawalink.db.models import ChatMessage, Conversation, Escalation, SourcingRequest
+from dawalink.domain.accounts import ClientStatus
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import (
     EscalationReason,
@@ -27,7 +29,7 @@ from dawalink.domain.vocabulary import (
     MessageAuthor,
     MessageKind,
 )
-from dawalink.services import audit, conversations, notify
+from dawalink.services import audit, clients, conversations, notify
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -36,8 +38,13 @@ MAX_REPLY = 500  # SM-9
 MAX_NOTE = 500
 # How much of the conversation an admin reads with an escalation (A-D4: redacted).
 THREAD_MESSAGES = 60
-# A note of another kind than "said later": where a reply went (see `reply`).
+# Notes of another kind than "said later": where a reply went (see `reply`), and the
+# reservation a contested missed pickup is about (see `escalate`).
 ANSWERED_IN = "answered_in"
+CONTESTED = "contested_order"
+_OWN_KINDS = (ANSWERED_IN, CONTESTED)
+# An order number as the contest's summary writes it (`R-7K3Q2F`).
+ORDER_REF = re.compile(r"\bR-[0-9A-Z]{6}\b")
 
 
 @dataclass(frozen=True)
@@ -56,22 +63,34 @@ def escalate(
     conversation_id: uuid.UUID | None = None,
     request_id: uuid.UUID | None = None,
     actor: Actor = Actor.AGENT,
+    contested_order: uuid.UUID | None = None,
 ) -> Escalated:
     """Opens an escalation, or adds to the client's open one.
 
     `summary` holds no personal details: the caller removes them first. Asking again with
     the same reason and summary changes nothing, so a turn that is retried doesn't write
     its escalation twice (R-AG6).
+
+    `contested_order`: the reservation of a contested missed pickup (R-N3). The case
+    remembers it in its notes, so that its page shows that reservation and how it ended,
+    whatever else the client has going (B#61). An ID names no person.
     """
     summary = summary.strip()
     if not summary or len(summary) > MAX_SUMMARY:
         raise ServiceError(Code.VALIDATION_ERROR, "A summary has 1 to 300 characters.")
+    # The client's profile is the first lock (docs/05 §6). A deletion holds it until its
+    # open cases are closed, so a turn that was running when the client deleted their
+    # account opens nothing afterwards: there is nobody left to answer (R-AU10).
+    client = clients.profile(tx, client_id, lock=True)
+    if client.status == ClientStatus.DELETED.value:
+        raise ServiceError(Code.NOT_FOUND, "Unknown client.")
     current = tx.session.execute(
         select(Escalation)
         .where(Escalation.client_id == client_id, Escalation.state != "RESOLVED")
         .with_for_update()
         .execution_options(populate_existing=True)
     ).scalar()
+    about = [_contested_note(contested_order)] if contested_order else []
     if current is None:
         created = Escalation(
             id=uuid.uuid4(),
@@ -80,6 +99,7 @@ def escalate(
             request_id=request_id,
             reason=reason.value,
             summary=summary,
+            notes=about,
             created_at=tx.now,
         )
         tx.session.add(created)
@@ -115,7 +135,41 @@ def escalate(
             current.id,
             after={"reason": reason.value, "notes": len(current.notes)},
         )
+    if about and about[0] not in current.notes:
+        # A contest added to a case of another kind is about its own reservation too.
+        current.notes = [*current.notes, *about]
     return Escalated(current.id, appended=True)
+
+
+def _contested_note(order_id: uuid.UUID) -> dict[str, str]:
+    return {"kind": CONTESTED, "order_id": str(order_id)}
+
+
+def contested_orders(escalation: Escalation) -> list[uuid.UUID]:
+    """The reservations this case's contested missed pickups are about, as the client
+    pressed them; empty for a case of another kind, or a complaint made before the case
+    remembered them."""
+    return [
+        uuid.UUID(str(note["order_id"]))
+        for note in escalation.notes
+        if isinstance(note, dict) and note.get("kind") == CONTESTED
+    ]
+
+
+def refs_in_complaints(escalation: Escalation) -> list[str]:
+    """The order numbers a complaint of this case quotes, opened as one or added later.
+
+    For a contest made before the case remembered its reservation: the contest's summary
+    always names the order ("…collected order R-7K3Q2F…"). A complaint the assistant
+    wrote about something else names none, so it shows no missed pickup."""
+    complaint = EscalationReason.COMPLAINT.value
+    said = [escalation.summary] if escalation.reason == complaint else []
+    said += [
+        str(note.get("summary", ""))
+        for note in said_later(escalation)
+        if note.get("reason") == complaint
+    ]
+    return sorted({ref for text in said for ref in ORDER_REF.findall(text)})
 
 
 # --- The admin's side (docs/03 AS-6) ------------------------------------------------------
@@ -186,7 +240,7 @@ def said_later(escalation: Escalation) -> list[dict[str, Any]]:
     return [
         note
         for note in escalation.notes
-        if isinstance(note, dict) and note.get("kind") != ANSWERED_IN
+        if isinstance(note, dict) and note.get("kind") not in _OWN_KINDS
     ]
 
 

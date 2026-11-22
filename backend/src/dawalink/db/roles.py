@@ -46,6 +46,7 @@ RETENTION_DELETES = (
     "notifications",
     "sessions",
     "email_verification_tokens",
+    "password_reset_tokens",
     "travel_time_cache",
     "claim_skips",
     "audit_events",
@@ -65,6 +66,12 @@ RETENTION_DELETES_FOUND_BY = {
 # A registration's user row is locked before it is deleted (`FOR UPDATE`), which
 # PostgreSQL allows only to a login that may update some column of the table.
 RETENTION_LOCKS = {"users": ("updated_at",)}
+# For one thing only: an account its client deleted (R-AU10, `services/daily.py`). The
+# login finds it by these columns, and **reads nothing personal** of the profile (never a
+# name, a date of birth or a place). It may set the one column that says it emptied the
+# account, which also lets it lock the row while it does.
+RETENTION_FINDS_DELETED = {"client_profiles": ("user_id", "status", "emptied_at")}
+RETENTION_MARKS_EMPTIED = {"client_profiles": ("emptied_at",)}
 # A request and a claim are kept; only the client's location on them is erased.
 RETENTION_ERASES = {
     "sourcing_requests": ("loc_lat", "loc_lon", "loc_source"),
@@ -213,6 +220,10 @@ def grant_privileges(migrator_url: str) -> None:
                 _grant(connection, ("DELETE",), table, RETENTION)
                 _grant_columns(connection, "SELECT", columns, table, RETENTION)
             for table, columns in RETENTION_LOCKS.items():
+                _grant_columns(connection, "UPDATE", columns, table, RETENTION)
+            for table, columns in RETENTION_FINDS_DELETED.items():
+                _grant_columns(connection, "SELECT", columns, table, RETENTION)
+            for table, columns in RETENTION_MARKS_EMPTIED.items():
                 _grant_columns(connection, "UPDATE", columns, table, RETENTION)
     finally:
         engine.dispose()

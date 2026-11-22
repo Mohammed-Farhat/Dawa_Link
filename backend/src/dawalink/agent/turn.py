@@ -348,18 +348,45 @@ def _guard_input(graph_state: _State) -> _State:
 # --- 3. agent (the model) --------------------------------------------------------------
 
 
+class OutOfTime(LLMError):
+    """The turn reached its time limit (N-37) while no model call of it had failed.
+
+    Its time went elsewhere: tools waiting for a slow routing service or database, or
+    slow answers that still came. The turn falls back like any other, but the circuit
+    breaker doesn't count it against the model (A#25, `limits.TIME_LIMIT`).
+    """
+
+
 def _ask(work: _Work, prompt: Prompt) -> ModelReply:
     """One model call, retried on what a retry can fix (N-35, N-36)."""
     attempts = 1 + len(LLM_RETRY_BACKOFF_S)
+    failed: LLMError | None = None
     for attempt in range(attempts):
         left = work.time_left()
         if left <= 0:
-            raise LLMUnavailable("the turn's time limit was reached")
+            # Once a model call of this turn has failed (`retries`), running out of time
+            # is the model's failure too: a provider that times out on half its calls
+            # must still open the breaker.
+            if failed is not None:
+                raise failed
+            if work.retries:
+                raise LLMUnavailable("the turn's time limit was reached")
+            raise OutOfTime("the turn's time limit was reached")
+        timeout_s = min(LLM_TIMEOUT_S, left)
         try:
-            return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))
+            return work.agent.model.complete(prompt, timeout_s=timeout_s)
         except LLMError as error:
+            if (
+                work.retries == 0
+                and error.retryable
+                and timeout_s < LLM_TIMEOUT_S
+                and work.time_left() <= 0
+            ):
+                # Cut short by what was left of the turn, not by the model's own limit.
+                raise OutOfTime("the turn's time limit was reached") from None
             if not error.retryable or attempt == attempts - 1:
                 raise
+            failed = error
             work.retries += 1
             work.agent.sleep(min(LLM_RETRY_BACKOFF_S[attempt], max(work.time_left(), 0)))
     raise AssertionError("unreachable")
@@ -421,6 +448,7 @@ def _agent(graph_state: _State) -> _State:
             cost_usd=str(call_cost),
             retries=work.retries - retries_before,
         )
+    _note_spending(work)
     work.messages.append(AssistantTurn(answer))
     if answer.tool_calls:
         work.route = "tools"
@@ -434,6 +462,32 @@ def _agent(graph_state: _State) -> _State:
     work.candidate, work.candidate_call_id = Reply(text=text[:1200]), None
     work.route = "guard_output"
     return graph_state
+
+
+def _note_spending(work: _Work) -> None:
+    """Writes what the turn's model calls have used so far on its `agent_runs` row (A#21).
+
+    The run's numbers are otherwise written when the turn ends. A turn that never ends, the
+    worker stopped or killed in the middle of it, would leave money spent that no cap
+    counts (R-AS, N-46). The save writes the same numbers again, with the rest. Best effort:
+    the turn doesn't fail for it.
+    """
+    try:
+        with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
+            tx.session.execute(
+                update(AgentRun)
+                .where(AgentRun.id == work.run_id)
+                .values(
+                    tokens_in=work.tokens_in,
+                    tokens_out=work.tokens_out,
+                    tokens_cached=work.tokens_cached,
+                    cost_usd=work.cost,
+                    llm_calls=work.llm_calls,
+                )
+            )
+    except Exception as error:
+        # Its kind only: a database error's message repeats the values (FS-13).
+        log.warning("agent_run_spending_not_written", error=type(error).__name__)
 
 
 def _last_input(messages: list[Message]) -> Any:
@@ -866,10 +920,13 @@ def _fallback(graph_state: _State) -> _State:
         error=type(work.failure).__name__ if work.failure else None,
         runs_in=work.runs_in,
     )
+    if isinstance(work.failure, OutOfTime) and limits.TIME_LIMIT not in work.guardrails:
+        work.guardrails.append(limits.TIME_LIMIT)
     with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
         conversation = conversations.locked(tx, work.conversation_id)
         _finish_run(tx, work, RunOutcome.FALLBACK)
         if conversations.holds_lease(tx, conversation, work.owner):
+            _keep_followups_used(conversation, work)
             if work.runs_in == "worker":
                 _try_again_later(tx, conversation, counted=True)
             conversations.release_lease(conversation, work.owner)
@@ -949,9 +1006,81 @@ def _crashed(work: _Work) -> None:
             conversation = conversations.locked(tx, work.conversation_id)
             if work.loaded is not None:
                 _finish_run(tx, work, RunOutcome.ERROR)
-            if conversations.holds_lease(tx, conversation, work.owner):
-                if work.runs_in == "worker":
-                    _try_again_later(tx, conversation, counted=True)
+            holds = conversations.holds_lease(tx, conversation, work.owner)
+            if holds:
+                _keep_followups_used(conversation, work)
+            # A crash in the opening transaction undid the lease with everything else, so
+            # nobody holds it. It is still this turn's failure: uncounted, the worker would
+            # pick the conversation again on every pass and never hand it to a person
+            # (SM-12, A#27). A lease someone else holds is their turn's business.
+            if work.runs_in == "worker" and (holds or not conversations.is_busy(tx, conversation)):
+                _try_again_later(tx, conversation, counted=True)
+                _follow_up_waits_too(tx, conversation)
+            if holds:
                 conversations.release_lease(conversation, work.owner)
     except Exception:
         log.exception("agent_turn_cleanup_failed", run_id=str(work.run_id))
+        if work.runs_in == "worker":
+            _put_aside(work)
+
+
+def _keep_followups_used(conversation: Conversation, work: _Work) -> None:
+    """A turn that isn't saved still keeps count of the follow-ups it scheduled.
+
+    `schedule_followup` commits the follow-up at once, and counts it in the turn's case
+    state, which only a saved turn writes. Without this, a turn that fell back would
+    leave a follow-up nobody counted, and its retry could schedule more than N-39 allows.
+    Only the counter is written, and only upwards: the rest of the state is the saved turns'.
+    """
+    if work.turn is None:
+        return
+    stored = dict(conversation.case_state or {})
+    before = stored.get("followups_used", 0)
+    used = work.turn.state.followups_used
+    if isinstance(before, int) and used > before:
+        stored["followups_used"] = used
+        conversation.case_state = stored
+
+
+def _follow_up_waits_too(tx: Tx, conversation: Conversation) -> None:
+    """A follow-up that was due waits for the retry with the rest.
+
+    The worker picks a conversation whose follow-up is due whatever its other mark says, so
+    a follow-up the crash left due would bring it back on the next pass, not after the wait.
+    """
+    if (
+        conversation.followup_at is not None
+        and conversation.followup_at <= tx.now
+        and conversation.pending_turn_at is not None
+    ):
+        conversation.followup_at = conversation.pending_turn_at
+
+
+def _put_aside(work: _Work) -> None:
+    """The last resort, when even the clean-up failed: the conversation's marks are pushed
+    back by the longest wait, so a turn that can't run isn't tried again every few seconds.
+
+    Nothing is counted (the counting is what failed); the error is in the log.
+    """
+    try:
+        with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
+            later = tx.now + TURN_RETRY_AFTER[-1]
+            mine = Conversation.id == work.conversation_id
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.pending_turn_at <= tx.now)
+                .values(pending_turn_at=later)
+            )
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.followup_at <= tx.now)
+                .values(followup_at=later)
+            )
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.turn_owner == work.owner)
+                .values(turn_lease_until=None, turn_owner=None)
+            )
+        log.error("agent_turn_put_aside", conversation_id=str(work.conversation_id))
+    except Exception as error:
+        log.error("agent_turn_put_aside_failed", error=type(error).__name__)

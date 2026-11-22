@@ -144,6 +144,11 @@ describe('Clients (AS-5)', () => {
     expect(within(reservations).getByText(c.orderStates.RESERVED)).toBeInTheDocument()
     expect(within(reservations).getByText(/pick up by Mon 16 Nov 20:00/)).toBeInTheDocument()
     expect(within(reservations).getByText(c.orderStates.EXPIRED_NO_SHOW)).toBeInTheDocument()
+    // The same colours as the client's and the pharmacy's (B#21): live and picked up are
+    // green, a missed pickup is red.
+    expect(within(reservations).getByText(c.orderStates.RESERVED)).toHaveClass('status-pill--green')
+    expect(within(reservations).getByText(c.orderStates.PICKED_UP)).toHaveClass('status-pill--green')
+    expect(within(reservations).getByText(c.orderStates.EXPIRED_NO_SHOW)).toHaveClass('status-pill--red')
     const requests = screen.getByRole('region', { name: c.requestsTitle })
     expect(within(requests).getByText('Q-6BN2RA')).toBeInTheDocument()
     expect(within(requests).getByText(c.secured(1, 2), { exact: false })).toBeInTheDocument()
@@ -217,11 +222,86 @@ describe('Clients (AS-5)', () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: c.suspend }))
+    expect(screen.getByLabelText(new RegExp(`^${s.why(c.suspend)}`))).toHaveFocus()
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(c.suspend)}`)), 'Not sure')
     await user.click(screen.getByRole('button', { name: s.cancel }))
 
+    // The focus goes back to the button that opened the question, not to the page's top.
     expect(screen.getByRole('button', { name: c.suspend })).toBeEnabled()
+    expect(screen.getByRole('button', { name: c.suspend })).toHaveFocus()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    // Asked again, the question starts empty.
+    await user.click(screen.getByRole('button', { name: c.suspend }))
+    expect(screen.getByLabelText(new RegExp(`^${s.why(c.suspend)}`))).toHaveValue('')
     expect(api.calls.every((call) => call.method === 'GET')).toBe(true)
+  })
+
+  it('says a refused action in the panel of its button, not at the top of the page', async () => {
+    adminApi({ [`POST ${A_CLIENT}/suspend`]: refusal(403, 'FORBIDDEN') })
+    renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: c.suspend }))
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(c.suspend)}`)), 'Abuse.')
+    await user.click(screen.getByRole('button', { name: c.suspend }))
+
+    const actions = screen.getByRole('region', { name: c.actions })
+    expect(await within(actions).findByText(strings.errors.FORBIDDEN)).toBeInTheDocument()
+    expect(screen.getAllByText(strings.errors.FORBIDDEN)).toHaveLength(1)
+  })
+
+  it('names the two rows of choices, and a row by all it shows', async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/clients' })
+
+    expect(await screen.findByRole('tablist', { name: c.account })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: c.show })).toBeInTheDocument()
+    expect(screen.getByText(c.account)).toBeVisible()
+    // "Says they picked it up" is the reason to open the row: it is in its spoken name.
+    expect(
+      await screen.findByRole('link', { name: new RegExp(`^${c.one} ${CLIENT.id.slice(0, 8)} ${c.contestWaiting}`) }),
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the typed number in the address when the bar's Clients tab is pressed", async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/clients' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(c.ref), 'R-7K3Q2F')
+    const tabs = screen.getByRole('navigation', { name: s.nav })
+    await user.click(within(tabs).getByRole('link', { name: /^Clients/ }))
+    await user.click(await screen.findByRole('link', { name: new RegExp(`^${c.one} ${CLIENT.id.slice(0, 8)}`) }))
+    await user.click(await screen.findByRole('link', { name: s.back }))
+
+    // What the box showed is what the list was: Back finds both again.
+    expect(await screen.findByLabelText(c.ref)).toHaveValue('R-7K3Q2F')
+  })
+
+  it("has the client's ID in its page title", async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
+
+    const title = await screen.findByRole('heading', { level: 1, name: `${c.one} ${CLIENT.id.slice(0, 8)}` })
+    expect(title).toHaveClass('page-title')
+    expect(title).not.toHaveClass('audit-change')
+  })
+
+  it('goes back to the list as it was left: the filter and the typed number', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/clients' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('radio', { name: c.having.look }))
+    await user.type(screen.getByLabelText(c.ref), 'r-7vb8ub')
+    await user.click(await screen.findByRole('link', { name: new RegExp(`^${c.one} ${CLIENT.id.slice(0, 8)}`) }))
+    await user.click(await screen.findByRole('link', { name: s.back }))
+
+    expect(await screen.findByRole('radio', { name: c.having.look })).toBeChecked()
+    expect(screen.getByLabelText(c.ref)).toHaveValue('r-7vb8ub')
+    const asked = api.sent('GET', '/api/v1/admin/clients?')
+    expect(asked[asked.length - 1].path).toContain('having=look')
+    expect(asked[asked.length - 1].path).toContain('ref=r-7vb8ub')
   })
 
   it('suspends a client, saying first what that cancels', async () => {
@@ -262,7 +342,7 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
   it("handles a flag on the client's own page, with a reason", async () => {
     const api = adminApi({
       [`GET ${A_CLIENT}`]: FLAGGED,
-      [`POST /api/v1/admin/abuse-flags/${FLAG.id}/act`]: { ...FLAG, state: 'ACTIONED', action: 'suspend' },
+      [`POST /api/v1/admin/abuse-flags/${FLAG.id}/dismiss`]: { ...FLAG, state: 'DISMISSED' },
     })
     const { container } = renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
     const user = userEvent.setup()
@@ -271,15 +351,29 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
     expect(screen.getByText(f.rules.guardrail_repeat)).toBeInTheDocument()
     expect(screen.getByText(/attempts in 24 hours: 3/)).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
-    await user.click(screen.getByRole('button', { name: f.suspend }))
-    await user.type(screen.getByLabelText(new RegExp(`^${s.why(f.suspend)}`)), 'Three attempts.')
-    await user.click(screen.getByRole('button', { name: f.suspend }))
+    await user.click(screen.getByRole('button', { name: f.dismiss }))
+    await user.type(screen.getByLabelText(new RegExp(`^${s.why(f.dismiss)}`)), 'A test by our team.')
+    await user.click(screen.getByRole('button', { name: f.dismiss }))
 
-    expect(await screen.findByText(c.suspended)).toBeInTheDocument()
-    expect(api.sent('POST', `/api/v1/admin/abuse-flags/${FLAG.id}/act`)[0].body).toEqual({
-      action: 'suspend',
-      reason: 'Three attempts.',
+    expect(await screen.findByText(f.done)).toBeInTheDocument()
+    expect(api.sent('POST', `/api/v1/admin/abuse-flags/${FLAG.id}/dismiss`)[0].body).toEqual({
+      reason: 'A test by our team.',
     })
+  })
+
+  it('has one Suspend button on a flagged client\'s page, under Actions (B#58)', async () => {
+    adminApi({ [`GET ${A_CLIENT}`]: FLAGGED })
+    renderApp(<AppRoutes />, { path: `/admin/clients/${CLIENT.id}` })
+
+    const flags = await screen.findByRole('region', { name: c.flags })
+    // A flag keeps its own two notes; suspending is one button, and it closes the flag.
+    expect(within(flags).getByRole('button', { name: f.dismiss })).toBeInTheDocument()
+    expect(within(flags).getByRole('button', { name: f.warn })).toBeInTheDocument()
+    expect(within(flags).queryByRole('button', { name: /suspend/i })).not.toBeInTheDocument()
+    expect(within(flags).getByText(f.warnHint)).toBeInTheDocument()
+    const actions = screen.getByRole('region', { name: c.actions })
+    expect(within(actions).getByRole('button', { name: c.suspend })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /suspend/i })).toHaveLength(1)
   })
 
   it('notes a warning on a flag, and says that nothing is sent (Q52)', async () => {
@@ -359,12 +453,29 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
 
     expect(await screen.findByText(h.noAlerts)).toBeInTheDocument()
   })
+
+  it('calls its shortest period what it counts: the last 24 hours', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/health' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('tab', { name: 'Last 24 hours' }))
+    await waitFor(() =>
+      expect(api.sent('GET', '/api/v1/admin/health').some((call) => call.path.includes('days=1'))).toBe(true),
+    )
+    expect(screen.queryByRole('tab', { name: 'Today' })).not.toBeInTheDocument()
+  })
 })
 
 describe('A no-show the client contests (R-N3)', () => {
   it('offers [I picked it up] once on an expired reservation', async () => {
     loggedIn()
-    const expired = { ...RESERVATION, state: 'EXPIRED_NO_SHOW', status_text: 'Expired', contestable: true }
+    const expired = {
+      ...RESERVATION,
+      state: 'EXPIRED_NO_SHOW',
+      status_text: "Missed pickup: it wasn't picked up in time",
+      contestable: true,
+    }
     const api = pretendApi({
       'GET /api/v1/auth/me': CLIENT,
       'GET /api/v1/config/public': CONFIG,

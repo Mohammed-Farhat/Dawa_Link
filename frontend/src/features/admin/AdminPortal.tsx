@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 
 import { useSession } from '../../api/session'
 import { strings } from '../../strings/en'
@@ -28,6 +28,10 @@ export default function AdminPortal() {
   const { logout } = useSession()
   const overview = useOverview()
   const waits = overview.data
+  // The list of pharmacies is the console's first page, so its tab is lit on the list
+  // and on a pharmacy's own page, as the other tabs are on the pages they open.
+  const { pathname } = useLocation()
+  const onPharmacies = /^\/admin\/?$/.test(pathname) || pathname.startsWith('/admin/pharmacies/')
   return (
     <div className="portal">
       <header className="bar bar--admin">
@@ -38,9 +42,9 @@ export default function AdminPortal() {
           <span style={{ fontSize: 16, fontWeight: 600 }}>{s.brand}</span>
         </div>
         <nav className="bar__tabs" aria-label={s.nav}>
-          <NavLink to="/admin" end className="bar__tab">
+          <Link to="/admin" className="bar__tab" aria-current={onPharmacies ? 'page' : undefined}>
             {s.count(s.tabs.pharmacies, (waits?.pharmacies_waiting ?? 0) + (waits?.pins_to_check ?? 0))}
-          </NavLink>
+          </Link>
           <NavLink to="/admin/escalations" className="bar__tab">
             {s.count(s.tabs.escalations, waits?.escalations_open ?? 0)}
           </NavLink>
@@ -64,10 +68,12 @@ export default function AdminPortal() {
               {s.tabs.clock}
             </NavLink>
           )}
-          <button type="button" className="bar__tab" onClick={() => void logout()}>
-            {s.logOut}
-          </button>
         </nav>
+        {/* Outside the tabs: when the tabs need a second line, they take it themselves,
+            and [Log out] stays on the first, never on a line of its own. */}
+        <button type="button" className="bar__tab bar__logout" onClick={() => void logout()}>
+          {s.logOut}
+        </button>
       </header>
       <div className="portal__body">
         <Routes>
@@ -83,7 +89,15 @@ export default function AdminPortal() {
           <Route path="audit" element={<AuditPage />} />
           {/* Outside demo mode the clock's screen doesn't exist (R-DEMO). */}
           {waits?.demo_mode && <Route path="clock" element={<ClockPage />} />}
-          <Route path="*" element={<NotFoundPage />} />
+          {/* The page has no main area of its own: it is given here (B#34). */}
+          <Route
+            path="*"
+            element={
+              <main className="portal__main">
+                <NotFoundPage />
+              </main>
+            }
+          />
         </Routes>
       </div>
     </div>

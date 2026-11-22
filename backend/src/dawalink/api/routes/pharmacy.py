@@ -240,8 +240,12 @@ def pharmacy_dashboard(pharmacy_id: OwnPharmacy, work: DoWork) -> Dashboard:
                 .select_from(AskRow)
                 .where(AskRow.pharmacy_id == pharmacy_id, AskRow.state == "ASKED")
             ).scalar_one(),
+            # The packs clients can see now, not the boxes' rows: a row may hold several.
             live_listings=tx.session.execute(
-                text("SELECT count(*) FROM visible_listings(:today) v WHERE v.pharmacy_id = :id"),
+                text(
+                    "SELECT coalesce(sum(v.qty_available), 0) "
+                    "FROM visible_listings(:today) v WHERE v.pharmacy_id = :id"
+                ),
                 {"today": tx.today, "id": pharmacy_id},
             ).scalar_one(),
             units_reserved=tx.session.execute(
@@ -259,7 +263,7 @@ _SHOWN = [state.value for state in present.RESERVATION_STATES]
 _WORDS = {
     OrderState.PICKED_UP: "Picked up",
     OrderState.NOT_AVAILABLE: "Marked not available",
-    OrderState.EXPIRED_NO_SHOW: "Not picked up in time: back in stock",
+    OrderState.EXPIRED_NO_SHOW: "Missed pickup: back in stock",
     OrderState.CANCELLED_BY_CLIENT: "Cancelled by the client: put the box back",
     OrderState.CANCELLED_BY_SYSTEM: "Cancelled by DawaLink: put the box back",
 }

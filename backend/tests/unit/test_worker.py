@@ -2,15 +2,30 @@
 
 import threading
 import time
+import uuid
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
-from dawalink.domain.numbers import CLOCK_CHECK_LATE_AFTER_S
+from dawalink.agent import pending as pending_module
+from dawalink.agent.pending import PendingTurns
+from dawalink.agent.turn import Agent, Status, TurnResult
+from dawalink.domain.numbers import (
+    CLOCK_CHECK_LATE_AFTER_S,
+    TURN_TIME_LIMIT_WORKER_S,
+    WORKER_STOP_WAIT_S,
+)
 from dawalink.worker import alive
+from dawalink.worker.__main__ import run_until_stopped
 from dawalink.worker.heartbeat import beat, is_alive
 from dawalink.worker.loop import ClockCheck
 from tests.conftest import logged
+
+
+def test_the_stop_wait_outlasts_a_worker_turn_and_fits_in_two_minutes() -> None:
+    """docs/12 §6: a turn that started may finish; ECS gives at most 120 s."""
+    assert TURN_TIME_LIMIT_WORKER_S < WORKER_STOP_WAIT_S < 120
 
 
 def test_a_fresh_heartbeat_means_alive(tmp_path: Path) -> None:
@@ -76,6 +91,101 @@ def test_the_loop_stops_when_asked_and_finishes_its_pass(tmp_path: Path) -> None
 
     assert len(passes) == 3
     assert is_alive(tmp_path / "heartbeat")
+
+
+def test_once_told_to_stop_no_further_task_starts(tmp_path: Path) -> None:
+    """A#21: SIGTERM stops the worker taking new work at once; the pass doesn't finish."""
+    stop = threading.Event()
+    calls: list[str] = []
+
+    def first() -> None:
+        calls.append("first")
+        stop.set()  # the signal arrives during the first task
+
+    check = ClockCheck([first, lambda: calls.append("second")], tmp_path / "b")
+
+    check.run_pass(stop)
+
+    assert calls == ["first"]
+    assert is_alive(tmp_path / "b")
+
+
+class TestStoppingTheWorker:
+    """A#21: on SIGTERM the worker waits a bounded time for what runs, then exits."""
+
+    def test_work_that_finishes_in_time_is_waited_for(self, tmp_path: Path) -> None:
+        stop = threading.Event()
+        finished: list[str] = []
+
+        def a_turn() -> None:
+            stop.set()  # the signal arrives while a turn runs
+            time.sleep(0.2)
+            finished.append("turn")
+
+        loops = {"agent-turns": ClockCheck([a_turn], tmp_path / "b", interval_s=0.01)}
+
+        assert run_until_stopped(loops, stop, wait_s=5, look_every_s=0.01) is True
+        assert finished == ["turn"]
+
+    def test_work_that_runs_too_long_is_left_and_the_worker_exits(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        stop = threading.Event()
+        release = threading.Event()
+
+        def a_stuck_turn() -> None:
+            stop.set()
+            release.wait(30)
+
+        loops = {"agent-turns": ClockCheck([a_stuck_turn], tmp_path / "b", interval_s=0.01)}
+        started = time.monotonic()
+        try:
+            finished = run_until_stopped(loops, stop, wait_s=0.2, look_every_s=0.01)
+            took = time.monotonic() - started
+        finally:
+            release.set()
+
+        assert finished is False
+        assert took < 5
+        assert logged(caplog, "worker_stopped_with_work_running")[0]["loops"] == ["agent-turns"]
+        # A daemon thread: it never keeps the process alive after main() returns.
+        assert all(t.daemon for t in threading.enumerate() if t.name == "agent-turns")
+
+    def test_a_loop_that_dies_stops_the_worker(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        stop = threading.Event()
+
+        def dies() -> None:
+            raise SystemExit("a bug no task catches")
+
+        loops = {
+            "agent-turns": ClockCheck([dies], tmp_path / "a"),
+            "clock-check": ClockCheck([lambda: None], tmp_path / "b", interval_s=0.01),
+        }
+
+        assert run_until_stopped(loops, stop, wait_s=5, look_every_s=0.01) is False
+        assert stop.is_set()
+        assert logged(caplog, "worker_loop_died")[0]["loops"] == ["agent-turns"]
+
+    def test_no_further_agent_turn_starts_once_told_to_stop(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        stop = threading.Event()
+        ran: list[uuid.UUID] = []
+
+        def a_turn(_: Any, conversation_id: uuid.UUID, **__: Any) -> TurnResult:
+            ran.append(conversation_id)
+            stop.set()
+            return TurnResult(Status.DONE)
+
+        pending = PendingTurns(cast(Agent, object()))
+        waiting = [(uuid.uuid4(), False), (uuid.uuid4(), False)]
+        monkeypatch.setattr(pending, "due", lambda: waiting)
+        monkeypatch.setattr(pending_module, "run_turn", a_turn)
+
+        assert pending.run_pending_turns(stop) == 1
+        assert ran == [waiting[0][0]]
 
 
 @pytest.mark.parametrize(("beats", "exit_code"), [(True, 0), (False, 1)])

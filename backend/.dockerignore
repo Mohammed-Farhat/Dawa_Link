@@ -2,9 +2,19 @@
 .mypy_cache
 .pytest_cache
 .ruff_cache
-__pycache__
+# At every depth: a bare name matches only at the top of the folder.
+**/__pycache__
 tests
+# Settings files hold secrets and stay on the laptop; the image gets its settings from
+# docker-compose or the task definition.
+.env*
 # The Ministry's raw downloads stay on the laptop; only the small catalog file ships.
 data/moph/pages
 data/moph/*.xls
+data/moph/*.xlsx
 data/moph/*.log
+# The no-prescription list's PDF and the rows read from it: catalog.csv carries the mark.
+data/moph/*.pdf
+data/moph/otc_list.csv
+# OpenStreetMap's raw answer: only the generated areas_osm.csv is needed.
+data/osm

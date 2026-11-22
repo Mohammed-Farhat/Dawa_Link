@@ -1,12 +1,15 @@
-import { TextInput } from '@mantine/core'
+import { NativeSelect, TextInput } from '@mantine/core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useRef, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
+import { FormProblems } from '../../components/FormProblems'
 import { Banner } from '../../components/layout'
+import { Placeholder } from '../../components/Placeholder'
 import { calendarDate, lbp } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
-import { saveFile, sendStockFile, useStock, useWaitingUpload, type Zone } from './data'
+import { saveFile, SEARCH_MAX, sendStockFile, usePharmacy, useStock, useWaitingUpload, type Zone } from './data'
+import { BATCH_MAX, batchFits, tidyBatch } from './draft'
 
 const s = strings.pharmacy.stock
 const u = strings.pharmacy.upload
@@ -27,14 +30,18 @@ function codeOf(error: unknown): string {
   return error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR'
 }
 
-/** PS-6: the pharmacy's whole stock. Private: only the pharmacy sees it. */
+/**
+ * PS-6: the pharmacy's whole stock. Private: only the pharmacy sees it. The two ways to
+ * change it, a file and one box by hand, come first: under a table of 50 rows a box
+ * typed by hand was about 60 keyboard stops away.
+ */
 export function InventoryPage() {
   return (
     <main className="portal__main">
       <h1 className="page-title">{strings.pharmacy.inventory}</h1>
       <StockFile />
-      <StockTable />
       <AddBox />
+      <StockTable />
     </main>
   )
 }
@@ -167,11 +174,35 @@ function UploadSummary({
   onDiscard: () => void
   onErrors: () => void
 }) {
+  const zeroed = upload.summary.zeroed
+  const tiles: { label: string; count: number; danger?: boolean }[] = [
+    { label: u.tiles.ready, count: upload.rows_ok },
+    { label: u.tiles.fix, count: upload.rows_error },
+    { label: u.tiles.new, count: upload.summary.new },
+    // The one count that takes stock away: red when it isn't nothing (R-U2).
+    { label: u.tiles.zeroed, count: zeroed, danger: zeroed > 0 },
+  ]
   return (
     <div className="row-card" style={{ background: 'var(--page)' }}>
       <span style={{ fontWeight: 600 }}>{u.waiting(upload.file_name)}</span>
-      <span>{u.rows(upload.rows_total, upload.rows_ok, upload.rows_error)}</span>
-      <span>{u.changes(upload.summary)}</span>
+      <div role="group" aria-label={u.tilesLabel}>
+        <dl className="upload-tiles">
+          {tiles.map((tile) => (
+            <div key={tile.label} className={`upload-tile${tile.danger ? ' upload-tile--red' : ''}`}>
+              <dt>{tile.label}</dt>
+              <dd>{tile.count}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      {upload.summary.changed > 0 && <span className="soft">{u.changedLine(upload.summary.changed)}</span>}
+      {/* A refused row is never read, so its box counts as missing from the file and is
+          set to 0 with the others: said before [Apply], in red. */}
+      {upload.rows_error > 0 && zeroed > 0 && (
+        <Banner tone="red" alert>
+          {u.zeroedWarning}
+        </Banner>
+      )}
       {upload.summary.reserved_kept > 0 && (
         <Banner tone="amber">{u.reservedKept(upload.summary.reserved_kept)}</Banner>
       )}
@@ -199,7 +230,7 @@ function UploadSummary({
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         <button type="button" className="pill-button" disabled={upload.rows_ok === 0} onClick={onApply}>
-          {u.apply}
+          {u.applyRows(upload.rows_ok)}
         </button>
         <button type="button" className="pill-button pill-button--grey" onClick={onDiscard}>
           {u.discard}
@@ -225,6 +256,7 @@ function StockTable() {
       <TextInput
         label={s.search}
         size="md"
+        maxLength={SEARCH_MAX}
         value={typed}
         onChange={(event) => setTyped(event.currentTarget.value)}
       />
@@ -241,13 +273,16 @@ function StockTable() {
           </button>
         ))}
       </div>
+      {stock.pending && <Placeholder height={56} />}
       {stock.loaded && items.length === 0 && (
         <span className="soft">{typed.trim() || zone ? s.noneFound : s.none}</span>
       )}
       {items.length > 0 && (
         // A wide table scrolls sideways on a phone: the region is reachable by keyboard.
-        <div className="table-scroll" role="region" aria-label={s.table} tabIndex={0}>
-          <table className="stock-table">
+        // The medicine's column stays in place, so a quantity is never edited without
+        // its name in view, and the right edge fades to show there is more.
+        <div className="table-scroll table-scroll--fade" role="region" aria-label={s.table} tabIndex={0}>
+          <table className="stock-table stock-table--pinned">
             <thead>
               <tr>
                 <th scope="col">{s.product}</th>
@@ -333,6 +368,8 @@ function StockRow({ item }: { item: Item }) {
               type="text"
               inputMode="numeric"
               aria-label={s.quantityOf(item.product.name, item.batch)}
+              // As the add form: never more than the API takes (A#35).
+              maxLength={QUANTITY_DIGITS}
               value={value}
               onChange={(event) => setTyped(event.currentTarget.value.replace(/\D/g, ''))}
             />
@@ -369,16 +406,48 @@ function fullName(product: Schemas['ProductSummary']): string {
   return `${parts.filter(Boolean).join(' · ')} · ${lbp(product.public_price.lbp)} · ${s.add.code(product.code)}`
 }
 
+/** How many years ahead a box's expiry can be chosen: a box rarely lasts longer. */
+const EXPIRY_YEARS = 6
+/** The most packs typed for one box: five digits stay under the API's own bound. */
+const QUANTITY_DIGITS = 5
+
+const two = (value: number) => String(value).padStart(2, '0')
+
+/**
+ * A box prints a month and a year, and DawaLink counts it until the last day of that
+ * month (R-D6). Written as text, never through a `Date` and `toISOString`, which would
+ * move the day with the computer's time zone.
+ */
+function lastDayOf(year: number, month: number): string {
+  const days = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  return `${year}-${two(month)}-${two(days)}`
+}
+
+/** What the pharmacist is told once the box is added: whether clients see it now. */
+function addedText(item: Item, rule: number): string {
+  const a = s.add
+  const name = item.product.name
+  if (item.visible) return a.addedVisible(name, item.batch)
+  if (item.zone === 'NEAR_EXPIRY') return a.addedHeld(name, item.batch, rule)
+  if (item.zone === 'NOT_ELIGIBLE') return a.addedNotListed(name, item.batch)
+  return a.addedPrivate(name, item.batch)
+}
+
 /** One box typed by hand, with the medicine chosen from the catalog (PS-6). */
 function AddBox() {
   const a = s.add
   const queryClient = useQueryClient()
+  const pharmacy = usePharmacy()
   const [typed, setTyped] = useState('')
   const [product, setProduct] = useState<Schemas['ProductSummary'] | null>(null)
   const [batch, setBatch] = useState('')
-  const [expiry, setExpiry] = useState('')
+  const [month, setMonth] = useState('')
+  const [year, setYear] = useState('')
   const [quantity, setQuantity] = useState('')
-  const [state, setState] = useState<'idle' | 'added' | string>('idle')
+  const [tried, setTried] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const [refusedBatch, setRefusedBatch] = useState(false)
+  const [state, setState] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
   const wanted = typed.trim()
   const found = useQuery({
     queryKey: ['catalog', wanted],
@@ -387,18 +456,37 @@ function AddBox() {
     enabled: product === null && wanted.length >= 2,
   })
 
+  // The app's day, not the computer's: the demo clock moves it (R-T11).
+  const today = (pharmacy.data?.server_now ?? '').slice(0, 10)
+  const thisYear = Number(today.slice(0, 4)) || 0
+  const expiry = month && year ? lastDayOf(Number(year), Number(month)) : ''
+  const problems = {
+    product: product ? null : a.problems.product,
+    batch: !batch.trim() ? a.problems.batch : batchFits(batch) ? null : a.problems.batchRule(BATCH_MAX),
+    expiry: !expiry ? a.problems.expiry : today && expiry < today ? a.problems.expired : null,
+    quantity: /^\d+$/.test(quantity) && Number(quantity) >= 1 ? null : a.problems.quantity,
+  }
+  const shown = (field: keyof typeof problems) => (tried && problems[field]) || null
+  const batchError = shown('batch') || (refusedBatch ? a.problems.batchRule(BATCH_MAX) : null)
+  const marked =
+    (['product', 'expiry', 'quantity'] as const).filter((field) => shown(field)).length +
+    (batchError ? 1 : 0)
+
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!product || !batch.trim() || !expiry || !/^\d+$/.test(quantity)) {
-      setState('incomplete')
+    setTried(true)
+    setRefusedBatch(false)
+    setState(null)
+    if (!product || Object.values(problems).some(Boolean)) {
+      setAttempt((count) => count + 1)
       return
     }
     try {
-      await unwrap(
+      const item = await unwrap(
         api.POST('/api/v1/pharmacy/inventory/items', {
           body: {
             product_id: product.id,
-            batch: batch.trim(),
+            batch: tidyBatch(batch),
             expiry_date: expiry,
             qty: Number(quantity),
           },
@@ -407,12 +495,20 @@ function AddBox() {
       setProduct(null)
       setTyped('')
       setBatch('')
-      setExpiry('')
+      setMonth('')
+      setYear('')
       setQuantity('')
-      setState('added')
+      setTried(false)
+      setState({ tone: 'green', text: addedText(item, pharmacy.data?.auto_list_days ?? 0) })
       await queryClient.invalidateQueries({ queryKey: ['pharmacy'] })
     } catch (error) {
-      setState(codeOf(error))
+      // The API checks the batch's shape (domain/pharmacy_details.py): said on the field.
+      if (error instanceof ApiFailure && error.details.field === 'batch') {
+        setRefusedBatch(true)
+        setAttempt((count) => count + 1)
+      } else {
+        setState({ tone: 'red', text: errorMessage(codeOf(error)) })
+      }
     }
   }
 
@@ -436,8 +532,10 @@ function AddBox() {
               description={a.productHint}
               size="md"
               autoComplete="off"
+              maxLength={SEARCH_MAX}
               value={typed}
               onChange={(event) => setTyped(event.currentTarget.value)}
+              error={shown('product')}
             />
             <div role="status" aria-live="polite" className="chips">
               {(found.data?.items ?? []).map((row) => (
@@ -457,36 +555,66 @@ function AddBox() {
             </div>
           </>
         )}
-        <div className="field-row">
-          <TextInput
-            label={a.batch}
-            size="md"
-            autoComplete="off"
-            value={batch}
-            onChange={(event) => setBatch(event.currentTarget.value)}
-          />
-          <TextInput
-            label={a.expiry}
-            size="md"
-            type="date"
-            value={expiry}
-            onChange={(event) => setExpiry(event.currentTarget.value)}
-          />
-          <TextInput
-            label={a.quantity}
-            size="md"
-            inputMode="numeric"
-            value={quantity}
-            onChange={(event) => setQuantity(event.currentTarget.value.replace(/\D/g, ''))}
-          />
-        </div>
+        <TextInput
+          label={a.batch}
+          size="md"
+          autoComplete="off"
+          maxLength={BATCH_MAX}
+          value={batch}
+          onChange={(event) => {
+            setBatch(event.currentTarget.value)
+            setRefusedBatch(false)
+          }}
+          error={batchError}
+        />
+        <fieldset className="choice">
+          <legend>{a.expiry}</legend>
+          <span className="hint">{a.expiryHint}</span>
+          <div className="field-row">
+            <NativeSelect
+              label={a.expiryMonth}
+              size="md"
+              value={month}
+              onChange={(event) => setMonth(event.currentTarget.value)}
+              error={shown('expiry') && !month ? true : undefined}
+              data={[
+                { value: '', label: '' },
+                ...a.months.map((name, index) => ({
+                  value: String(index + 1),
+                  label: `${two(index + 1)} · ${name}`,
+                })),
+              ]}
+            />
+            <NativeSelect
+              label={a.expiryYear}
+              size="md"
+              value={year}
+              onChange={(event) => setYear(event.currentTarget.value)}
+              error={shown('expiry') && (!year || Boolean(month)) ? true : undefined}
+              data={[
+                { value: '', label: '' },
+                ...Array.from({ length: thisYear ? EXPIRY_YEARS : 0 }, (_, index) => {
+                  const value = String(thisYear + index)
+                  return { value, label: value }
+                }),
+              ]}
+            />
+          </div>
+          {shown('expiry') && <span className="field-problem">{shown('expiry')}</span>}
+        </fieldset>
+        <TextInput
+          label={a.quantity}
+          size="md"
+          inputMode="numeric"
+          maxLength={QUANTITY_DIGITS}
+          value={quantity}
+          onChange={(event) => setQuantity(event.currentTarget.value.replace(/\D/g, ''))}
+          error={shown('quantity')}
+        />
         <div role="status" aria-live="polite">
-          {state === 'added' && <Banner tone="green">{a.added}</Banner>}
-          {state === 'incomplete' && <Banner tone="red">{a.problem}</Banner>}
-          {!['idle', 'added', 'incomplete'].includes(state) && (
-            <Banner tone="red">{errorMessage(state)}</Banner>
-          )}
+          {state && <Banner tone={state.tone}>{state.text}</Banner>}
         </div>
+        <FormProblems count={marked} attempt={attempt} />
         <button type="submit" className="pill-button" style={{ alignSelf: 'flex-start' }}>
           {a.submit}
         </button>

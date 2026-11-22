@@ -5,7 +5,6 @@ chat message and asks for no agent turn (R-AG5). With the assistant switched off
 this works the same (C15).
 """
 
-import time
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
@@ -40,6 +39,7 @@ from dawalink.api.schemas.search import (
     ViewListing,
 )
 from dawalink.db.models import District, ProductIngredient
+from dawalink.domain.accounts import ClientStatus
 from dawalink.domain.geo import cell
 from dawalink.domain.money import to_lbp
 from dawalink.domain.orders import OrderSource
@@ -59,8 +59,6 @@ from dawalink.services.orders import ReserveLine
 from dawalink.services.travel import Location, RoutingService
 
 router = APIRouter(tags=["search"])
-
-ROUTING_PAUSE_S = 60
 
 
 @router.get("/catalog/products")
@@ -165,9 +163,7 @@ def _road_times_first(
     shows straight-line estimates, labeled "about" (FX-18).
     """
     routing = cast("RoutingService | None", request.app.state.routing)
-    # A routing service that just failed isn't asked again for a minute: without this,
-    # every search would wait for its timeout while it is down.
-    if routing is None or time.monotonic() < request.app.state.routing_paused_until:
+    if routing is None:
         return
     with work.tx() as tx:
         origin, _ = location_of(tx, client_id, sent)
@@ -175,9 +171,9 @@ def _road_times_first(
         if not pharmacy_ids:
             return
         wanted = travel.missing(tx, origin, pharmacy_ids)
+    # A routing service that just failed isn't asked again for a while, by the search page
+    # or the agent: `travel.fetch` keeps that pause, and answers nothing meanwhile.
     rows = travel.fetch(routing, wanted)
-    if wanted and not rows:
-        request.app.state.routing_paused_until = time.monotonic() + ROUTING_PAUSE_S
     if rows:
         with work.tx() as tx:
             travel.store(tx, rows)
@@ -274,13 +270,7 @@ def search_by_name(
             {
                 box.pharmacy_id
                 for box in search.visible_boxes(
-                    tx,
-                    product_ids=[
-                        p.id
-                        for p in catalog.find_by_name(
-                            tx, body.q, among=search.stocked_products(tx)
-                        ).products
-                    ],
+                    tx, product_ids=[p.id for p in search.medicines_named(tx, body.q).products]
                 )
             }
         ),
@@ -301,12 +291,21 @@ def search_by_name(
             open_now=body.open_now,
             per_medicine=body.per_medicine,
         )
+        # Every group's boxes are presented at once: their pharmacies are read once, not
+        # once per medicine (review A#29).
+        shown = iter(
+            present.listings(
+                tx,
+                [listing for group in found.groups for listing in group.result.listings],
+                lbp_per_usd,
+            )
+        )
         return NameSearchResult(
             groups=[
                 MedicineGroup(
                     product=present.product_summary(group.product, lbp_per_usd),
                     by_ingredient=group.by_ingredient,
-                    items=present.listings(tx, group.result.listings, lbp_per_usd),
+                    items=[next(shown) for _ in group.result.listings],
                     total_found=group.result.total_found,
                     no_match=(
                         NoMatch(
@@ -340,6 +339,7 @@ def keep_a_search(body: Searched, caller: AsClient, work: DoWork) -> Searches:
     result was opened, or Enter was pressed), not for every letter typed. A name that is
     not a medicine's name in shape is quietly left out."""
     with work.tx() as tx:
+        _own_searches(tx, caller.user_id)
         search_history.record(tx, caller.user_id, body.q)
         return Searches(items=search_history.recent(tx, caller.user_id))
 
@@ -348,8 +348,20 @@ def keep_a_search(body: Searched, caller: AsClient, work: DoWork) -> Searches:
 def clear_searches(caller: AsClient, work: DoWork) -> Searches:
     """[Clear]: the caller's whole list is deleted."""
     with work.tx() as tx:
+        _own_searches(tx, caller.user_id)
         search_history.clear(tx, caller.user_id)
         return Searches(items=[])
+
+
+def _own_searches(tx: Tx, client_id: uuid.UUID) -> None:
+    """The caller's profile, locked, before their list of searches changes, as for their
+    other details (`accounts._own_details`). A deletion holds this lock while it empties
+    the rows, so a search kept in the moment after a deletion waits for it, finds the
+    account deleted, and is answered as a logged-out person is: nothing is written back
+    onto the emptied rows (R-AU10)."""
+    profile = clients.profile(tx, client_id, lock=True)
+    if profile.status == ClientStatus.DELETED.value:
+        raise ApiError(ErrorCode.UNAUTHENTICATED)
 
 
 @router.post("/listings/{listing_id}/view")

@@ -13,7 +13,12 @@ import structlog
 from sqlalchemy import Connection, create_engine, func, select
 from sqlalchemy.orm import sessionmaker
 
-from dawalink.catalog.importer import ImportResult, import_catalog
+from dawalink.catalog.importer import (
+    ImportResult,
+    MarkRefresh,
+    import_catalog,
+    refresh_prescription_marks,
+)
 from dawalink.catalog.moph import read_catalog
 from dawalink.catalog.rules import DEFAULT_RULES_FILE, load_rules
 from dawalink.config import Settings, load_settings, required
@@ -49,6 +54,22 @@ def import_from_folder(
         lbp_per_usd=Decimal(details["lbp_per_usd"]),
         rows_total=int(details["rows_total"]),
     )
+
+
+def refresh_marks_from_folder(
+    connection: Connection, folder: Path = DEFAULT_FOLDER, rules_file: Path = DEFAULT_RULES_FILE
+) -> MarkRefresh:
+    """The prescription marks of the products already there, from the catalog file."""
+    result = refresh_prescription_marks(
+        connection, read_catalog(folder / CATALOG_FILE), load_rules(rules_file)
+    )
+    log.info(
+        "prescription_marks_refreshed",
+        notice_removed=result.notice_removed,
+        notice_restored=result.notice_restored,
+        kept_other_product=result.kept_other_product,
+    )
+    return result
 
 
 def log_result(result: ImportResult) -> None:

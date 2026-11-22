@@ -184,6 +184,9 @@ class ContestedReservation(Out):
     pharmacy: str
     expired_at: datetime | None
     contested_at: datetime
+    # False once an admin cleared it: it no longer counts as a missed pickup, and has
+    # nothing left to clear (R-N3).
+    counts_as_no_show: bool
 
 
 class EscalationDetail(Out):
@@ -191,8 +194,10 @@ class EscalationDetail(Out):
     # Empty when there is no chat to show: the case came from a button, not from a
     # chat, or the chat was deleted after its 30 days.
     thread: list[ThreadMessage]
-    # The no-shows this client contests and that still count: what a complaint about a
-    # missed pickup is about, with [Clear] beside it.
+    # What this case's contested missed pickup is about: the reservation the client
+    # pressed [I picked it up] on, with the other boxes of its trip, cleared or not.
+    # Empty on a case of another kind. A complaint made before cases remembered their
+    # reservation shows the contested reservations its summary names.
     contested: list[ContestedReservation]
 
 
@@ -311,7 +316,9 @@ class AuditPage(Out):
 
 # --- Clients (AS-5) ---------------------------------------------------------------------------
 
-ClientStatusName = Literal["UNVERIFIED", "ACTIVE", "PAUSED", "SUSPENDED"]
+# DELETED: the client deleted their account (R-AU10). Their page shows its ID, this
+# status and their past reservations; nothing else is kept.
+ClientStatusName = Literal["UNVERIFIED", "ACTIVE", "PAUSED", "SUSPENDED", "DELETED"]
 
 
 class AdminClientRow(Out):

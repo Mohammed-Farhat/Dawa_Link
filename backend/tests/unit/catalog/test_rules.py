@@ -56,6 +56,12 @@ class TestPrescriptionNotice:
     def test_an_empty_list_keeps_the_notice_on_everything(self) -> None:
         assert CatalogRules().needs_prescription(parse_ingredients("Paracetamol - 500mg"))
 
+    def test_a_product_the_ministrys_list_names_has_no_notice(self) -> None:
+        amoxicillin = parse_ingredients("Amoxicillin - 500mg")
+
+        assert not CatalogRules().needs_prescription(amoxicillin, on_ministry_list=True)
+        assert CatalogRules().needs_prescription(amoxicillin, on_ministry_list=False)
+
 
 def test_corrections_are_read_by_the_ministrys_code() -> None:
     assert RULES.products[101] == ProductOverride(controlled=True)

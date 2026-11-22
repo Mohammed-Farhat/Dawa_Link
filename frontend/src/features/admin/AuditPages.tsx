@@ -4,8 +4,10 @@ import { useState } from 'react'
 
 import { api, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Placeholder } from '../../components/Placeholder'
 import { errorMessage, strings } from '../../strings/en'
 import { codeOf, useAudit, useDemoClock, when } from './data'
+import { ListFailed } from './ListFailed'
 
 const s = strings.admin
 const a = s.audit
@@ -64,7 +66,8 @@ export function AuditPage() {
           onChange={(event) => setEntity(event.currentTarget.value)}
         />
       </div>
-      {found.failed && <Banner tone="amber">{errorMessage('INTERNAL_ERROR')}</Banner>}
+      {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
+      {found.loading && <Placeholder height={56} />}
       {found.loaded && found.items.length === 0 && <div className="empty">{a.none}</div>}
       {found.items.length > 0 && (
         <section className="panel">
@@ -87,11 +90,11 @@ export function AuditPage() {
                     <td>{a.actors[event.actor_type as keyof typeof a.actors] ?? event.actor_type}</td>
                     <th scope="row">{event.action}</th>
                     <td>
-                      {event.entity_type}
+                      {event.entity_type}{' '}
                       {event.entity_id && (
                         <button
                           type="button"
-                          className="text-button audit-change"
+                          className="text-button audit-id"
                           onClick={() => setEntity(event.entity_id ?? '')}
                         >
                           {event.entity_id.slice(0, 8)}

@@ -1,4 +1,4 @@
-import { createTheme, type MantineColorsTuple } from '@mantine/core'
+import { createTheme, type CSSVariablesResolver, type MantineColorsTuple } from '@mantine/core'
 
 // Design tokens from docs/11 §2 (the v2 design). A color is added here when a screen first uses it.
 // The fixed points are named in the doc; the shades between them are steps along the same line.
@@ -85,9 +85,30 @@ export const theme = createTheme({
   radius: { xs: '8px', sm: '12px', md: '16px', lg: '20px', xl: '28px' },
   fontSizes: { xs: '13px', sm: '14px', md: '17px', lg: '18px', xl: '22px' },
   components: {
-    // A dialog's close button is an icon alone: it gets a name for a screen reader.
-    Modal: { defaultProps: { closeButtonProps: { 'aria-label': 'Close' } } },
+    // A dialog's close button is an icon alone: it gets a name for a screen reader, and
+    // the project's 44 px for a finger (docs/11 §9, B#41; "xl" is 44 px).
+    Modal: { defaultProps: { closeButtonProps: { 'aria-label': 'Close', size: 'xl' } } },
+    // The eye that shows a password is reached with the keyboard too (B#42): the library
+    // leaves it out of the tab order.
+    PasswordInput: { defaultProps: { visibilityToggleFocusable: true } },
   },
+})
+
+/**
+ * The component library's own greys, mapped to ours (B#18). Its hints and placeholders
+ * were 3.3:1 and 2.1:1 on white: a hint is now `ink-soft` and a placeholder `ink-hint`,
+ * both above 4.5:1. The edges of its fields are set in global.css ("Fields"), next to the
+ * hand-made boxes that share their height and radius.
+ *
+ * A provider's setting, not part of the theme: the app and the tests pass both.
+ */
+export const cssVariablesResolver: CSSVariablesResolver = () => ({
+  variables: {},
+  light: {
+    '--mantine-color-dimmed': ink[7],
+    '--mantine-color-placeholder': ink[6],
+  },
+  dark: {},
 })
 
 export const pageBackground = ink[0]

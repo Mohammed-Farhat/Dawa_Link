@@ -12,6 +12,9 @@ afterEach(() => {
   cleanup()
   // No test starts logged in because of the one before it.
   window.localStorage.clear()
+  // Nor with what a page kept in this tab's storage (the reset link's token, the note
+  // that an account was deleted).
+  window.sessionStorage.clear()
 })
 
 // jsdom lacks these browser features, which Mantine reads.

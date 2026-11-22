@@ -1,7 +1,7 @@
 """Builds the API application. Run with: uvicorn dawalink.api.main:create_app --factory"""
 
+import asyncio
 from collections.abc import AsyncIterator
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from dawalink.agent.setup import build_agent, build_routing
 from dawalink.agent.turn import Agent
+from dawalink.api.chat_stream import TurnPool
 from dawalink.api.errors import register_error_handlers
+from dawalink.api.health import DatabasePing
 from dawalink.api.health import router as health_router
 from dawalink.api.limits import Limiter
 from dawalink.api.middleware import (
@@ -59,6 +61,7 @@ def _operation_id(route: APIRoute) -> str:
 
 # How many chat turns may run at once. A turn mostly waits for the model, and each
 # conversation runs one at a time, so this is "clients waiting for an answer right now".
+# One more is refused as busy, and the page sends it again (A#6, `chat_stream.TurnPool`).
 CHAT_TURNS_AT_ONCE = 8
 
 
@@ -79,13 +82,16 @@ def create_app(
     engine = make_engine(settings.database_url)
     sessions = sessions or sessionmaker(engine, expire_on_commit=False)
     clock = clock or AppClock(engine, demo_mode=settings.demo_mode)
-    turn_pool = ThreadPoolExecutor(max_workers=CHAT_TURNS_AT_ONCE, thread_name_prefix="chat-turn")
+    turn_pool = TurnPool(CHAT_TURNS_AT_ONCE)
+    database_ping = DatabasePing(engine)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
         # A turn that is running finishes and saves its reply before the process ends.
-        turn_pool.shutdown(wait=True)
+        # Waited for off the event loop, so its stream still gets its last events.
+        await asyncio.to_thread(turn_pool.shutdown, wait=True)
+        database_ping.shutdown()
         engine.dispose()
 
     app = FastAPI(
@@ -103,12 +109,13 @@ def create_app(
     app.state.sessions = sessions
     app.state.clock = clock
     app.state.turn_pool = turn_pool
+    app.state.database_ping = database_ping
     # With no model configured the assistant is off, and everything else works (C15).
     app.state.agent = agent or build_agent(settings, sessions, clock)
-    # Road times for the search page. The agent has its own; both read one cache.
-    app.state.routing = agent.routing if agent else build_routing(settings)
+    # Road times for the search page: the agent's own routing service when there is an
+    # agent, so that one failure pauses it for both (`travel.fetch`, A#25).
+    app.state.routing = app.state.agent.routing if app.state.agent else build_routing(settings)
     app.state.last_point_of_client = {}
-    app.state.routing_paused_until = 0.0
     app.state.calls_per_session = Limiter(API_CALLS_PER_MINUTE, 60)
     app.state.chat_per_client = Limiter(CHAT_MESSAGES_PER_MINUTE, 60)
     app.state.locations_per_client = Limiter(LOCATION_UPDATES_PER_HOUR, 3600)

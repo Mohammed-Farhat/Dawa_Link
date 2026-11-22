@@ -17,6 +17,7 @@ from dawalink.api.schemas.common import (
     Out,
     PharmacyCard,
     ProductSummary,
+    Travel,
 )
 
 
@@ -35,16 +36,6 @@ class Products(Out):
     items: list[ProductSummary]
     # Close names to offer when nothing matched well: "Did you mean Augmentin?"
     did_you_mean: list[str]
-
-
-class Travel(Out):
-    """How far a pharmacy is from the client. Computed by code; never a coordinate."""
-
-    car_min: int
-    walk_min: int
-    km: float
-    # "straight" is an estimate, shown as "about".
-    source: Literal["road", "straight"]
 
 
 class Listing(Out):

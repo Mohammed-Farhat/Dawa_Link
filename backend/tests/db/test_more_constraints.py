@@ -24,6 +24,7 @@ from dawalink.db.models import (
     InventoryUpload,
     InventoryUploadRow,
     Notification,
+    PasswordResetToken,
     PharmacyHours,
     PricingTier,
     Session,
@@ -66,6 +67,22 @@ class TestAccountsAndPlaces:
             lambda: add(db, EmailVerificationToken, **session),
             "uq_email_verification_tokens_token_hash",
         )
+        twice(
+            db,
+            lambda: add(db, PasswordResetToken, **session),
+            "uq_password_reset_tokens_token_hash",
+        )
+
+    def test_a_deleted_account_says_when_and_is_emptied_only_after(self, db: Connection) -> None:
+        """R-AU10: the clean-up finds a deleted account by these columns."""
+        refused(db, lambda: make.client(db, "DELETED"), "ck_client_profiles_deleted_has_a_moment")
+        refused(
+            db, lambda: make.client(db, deleted_at=NOW), "ck_client_profiles_deleted_has_a_moment"
+        )
+        refused(
+            db, lambda: make.client(db, emptied_at=NOW), "ck_client_profiles_emptied_after_deleted"
+        )
+        make.client(db, "DELETED", deleted_at=NOW, emptied_at=NOW)
 
     def test_a_pin_is_a_real_place(self, db: Connection) -> None:
         refused(db, lambda: make.pharmacy(db, lat=95), "ck_pharmacies_pin_in_range")

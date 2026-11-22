@@ -3,16 +3,26 @@
 import smtplib
 import uuid
 from decimal import Decimal
-from typing import Any
+from pathlib import Path
+from typing import Any, ClassVar
 
 import pytest
 
+from dawalink.config import ConfigError, Settings
 from dawalink.domain.orders import OrderSource
 from dawalink.services import email, orders
 from dawalink.services.notify import Template, notify
 from dawalink.services.orders import ReserveLine
-from tests.conftest import logged
+from dawalink.worker.__main__ import mailer
+from tests.conftest import logged, make_settings
 from tests.services.conftest import World
+from tests.services.fake_smtp import (
+    FakeSmtpServer,
+    Login,
+    client_context,
+    make_certificate,
+    server_context,
+)
 
 
 class FakeMailer:
@@ -58,7 +68,7 @@ class TestSending:
 
         ((to, subject, body),) = mailer.sent
         assert to == address(world, client)
-        assert subject == "Your watch ended without stock"
+        assert subject == '"Notify me" ended: Testol 500 mg didn\'t appear in time'
         assert body.splitlines()[:3] == [subject, "", "Medicine: Testol 500 mg"]
         row = outbox(world, client)
         assert (row.state, row.attempts, row.last_error) == ("SENT", 0, None)
@@ -258,12 +268,14 @@ class TestRender:
             "Order number: R-7K3Q2F",
             "Medicine: Testol 500 mg",
             "Packs: 2",
-            "Price per pack: 600,000 LBP (about $6.70)",
+            "Price per pack: 600,000 LBP (about $6.7)",
             "Pharmacy: Test Pharmacy",
             "Address: 1 Test Street",
             "Open on the pickup day: 08:00-21:00",
             "Pick up by: Tue 20 Oct, 21:00",
             "Prescription needed: bring it to the pharmacy.",
+            "",
+            "Show the order number at the counter and pay there.",
             "",
             "Open DawaLink to see the details.",
             "",
@@ -311,33 +323,281 @@ class TestRender:
         assert named == set(email.SUBJECTS)
 
 
-class TestSmtpSender:
-    def test_it_hands_the_message_to_the_server(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        handed: list[Any] = []
+OFFER = {
+    "order_ref": "R-7K3Q2F",
+    "product": "Testol 500 mg",
+    "pharmacy": "Test Pharmacy",
+    "units": 1,
+    "price_lbp": 600_000,
+    "pickup_by": None,
+    "prescription_required": True,
+    "offer_expires_at": "2026-10-20T10:00:00+00:00",
+    "expiry_date": "2027-01-31",
+}
 
-        class Server:
-            def __init__(self, host: str, port: int, timeout: float) -> None:
-                handed.append((host, port, timeout))
 
-            def __enter__(self) -> "Server":
-                return self
+class TestOfferEmails:
+    """B#12: a held box isn't reserved. Nothing may send the client to the counter with a
+    number the pharmacy can't find, and the email must say that the box is lost unless
+    they accept it in time."""
 
-            def __exit__(self, *error: object) -> None:
-                return None
+    @pytest.mark.parametrize(
+        ("template", "subject"),
+        [
+            ("CN-9", "A pharmacy is holding Testol 500 mg for you: accept it in DawaLink"),
+            ("CN-10", "Testol 500 mg is held for you: accept it in DawaLink"),
+        ],
+    )
+    def test_it_says_held_and_to_accept_before_the_time_shown(
+        self, template: str, subject: str
+    ) -> None:
+        shown, body = email.render(template, OFFER, Decimal("89500"))
 
-            def send_message(self, message: Any) -> None:
-                handed.append(message)
+        assert shown == subject
+        first = body.split("\n\n")[1]
+        assert first == email.LEADS[template]
+        assert first.startswith("It is held for you, not reserved")
+        assert '"Accept and reserve" in DawaLink before the time below' in first
+        assert "Held for you until: Tue 20 Oct, 13:00" in body.splitlines()
 
-        monkeypatch.setattr(smtplib, "SMTP", Server)
+    def test_a_listed_box_goes_to_the_next_person_after_the_time(self) -> None:
+        assert email.LEADS["CN-10"].endswith("After that it goes to the next person.")
+        # A released box goes back to the pharmacy's private stock instead (R-E6).
+        assert email.LEADS["CN-9"].endswith("After that it is no longer held for you.")
 
-        email.SmtpSender("mail.test", 1025, "DawaLink <no-reply@example.test>").send(
-            "someone@example.test", "Hello", "The body."
+    @pytest.mark.parametrize("template", ["CN-9", "CN-10"])
+    def test_it_gives_no_order_number_and_no_prescription_line(self, template: str) -> None:
+        _, body = email.render(template, OFFER)
+
+        assert "R-7K3Q2F" not in body
+        assert "Order number" not in body
+        assert "Prescription" not in body
+
+    def test_the_apps_list_says_the_same(self) -> None:
+        """The notification and the email share one template (docs/03 CS-12)."""
+        lines = email.facts("CN-10", OFFER)
+
+        assert lines[0] == email.LEADS["CN-10"]
+        assert "Held for you until: Tue 20 Oct, 13:00" in lines
+        assert not any("Order number" in line or "Prescription" in line for line in lines)
+
+
+class TestNextSteps:
+    """B#20: each email ends with one plain next step, and no link (docs/03 CN-)."""
+
+    def test_a_reservation_says_to_show_the_number_and_pay_at_the_counter(self) -> None:
+        _, body = email.render("CN-3", {"order_ref": "R-7K3Q2F"})
+
+        assert "Show the order number at the counter and pay there." in body.split("\n\n")
+
+    def test_not_available_says_it_costs_nothing_and_never_counts(self) -> None:
+        """R-N2. True whether some packs are still reserved or none."""
+        _, body = email.render("CN-5", {"order_ref": "R-7K3Q2F", "units_not_available": 1})
+
+        step = email.NEXT_STEPS["CN-5"]
+        assert step in body.split("\n\n")
+        assert "never counts as a missed pickup" in step
+
+    NOT_AVAILABLE: ClassVar[dict[str, Any]] = {
+        "order_ref": "R-7K3Q2F",
+        "units": 3,
+        "units_not_available": 1,
+        "pickup_by": "2026-10-20T18:00:00+00:00",
+        "prescription_required": True,
+    }
+
+    def test_some_packs_not_available_still_says_when_to_pick_up_the_rest(self) -> None:
+        """A partial [Not available] keeps the order reserved (SM-5 O3): the rest must
+        still be collected, so its email keeps the deadline and the prescription line."""
+        lines = email.facts("CN-5", self.NOT_AVAILABLE | {"units_still_reserved": 2})
+
+        assert "Packs not available: 1" in lines
+        assert "Packs still reserved for you: 2" in lines
+        assert "Pick up by: Tue 20 Oct, 21:00" in lines
+        assert "Prescription needed: bring it to the pharmacy." in lines
+
+    @pytest.mark.parametrize("still", [0, None])
+    def test_all_packs_not_available_shows_no_pickup_time(self, still: int | None) -> None:
+        """None: a notification stored before the payload said how many are left."""
+        params = self.NOT_AVAILABLE | {"units_not_available": 3, "units_still_reserved": still}
+
+        lines = email.facts("CN-5", params)
+
+        assert not any(line.startswith(("Pick up by", "Packs still reserved")) for line in lines)
+        assert "Prescription needed: bring it to the pharmacy." not in lines
+
+    def test_a_missed_pickup_is_called_so_and_says_how_to_contest_it(self) -> None:
+        """B#13 and R-N3: "expired" is a box's date; the contest is [I picked it up]."""
+        subject, body = email.render("CN-7", {"order_ref": "R-7K3Q2F", "product": "Testol"})
+
+        assert subject == "Missed pickup: R-7K3Q2F"
+        assert "expired" not in body.lower()
+        assert 'press "I picked it up"' in body.split("\n\n")[-3]
+
+    def test_a_pause_says_why_and_what_still_works(self) -> None:
+        _, body = email.render("CN-8", {"paused_until": "2026-10-27T08:00:00+00:00"})
+
+        assert "Paused until: Tue 27 Oct, 10:00" in body
+        assert email.NEXT_STEPS["CN-8"] in body
+        assert "missed pickups" in email.NEXT_STEPS["CN-8"]
+
+    def test_a_watch_that_ended_offers_to_keep_looking(self) -> None:
+        subject, body = email.render("CN-11", {"product": "Testol 500 mg"})
+
+        assert subject == '"Notify me" ended: Testol 500 mg didn\'t appear in time'
+        assert "watch" not in subject.lower()
+        assert "You can ask DawaLink to keep looking for it." in body
+
+    def test_a_watch_whose_medicine_left_dawalink_never_says_without_stock(self) -> None:
+        """R-C6: a medicine that became controlled can't be looked for at all."""
+        params = {"product": "Testol 500 mg", "reason": "no_longer_available"}
+
+        subject, body = email.render("CN-11", params)
+
+        assert subject == '"Notify me" ended'
+        assert "keep looking" not in body
+        assert email.facts("CN-11", params)[-1] == "This medicine is no longer offered on DawaLink."
+
+    @pytest.mark.parametrize("template", sorted(email.NEXT_STEPS))
+    def test_no_email_carries_a_link_or_an_address(self, template: str) -> None:
+        _, body = email.render(template, {"order_ref": "R-7K3Q2F", "product": "Testol"})
+
+        assert "http" not in body
+        assert "www." not in body
+
+    def test_the_lines_of_one_notification_are_all_different(self) -> None:
+        """The app's list draws each line under its own text as a key."""
+        for template in email.SUBJECTS:
+            lines = email.facts(template, OFFER | {"paused_until": OFFER["offer_expires_at"]})
+            assert len(lines) == len(set(lines)), template
+
+
+class TestMomentsAndMoney:
+    def test_a_midnight_deadline_is_the_day_before_at_24(self) -> None:
+        """B#39: a pharmacy open until midnight. 00:00 on Thursday would send the client
+        on Thursday, a day late: the ticket says Wednesday 24:00, and so does the email."""
+        _, body = email.render(
+            "CN-3", {"order_ref": "R-7K3Q2F", "pickup_by": "2026-11-18T22:00:00+00:00"}
         )
 
-        where, message = handed
-        assert where == ("mail.test", 1025, 10)
+        assert "Pick up by: Wed 18 Nov, 24:00" in body.splitlines()
+
+    def test_a_minute_after_midnight_is_the_new_day(self) -> None:
+        _, body = email.render(
+            "CN-3", {"order_ref": "R-7K3Q2F", "pickup_by": "2026-11-18T22:01:00+00:00"}
+        )
+
+        assert "Pick up by: Thu 19 Nov, 00:01" in body.splitlines()
+
+    @pytest.mark.parametrize(
+        ("lbp", "rate", "shown"),
+        [
+            (600_000, 89_500, "600,000 LBP (about $6.7)"),
+            # Exactly half way: up, as the website's toFixed(1) rounds it.
+            (225, 100, "225 LBP (about $2.3)"),
+            (245, 100, "245 LBP (about $2.5)"),
+            (110_500_000, 1_000, "110,500,000 LBP (about $110,500.0)"),
+        ],
+    )
+    def test_dollars_have_one_decimal_like_the_website(
+        self, lbp: int, rate: int, shown: str
+    ) -> None:
+        """B#31: the ticket says "about $2.4", so its email must not say "$2.44"."""
+        _, body = email.render("CN-3", {"order_ref": "R-7K3Q2F", "price_lbp": lbp}, Decimal(rate))
+
+        assert f"Price per pack: {shown}" in body.splitlines()
+
+
+class TestSmtpSender:
+    def test_it_hands_the_message_to_the_local_mail_catcher(self) -> None:
+        """No user name: no TLS and no login, as mailpit expects (docs/12 §2)."""
+        with FakeSmtpServer() as server:
+            email.SmtpSender("127.0.0.1", server.port, "DawaLink <no-reply@example.test>").send(
+                "someone@example.test", "Hello", "The body."
+            )
+
+        (message,) = server.seen.messages
         assert (message["To"], message["Subject"]) == ("someone@example.test", "Hello")
-        assert message.get_content().strip() == "The body."
+        assert str(message.get_payload()).strip() == "The body."
+        assert "STARTTLS" not in server.seen.commands
+        assert "AUTH" not in server.seen.commands
+
+    def test_with_a_login_it_asks_for_tls_first_then_logs_in(self, tmp_path: Path) -> None:
+        """A#1: Amazon SES refuses a plain connection and a login in clear."""
+        certificate, key = make_certificate(tmp_path)
+        with FakeSmtpServer(tls=server_context(certificate, key), password="right") as server:
+            sender = email.SmtpSender(
+                "127.0.0.1",
+                server.port,
+                "DawaLink <no-reply@example.test>",
+                user="smtp-user",
+                password="right",
+                starttls=True,
+                tls=client_context(certificate),
+            )
+            sender.send("someone@example.test", "Hello", "The body.")
+
+        assert server.seen.logins == [Login("smtp-user", "right", over_tls=True)]
+        assert server.seen.commands.index("STARTTLS") < server.seen.commands.index("AUTH")
+        assert len(server.seen.messages) == 1
+
+    def test_a_certificate_it_cannot_trust_sends_nothing(self, tmp_path: Path) -> None:
+        """The system's own check: the password never goes to a server that isn't SES."""
+        certificate, key = make_certificate(tmp_path)
+        with FakeSmtpServer(tls=server_context(certificate, key), password="right") as server:
+            sender = email.SmtpSender(
+                "127.0.0.1",
+                server.port,
+                "DawaLink <no-reply@example.test>",
+                user="smtp-user",
+                password="right",
+                starttls=True,
+            )
+            with pytest.raises(email.MailServerDown, match="SSLCertVerificationError"):
+                sender.send("someone@example.test", "Hello", "The body.")
+
+        assert server.seen.logins == []
+        assert server.seen.messages == []
+
+    def test_a_refused_login_stops_the_pass_and_says_so(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Every email would be refused the same way: it is the server's problem, not one
+        email's (FX-7), and someone must fix the settings."""
+        with FakeSmtpServer(password="right") as server:
+            sender = email.SmtpSender(
+                "127.0.0.1",
+                server.port,
+                "DawaLink <no-reply@example.test>",
+                user="smtp-user",
+                password="wrong",
+            )
+            with pytest.raises(email.MailServerDown, match="SMTPAuthenticationError"):
+                sender.send("someone@example.test", "Hello", "The body.")
+
+        assert "MAIL" not in server.seen.commands
+        (entry,) = logged(caplog, "email_login_refused")
+        assert "wrong" not in str(entry)
+
+    @pytest.mark.parametrize("hang_up_at", ["EHLO", "MAIL", "DATA"])
+    def test_a_server_that_goes_away_is_reported_as_down(self, hang_up_at: str) -> None:
+        with FakeSmtpServer(hang_up_at=hang_up_at) as server:
+            sender = email.SmtpSender("127.0.0.1", server.port, "DawaLink <no@example.test>")
+            with pytest.raises(email.MailServerDown, match="SMTPServerDisconnected"):
+                sender.send("someone@example.test", "Hello", "The body.")
+
+        assert server.seen.messages == []
+
+    def test_a_refused_address_fails_that_email_only(self) -> None:
+        """FX-9: in the SES sandbox an address that isn't verified is refused. The others
+        must still go, so this is not `MailServerDown`."""
+        with FakeSmtpServer(refuses=frozenset({"unknown@example.test"})) as server:
+            sender = email.SmtpSender("127.0.0.1", server.port, "DawaLink <no@example.test>")
+            with pytest.raises(smtplib.SMTPRecipientsRefused):
+                sender.send("unknown@example.test", "Hello", "The body.")
+            sender.send("someone@example.test", "Hello", "The body.")
+
+        assert [message["To"] for message in server.seen.messages] == ["someone@example.test"]
 
     def test_a_server_it_cannot_reach_is_reported_as_down(
         self, monkeypatch: pytest.MonkeyPatch
@@ -351,6 +611,125 @@ class TestSmtpSender:
             email.SmtpSender("mail.test", 1025, "DawaLink <no-reply@example.test>").send(
                 "someone@example.test", "Hello", "The body."
             )
+
+
+class TestThroughARealServer:
+    """The outbox and the SMTP sender together: SENT means the server took it."""
+
+    def test_a_sent_email_reached_the_server(self, world: World) -> None:
+        client = world.make.client()
+        queue(world, client)
+        with FakeSmtpServer() as server:
+            sender = email.SmtpSender("127.0.0.1", server.port, "DawaLink <no@example.test>")
+            assert world.clock_tasks(mailer=sender).send_emails() == 1
+
+        (message,) = server.seen.messages
+        assert message["To"] == address(world, client)
+        assert outbox(world, client).state == "SENT"
+
+    def test_a_server_that_goes_away_leaves_the_email_to_try_again(self, world: World) -> None:
+        client = world.make.client()
+        queue(world, client)
+        with FakeSmtpServer(hang_up_at="DATA") as server:
+            sender = email.SmtpSender("127.0.0.1", server.port, "DawaLink <no@example.test>")
+            assert world.clock_tasks(mailer=sender).send_emails() == 0
+
+        row = outbox(world, client)
+        assert (row.state, row.attempts, row.last_error) == ("FAILED", 1, "SMTPServerDisconnected")
+
+
+AWS_MAIL = {
+    "app_env": "aws",
+    # What the rest of an AWS setting needs, so that only the mail settings are judged.
+    "website_url": "https://website.example.org",
+    "app_secret_key": "kU3n8Qz1rT6vW0yB4dF7hJ2mP5sX9cL0-test-only",
+    "smtp_host": "email-smtp.eu-west-1.amazonaws.com",
+    "smtp_port": 587,
+    "smtp_user": "AKIA-TEST-USER",
+    "smtp_password": "a-test-only-smtp-password",
+    "email_from": "DawaLink <no-reply@dawalink.example.org>",
+}
+
+
+class TestTheWorkersSender:
+    """A#1: what the worker sends email with, from its settings."""
+
+    def settings(self, tmp_path: Path, **overrides: object) -> Settings:
+        return make_settings("postgresql+psycopg://unused@127.0.0.1/none", tmp_path, **overrides)
+
+    def test_locally_without_a_server_emails_are_only_logged(self, tmp_path: Path) -> None:
+        assert isinstance(mailer(self.settings(tmp_path)), email.LogSender)
+
+    def test_the_local_mail_catcher_gets_no_tls_and_no_login(self, tmp_path: Path) -> None:
+        with FakeSmtpServer() as server:
+            sender = mailer(self.settings(tmp_path, smtp_host="127.0.0.1", smtp_port=server.port))
+            sender.send("someone@example.test", "Hello", "The body.")
+
+        assert len(server.seen.messages) == 1
+        assert "STARTTLS" not in server.seen.commands
+
+    def test_a_user_name_turns_starttls_on(self, tmp_path: Path) -> None:
+        """Before any login: here the server's test certificate isn't trusted, so nothing
+        more happens, which is what must happen with a certificate nobody vouches for."""
+        certificate, key = make_certificate(tmp_path)
+        settings = self.settings(
+            tmp_path, smtp_host="127.0.0.1", smtp_user="smtp-user", smtp_password="right"
+        )
+        with FakeSmtpServer(tls=server_context(certificate, key), password="right") as server:
+            sender = mailer(settings.model_copy(update={"smtp_port": server.port}))
+            with pytest.raises(email.MailServerDown):
+                sender.send("someone@example.test", "Hello", "The body.")
+
+        assert "STARTTLS" in server.seen.commands
+        assert server.seen.logins == []
+
+    def test_starttls_can_be_switched_off_locally(self, tmp_path: Path) -> None:
+        """A local server with a login and no certificate."""
+        with FakeSmtpServer(password="right") as server:
+            settings = self.settings(
+                tmp_path,
+                smtp_host="127.0.0.1",
+                smtp_port=server.port,
+                smtp_user="smtp-user",
+                smtp_password="right",
+                smtp_starttls=False,
+            )
+            mailer(settings).send("someone@example.test", "Hello", "The body.")
+
+        assert server.seen.logins == [Login("smtp-user", "right", over_tls=False)]
+
+    def test_in_aws_a_full_setting_gives_a_real_sender(self, tmp_path: Path) -> None:
+        assert isinstance(mailer(self.settings(tmp_path, **AWS_MAIL)), email.SmtpSender)
+
+    @pytest.mark.parametrize(
+        ("change", "named"),
+        [
+            ({"smtp_host": None}, "SMTP_HOST"),
+            ({"smtp_port": 1025}, "SMTP_PORT"),
+            ({"smtp_port": 465}, "SMTP_PORT"),
+            ({"smtp_user": None}, "SMTP_USER and SMTP_PASSWORD"),
+            ({"smtp_password": None}, "SMTP_USER and SMTP_PASSWORD"),
+            ({"smtp_starttls": False}, "SMTP_STARTTLS"),
+            ({"email_from": "DawaLink <no-reply@dawalink.invalid>"}, "EMAIL_FROM"),
+            ({"email_from": "nobody"}, "EMAIL_FROM"),
+        ],
+    )
+    def test_in_aws_the_worker_refuses_to_start_without_a_real_sender(
+        self, tmp_path: Path, change: dict[str, object], named: str
+    ) -> None:
+        """An email only written to the log would be recorded as SENT there."""
+        settings = self.settings(tmp_path, **(AWS_MAIL | change))
+
+        with pytest.raises(ConfigError, match=named) as refused:
+            mailer(settings)
+
+        assert "a-test-only-smtp-password" not in str(refused.value)
+
+    def test_the_default_sender_address_is_refused_in_aws(self, tmp_path: Path) -> None:
+        values = {key: value for key, value in AWS_MAIL.items() if key != "email_from"}
+
+        with pytest.raises(ConfigError, match="EMAIL_FROM"):
+            mailer(self.settings(tmp_path, **values))
 
 
 def test_an_email_that_cannot_be_written_never_blocks_the_others(world: World) -> None:

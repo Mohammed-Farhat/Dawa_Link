@@ -267,7 +267,8 @@
               "UNVERIFIED",
               "ACTIVE",
               "PAUSED",
-              "SUSPENDED"
+              "SUSPENDED",
+              "DELETED"
             ],
             "title": "Status",
             "type": "string"
@@ -1172,6 +1173,16 @@
             ],
             "title": "Action Label"
           },
+          "box": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardBox"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "call_number": {
             "anyOf": [
               {
@@ -1268,6 +1279,64 @@
           "data"
         ],
         "title": "Card",
+        "type": "object"
+      },
+      "CardBox": {
+        "description": "What a reserve, plan or \"another brand\" card shows of its boxes, as search shows a\nbox (B#5). Written by code when the card was made; the model never reads it.",
+        "properties": {
+          "days_of_use": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Of Use"
+          },
+          "expiry_date": {
+            "format": "date",
+            "title": "Expiry Date",
+            "type": "string"
+          },
+          "hours_on_pickup_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours On Pickup Day"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "saving": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "travel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Travel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "price",
+          "saving",
+          "expiry_date",
+          "days_of_use",
+          "hours_on_pickup_day",
+          "travel"
+        ],
+        "title": "CardBox",
         "type": "object"
       },
       "CardLine": {
@@ -1971,6 +2040,10 @@
             "title": "Contested At",
             "type": "string"
           },
+          "counts_as_no_show": {
+            "title": "Counts As No Show",
+            "type": "boolean"
+          },
           "expired_at": {
             "anyOf": [
               {
@@ -2007,7 +2080,8 @@
           "product",
           "pharmacy",
           "expired_at",
-          "contested_at"
+          "contested_at",
+          "counts_as_no_show"
         ],
         "title": "ContestedReservation",
         "type": "object"
@@ -2130,6 +2204,23 @@
           "reason"
         ],
         "title": "DeclineAsk",
+        "type": "object"
+      },
+      "DeleteAccount": {
+        "additionalProperties": false,
+        "description": "A client deletes their own account (R-AU10): their password, typed again.",
+        "properties": {
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccount",
         "type": "object"
       },
       "DemoClock": {
@@ -2586,6 +2677,22 @@
           "action"
         ],
         "title": "FlagAction",
+        "type": "object"
+      },
+      "ForgotPassword": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPassword",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -3486,6 +3593,13 @@
           },
           "pharmacy": {
             "$ref": "#/components/schemas/PharmacyCard"
+          },
+          "pickup_day_hours": {
+            "items": {
+              "$ref": "#/components/schemas/DayHours"
+            },
+            "title": "Pickup Day Hours",
+            "type": "array"
           },
           "pickup_days_allowed": {
             "items": {
@@ -5384,6 +5498,30 @@
         "title": "Reserve",
         "type": "object"
       },
+      "ResetPassword": {
+        "additionalProperties": false,
+        "description": "The form of a \"set a new password\" link: the link's token and the new password.",
+        "properties": {
+          "new_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPassword",
+        "type": "object"
+      },
       "Resolve": {
         "additionalProperties": false,
         "properties": {
@@ -6691,6 +6829,92 @@
         "title": "Watch",
         "type": "object"
       },
+      "WatchStarted": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "days_of_use": {
+            "title": "Days Of Use",
+            "type": "integer"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductSummary"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "integer"
+          },
+          "qty_missing": {
+            "title": "Qty Missing",
+            "type": "integer"
+          },
+          "server_now": {
+            "format": "date-time",
+            "title": "Server Now",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "OFFER_PENDING",
+              "FULFILLED",
+              "EXPIRED",
+              "CANCELLED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "product",
+          "qty",
+          "qty_missing",
+          "days_of_use",
+          "max_price",
+          "state",
+          "district",
+          "ends_at",
+          "created_at",
+          "server_now"
+        ],
+        "title": "WatchStarted",
+        "type": "object"
+      },
       "Watches": {
         "properties": {
           "items": {
@@ -7505,7 +7729,8 @@
                     "UNVERIFIED",
                     "ACTIVE",
                     "PAUSED",
-                    "SUSPENDED"
+                    "SUSPENDED",
+                    "DELETED"
                   ],
                   "type": "string"
                 },
@@ -9361,6 +9586,82 @@
         ]
       }
     },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "description": "Always the same answer, whatever the email (R-AU9, R-AU7): nobody can find out\nhere who uses DawaLink. A link goes only to an account that could log in today.",
+        "operationId": "forgot_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "reset_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
     "/api/v1/auth/register/client": {
       "post": {
         "description": "Always \"check your email\", whether or not the address already has an account\n(R-AU7): nobody can find out here who uses DawaLink.",
@@ -9447,7 +9748,7 @@
     },
     "/api/v1/auth/verify-email": {
       "post": {
-        "description": "The link of the confirmation email. It also logs the user in (R-AU4).",
+        "description": "The link of the confirmation email. It confirms the address and logs nobody in\n(R-AU4): every earlier session of the account has ended, and the person logs in with\ntheir password.",
         "operationId": "verify_email",
         "requestBody": {
           "content": {
@@ -9460,14 +9761,7 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoggedIn"
-                }
-              }
-            },
+          "204": {
             "description": "Successful Response"
           },
           "422": {
@@ -10377,6 +10671,58 @@
         ]
       }
     },
+    "/api/v1/me/delete-account": {
+      "post": {
+        "operationId": "delete_account",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Account",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
     "/api/v1/me/home-place": {
       "delete": {
         "operationId": "forget_home_place",
@@ -11029,7 +11375,7 @@
     },
     "/api/v1/offers/{offer_id}/accept": {
       "post": {
-        "description": "The offer becomes a reservation; the need's other offers are withdrawn at once\n(O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once.",
+        "description": "The offer becomes a reservation; the need's other offers are withdrawn at once\n(O9). An offer is accepted once: a second tap answers with the reservation the first\none made, as it is (its pickup day included), and reserves nothing more.",
         "operationId": "accept_offer",
         "parameters": [
           {
@@ -13032,7 +13378,7 @@
     },
     "/api/v1/reservations/{reservation_id}/contest": {
       "post": {
-        "description": "[I picked it up] on an expired reservation: the pharmacy forgot to press\n[Picked up] (R-N3). Once per reservation, while the no-show still counts. A person\nfrom DawaLink looks at it: nothing changes until they do.",
+        "description": "[I picked it up] on an expired reservation: the pharmacy forgot to press\n[Picked up] (R-N3). Once per missed trip, while it still counts: the boxes of a plan\ncard are contested together. A person from DawaLink looks at it: nothing changes\nuntil they do.",
         "operationId": "contest_no_show",
         "parameters": [
           {
@@ -13189,7 +13535,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Watch"
+                  "$ref": "#/components/schemas/WatchStarted"
                 }
               }
             },

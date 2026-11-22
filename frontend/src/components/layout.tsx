@@ -168,6 +168,9 @@ export function Shell({ children }: { children: ReactNode }) {
  *   using the window's width.
  *
  * `narrow`: a page that is one card or one form, kept to a readable width.
+ *
+ * Its main area is where "Skip to content" goes, and its h1 names the browser's tab and
+ * takes the focus after a move from another page (`components/arrival.ts`, B#19, B#34).
  */
 export function Screen({
   children,
@@ -182,14 +185,18 @@ export function Screen({
   if (!wide) {
     return (
       <>
-        <main className={plain ? 'screen screen--plain' : 'screen'}>{children}</main>
+        <main className={plain ? 'screen screen--plain' : 'screen'} id="main">
+          {children}
+        </main>
         {!plain && <NavBar />}
       </>
     )
   }
   return (
     <Shell>
-      <main className={narrow ? 'page page--narrow' : 'page'}>{children}</main>
+      <main className={narrow ? 'page page--narrow' : 'page'} id="main">
+        {children}
+      </main>
     </Shell>
   )
 }

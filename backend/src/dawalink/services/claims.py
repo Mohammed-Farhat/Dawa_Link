@@ -11,7 +11,13 @@ from sqlalchemy import func, select
 
 from dawalink.db.models import Claim, Product
 from dawalink.domain.claims import LIVE_STATES, ClaimState
-from dawalink.domain.numbers import DEFAULT_DAYS_OF_USE, MAX_UNITS_PER_GROUP, MAX_WATCHES
+from dawalink.domain.numbers import (
+    DEFAULT_DAYS_OF_USE,
+    MAX_UNITS_PER_GROUP,
+    MAX_WATCHES,
+    REQUEST_HOURS_END,
+    REQUEST_HOURS_START,
+)
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import ClaimKind, ClaimSource
 from dawalink.domain.windows import in_request_hours, request_hours_open_at, search_window_end
@@ -29,7 +35,9 @@ def require_request_hours(tx: Tx) -> None:
     if not in_request_hours(tx.now):
         raise ServiceError(
             Code.OUTSIDE_REQUEST_HOURS,
-            "DawaLink searches during the day. Please come back tomorrow from 08:00.",
+            # True at any hour: before 08:00 the next start is today, not "tomorrow".
+            f"DawaLink starts new searches between {REQUEST_HOURS_START:%H:%M} "
+            f"and {REQUEST_HOURS_END:%H:%M}.",
             opens_at=request_hours_open_at(tx.now),
         )
 

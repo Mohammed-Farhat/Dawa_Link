@@ -139,7 +139,12 @@ def mark_not_available(
         tx,
         order.client_id,
         Template.NOT_AVAILABLE,
-        orders.order_summary(order, product, pharmacy) | {"units_not_available": units},
+        # A partial mark keeps the rest reserved: the email still says when to pick it up.
+        orders.order_summary(order, product, pharmacy)
+        | {
+            "units_not_available": units,
+            "units_still_reserved": order.qty_locked if after.state is OrderState.RESERVED else 0,
+        },
         # A reservation can be marked more than once, a part at a time.
         event=f"order:{order.id}:not-available:{marks}",
     )

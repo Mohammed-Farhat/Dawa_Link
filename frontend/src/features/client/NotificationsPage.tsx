@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 
 import { api, unwrap } from '../../api/client'
 import { Screen } from '../../components/layout'
-import { dateAndClock } from '../../format'
+import { Placeholder } from '../../components/Placeholder'
+import { dateAndClock, langOf } from '../../format'
 import { strings } from '../../strings/en'
 
 const s = strings.notifications
@@ -41,7 +42,7 @@ export function NotificationsList() {
           </button>
         )}
       </div>
-      {pages.isPending && <p className="soft">{strings.common.loading}</p>}
+      {pages.isPending && <Placeholder height={72} />}
       {pages.isSuccess && items.length === 0 && <div className="empty">{s.none}</div>}
       <ul className="plain-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {items.map((note) => {
@@ -52,7 +53,7 @@ export function NotificationsList() {
                 {!note.read && <span className="status-pill status-pill--blue">{s.unread}</span>}
               </div>
               {note.lines.map((line) => (
-                <span key={line} className="soft" style={{ fontSize: 15 }} dir="auto">
+                <span key={line} className="soft" style={{ fontSize: 15 }} dir="auto" lang={langOf(line)}>
                   {line}
                 </span>
               ))}

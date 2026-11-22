@@ -18,7 +18,9 @@ from dawalink.db.roles import (
     RETENTION_DELETES,
     RETENTION_DELETES_FOUND_BY,
     RETENTION_ERASES,
+    RETENTION_FINDS_DELETED,
     RETENTION_LOCKS,
+    RETENTION_MARKS_EMPTIED,
     RoleSetupError,
     app_privileges,
     ensure_roles,
@@ -90,6 +92,22 @@ def test_the_grants_in_the_database_are_exactly_the_lists(db: Connection) -> Non
     assert by_column == {
         **{(table, "SELECT"): set(cols) for table, cols in RETENTION_DELETES_FOUND_BY.items()},
         **{(table, "UPDATE"): set(cols) for table, cols in RETENTION_LOCKS.items()},
+    }
+
+    # A deleted account (R-AU10): found by three columns of the profile, one of them set.
+    profile_columns: dict[str, set[str]] = {}
+    for column, privilege in db.execute(
+        text(
+            "SELECT column_name, privilege_type FROM information_schema.column_privileges "
+            "WHERE table_schema = 'public' AND grantee = :retention "
+            "AND table_name = 'client_profiles'"
+        ),
+        {"retention": RETENTION},
+    ):
+        profile_columns.setdefault(privilege, set()).add(column)
+    assert profile_columns == {
+        "SELECT": set(RETENTION_FINDS_DELETED["client_profiles"]),
+        "UPDATE": set(RETENTION_MARKS_EMPTIED["client_profiles"]),
     }
 
 
@@ -275,6 +293,32 @@ class TestTheRetentionLogin:
             "UPDATE pharmacies SET status = 'APPROVED'",
             "DELETE FROM client_profiles",
             "DELETE FROM inventory_items",
+        ):
+            denied(as_retention, statement)
+
+    def test_it_finds_a_deleted_account_without_reading_who_it_was(
+        self, as_retention: Connection
+    ) -> None:
+        """R-AU10: it empties an account its client deleted. It reads the columns that
+        find one, sets the one that says it is done, and reads nothing personal."""
+        as_retention.execute(
+            text(
+                "SELECT user_id FROM client_profiles "
+                "WHERE status = 'DELETED' AND emptied_at IS NULL FOR UPDATE"
+            )
+        )
+        as_retention.execute(text("UPDATE client_profiles SET emptied_at = now() WHERE false"))
+
+        for statement in (
+            "SELECT first_name FROM client_profiles",
+            "SELECT last_name FROM client_profiles",
+            "SELECT birth_date FROM client_profiles",
+            "SELECT home_lat, home_lon FROM client_profiles",
+            "SELECT district_id FROM client_profiles",
+            "SELECT deleted_at FROM client_profiles",
+            "SELECT * FROM client_profiles",
+            "UPDATE client_profiles SET status = 'ACTIVE'",
+            "DELETE FROM client_profiles",
         ):
             denied(as_retention, statement)
 

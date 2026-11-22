@@ -25,3 +25,15 @@ export function PasswordRules({ password }: { password: string }) {
     </ul>
   )
 }
+
+/**
+ * The same rule in one sentence, for the password box's own description: "A password
+ * needs: At least 10 characters (met), A capital letter (A to Z) (missing), …". A screen
+ * reader says it on arriving in the box. The list above can't be tied to the box: the
+ * library's password box sets its own `aria-describedby`, from its `description`.
+ */
+export function PasswordRulesSaid({ password }: { password: string }) {
+  const missing = new Set(passwordGaps(password))
+  const parts = PASSWORD_PART_NAMES.map((part) => `${s.rules[part]} ${missing.has(part) ? s.missing : s.met}`)
+  return <>{`${s.rulesLabel}: ${parts.join(', ')}.`}</>
+}

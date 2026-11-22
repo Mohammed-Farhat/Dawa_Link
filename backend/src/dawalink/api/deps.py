@@ -6,6 +6,7 @@ token, `as_client` / `as_pharmacist` / `as_admin` check the role. The status gat
 are.
 """
 
+import threading
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -154,9 +155,26 @@ def stated_address(request: Request, settings: Settings) -> str | None:
     would count everybody together. So there it is None, and said loudly in the log.
     """
     if settings.app_env != "aws":
+        if "cloudfront-viewer-address" in request.headers:
+            _say_app_env_is_missing_once()
         return request.client.host if request.client else None
     viewer = request.headers.get("cloudfront-viewer-address", "")
     if viewer:
         return viewer.rsplit(":", 1)[0]
     log.error("visitor_address_not_stated", path=request.url.path)
     return None
+
+
+# Set once the log has said that CloudFront is in front while APP_ENV is not "aws".
+_APP_ENV_MISSING_SAID = threading.Event()
+
+
+def _say_app_env_is_missing_once() -> None:
+    """CloudFront's header arrived, so this API runs behind CloudFront, yet APP_ENV is not
+    "aws": every request then seems to come from the load balancer, and the limits per
+    address (sign-ups, failed logins) count every visitor together (docs/12 §11). The
+    header is still not believed: outside AWS anyone could send it. Said once per process,
+    not on every request."""
+    if not _APP_ENV_MISSING_SAID.is_set():
+        _APP_ENV_MISSING_SAID.set()
+        log.error("cloudfront_in_front_but_app_env_is_not_aws", missing_setting="APP_ENV=aws")

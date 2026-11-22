@@ -1,13 +1,19 @@
 import type { Schemas } from '../../../api/client'
-import { clock } from '../../../format'
+import { clock, tripWords } from '../../../format'
 import { strings } from '../../../strings/en'
 
 const s = strings.search
 
-/** "9 min walk · 4 min by car", or "about 3 km" when no road time is known. */
+/** "4 min by car · 21 min on foot", or "about 3 km" when no road time is known. */
 export function travelWords(travel: Schemas['Travel']): string {
   if (travel.source === 'straight') return s.about(travel.km.toFixed(1))
-  return `${s.walk(travel.walk_min)} · ${s.car(travel.car_min)}`
+  return tripWords(travel.car_min, travel.walk_min)
+}
+
+/** True when the fit line (FitBadge) says "Lasts your N days" alone, without the box's
+ * expiry date: only then does the offer's page write the date a second time. */
+export function lastsKnown(listing: Schemas['Listing'], daysOfUse: number | null): boolean {
+  return daysOfUse !== null && listing.fits === true
 }
 
 /** "open until 21:00", or "closed now". */

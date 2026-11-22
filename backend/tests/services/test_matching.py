@@ -120,6 +120,18 @@ class TestCreatingAWatch:
         assert error.code is Code.OUTSIDE_REQUEST_HOURS
         assert error.details["opens_at"] == NOW + timedelta(hours=22)  # tomorrow 08:00
 
+    def test_before_eight_the_refusal_never_says_tomorrow(
+        self, market: Market, world: World
+    ) -> None:
+        """At 06:00 the searches start again today: the sentence is true at any hour."""
+        world.later(hours=20)  # 06:00 the next day
+
+        error = refusal(market.watch)
+
+        assert error.code is Code.OUTSIDE_REQUEST_HOURS
+        assert error.message == "DawaLink starts new searches between 08:00 and 20:00."
+        assert error.details["opens_at"] == NOW + timedelta(hours=22)  # in two hours
+
     def test_one_watch_per_medicine_and_five_at_most(self, market: Market, world: World) -> None:
         """R-W2."""
         client = world.make.client()

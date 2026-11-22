@@ -1,20 +1,31 @@
 import { NativeSelect, TextInput } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, lazy, Suspense, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { type FormEvent, lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Placeholder } from '../../components/Placeholder'
 import { errorMessage, strings } from '../../strings/en'
 import { useDistricts } from '../client/data'
 import {
-  codeOf,
+  loadProblem,
+  type Note,
+  oneOf,
   type PharmacyStatus,
+  refusal,
+  TYPED_MAX,
   useAdminPharmacies,
   useAdminPharmacy,
+  useBackToList,
+  useFromList,
+  useListChoices,
   useOverview,
   when,
 } from './data'
+import { DETAIL_MAX } from '../pharmacy/draft'
+import { ListFailed } from './ListFailed'
+import { Said } from './said'
 
 // The map is downloaded only when an admin opens a pharmacy (docs/11 §10).
 const PinMap = lazy(() => import('../pharmacy/PinMap'))
@@ -27,7 +38,11 @@ const days = strings.pharmacy.hours.days
 
 type Pharmacy = Schemas['AdminPharmacy']
 type Pin = Schemas['Pin']
-type Note = { tone: 'green' | 'red' | 'amber'; text: string }
+/** The panels of a pharmacy's page whose buttons can be refused. */
+type Place = 'checks' | 'decide' | 'suspension' | 'edit'
+
+// The list is the console's first page.
+const LIST = '/admin'
 
 const STATUSES: PharmacyStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']
 const TONE: Record<PharmacyStatus, string> = {
@@ -39,10 +54,19 @@ const TONE: Record<PharmacyStatus, string> = {
 
 /** AS-3 and AS-4: the approval queue first, then every pharmacy by status. */
 export function PharmaciesPage() {
-  const [status, setStatus] = useState<PharmacyStatus>('PENDING')
-  const [typed, setTyped] = useState('')
+  const [choices, choose] = useListChoices()
+  const status = oneOf(choices.get('status'), STATUSES, 'PENDING') ?? 'PENDING'
+  // The box keeps its own text, so typing never waits for the address to change.
+  // Never longer than the API takes, an old address included: it would fail on every visit.
+  const [typed, setTyped] = useState((choices.get('q') ?? '').slice(0, TYPED_MAX.search))
   const found = useAdminPharmacies(status, typed.trim())
   const toCheck = useOverview().data?.pins_to_check ?? 0
+  const from = useFromList()
+  // The box is what the list shows. If the address lost its text (a tab of the bar was
+  // pressed on this page), it is written back, so that Back finds the same list.
+  useEffect(() => {
+    if ((choices.get('q') ?? '') !== typed) choose('q', typed)
+  }, [choices, choose, typed])
   return (
     <main className="portal__main">
       <h1 className="page-title">{p.title}</h1>
@@ -50,12 +74,12 @@ export function PharmaciesPage() {
       {toCheck > 0 && status !== 'APPROVED' && (
         <Banner tone="amber">
           {p.movedWaiting(toCheck)}{' '}
-          <button type="button" className="text-button" onClick={() => setStatus('APPROVED')}>
+          <button type="button" className="text-button" onClick={() => choose('status', 'APPROVED')}>
             {p.showMoved}
           </button>
         </Banner>
       )}
-      <div className="tabs" role="tablist" aria-label={p.title}>
+      <div className="tabs tabs--wrap" role="tablist" aria-label={p.title}>
         {STATUSES.map((choice) => (
           <button
             key={choice}
@@ -63,7 +87,7 @@ export function PharmaciesPage() {
             role="tab"
             aria-selected={status === choice}
             className="tabs__tab"
-            onClick={() => setStatus(choice)}
+            onClick={() => choose('status', choice)}
           >
             {p.statuses[choice]}
           </button>
@@ -73,15 +97,23 @@ export function PharmaciesPage() {
         label={p.search}
         size="md"
         autoComplete="off"
+        maxLength={TYPED_MAX.search}
         value={typed}
-        onChange={(event) => setTyped(event.currentTarget.value)}
+        onChange={(event) => {
+          setTyped(event.currentTarget.value)
+          choose('q', event.currentTarget.value)
+        }}
       />
+      {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
+      {found.loading && <Placeholder />}
       {found.loaded && found.items.length === 0 && (
         <div className="empty">{status === 'PENDING' && !typed.trim() ? p.noneWaiting : p.none}</div>
       )}
       {found.items.map((row) => (
         <article key={row.id} className="row-card">
-          <Link to={`/admin/pharmacies/${row.id}`} className="row-link" aria-label={p.open(row.name)}>
+          {/* Named by what it shows, the status included: "Pin to check" is the reason
+              to open it (WCAG 2.5.3). */}
+          <Link to={`/admin/pharmacies/${row.id}`} state={from} className="row-link">
             <div className="row-card__top">
               <h2 className="card__title" style={{ margin: 0 }}>
                 {row.name}
@@ -115,17 +147,29 @@ export function PharmacyPage() {
   // Kept here: the view below starts again when the pharmacy's details or status change,
   // and what the last action answered must still be on the screen.
   const [note, setNote] = useState<Note | null>(null)
+  const back = useBackToList(LIST)
   if (found.isError) {
     return (
       <main className="portal__main">
-        <Banner tone="amber">{errorMessage(codeOf(found.error))}</Banner>
-        <Link to="/admin" className="text-button">
+        {/* The section's name as the page's heading: the focus and the tab's title find it
+            when the page could not be read (B#19, B#34). */}
+        <h1 className="page-title">{p.title}</h1>
+        <Banner tone="red" alert>
+          {loadProblem(found.error)}
+        </Banner>
+        <Link to={back} className="text-button">
           {s.back}
         </Link>
       </main>
     )
   }
-  if (!found.data) return <p className="soft">{strings.common.loading}</p>
+  if (!found.data) {
+    return (
+      <main className="portal__main">
+        <p className="soft">{strings.common.loading}</p>
+      </main>
+    )
+  }
   // A new version of the details is a new form: what was typed over the old one is dropped.
   return (
     <PharmacyView
@@ -133,6 +177,7 @@ export function PharmacyPage() {
       pharmacy={found.data}
       note={note}
       setNote={setNote}
+      back={back}
     />
   )
 }
@@ -149,26 +194,36 @@ function PharmacyView({
   pharmacy,
   note,
   setNote,
+  back,
 }: {
   pharmacy: Pharmacy
   note: Note | null
   setNote: (note: Note | null) => void
+  back: string
 }) {
   const queryClient = useQueryClient()
+  // A pharmacy at the same address opens with the same way back to the list.
+  const { state } = useLocation()
   const [pin, setPin] = useState<Pin>(pharmacy.location)
   const pinMoved = pin.lat !== pharmacy.location.lat || pin.lon !== pharmacy.location.lon
+  // A refusal is said in its panel while the panel is there (see `Said`).
+  const present: Place[] = ['checks', 'edit']
+  if (pharmacy.status === 'PENDING') present.push('decide')
+  if (pharmacy.status === 'APPROVED' || pharmacy.status === 'SUSPENDED') present.push('suspension')
 
-  /** Shows what the API answered, and the page as it is now. */
-  async function act(call: () => Promise<Pharmacy>, done: string) {
+  /** Shows what the API answered, and the page as it is now. A success is said at the
+   * top, a refusal in the panel `at`. */
+  async function act(call: () => Promise<Pharmacy>, done: string, at: Place) {
     setNote(null)
     try {
       const saved = await call()
       queryClient.setQueryData(['admin', 'pharmacy', pharmacy.id], saved)
       setNote({ tone: 'green', text: done })
     } catch (error) {
-      const code = codeOf(error)
-      setNote({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
-      if (code === 'CHANGED_SINCE') {
+      const said = refusal(error, at)
+      setNote(said)
+      // "It changed since you opened it": the page is read again.
+      if (!said.at) {
         await queryClient.invalidateQueries({ queryKey: ['admin', 'pharmacy', pharmacy.id] })
       }
       throw error
@@ -181,18 +236,17 @@ function PharmacyView({
   return (
     <div className="portal__columns">
       <main className="portal__main">
-        <Link to="/admin" className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
+        <Link to={back} className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
           {s.back}
         </Link>
         <div className="row-card__top">
           <h1 className="page-title">{pharmacy.name}</h1>
-          <span className={`status-pill status-pill--${TONE[pharmacy.status]}`}>
-            {pharmacy.info_requested ? p.infoAsked : p.statuses[pharmacy.status]}
+          {/* The same words as its row in the list: a moved pin is why the admin is here. */}
+          <span className={`status-pill status-pill--${pharmacy.pin_to_check ? 'amber' : TONE[pharmacy.status]}`}>
+            {pharmacy.pin_to_check ? p.pinToCheck : pharmacy.info_requested ? p.infoAsked : p.statuses[pharmacy.status]}
           </span>
         </div>
-        <div role="status" aria-live="polite">
-          {note && <Banner tone={note.tone}>{note.text}</Banner>}
-        </div>
+        <Said note={note} present={present} />
         {pharmacy.status_reason && <Banner tone="grey">{one.reasonGiven(pharmacy.status_reason)}</Banner>}
 
         <section className="panel" aria-labelledby="typed">
@@ -267,7 +321,7 @@ function PharmacyView({
           {pinMoved && <Banner tone="amber">{one.pinMoved}</Banner>}
         </section>
 
-        <EditDetails pharmacy={pharmacy} pin={pinMoved ? pin : null} act={act} />
+        <EditDetails pharmacy={pharmacy} pin={pinMoved ? pin : null} act={act} note={note} />
       </main>
 
       <aside className="portal__aside">
@@ -275,6 +329,7 @@ function PharmacyView({
           <h2 id="checks" className="panel__title">
             {one.checks}
           </h2>
+          <Said note={note} at="checks" />
           <ul className="plain-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <li>{one.emailConfirmed}</li>
             <li>{one.licenseUnique}</li>
@@ -285,7 +340,7 @@ function PharmacyView({
                 <>
                   <strong>{one.sameAddress}</strong>{' '}
                   {pharmacy.same_address.map((other) => (
-                    <Link key={other.id} to={`/admin/pharmacies/${other.id}`} className="text-button">
+                    <Link key={other.id} to={`/admin/pharmacies/${other.id}`} state={state} className="text-button">
                       {other.name}
                     </Link>
                   ))}
@@ -307,6 +362,7 @@ function PharmacyView({
                           }),
                         ),
                       one.pinConfirmed,
+                      'checks',
                     ).catch(() => undefined)
                   }
                 >
@@ -321,9 +377,9 @@ function PharmacyView({
             <li className="soft">{one.nameCheck}</li>
           </ul>
         </section>
-        {pharmacy.status === 'PENDING' && <Decide pharmacy={pharmacy} act={act} />}
+        {pharmacy.status === 'PENDING' && <Decide pharmacy={pharmacy} act={act} note={note} />}
         {(pharmacy.status === 'APPROVED' || pharmacy.status === 'SUSPENDED') && (
-          <Suspension pharmacy={pharmacy} act={act} />
+          <Suspension pharmacy={pharmacy} act={act} note={note} />
         )}
       </aside>
     </div>
@@ -339,22 +395,45 @@ function Line({ label, value }: { label: string; value: string }) {
   )
 }
 
-type Act = (call: () => Promise<Pharmacy>, done: string) => Promise<void>
+type Act = (call: () => Promise<Pharmacy>, done: string, at: Place) => Promise<void>
+type Asking = 'reject' | 'request-info'
 
 /** [Approve], [Ask for more information] or [Reject] (SM-1). The two that say no need
  * words the pharmacy will read. */
-function Decide({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
-  const [asking, setAsking] = useState<'reject' | 'request-info' | null>(null)
+function Decide({ pharmacy, act, note }: { pharmacy: Pharmacy; act: Act; note: Note | null }) {
+  const [asking, setAsking] = useState<Asking | null>(null)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const path = { pharmacy_id: pharmacy.id }
+  // The button that opened the question gets the focus back when it closes: without
+  // this it fell to the top of the page (WCAG 2.4.3).
+  const openers = useRef<Partial<Record<Asking, HTMLButtonElement | null>>>({})
+  const openedBy = useRef<Asking | null>(null)
+  useEffect(() => {
+    if (asking === null && openedBy.current) {
+      openers.current[openedBy.current]?.focus()
+      openedBy.current = null
+    }
+  }, [asking])
+
+  /** Each question starts empty: a reason typed for Reject, then cancelled, must not be
+   * sent to the pharmacy as the question about what is missing. */
+  function open(kind: Asking) {
+    setReason('')
+    openedBy.current = kind
+    setAsking(kind)
+  }
+
+  function close() {
+    setReason('')
+    setAsking(null)
+  }
 
   async function run(call: () => Promise<Pharmacy>, done: string) {
     setBusy(true)
     try {
-      await act(call, done)
-      setAsking(null)
-      setReason('')
+      await act(call, done, 'decide')
+      close()
     } catch {
       // `act` has already said what went wrong.
     } finally {
@@ -397,15 +476,30 @@ function Decide({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
       <h2 id="decide" className="panel__title">
         {one.decide}
       </h2>
+      <Said note={note} at="decide" />
       {asking === null ? (
         <>
           <button type="button" className="pill-button pill-button--green" disabled={busy} onClick={approve}>
             {one.approve}
           </button>
-          <button type="button" className="pill-button pill-button--grey" onClick={() => setAsking('request-info')}>
+          <button
+            ref={(node) => {
+              openers.current['request-info'] = node
+            }}
+            type="button"
+            className="pill-button pill-button--grey"
+            onClick={() => open('request-info')}
+          >
             {one.askMore}
           </button>
-          <button type="button" className="text-button" onClick={() => setAsking('reject')}>
+          <button
+            ref={(node) => {
+              openers.current.reject = node
+            }}
+            type="button"
+            className="text-button"
+            onClick={() => open('reject')}
+          >
             {one.reject}
           </button>
         </>
@@ -418,13 +512,14 @@ function Decide({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
             id="decision-reason"
             className="text-area"
             maxLength={300}
+            autoFocus
             value={reason}
             onChange={(event) => setReason(event.currentTarget.value)}
           />
           <button type="submit" className="pill-button" disabled={busy || !reason.trim()}>
             {asking === 'reject' ? one.confirmReject : one.confirmAsk}
           </button>
-          <button type="button" className="text-button" onClick={() => setAsking(null)}>
+          <button type="button" className="text-button" onClick={close}>
             {one.cancel}
           </button>
         </form>
@@ -435,7 +530,7 @@ function Decide({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
 
 /** [Suspend] an approved pharmacy, or [Reinstate] a suspended one, with a reason the
  * pharmacy reads (SM-1). What clients already reserved there is kept. */
-function Suspension({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
+function Suspension({ pharmacy, act, note }: { pharmacy: Pharmacy; act: Act; note: Note | null }) {
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const suspended = pharmacy.status === 'SUSPENDED'
@@ -451,6 +546,7 @@ function Suspension({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
             ? unwrap(api.POST('/api/v1/admin/pharmacies/{pharmacy_id}/reinstate', { params: { path }, body: { reason } }))
             : unwrap(api.POST('/api/v1/admin/pharmacies/{pharmacy_id}/suspend', { params: { path }, body: { reason } })),
         suspended ? one.reinstated : one.suspended,
+        'suspension',
       )
       setReason('')
     } catch {
@@ -468,6 +564,7 @@ function Suspension({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
         </h2>
         <span className="hint">{suspended ? one.reinstateHint : one.suspendHint}</span>
       </div>
+      <Said note={note} at="suspension" />
       <form className="form" onSubmit={send}>
         <label htmlFor="suspension-reason" style={{ fontWeight: 600 }}>
           {one.suspensionReason}
@@ -493,7 +590,17 @@ function Suspension({ pharmacy, act }: { pharmacy: Pharmacy; act: Act }) {
 
 /** An admin corrects a name, a licence, a phone, an address or the pin, with a reason.
  * Only what was changed is sent, so a field nobody touched is never checked again. */
-function EditDetails({ pharmacy, pin, act }: { pharmacy: Pharmacy; pin: Pin | null; act: Act }) {
+function EditDetails({
+  pharmacy,
+  pin,
+  act,
+  note,
+}: {
+  pharmacy: Pharmacy
+  pin: Pin | null
+  act: Act
+  note: Note | null
+}) {
   const districts = useDistricts()
   const [name, setName] = useState(pharmacy.name)
   const [license, setLicense] = useState(pharmacy.license_number)
@@ -529,6 +636,7 @@ function EditDetails({ pharmacy, pin, act }: { pharmacy: Pharmacy; pin: Pin | nu
             }),
           ),
         one.saved,
+        'edit',
       )
     } catch (error) {
       const field = error instanceof ApiFailure ? error.details.field : null
@@ -547,11 +655,20 @@ function EditDetails({ pharmacy, pin, act }: { pharmacy: Pharmacy; pin: Pin | nu
         </h2>
         <span className="hint">{one.editHint}</span>
       </div>
+      <Said note={note} at="edit" />
       <form className="form" onSubmit={save} noValidate>
-        <TextInput label={d.name} size="md" value={name} onChange={(e) => setName(e.currentTarget.value)} error={wrong('name')} />
+        <TextInput
+          label={d.name}
+          size="md"
+          maxLength={DETAIL_MAX.name}
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+          error={wrong('name')}
+        />
         <TextInput
           label={d.license}
           size="md"
+          maxLength={DETAIL_MAX.license}
           value={license}
           onChange={(e) => setLicense(e.currentTarget.value)}
           error={wrong('license_number')}
@@ -560,6 +677,7 @@ function EditDetails({ pharmacy, pin, act }: { pharmacy: Pharmacy; pin: Pin | nu
           label={d.phone}
           size="md"
           type="tel"
+          maxLength={DETAIL_MAX.phone}
           value={phone}
           onChange={(e) => setPhone(e.currentTarget.value)}
           error={wrong('phone')}
@@ -567,6 +685,7 @@ function EditDetails({ pharmacy, pin, act }: { pharmacy: Pharmacy; pin: Pin | nu
         <TextInput
           label={d.address}
           size="md"
+          maxLength={DETAIL_MAX.address}
           value={address}
           onChange={(e) => setAddress(e.currentTarget.value)}
           error={wrong('address')}

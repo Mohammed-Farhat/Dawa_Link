@@ -65,6 +65,56 @@ export function dayAndClock(moment: string | Date, now: string | Date): string {
   return `${dayWord(at, now)} ${clock(at)}`
 }
 
+/** A moment inside a sentence: "16:00" today, "tomorrow 01:30", or "Fri 20 Nov 10:00",
+ * counted from `now` (the server's clock: the demo clock may be ahead of the device's).
+ * A watch started at 19:30 ends at 01:30 the next day, which "until 01:30" hid (B#39). */
+export function clockInSentence(moment: string | Date, now: string | Date): string {
+  const words = dayAndClock(moment, now)
+  if (words.startsWith(`${c.today} `)) return words.slice(c.today.length + 1)
+  if (words.startsWith(`${c.tomorrow} `)) {
+    return `${c.tomorrowInSentence} ${words.slice(c.tomorrow.length + 1)}`
+  }
+  return words
+}
+
+/** The same, with today said too: "today 23:30", "tomorrow 01:30", "Fri 20 Nov 10:00".
+ * For a watch's end: its six hours often cross midnight, and "until 23:30" left the
+ * reader to work out which day it meant (B#39). */
+export function dayClockInSentence(moment: string | Date, now: string | Date): string {
+  const words = dayAndClock(moment, now)
+  if (words.startsWith(`${c.today} `)) return `${c.todayInSentence} ${words.slice(c.today.length + 1)}`
+  return clockInSentence(moment, now)
+}
+
+/** "45 min", "2 h", "1 h 20 min": a length of time, never "80 min" (A#37). */
+export function duration(minutes: number): string {
+  const whole = Math.max(0, Math.round(minutes))
+  return c.duration(Math.floor(whole / 60), whole % 60)
+}
+
+/** A walk longer than this is not a way anyone would go: only the car's time is shown. */
+export const LONGEST_WALK_SHOWN_MIN = 60
+
+/**
+ * "4 min by car · 21 min on foot": how far a pharmacy is, in the words and the order of
+ * the assistant's cards (A#37). The walk is left out above an hour ("1294 min on foot"
+ * helped nobody) and a long time is written in hours: the cards don't do these two yet,
+ * and this function is exported for them.
+ */
+export function tripWords(carMin: number, walkMin: number): string {
+  const search = strings.search
+  const byCar = search.byCar(duration(carMin))
+  if (walkMin > LONGEST_WALK_SHOWN_MIN) return byCar
+  return `${byCar} · ${search.onFoot(duration(walkMin))}`
+}
+
+/** A reservation's state in a sentence. The server's words, except a missed pickup, which
+ * is never called "Expired": that word is for a box's date, shown beside it (B#13). */
+export function reservationWords(reservation: Schemas['Reservation']): string {
+  if (reservation.state === 'EXPIRED_NO_SHOW') return strings.ticket.missedPickup
+  return reservation.status_text
+}
+
 /** "14 Mar 2027", for a date with no time ("2027-03-14"). */
 export function calendarDate(day: string): string {
   return new Intl.DateTimeFormat('en-GB', {
@@ -110,4 +160,20 @@ export function dateAndClock(moment: string | Date): string {
   })
     .format(new Date(moment))
     .replace(',', '')
+}
+
+const ARABIC_LETTER = /[؀-ۿ]/g
+const LATIN_LETTER = /[A-Za-z]/g
+
+/**
+ * `'ar'` for text a person or the model wrote in Arabic letters, so a screen reader reads
+ * it with an Arabic voice (B#10); `undefined` otherwise, so the page's English is kept.
+ * Arabizi is Latin letters, and stays English. Put it next to `dir="auto"`, on the element
+ * that holds only the written text: never on a label in English beside it.
+ */
+export function langOf(text: string | null | undefined): 'ar' | undefined {
+  if (!text) return undefined
+  const arabic = text.match(ARABIC_LETTER)?.length ?? 0
+  const latin = text.match(LATIN_LETTER)?.length ?? 0
+  return arabic > 0 && arabic >= latin ? 'ar' : undefined
 }

@@ -34,6 +34,7 @@ def profile(tx: Tx, client_id: uuid.UUID, *, lock: bool = False) -> ClientProfil
 
 
 def require_search(client: ClientProfile) -> None:
+    # A deleted account has no session left, so only a suspended one is ever refused here.
     if not client_can_search(ClientStatus(client.status)):
         raise ServiceError(Code.ACCOUNT_SUSPENDED, "This account is suspended.")
 
@@ -157,6 +158,26 @@ def set_home_place(tx: Tx, client: ClientProfile, lat: float, lon: float) -> Non
 
 def clear_home_place(client: ClientProfile) -> None:
     client.home_lat = client.home_lon = None
+
+
+# The name a deleted account keeps (R-AU10): the same for everyone, so it names nobody.
+DELETED_NAME = "Deleted account"
+
+
+def erase(tx: Tx, client: ClientProfile) -> None:
+    """The client deleted their account (R-AU10): everything they told DawaLink about
+    themselves goes now, on the profile and on the user. With `set_name`, the only other
+    place a client's name is written."""
+    user = tx.session.get_one(User, client.user_id)
+    user.full_name = DELETED_NAME
+    user.phone = None
+    client.first_name = client.middle_name = client.last_name = None
+    client.birth_date = None
+    client.district_id = client.home_area_id = None
+    clear_home_place(client)
+    client.alternatives_ok_default = False
+    client.paused_until = None
+    client.status_reason = None
 
 
 @dataclass(frozen=True)

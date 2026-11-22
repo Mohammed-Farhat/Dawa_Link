@@ -1,5 +1,5 @@
 import { TextInput } from '@mantine/core'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { strings } from '../../strings/en'
 
@@ -25,11 +25,21 @@ export function ReasonedButton({ label, confirm, tone = 'grey', disabled = false
   const [asking, setAsking] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const opener = useRef<HTMLButtonElement>(null)
+  const wasAsking = useRef(false)
   const look = tone === 'plain' ? 'pill-button' : `pill-button pill-button--${tone}`
+
+  // When the question closes, the focus goes back to the button that opened it: without
+  // this it fell to the top of the page (WCAG 2.4.3). Never on the first showing.
+  useEffect(() => {
+    if (wasAsking.current && !asking) opener.current?.focus()
+    wasAsking.current = asking
+  }, [asking])
 
   if (!asking) {
     return (
       <button
+        ref={opener}
         type="button"
         className={look}
         style={{ alignSelf: 'flex-start' }}
@@ -70,7 +80,14 @@ export function ReasonedButton({ label, confirm, tone = 'grey', disabled = false
         <button type="submit" className={look} disabled={busy || !reason.trim()}>
           {confirm ?? label}
         </button>
-        <button type="button" className="text-button" onClick={() => setAsking(false)}>
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => {
+            setReason('')
+            setAsking(false)
+          }}
+        >
           {s.cancel}
         </button>
       </div>

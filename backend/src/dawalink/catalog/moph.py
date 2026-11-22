@@ -81,6 +81,8 @@ class CatalogRow:
     atc: str
     brand_generic: str
     ingredients: str
+    # The Ministry's no-prescription list names this very product (catalog/otc_list.py).
+    otc_listed: bool = False
 
 
 @dataclass(frozen=True)
@@ -278,6 +280,9 @@ def read_catalog(path: Path) -> list[CatalogRow]:
                 atc=row["atc"],
                 brand_generic=row["brand_generic"],
                 ingredients=row["ingredients"],
+                # A file built before the column existed, or any other value: not listed,
+                # so the notice stays (the safe way to be wrong).
+                otc_listed=row.get("otc_listed") == "True",
             )
             for row in csv.DictReader(file)
         ]

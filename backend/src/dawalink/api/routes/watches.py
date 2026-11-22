@@ -75,6 +75,12 @@ class Watches(Out):
     server_now: datetime
 
 
+class WatchStarted(Watch):
+    # The server's clock when it answered, to say "until tomorrow 01:30" from: the demo
+    # clock may be ahead of the device's (B#39).
+    server_now: datetime
+
+
 def _watch(tx: Tx, claim: Claim) -> Watch:
     rate = email.display_rate(tx)
     product = tx.session.get_one(Product, claim.product_id)
@@ -94,7 +100,7 @@ def _watch(tx: Tx, claim: Claim) -> Watch:
 
 
 @router.post("/watches", status_code=201)
-def notify_me(body: NewWatch, request: Request, caller: AsClient, work: DoWork) -> Watch:
+def notify_me(body: NewWatch, request: Request, caller: AsClient, work: DoWork) -> WatchStarted:
     """[Notify me]: DawaLink watches for this medicine for 6 hours and offers the first
     box that appears, to whoever asked first (R-W1, R-PRI). Only during request hours.
 
@@ -121,7 +127,7 @@ def notify_me(body: NewWatch, request: Request, caller: AsClient, work: DoWork) 
             if body.max_price
             else None,
         )
-        return _watch(tx, claim)
+        return WatchStarted(**_watch(tx, claim).model_dump(), server_now=tx.now)
 
 
 @router.get("/watches")
@@ -187,6 +193,10 @@ def _link(row: Notification, role: UserRole) -> str | None:
     kind, _, rest = event.partition(":")
     thing = rest.split(":", 1)[0]
     if role is UserRole.PHARMACIST:
+        if row.type == "PN-8":
+            # A cancelled reservation is no longer "to hand over": it is in the history,
+            # where the box to put back is named (B#52).
+            return "/pharmacy/reservations?view=history"
         if kind == "order":
             return "/pharmacy/reservations"
         return "/pharmacy/inventory" if row.type == "PN-10" else "/pharmacy"

@@ -1,7 +1,6 @@
 """The chat and a request's thread: reading, writing, and tapping a card (docs/06 §6.6, §6.7)."""
 
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, time
 from typing import Annotated, cast
 
@@ -246,7 +245,8 @@ def send_message(
     wait_s = cast(Limiter, request.app.state.chat_per_client).wait_s(caller.user_id)
     if wait_s:
         raise ApiError(ErrorCode.RATE_LIMITED, details={"retry_after_s": wait_s})
-    with work.tx() as tx:
+    pool = cast(chat_stream.TurnPool, request.app.state.turn_pool)
+    with chat_stream.TurnSlot(pool) as slot, work.tx() as tx:
         _may_use_the_assistant(tx, caller.user_id)
         conversation = conversations.own(tx, caller.user_id, conversation_id)
         in_chat = conversation.kind == "chat"
@@ -285,6 +285,14 @@ def send_message(
                 "You've reached today's number of messages. Search still works.",
                 details={"retry_after_s": 3600},
             )
+        if in_chat and not slot.take():
+            # Every turn thread is busy: the turn would wait in a queue, its stream
+            # showing nothing. Refused before the message is stored (A#6).
+            raise ServiceError(
+                Code.CONVERSATION_BUSY,
+                "One moment…",
+                retry_after_ms=chat_stream.BUSY_RETRY_MS,
+            )
         posted = post_client_message(
             tx,
             client_id=caller.user_id,
@@ -296,11 +304,12 @@ def send_message(
         return JSONResponse({"message_seq": posted.seq}, status_code=202)
     assert agent is not None
     stream = chat_stream.answer(
-        cast(ThreadPoolExecutor, request.app.state.turn_pool),
+        pool,
         agent,
         conversation_id,
         client_message_seq=posted.seq,
         request_id=request_id_of(request),
+        taken=slot.taken,
     )
     return StreamingResponse(
         stream,

@@ -79,20 +79,29 @@ def cancel_reservation(reservation_id: uuid.UUID, caller: AsClient, work: DoWork
 @router.post("/reservations/{reservation_id}/contest")
 def contest_no_show(reservation_id: uuid.UUID, caller: AsClient, work: DoWork) -> Reservation:
     """[I picked it up] on an expired reservation: the pharmacy forgot to press
-    [Picked up] (R-N3). Once per reservation, while the no-show still counts. A person
-    from DawaLink looks at it: nothing changes until they do."""
+    [Picked up] (R-N3). Once per missed trip, while it still counts: the boxes of a plan
+    card are contested together. A person from DawaLink looks at it: nothing changes
+    until they do."""
     with work.tx() as tx:
         order = orders.contest_no_show(tx, caller.user_id, reservation_id)
+        summary = (
+            f"The client says they collected order {order.ref}, but the pharmacy never"
+            " pressed [Picked up]: it was counted as a missed pickup."
+        )
+        others = [other.ref for other in orders.missed_trip(tx, order)[1:]]
+        if others:
+            # Reserved in one tap and missed together: one missed pickup (R-N1). A plan
+            # card has at most 5 lines, so this stays within a summary's 300 characters.
+            summary += f" One trip with {', '.join(others)}: clearing it clears them too."
         escalations.escalate(
             tx,
             client_id=caller.user_id,
             reason=EscalationReason.COMPLAINT,
             # An order number names no person.
-            summary=(
-                f"The client says they collected order {order.ref}, but the pharmacy never"
-                " pressed [Picked up]: it was counted as a missed pickup."
-            ),
+            summary=summary,
             conversation_id=orders.conversation_of(tx, order),
             actor=Actor.CLIENT,
+            # The case shows this reservation and its trip, and how they ended (B#61).
+            contested_order=order.id,
         )
         return present.reservations(tx, [order])[0]

@@ -282,13 +282,18 @@ class TestOffers:
         )
 
         def accept(tx: Tx) -> Any:
-            return orders.accept_offer(tx, client, offer.id, tx.today)
+            return orders.accept_offer(tx, client, offer.id, tx.today).id
 
         won, refused = split(arena.together(accept, accept, hold="orders"))
 
-        assert len(won) == 1
-        assert [error.code for error in refused] == [Code.OFFER_NOT_OPEN]
+        # A#28: the second tap waits for the first, then gets the same reservation.
+        assert (won, refused) == ([offer.id, offer.id], [])
         assert item_row(arena, item).qty_reserved == 1
+        accepted = arena.all(
+            "SELECT 1 FROM audit_events WHERE entity_id = :o AND action = 'order.accept_offer'",
+            o=offer.id,
+        )
+        assert len(accepted) == 1
 
 
 class SlowMailer:

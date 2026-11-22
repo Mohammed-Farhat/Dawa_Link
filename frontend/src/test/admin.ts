@@ -181,6 +181,7 @@ export const CLIENT_DETAIL = {
       pharmacy: 'Hamra Pharmacy',
       expired_at: '2026-11-15T19:00:00Z',
       contested_at: '2026-11-16T07:00:00Z',
+      counts_as_no_show: true,
     },
   ],
 } satisfies Schemas['AdminClient']

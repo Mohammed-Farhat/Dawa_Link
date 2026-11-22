@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,13 @@ from dawalink.domain.numbers import DISCOUNT_TIERS, NEAR_EXPIRY_MAX_DAYS
 from dawalink.domain.places import key
 from dawalink.ops.build_catalog import CATALOG_FILE, DETAILS_FILE
 from dawalink.ops.prepare_db import login_passwords, prepare
-from dawalink.ops.seed_demo import CLIENT_NAMES, move_demo_pins_onto_land, seed_demo
+from dawalink.ops.seed_demo import (
+    CLIENT_NAMES,
+    NoCatalogYet,
+    move_demo_pins_onto_land,
+    refuse_without_a_catalog,
+    seed_demo,
+)
 from dawalink.osm_places import FIRST_ID, script
 from tests.conftest import DatabaseUrls, make_settings, run_as_admin
 from tests.db import factories as make
@@ -295,6 +302,17 @@ class TestDemoSeed:
 
         assert (result.pharmacies, result.inventory_items) == (16, 0)
 
+    def test_the_commands_refuse_to_seed_without_a_product_to_stock(self, db: Connection) -> None:
+        """A#19: only controlled products is no catalog either: none of them is stocked."""
+        db.execute(text("DELETE FROM product_ingredients"))
+        make.product(db, controlled=True)
+
+        with pytest.raises(NoCatalogYet):
+            refuse_without_a_catalog(db)
+
+        make.product(db)
+        refuse_without_a_catalog(db)
+
 
 CATALOG = [
     CatalogRow(
@@ -392,6 +410,94 @@ def test_without_demo_mode_or_a_catalog_file_it_only_builds_the_schema(
         assert count(scratch.app, "products") == 0
         assert count(scratch.app, "pharmacies") == 0
         assert count(scratch.app, "districts") == 26
+    finally:
+        run_as_admin(development_urls, f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_demo_mode_without_a_catalog_stops_and_seeds_nothing_until_there_is_one(
+    development_urls: DatabaseUrls, tmp_path: Path, catalog_folder: Path
+) -> None:
+    """A#19: demo pharmacies seeded before the catalog stayed without stock for good,
+    because every later run saw pharmacies and skipped the seed."""
+    name = "dawalink_prepare_test"
+    scratch = development_urls.on(name)
+    run_as_admin(
+        development_urls,
+        f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)',
+        f'CREATE DATABASE "{name}"',
+    )
+    settings = make_settings(
+        scratch.app,
+        tmp_path,
+        demo_mode=True,
+        database_admin_url=scratch.admin,
+        database_migrator_url=scratch.migrator,
+        database_retention_url=scratch.retention,
+    )
+    try:
+        with pytest.raises(NoCatalogYet, match="catalog is empty"):
+            prepare(settings, wait_seconds=5, catalog_folder=tmp_path / "nothing-here")
+        assert count(scratch.app, "pharmacies") == 0
+        assert count(scratch.app, "districts") == 26
+
+        prepare(settings, wait_seconds=5, catalog_folder=catalog_folder)
+
+        assert count(scratch.app, "pharmacies") == 16
+        assert count(scratch.app, "inventory_items") == 16 * 8
+    finally:
+        run_as_admin(development_urls, f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_a_database_with_its_catalog_gets_the_prescription_marks_of_a_newer_file(
+    development_urls: DatabaseUrls, tmp_path: Path, catalog_folder: Path
+) -> None:
+    """The catalog is imported only into an empty database, so the Ministry's no-prescription
+    marks reached no database that already had its products. Now they do, both ways."""
+    name = "dawalink_prepare_test"
+    scratch = development_urls.on(name)
+    run_as_admin(
+        development_urls,
+        f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)',
+        f'CREATE DATABASE "{name}"',
+    )
+    settings = make_settings(
+        scratch.app,
+        tmp_path,
+        database_admin_url=scratch.admin,
+        database_migrator_url=scratch.migrator,
+        database_retention_url=scratch.retention,
+    )
+
+    def without_notice() -> set[int]:
+        engine = create_engine(scratch.app)
+        try:
+            with engine.connect() as connection:
+                found = connection.execute(
+                    text("SELECT moph_code FROM products WHERE NOT prescription_required")
+                )
+                return set(found.scalars())
+        finally:
+            engine.dispose()
+
+    try:
+        prepare(settings, wait_seconds=5, catalog_folder=catalog_folder)
+        assert without_notice() == set()
+
+        marked = [replace(r, otc_listed=r.code in (701, 702)) for r in CATALOG]
+        write_catalog(catalog_folder / CATALOG_FILE, marked)
+        prepare(settings, wait_seconds=5, catalog_folder=catalog_folder)
+        assert without_notice() == {701, 702}
+
+        # Without the file nothing is touched; with 702 taken off the list, it gets the
+        # notice back.
+        prepare(settings, wait_seconds=5, catalog_folder=tmp_path / "nothing-here")
+        assert without_notice() == {701, 702}
+        write_catalog(
+            catalog_folder / CATALOG_FILE, [replace(r, otc_listed=r.code == 701) for r in CATALOG]
+        )
+        prepare(settings, wait_seconds=5, catalog_folder=catalog_folder)
+        assert without_notice() == {701}
+        assert count(scratch.app, "catalog_imports") == 1
     finally:
         run_as_admin(development_urls, f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
 

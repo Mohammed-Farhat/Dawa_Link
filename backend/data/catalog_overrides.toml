@@ -72,8 +72,13 @@ ingredients = [
 # "Prescription needed: bring it to the pharmacy." The notice is all this list changes:
 # the pharmacist checks at the counter either way.
 #
-# A product is on the list when EVERY one of its ingredients contains one of these words.
-# The list starts empty, so every product shows the notice. TO FILL by the team.
+# The source is the Ministry's own "National OTC Medicines List" (2018 edition), read by
+# `python -m dawalink.ops.fetch_otc_list` and applied by `build_catalog`: a product loses the
+# notice only when that list names the very product, by its code AND registration number.
+#
+# The words below are an extra the team may fill: a product is also without the notice when
+# EVERY one of its ingredients contains one of them. Empty on purpose: by ingredient, a
+# cream and an injection of the same substance would be treated alike.
 # ---------------------------------------------------------------------------------------
 [otc]
 ingredients = []

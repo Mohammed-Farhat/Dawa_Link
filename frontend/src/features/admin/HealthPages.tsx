@@ -2,9 +2,11 @@ import { TextInput } from '@mantine/core'
 import { useState } from 'react'
 
 import { Banner } from '../../components/layout'
+import { Placeholder } from '../../components/Placeholder'
 import { lbp } from '../../format'
-import { errorMessage, strings } from '../../strings/en'
-import { codeOf, useAdminHealth, useCatalog, useCatalogImports } from './data'
+import { strings } from '../../strings/en'
+import { loadProblem, TYPED_MAX, useAdminHealth, useCatalog, useCatalogImports } from './data'
+import { ListFailed } from './ListFailed'
 
 const s = strings.admin
 const h = s.health
@@ -51,8 +53,25 @@ function Facts({ title, id, rows }: { title: string; id: string; rows: [string, 
 export function HealthPage() {
   const [days, setDays] = useState(7)
   const found = useAdminHealth(days)
-  if (found.isError) return <Banner tone="amber">{errorMessage(codeOf(found.error))}</Banner>
-  if (!found.data) return <p className="soft">{strings.common.loading}</p>
+  if (found.isError) {
+    return (
+      <main className="portal__main">
+        {/* The section's name as the page's heading: the focus and the tab's title find it
+            when the page could not be read (B#19, B#34). */}
+        <h1 className="page-title">{h.title}</h1>
+        <Banner tone="red" alert>
+          {loadProblem(found.error)}
+        </Banner>
+      </main>
+    )
+  }
+  if (!found.data) {
+    return (
+      <main className="portal__main">
+        <p className="soft">{strings.common.loading}</p>
+      </main>
+    )
+  }
   const agent = found.data.agent as Numbers
   const requests = found.data.requests as Numbers
   const market = found.data.marketplace as Numbers
@@ -62,7 +81,7 @@ export function HealthPage() {
     <main className="portal__main">
       <div className="row-card__top">
         <h1 className="page-title">{h.title}</h1>
-        <div className="tabs" role="tablist" aria-label={h.period}>
+        <div className="tabs tabs--wrap" role="tablist" aria-label={h.period}>
           {[1, 7, 30].map((choice) => (
             <button
               key={choice}
@@ -169,9 +188,12 @@ export function CatalogPage() {
         label={k.search}
         size="md"
         autoComplete="off"
+        maxLength={TYPED_MAX.search}
         value={typed}
         onChange={(event) => setTyped(event.currentTarget.value)}
       />
+      {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
+      {found.loading && <Placeholder height={56} />}
       {found.loaded && found.items.length === 0 && <div className="empty">{k.none}</div>}
       {found.items.length > 0 && (
         <section className="panel">

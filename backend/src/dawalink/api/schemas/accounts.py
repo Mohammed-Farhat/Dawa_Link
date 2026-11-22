@@ -140,6 +140,24 @@ class ChangePassword(In):
     new_password: str = Field(min_length=1, max_length=200)
 
 
+class ForgotPassword(In):
+    # Its shape is not checked: whatever is typed gets the same answer (R-AU9).
+    email: str = Field(min_length=1, max_length=320)
+
+
+class DeleteAccount(In):
+    """A client deletes their own account (R-AU10): their password, typed again."""
+
+    password: str = Field(min_length=1, max_length=200)
+
+
+class ResetPassword(In):
+    """The form of a "set a new password" link: the link's token and the new password."""
+
+    token: str = Field(min_length=10, max_length=200)
+    new_password: str = Field(min_length=1, max_length=200)
+
+
 class ProfileChange(In):
     """Only what is sent changes. The three name parts are sent together; so are the
     district and the town, because a town belongs to its district."""

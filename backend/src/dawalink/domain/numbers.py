@@ -76,15 +76,27 @@ SAME_PRODUCT_EARLY_RELEASE_WAIT = timedelta(hours=24)  # R-E5
 # --- The system ---
 CLOCK_CHECK_INTERVAL_S = 5  # N-26
 CLOCK_CHECK_LATE_AFTER_S = 120  # N-21 (R-AL): the clock check counts as late after 2 min
+# docs/12 §6: told to stop, the worker waits this long for the work in progress, then
+# exits. Longer than a worker turn (N-37), shorter than the 120 s ECS may be set to give.
+WORKER_STOP_WAIT_S = 100
+# docs/06 §6.1: how long GET /health waits for the database's answer before saying "down".
+HEALTH_DB_WAIT_S = 1
 DB_STATEMENT_TIMEOUT_S = 5  # N-40
 DB_CONNECT_TIMEOUT_S = 2  # N-40
 HTTP_TIMEOUT_S = 10  # N-41: outbound calls that aren't the LLM (email, routing, tracing)
 # Inside an agent turn the routing service gets less: a tool must stay quick, and the
 # straight-line estimate is ready if it doesn't answer (docs/07 §8).
 ROUTING_TIMEOUT_S = 4
+# docs/07 §8 (A#25): after a failure the routing service isn't asked again for this long;
+# the straight-line estimate is used meanwhile, so a service that is down costs one wait.
+ROUTING_PAUSE_AFTER_FAILURE_S = 60
 # SM-12: a failed email is tried again after each of these, then given up (DEAD).
 EMAIL_RETRY_AFTER = (timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=30))
 STALE_INVENTORY_AFTER = timedelta(days=7)  # N-16
+# The most units of one box a pharmacy can give, typed in the form or in a stock file
+# (rows for the same box added up). No pharmacy holds more; a bigger number is a typo,
+# such as a barcode pasted into the quantity column.
+MAX_BOX_QUANTITY = 100_000
 
 # --- The agent (N-17, N-27, N-30, N-32 to N-39, N-45, N-46; docs/04 R-AS) ---
 MAX_MESSAGE_CHARS = 1_000  # N-17
@@ -103,6 +115,11 @@ LLM_TIMEOUT_S = 30  # N-35
 LLM_RETRY_BACKOFF_S = (1, 3)  # N-36: two retries, on timeouts, 429 and 5xx
 TURN_TIME_LIMIT_CHAT_S = 60  # N-37
 TURN_TIME_LIMIT_WORKER_S = 90  # N-37
+# docs/07 §8 (A#30): how many worker turns run at once, each on another conversation (the
+# lease keeps one turn per conversation). A turn holds one database connection at a time,
+# so the worker needs this many, plus the clock check's, plus a moment's read of the demo
+# clock: the engine's default pool (5, and 10 more when busy) has room.
+AGENT_TURNS_AT_ONCE = 4
 # N-38: this many failed turns within the window put everyone in degraded mode for a while.
 BREAKER_FAILURES = 3
 BREAKER_WINDOW = timedelta(minutes=5)
@@ -119,6 +136,13 @@ DAILY_SPEND_CAP_SHARE = 10  # N-46: a day may use this many % of the month's LLM
 # These limits protect logins, so they are counted in real time, never on the demo clock.
 PASSWORD_MIN_CHARS = 10  # R-AU1
 COMMON_PASSWORDS = 10_000  # R-AU1: a password among the most common ones is refused
+# R-AU1: argon2id with OWASP's minimum. Each hash or check takes this much memory, so how
+# many run at once is capped too: a burst of logins must not outgrow the API's task.
+PASSWORD_HASH_MEMORY_KIB = 19_456
+PASSWORD_HASH_PASSES = 2
+PASSWORD_HASH_LANES = 1
+PASSWORD_HASHES_AT_ONCE = 4  # in one API process
+PASSWORD_HASH_WAIT = timedelta(seconds=3)  # for a free slot, then "try again shortly"
 FAILED_LOGINS_BEFORE_LOCK = 5  # R-AU2
 LOGIN_LOCK = timedelta(minutes=15)  # R-AU2: both the counting window and the lock
 FAILED_LOGINS_PER_ADDRESS = 30  # N-52: from one network address, on any accounts
@@ -129,6 +153,12 @@ VERIFICATION_LINK_VALID = timedelta(hours=24)  # R-AU4
 SIGNUPS_PER_ADDRESS_PER_HOUR = 5  # R-AU5
 RESEND_VERIFICATION_EVERY = timedelta(minutes=1)  # N-47
 RESEND_VERIFICATION_PER_DAY = 5  # N-47
+# R-AU9: "Forgot my password". A link lasts this long; one account gets this many reset
+# emails an hour and a day at most; one network address may ask this many times an hour.
+RESET_LINK_VALID = timedelta(minutes=30)
+RESET_EMAILS_PER_HOUR = 3
+RESET_EMAILS_PER_DAY = 5
+RESET_ASKS_PER_ADDRESS_PER_HOUR = 5
 API_CALLS_PER_MINUTE = 120  # N-29: per session
 CHAT_MESSAGES_PER_MINUTE = 20  # N-17
 CHAT_MESSAGES_PER_DAY = 100  # N-17

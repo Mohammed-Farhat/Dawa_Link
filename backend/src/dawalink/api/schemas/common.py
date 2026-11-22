@@ -108,6 +108,16 @@ class Pin(Out):
     lon: float
 
 
+class Travel(Out):
+    """How far a pharmacy is from the client. Computed by code; never a coordinate."""
+
+    car_min: int
+    walk_min: int
+    km: float
+    # "straight" is an estimate, shown as "about".
+    source: Literal["road", "straight"]
+
+
 class PharmacyCard(Out):
     """What a client sees about a pharmacy."""
 

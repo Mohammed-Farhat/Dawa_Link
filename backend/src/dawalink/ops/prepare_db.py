@@ -6,8 +6,10 @@ Run from the backend folder (where alembic.ini is). Running it twice is safe (do
 3. applies the migrations, as the migrator login;
 4. gives the app and retention logins exactly their privileges;
 5. writes the reference data (discount tiers, districts, areas);
-6. imports the catalog, if there are no products yet and the catalog file is there;
-7. in demo mode, adds the demo data if there are no pharmacies yet.
+6. imports the catalog, if there are no products yet and the catalog file is there; if
+   there are, sets their prescription marks from the file (nothing else about them changes);
+7. in demo mode, adds the demo data if there are no pharmacies yet. Without a catalog it
+   stops instead: pharmacies seeded then would stay without stock for good.
 
 If it fails, the services must not be updated: the old version keeps running (FO-1).
 """
@@ -20,12 +22,12 @@ from pathlib import Path
 import structlog
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, make_url
 
 from dawalink.config import ConfigError, Settings, load_settings, required
 from dawalink.db.reference import seed_areas, seed_districts, seed_pricing_tiers
 from dawalink.db.roles import APP, MIGRATOR, RETENTION, ensure_roles, grant_privileges, login_of
-from dawalink.db.session import database_is_up, make_engine
+from dawalink.db.session import database_answer, make_engine
 from dawalink.domain.clock import SystemClock
 from dawalink.observability.logging import configure_logging
 from dawalink.ops.import_catalog import (
@@ -34,11 +36,14 @@ from dawalink.ops.import_catalog import (
     catalog_is_empty,
     import_from_folder,
     log_result,
+    refresh_marks_from_folder,
 )
 from dawalink.ops.seed_demo import (
     DEFAULT_SEED,
+    NoCatalogYet,
     has_pharmacies,
     move_demo_pins_onto_land,
+    refuse_without_a_catalog,
     seed_demo,
     set_demo_passwords,
 )
@@ -50,18 +55,34 @@ class DatabaseNotReady(Exception):
     pass
 
 
+class DatabaseLoginRefused(DatabaseNotReady):
+    """The database answered and refused a login: a wrong password, user or database name.
+    Said at once, with the setting to fix, rather than after the whole wait (docs/09 FO-1)."""
+
+
 def wait_for_database(
     database_url: str,
     *,
     timeout_s: float,
+    setting: str = "DATABASE_URL",
     sleep: Callable[[float], None] = time.sleep,
 ) -> None:
+    """Waits until the database answers. `setting` names the address in the error, which
+    shows the login's name and never its password."""
     engine = make_engine(database_url)
     try:
         waited = 0.0
-        while not database_is_up(engine):
+        while (answer := database_answer(engine)) != "up":
+            if answer == "login_refused":
+                raise DatabaseLoginRefused(
+                    f"The database refused the login of {setting} "
+                    f"(user {make_url(database_url).username}): check its password, its "
+                    "user name and its database name."
+                )
             if waited >= timeout_s:
-                raise DatabaseNotReady(f"The database did not answer within {timeout_s:.0f} s.")
+                raise DatabaseNotReady(
+                    f"The database did not answer {setting} within {timeout_s:.0f} s."
+                )
             sleep(1.0)
             waited += 1.0
     finally:
@@ -112,8 +133,11 @@ def prepare(
     catalog_folder: Path = DEFAULT_FOLDER,
 ) -> None:
     admin_url, migrator_url, passwords = login_passwords(settings)
-    wait_for_database(admin_url, timeout_s=wait_seconds)
+    wait_for_database(admin_url, timeout_s=wait_seconds, setting="DATABASE_ADMIN_URL")
     ensure_roles(admin_url, passwords)
+    # The migrator's password was just set from its own address, so a refusal here means
+    # that address names another server or database than the master's.
+    wait_for_database(migrator_url, timeout_s=wait_seconds, setting="DATABASE_MIGRATOR_URL")
     run_migrations(migrator_url)
     grant_privileges(migrator_url)
 
@@ -128,6 +152,10 @@ def prepare(
         with engine.begin() as connection:
             if not catalog_is_empty(connection):
                 log.info("catalog_import_skipped", reason="products already exist")
+                # The Ministry's no-prescription marks came after the first imports: a
+                # database with its catalog gets them, and loses them, from the file too.
+                if catalog_is_available(catalog_folder):
+                    refresh_marks_from_folder(connection, catalog_folder)
             elif not catalog_is_available(catalog_folder):
                 # Not an error: the app runs, but there is nothing to search for yet.
                 log.warning("catalog_import_skipped", reason="no catalog file in data/moph")
@@ -144,6 +172,7 @@ def prepare(
                     if moved:
                         log.info("demo_pins_moved_onto_land", pharmacies=moved)
                 else:
+                    refuse_without_a_catalog(connection)
                     result = seed_demo(connection, seed=seed, now=SystemClock().now())
                     log.info(
                         "demo_seeded",
@@ -168,7 +197,12 @@ def main() -> None:
 
     settings = load_settings()
     configure_logging(settings.log_level)
-    prepare(settings, wait_seconds=arguments.wait_seconds)
+    try:
+        prepare(settings, wait_seconds=arguments.wait_seconds)
+    except (DatabaseNotReady, NoCatalogYet) as stopped:
+        # A sentence for the person running it, and a failed exit: the services must not
+        # be updated (FO-1).
+        raise SystemExit(str(stopped)) from None
     log.info("database_prepared", version=settings.app_version)
 
 

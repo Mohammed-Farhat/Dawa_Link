@@ -3,17 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
-import { type ChatEvent, sendMessage } from '../../../api/chatStream'
+import { type ChatEvent, sendMessage, StreamDropped } from '../../../api/chatStream'
 import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/client'
 import { useSession } from '../../../api/session'
 import { BackIcon, HistoryIcon, PinIcon, PlusIcon, SendIcon } from '../../../components/icons'
 import { Banner, Screen, Shell } from '../../../components/layout'
 import { useWide } from '../../../components/wide'
-import { beirutHour, dayAndClock, dayWord } from '../../../format'
+import { beirutHour, dayAndClock, dayWord, langOf } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
+import { type Failure, failureMessage } from '../../../strings/failure'
 import { usePublicConfig } from '../data'
 import { UnverifiedBanner } from '../HomePage'
-import { MessageCards } from './Cards'
+import { MessageCards, type OffersKnown } from './Cards'
 import { LocationSheet } from './LocationSheet'
 import { ReportAnswer } from './ReportAnswer'
 
@@ -22,9 +23,19 @@ const s = strings.chat
 type Card = Schemas['Card']
 type Notice = { tone: 'green' | 'red' | 'amber'; text: string }
 
-const BUSY_TRIES = 5
-// These mean the message was not kept: it goes back into the box (docs/11 §7).
-const NOT_STORED = new Set(['UNREACHABLE', 'ASSISTANT_UNAVAILABLE', 'TOKEN_BUDGET_EXCEEDED', 'RATE_LIMITED'])
+/** How often a message refused as busy is sent again, with "One moment…" meanwhile: at
+ * the API's 2 s, about 30 s. A message is also refused as busy while every one of the
+ * server's agent turns is taken, and a turn may last that long. */
+const BUSY_TRIES = 15
+// A green notice ("Reserved") may fade; a red or amber one is the only explanation of
+// what failed, so it stays until the next send or tap, or until it is closed (B#35).
+const GREEN_NOTICE_MS = 6000
+
+/** How a send ended. `kept`: the API stored the message, whatever came after. */
+type Sent =
+  | { outcome: 'answered' }
+  | { outcome: 'dropped' }
+  | { outcome: 'refused'; failure: Failure; kept: boolean }
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -91,6 +102,7 @@ export function AssistantPage() {
     <ChatList
       current={current}
       shown={shown}
+      titled={wide}
       onOpen={(id) => {
         setReading(id === current ? null : id)
         setListOpen(false)
@@ -143,10 +155,13 @@ function ChatList({
   current,
   shown,
   onOpen,
+  titled = true,
 }: {
   current: string
   shown: string
   onOpen: (conversationId: string) => void
+  /** False in the phone's sheet, whose own title already says "Your chats". */
+  titled?: boolean
 }) {
   const chats = useQuery({
     queryKey: ['chats', current],
@@ -155,7 +170,7 @@ function ChatList({
   const items = chats.data?.items ?? []
   return (
     <>
-      <h2 className="section-title">{s.chats}</h2>
+      {titled && <h2 className="section-title">{s.chats}</h2>}
       <ul className="chat-list">
         {items.map((chat) => (
           <li key={chat.conversation_id}>
@@ -165,7 +180,7 @@ function ChatList({
               aria-current={chat.conversation_id === shown ? 'true' : undefined}
               onClick={() => onOpen(chat.conversation_id)}
             >
-              <span className="chat-list__title" dir="auto">
+              <span className="chat-list__title" dir="auto" lang={langOf(chat.title)}>
                 {chat.title ?? s.untitled}
               </span>
               <span className="hint">
@@ -256,6 +271,11 @@ export function Conversation({
   // In a thread: the newest message when the client wrote. The agent's answer is the
   // first of its messages after it.
   const [awaitingAfter, setAwaitingAfter] = useState<number | null>(null)
+  // The answer's stream dropped after the message was kept: its reply comes by polling.
+  const [dropped, setDropped] = useState(false)
+  // A message the API refused before keeping it, with its ID: sent again unchanged, it
+  // carries the same ID, so the API never keeps it twice (A#12, docs/06 §6.6).
+  const unsent = useRef<{ text: string; id: string } | null>(null)
   const end = useRef<HTMLDivElement>(null)
 
   const messages = page.data?.messages ?? []
@@ -288,15 +308,44 @@ export function Conversation({
   }, [awaitingAfter])
 
   useEffect(() => {
-    if (!notice) return
-    const timer = setTimeout(() => setNotice(null), 6000)
+    if (notice?.tone !== 'green') return
+    const timer = setTimeout(() => setNotice(null), GREEN_NOTICE_MS)
     return () => clearTimeout(timer)
   }, [notice])
 
-  function refused(code: string, text: string) {
-    if (NOT_STORED.has(code)) setDraft(text)
-    if (code === 'ASSISTANT_UNAVAILABLE') setDegraded(true)
-    else setNotice({ tone: 'red', text: errorMessage(code) })
+  /** A refused message. Kept by the API (the refusal came inside the answer's stream):
+   * it is in the thread, and is not put back in the box, or a resend would store it
+   * twice. Not kept: it goes back in the box, and keeps its ID for a resend (A#12). */
+  function refused(failure: Failure, text: string, messageId: string, kept: boolean) {
+    if (!kept) {
+      unsent.current = { text, id: messageId }
+      // Never over words the client started to type meanwhile.
+      setDraft((typed) => typed || text)
+    }
+    if (failure.code === 'ASSISTANT_UNAVAILABLE') setDegraded(true)
+    // Still busy after every try: "One moment…" would promise an answer that isn't coming.
+    else if (failure.code === 'CONVERSATION_BUSY') setNotice({ tone: 'red', text: strings.limits.busy })
+    else setNotice({ tone: 'red', text: failureMessage(failure, { chat: true, now: page.data?.server_now }) })
+  }
+
+  /** Sends once, and says how it ended. */
+  async function sendOnce(text: string, messageId: string): Promise<Sent> {
+    // Anything inside the stream comes after the API stored the message.
+    let kept = false
+    let failure: Failure | null = null
+    try {
+      await sendMessage(conversationId, text, messageId, (event: ChatEvent) => {
+        kept = true
+        if (event.name === 'progress') setProgress(event.data.label)
+        if (event.name === 'error') failure = event.data.error
+      })
+    } catch (error) {
+      if (error instanceof StreamDropped) return { outcome: 'dropped' }
+      failure =
+        error instanceof ApiFailure ? { code: error.code, details: error.details } : { code: 'INTERNAL_ERROR' }
+    }
+    const found = failure as Failure | null
+    return found === null ? { outcome: 'answered' } : { outcome: 'refused', failure: found, kept }
   }
 
   async function send(raw: string) {
@@ -306,40 +355,43 @@ export function Conversation({
       setNotice({ tone: 'red', text: s.tooLong(maxChars) })
       return
     }
-    // The same ID on every retry: the server stores the message once (docs/06 §6.6).
-    const messageId = newKey()
+    // The same ID on every retry, and on a resend of a message the API refused before
+    // keeping it: the server stores a message once (docs/06 §6.6).
+    const messageId = unsent.current?.text === text ? unsent.current.id : newKey()
+    unsent.current = null
     const newest = page.data?.last_seq ?? 0
     setPendingAfter(newest)
     setPending(text)
     setDraft('')
     setNotice(null)
+    setDropped(false)
+    // Stored on one try, it stays stored when a later try is refused.
+    let keptBefore = false
     try {
       for (let attempt = 0; attempt < BUSY_TRIES; attempt += 1) {
-        let failure: { code: string; details?: Record<string, unknown> } | null = null
-        try {
-          await sendMessage(conversationId, text, messageId, (event: ChatEvent) => {
-            if (event.name === 'progress') setProgress(event.data.label)
-            if (event.name === 'error') failure = event.data.error
-          })
-        } catch (error) {
-          failure =
-            error instanceof ApiFailure
-              ? { code: error.code, details: error.details }
-              : { code: 'INTERNAL_ERROR' }
-        }
-        const found = failure as { code: string; details?: Record<string, unknown> } | null
-        if (found === null) {
+        const sent = await sendOnce(text, messageId)
+        if (sent.outcome === 'answered') {
           setDegraded(false)
           if (thread) setAwaitingAfter(newest)
           break
         }
-        if (found.code === 'CONVERSATION_BUSY' && attempt < BUSY_TRIES - 1) {
+        if (sent.outcome === 'dropped') {
+          // The turn goes on without the stream: "Working on it…" until its reply is
+          // polled in (docs/09 FX-16). Not an error: nothing failed for the client.
+          setDropped(true)
+          setAwaitingAfter(newest)
+          break
+        }
+        const { failure } = sent
+        const kept = sent.kept || keptBefore
+        keptBefore = kept
+        if (failure.code === 'CONVERSATION_BUSY' && attempt < BUSY_TRIES - 1) {
           // The agent is already working here: wait, then send again (API-D8).
           setProgress(s.oneMoment)
-          await wait(Number(found.details?.retry_after_ms ?? 2000))
+          await wait(Number(failure.details?.retry_after_ms ?? 2000))
           continue
         }
-        refused(found.code, text)
+        refused(failure, text, messageId, kept)
         break
       }
     } finally {
@@ -376,8 +428,9 @@ export function Conversation({
       // [Start sourcing]: the request has a page of its own, with its thread (BLD-D30).
       if (done.request_id && !thread) navigate(`/requests/${done.request_id}`)
     } catch (error) {
-      const code = error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR'
-      setNotice({ tone: 'red', text: errorMessage(code) })
+      const failure = error instanceof ApiFailure ? { code: error.code, details: error.details } : { code: 'INTERNAL_ERROR' }
+      // [Start sourcing] at night: when requests open again, by the server's clock (B#37).
+      setNotice({ tone: 'red', text: failureMessage(failure, { now: page.data?.server_now }) })
     } finally {
       await page.refetch()
       setActing(false)
@@ -385,14 +438,61 @@ export function Conversation({
   }
 
   async function startNewChat() {
+    setNotice(null)
     const fresh = await unwrap(api.POST('/api/v1/conversations/new-chat')).catch(() => null)
-    if (!fresh) return
+    if (!fresh) {
+      // Said, never silent: the client would otherwise go on writing in the old chat.
+      setNotice({ tone: 'red', text: s.newChatFailed })
+      return
+    }
     queryClient.setQueryData(['active-chat'], fresh)
     onNewChat?.()
   }
 
+  // The reservations still waiting, for the chat's "Reserved" cards: one that is no
+  // longer waiting links to its ticket in plain words (A#36). Asked only when a chat
+  // shows such a card; the same list as Home's, so it is shared.
+  const showsReserved = messages.some((message) => message.cards.some((card) => card.type === 'reserved'))
+  const active = useQuery({
+    queryKey: ['reservations', 'active'],
+    queryFn: () => unwrap(api.GET('/api/v1/reservations', { params: { query: { view: 'active' } } })),
+    enabled: showsReserved,
+  })
+  const waiting = active.data ? new Set(active.data.items.map((reservation) => reservation.id)) : null
+  // The same for a box held for the client (B#15): its card points to the offer only
+  // while the offer still waits for a tap. The list Home shows, so it is shared.
+  const showsOffer = messages.some((message) => message.cards.some((card) => card.type === 'offer'))
+  const openOffers = useQuery({
+    queryKey: ['offers'],
+    queryFn: () => unwrap(api.GET('/api/v1/offers')),
+    enabled: showsOffer,
+  })
+  const offers: OffersKnown | null = page.data
+    ? {
+        // Not known while it is read again: a card that just arrived isn't in the list
+        // yet, and must not be called over for that.
+        open:
+          openOffers.data && !openOffers.isFetching
+            ? new Set(openOffers.data.items.map((offer) => offer.id))
+            : null,
+        now: page.data.server_now,
+        here: Boolean(thread),
+      }
+    : null
+  // A card that says a reservation ended ("Picked up", "Cancelled") arrives by polling:
+  // the list is asked again, so its "Reserved" card stops offering the counter. An offer
+  // accepted, declined or over is told by a card too.
+  const systemCards = messages.filter((message) => message.author === 'system').length
+  const seenSystemCards = useRef(systemCards)
+  useEffect(() => {
+    if (systemCards === seenSystemCards.current) return
+    seenSystemCards.current = systemCards
+    if (showsReserved) void queryClient.invalidateQueries({ queryKey: ['reservations', 'active'] })
+    if (showsOffer) void queryClient.invalidateQueries({ queryKey: ['offers'] })
+  }, [systemCards, showsReserved, showsOffer, queryClient])
+
   return (
-    <div className="chat">
+    <main className="chat">
       <header className="chat__header">
         {!(framed && !thread) && (
           <Link to={thread?.backTo ?? '/'} className="round-button" aria-label={strings.common.back}>
@@ -432,8 +532,9 @@ export function Conversation({
         )}
       </div>
 
-      <div className="chat__messages" aria-live="polite">
-        {degraded && <Banner tone="amber">{strings.banner.degraded}</Banner>}
+      {/* The scroller. Only the list of messages in it is read out as it grows (B#11):
+          not the banners, the cards' forms or the quick replies. */}
+      <div className="chat__messages">
         {paused && me?.client?.paused_until && page.data && (
           <Banner tone="amber">
             {strings.banner.paused(dayAndClock(me.client.paused_until, page.data.server_now))}
@@ -447,7 +548,14 @@ export function Conversation({
             <span>{s.empty}</span>
             <div className="chips">
               {s.emptyExamples.map((example) => (
-                <button key={example} type="button" className="chip" dir="auto" onClick={() => void send(example)}>
+                <button
+                  key={example}
+                  type="button"
+                  className="chip"
+                  dir="auto"
+                  lang={langOf(example)}
+                  onClick={() => void send(example)}
+                >
                   {example}
                 </button>
               ))}
@@ -455,35 +563,87 @@ export function Conversation({
           </div>
         )}
 
-        {messages.map((message) => (
-          <MessageView
-            key={message.seq}
-            message={message}
-            conversationId={conversationId}
-            busy={acting}
-            onAct={act}
-          />
-        ))}
-        {pending !== null && !stored && (
-          <p className="bubble bubble--mine bubble--waiting" dir="auto">
-            {pending}
-          </p>
-        )}
-        {working && <div className="progress-line">{progress ?? s.working}</div>}
-
-        {!working && !earlier && last?.author === 'agent' && last.quick_replies.length > 0 && (
-          <div className="chips" role="group" aria-label={s.quickReplies}>
-            {last.quick_replies.map((chip) => (
-              <button key={chip} type="button" className="chip" dir="auto" onClick={() => void send(chip)}>
-                {chip}
-              </button>
+        {/* The messages. It appears with the first page already in it, so the history is
+            never read out when the page opens; only what arrives later is. An earlier chat
+            is only read: nothing in it is announced. The client's own message is announced
+            once, when it is stored (the bubble shown while sending is outside). */}
+        {page.data && (
+          <div
+            className="chat__log"
+            role={earlier ? undefined : 'log'}
+            aria-label={earlier ? undefined : s.messagesLabel}
+          >
+            {messages.map((message) => (
+              <MessageView
+                key={message.seq}
+                message={message}
+                conversationId={conversationId}
+                busy={acting}
+                earlier={Boolean(earlier)}
+                waiting={waiting}
+                offers={offers}
+                onAct={act}
+              />
             ))}
           </div>
         )}
-        {notice && (
-          <Banner tone={notice.tone} alert={notice.tone === 'red'}>
-            {notice.text}
-          </Banner>
+        {pending !== null && !stored && (
+          <p className="bubble bubble--mine bubble--waiting" dir="auto">
+            <Speaker author="client" />
+            <span lang={langOf(pending)}>{pending}</span>
+          </p>
+        )}
+
+        {/* What the page itself says while and after a send: read out as it changes. */}
+        <div className="chat__status" role="status">
+          {/* After a send the assistant refused: at the end of the chat, where the client
+              looks, never above a long history (A#12). It stays until a send works. */}
+          {degraded && (
+            <Banner tone="amber" alert>
+              {strings.banner.degraded}
+            </Banner>
+          )}
+          {working && <div className="progress-line">{progress ?? s.working}</div>}
+          {dropped && working && <Banner tone="grey">{s.replyComing}</Banner>}
+          {notice && (
+            <Banner
+              tone={notice.tone}
+              alert={notice.tone === 'red'}
+              action={
+                notice.tone === 'green' ? undefined : (
+                  <button type="button" className="text-button" onClick={() => setNotice(null)}>
+                    {strings.common.close}
+                  </button>
+                )
+              }
+            >
+              {notice.text}
+            </Banner>
+          )}
+        </div>
+
+        {/* They only write an answer for the client: what reserves is a card's button,
+            so they look like words to say, not like buttons that do something (B#8). */}
+        {!working && !earlier && last?.author === 'agent' && last.quick_replies.length > 0 && (
+          <div className="chat__replies">
+            <span id={`replies-${conversationId}`} className="hint">
+              {s.quickRepliesIntro}
+            </span>
+            <div className="chips" role="group" aria-labelledby={`replies-${conversationId}`}>
+              {last.quick_replies.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  className="chip chip--reply"
+                  dir="auto"
+                  lang={langOf(chip)}
+                  onClick={() => void send(chip)}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         <div ref={end} />
       </div>
@@ -510,6 +670,7 @@ export function Conversation({
           className="chat__input"
           type="text"
           dir="auto"
+          lang={langOf(draft)}
           autoComplete="off"
           placeholder={s.placeholder}
           value={draft}
@@ -538,7 +699,20 @@ export function Conversation({
           await page.refetch()
         }}
       />
-    </div>
+    </main>
+  )
+}
+
+/**
+ * Who speaks, for a screen reader only: the bubbles differ by side and colour alone (B#9).
+ * Its own `dir` keeps it out of the bubble's `dir="auto"`, which would otherwise take this
+ * English word for the direction of an Arabic message.
+ */
+function Speaker({ author }: { author: string }) {
+  return (
+    <span className="sr-only" dir="ltr">
+      {`${s.speaker[author] ?? s.speaker.system} `}
+    </span>
   )
 }
 
@@ -546,27 +720,52 @@ function MessageView({
   message,
   conversationId,
   busy,
+  earlier,
+  waiting,
+  offers,
   onAct,
 }: {
   message: Schemas['ChatMessage']
   conversationId: string
   busy: boolean
+  earlier: boolean
+  waiting: Set<string> | null
+  offers: OffersKnown | null
   onAct: (card: Card, selectedItemKeys: string[] | null) => void
 }) {
   const mine = message.author === 'client'
   return (
     <>
-      {/* A person from DawaLink answered: it must not read as the AI's words. */}
-      {message.author === 'admin' && <span className="bubble-label">{s.team}</span>}
+      {/* A person from DawaLink answered: it must not read as the AI's words. A screen
+          reader hears it from the bubble itself. */}
+      {message.author === 'admin' && (
+        <span className="bubble-label" aria-hidden="true">
+          {s.team}
+        </span>
+      )}
       {message.text && (
-        // dir="auto": Arabic runs right to left, Arabizi and English left to right.
+        // dir="auto": Arabic runs right to left, Arabizi and English left to right. The
+        // language is on the words alone, so "You:" keeps the page's voice (B#10).
         <p className={`bubble ${mine ? 'bubble--mine' : 'bubble--theirs'}`} dir="auto">
-          {message.text}
+          <Speaker author={message.author} />
+          <span lang={langOf(message.text)}>{message.text}</span>
         </p>
       )}
-      {message.cards.length > 0 && <MessageCards cards={message.cards} busy={busy} onAct={onAct} />}
+      {message.cards.length > 0 && (
+        <MessageCards
+          cards={message.cards}
+          busy={busy}
+          earlier={earlier}
+          waiting={waiting}
+          offers={offers}
+          onAct={onAct}
+        />
+      )}
       {message.reportable && message.text && (
-        <ReportAnswer conversationId={conversationId} seq={message.seq} reported={message.reported} />
+        // Opening the report form is the client's own doing: not read out as news.
+        <div aria-live="off" className="chat__report">
+          <ReportAnswer conversationId={conversationId} seq={message.seq} reported={message.reported} />
+        </div>
       )}
     </>
   )

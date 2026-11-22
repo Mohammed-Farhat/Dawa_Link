@@ -1,18 +1,35 @@
 """Conversations, messages and cards (docs/06 §5.5, §6.6, §6.7)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import In, Money, Out
+from dawalink.api.schemas.common import In, Money, Out, Travel
 from dawalink.api.schemas.orders import Reservation
 
 
 class CardLine(Out):
     label: str
     value: str
+
+
+class CardBox(Out):
+    """What a reserve, plan or "another brand" card shows of its boxes, as search shows a
+    box (B#5). Written by code when the card was made; the model never reads it."""
+
+    # At the counter, for every pack on the card, and what that saves.
+    price: Money
+    saving: Money
+    # The box's expiry, or the soonest of the card's boxes.
+    expiry_date: date
+    # The client's days of use, which every box lasts. None when the boxes are for
+    # different days (each lasts its own). 1 is also what is used when they didn't say.
+    days_of_use: int | None
+    # The pharmacy's opening hours on the pickup day: "08:00-13:00, 16:00-21:00".
+    hours_on_pickup_day: str | None
+    travel: Travel | None
 
 
 class SelectableItem(Out):
@@ -49,6 +66,9 @@ class Card(Out):
     # is served. It never passes the model (R-AG8).
     call_number: str | None
     data: dict[str, Any]
+    # A proposal card's boxes: its price, saving, fit and hours. None on the other cards,
+    # and on cards made before these were stored.
+    box: CardBox | None = None
 
 
 class ChatMessage(Out):

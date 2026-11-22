@@ -8,6 +8,7 @@ Two rules run through everything here:
 
 import csv
 import io
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import date
@@ -34,7 +35,7 @@ from dawalink.domain.expiry import (
     zone_of,
 )
 from dawalink.domain.inventory import ListingControl, Stock
-from dawalink.domain.numbers import NEAR_EXPIRY_MAX_DAYS
+from dawalink.domain.numbers import MAX_BOX_QUANTITY, NEAR_EXPIRY_MAX_DAYS
 from dawalink.domain.pharmacy_details import clean_batch
 from dawalink.domain.pricing import is_valid_override
 from dawalink.domain.state_machine import Actor
@@ -68,6 +69,14 @@ MAX_CHOICES = 8
 DELIMITERS = (",", ";", "\t")
 # A cell that starts like this is a formula in a spreadsheet: the file is refused (SM-4).
 FORMULA_STARTS = ("=", "+", "@", "\t", "\r")
+# A quantity and a code are plain digits 0 to 9, nothing else: `isdigit()` also takes
+# "²", which `int()` then refuses. A quantity of more than six digits is past
+# MAX_BOX_QUANTITY (a barcode in the quantity column), and is never turned into a number.
+# No Ministry code is near 12 digits.
+PLAIN_DIGITS = re.compile(r"[0-9]+")
+QUANTITY_MAX_DIGITS = len(str(MAX_BOX_QUANTITY))
+PLAIN_CODE = re.compile(r"[0-9]{1,12}")
+NO_SUCH_NAME = "no product with this name"
 UNSET: Any = object()
 
 
@@ -78,9 +87,21 @@ class Edited:
     reserved_kept: bool
 
 
-def can_manage(tx: Tx, pharmacy_id: uuid.UUID) -> Pharmacy:
-    """Only an approved pharmacy has an inventory (P-D2)."""
-    pharmacy = tx.session.get(Pharmacy, pharmacy_id)
+def can_manage(tx: Tx, pharmacy_id: uuid.UUID, *, lock: bool = False) -> Pharmacy:
+    """Only an approved pharmacy has an inventory (P-D2).
+
+    `lock` makes the pharmacy's other work of this kind wait for this transaction. It is
+    FOR NO KEY UPDATE: a client reserving one of its boxes is never held up by it.
+    """
+    if lock:
+        pharmacy = tx.session.execute(
+            select(Pharmacy)
+            .where(Pharmacy.id == pharmacy_id)
+            .with_for_update(key_share=True)  # FOR NO KEY UPDATE on PostgreSQL
+            .execution_options(populate_existing=True)
+        ).scalar()
+    else:
+        pharmacy = tx.session.get(Pharmacy, pharmacy_id)
     if pharmacy is None or not pharmacy_can_manage_inventory(PharmacyStatus(pharmacy.status)):
         raise ServiceError(Code.PHARMACY_NOT_APPROVED, "This pharmacy can't manage inventory.")
     return pharmacy
@@ -289,20 +310,30 @@ def _choice(product: Product) -> str:
     return f"{told_apart or product.moph_name}: code {product.moph_code}"
 
 
+def _products_named(tx: Tx, rows: list[dict[str, str]]) -> dict[str, list[Product]]:
+    """The catalog's products for every name the file uses, in one query: a file of
+    10,000 rows must not cost 10,000 questions to the database (N-15)."""
+    names = {normalize(row.get("product", "")) for row in rows} - {""}
+    by_name: dict[str, list[Product]] = {}
+    if names:
+        for product in tx.session.execute(
+            select(Product).where(Product.search_name.in_(names))
+        ).scalars():
+            by_name.setdefault(product.search_name, []).append(product)
+    return by_name
+
+
 def _match_product(
-    tx: Tx, name: str, strength: str, code: str = ""
+    by_name: list[Product], strength: str, code: str = ""
 ) -> tuple[Product | None, dict[str, Any]]:
-    """The catalog product a row names, or why not, with close names to suggest (R-C9).
+    """The catalog product a row names, or why not (R-C9). `by_name` is every product
+    whose name is the row's. Close names to suggest for an unknown one are the caller's.
 
     **A code chooses among the products the name already matches; it never replaces the
     name.** A mistyped code would otherwise put another medicine on the shelf, at another
     price, without anyone seeing it: the row has to say the same thing twice.
     """
-    wanted = normalize(name)
-    by_name = list(
-        tx.session.execute(select(Product).where(Product.search_name == wanted)).scalars()
-    )
-    found = by_name
+    found = list(by_name)
     # A row's strength that no product of that name has: without a code it is taken as a
     # slip of the pen when the name is enough by itself. With a code it is a
     # contradiction, and the row is refused: the code may not overrule what the row says.
@@ -318,7 +349,8 @@ def _match_product(
         named = [
             p
             for p in found
-            if not strength_is_wrong and code.isdigit() and p.moph_code == int(code)
+            # Plain digits only: "²" passes `isdigit()` and then breaks `int()`.
+            if not strength_is_wrong and PLAIN_CODE.fullmatch(code) and p.moph_code == int(code)
         ]
         if named:
             return named[0], {}
@@ -346,9 +378,37 @@ def _match_product(
             "makers): write the code of yours in the code column, or add this box by hand",
             "did_you_mean": [_choice(p) for p in found[:MAX_CHOICES]],
         }
-    suggestions = catalog.search_products(tx, name, limit=3)
-    names = [p.name for p in suggestions.products] or suggestions.did_you_mean
-    return None, {"problem": "no product with this name", "did_you_mean": names}
+    return None, {"problem": NO_SUCH_NAME}
+
+
+class _CloseNames:
+    """The "did you mean" of an unknown name, asked once per name in one upload.
+
+    A fuzzy search costs about 50 ms on the real catalog, and a file in the pharmacy's
+    own names may have thousands of them (BLD-D44, Q65): asked for every row, a large
+    file took minutes, past the API's time limit.
+    """
+
+    def __init__(self, tx: Tx) -> None:
+        self._tx = tx
+        self._known: dict[str, list[str]] = {}
+
+    def of(self, name: str) -> list[str]:
+        key = normalize(name)
+        if key not in self._known:
+            found = catalog.search_products(self._tx, name, limit=3)
+            self._known[key] = [p.name for p in found.products] or found.did_you_mean
+        return self._known[key]
+
+
+def _quantity(cell: str) -> int | str:
+    """A row's quantity, or what is wrong with it."""
+    if not PLAIN_DIGITS.fullmatch(cell):
+        return "the quantity must be a whole number, 0 or more"
+    digits = cell.lstrip("0") or "0"
+    if len(digits) > QUANTITY_MAX_DIGITS or int(digits) > MAX_BOX_QUANTITY:
+        return f"the quantity must be {MAX_BOX_QUANTITY:,} or fewer"
+    return int(digits)
 
 
 def needs_a_code(tx: Tx, product_ids: set[uuid.UUID]) -> set[uuid.UUID]:
@@ -392,27 +452,19 @@ def validate_upload(
     can_manage(tx, pharmacy_id)
     rows = _read_rows(content)
 
-    waiting = tx.session.execute(
-        select(InventoryUpload)
-        .where(InventoryUpload.pharmacy_id == pharmacy_id, InventoryUpload.status == "VALIDATED")
-        .with_for_update()
-    ).scalar()
-    if waiting is not None:
-        tx.session.execute(
-            delete(InventoryUploadRow).where(InventoryUploadRow.upload_id == waiting.id)
-        )
-        waiting.status = "DISCARDED"
-        tx.session.flush()
-
     staged: dict[tuple[uuid.UUID, str, date], int] = {}
     errors: list[dict[str, Any]] = []
     rows_error = 0
     # "3/31/2027" or "31/03/2027"? Read only if the file's own dates show which (FI-20).
     order = day_month_order(row.get("expiry", "") for row in rows)
+    products_named = _products_named(tx, rows)
+    close_names = _CloseNames(tx)
     for number, row in enumerate(rows, start=2):  # row 1 is the header
         problem: dict[str, Any] = {}
         product, problem = _match_product(
-            tx, row.get("product", ""), row.get("strength", ""), row.get("code", "")
+            products_named.get(normalize(row.get("product", "")), []),
+            row.get("strength", ""),
+            row.get("code", ""),
         )
         expiry: date | None = None
         quantity: int | None = None
@@ -431,10 +483,11 @@ def validate_upload(
                 if expiry < tx.today:
                     problem = {"problem": "this box has already expired"}
         if product is not None and not problem:
-            if row.get("quantity", "").isdigit():
-                quantity = int(row["quantity"])
+            read = _quantity(row.get("quantity", ""))
+            if isinstance(read, str):
+                problem = {"problem": read}
             else:
-                problem = {"problem": "the quantity must be a whole number, 0 or more"}
+                quantity = read
         if product is not None and not problem:
             try:
                 batch = clean_batch(row.get("batch", ""))
@@ -444,14 +497,47 @@ def validate_upload(
                     if not row.get("batch")
                     else "the batch must be letters and digits, as printed on the box"
                 }
+        # R-U1: rows for the same box are added up, and the sum is a box's quantity too.
+        # The row that would take the sum over the most is refused; the ones above stand.
+        if (
+            product is not None
+            and expiry is not None
+            and quantity is not None
+            and not problem
+            and staged.get((product.id, batch, expiry), 0) + quantity > MAX_BOX_QUANTITY
+        ):
+            problem = {
+                "problem": "with the rows above for the same box, the quantity is more "
+                f"than {MAX_BOX_QUANTITY:,}"
+            }
         if problem or product is None or expiry is None or quantity is None:
             rows_error += 1
             if len(errors) < MAX_ERRORS_KEPT:
+                if problem.get("problem") == NO_SUCH_NAME:
+                    # Only for the rows that are shown: the search is the slow part.
+                    problem = {**problem, "did_you_mean": close_names.of(row.get("product", ""))}
                 # Only the start of what was typed is kept, to show which row it was.
                 errors.append({"row": number, "product": row.get("product", "")[:80], **problem})
             continue
         key = (product.id, batch, expiry)
-        staged[key] = staged.get(key, 0) + quantity  # R-U1: duplicate keys are summed
+        staged[key] = staged.get(key, 0) + quantity
+
+    # The same file sent twice at once (a double click, a retry): the second waits here
+    # for the first, then replaces it. Otherwise both see no file waiting, and the second
+    # breaks the rule of one waiting file per pharmacy with a server error. Taken only
+    # now, after the slow reading, so nothing else of the pharmacy's waits on it long.
+    can_manage(tx, pharmacy_id, lock=True)
+    waiting = tx.session.execute(
+        select(InventoryUpload)
+        .where(InventoryUpload.pharmacy_id == pharmacy_id, InventoryUpload.status == "VALIDATED")
+        .with_for_update()
+    ).scalar()
+    if waiting is not None:
+        tx.session.execute(
+            delete(InventoryUploadRow).where(InventoryUploadRow.upload_id == waiting.id)
+        )
+        waiting.status = "DISCARDED"
+        tx.session.flush()
 
     existing = {
         (item.product_id, item.batch, item.expiry_date): item

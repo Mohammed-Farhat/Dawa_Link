@@ -121,7 +121,7 @@ describe("A request's page", () => {
     expect(await screen.findByRole('heading', { name: r.title('Q-4HX9TM') })).toBeInTheDocument()
     expect(screen.getByText(r.reserved(1, 2))).toBeInTheDocument()
     expect(screen.getByText(r.asked(2))).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Ticket R-7K3Q2F/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Reservation R-7K3Q2F/ })).toHaveAttribute(
       'href',
       `/reservations/${RESERVATION.id}`,
     )
@@ -201,6 +201,25 @@ describe("A request's page", () => {
 
     expect((await screen.findAllByText(r.closed.CANCELLED)).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: r.cancel })).not.toBeInTheDocument()
+  })
+
+  it("shows a medicine whose offer waits for the client's tap in amber (B#17)", async () => {
+    requestApi()
+    renderApp(<AppRoutes />, { path: `/requests/${REQUEST_ID}` })
+
+    const medicines = await screen.findByRole('list', { name: r.medicines })
+    expect(within(medicines).getByText(r.offerWaiting)).toHaveClass('status-pill--amber')
+    // The server's "still looking" is not said beside an offer that is there.
+    expect(within(medicines).queryByText('Not listed yet: still looking')).not.toBeInTheDocument()
+  })
+
+  it('gives a request with no thread a page of its own, with its heading (B#34)', async () => {
+    requestApi({ [`GET /api/v1/requests/${REQUEST_ID}`]: { ...REQUEST, conversation_id: null } })
+    const { container } = renderApp(<AppRoutes />, { path: `/requests/${REQUEST_ID}` })
+
+    const heading = await screen.findByRole('heading', { level: 1, name: r.title('Q-4HX9TM') })
+    expect(screen.getByRole('main')).toContainElement(heading)
+    expect(await accessibilityProblems(container)).toEqual([])
   })
 
   it("says so when the request isn't the client's", async () => {

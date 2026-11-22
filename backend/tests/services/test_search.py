@@ -10,7 +10,7 @@ import pytest
 from dawalink.domain.geo import Point
 from dawalink.services import catalog, travel
 from dawalink.services.errors import Code, ServiceError
-from dawalink.services.search import SearchResult, search_listings
+from dawalink.services.search import SearchResult, search_by_name, search_listings
 from dawalink.services.travel import Location, district_location, shared_location
 from tests.db.factories import TODAY
 from tests.fakes import FakeRouting
@@ -333,6 +333,54 @@ class TestListingSearch:
         assert code(product_ids=[controlled]) is Code.PRODUCT_NOT_ALLOWED
         assert code(pickup_day=TODAY - DAY) is Code.PICKUP_DAY_INVALID
         assert code(days_of_use=0) is Code.VALIDATION_ERROR
+
+    @pytest.mark.parametrize(
+        "choices",
+        [
+            {},
+            {"days_of_use": 20},
+            {"days_of_use": 7, "pickup_day": TODAY + DAY},
+            {"max_price_lbp": 700_000, "sort": "cheapest"},
+            {"open_now": True, "sort": "nearest"},
+            {"on_foot": True, "sort": "latest_expiry"},
+        ],
+    )
+    def test_a_search_by_name_answers_what_one_search_per_medicine_answers(
+        self, world: World, setup: dict[str, uuid.UUID], choices: dict[str, Any]
+    ) -> None:
+        """Review A#29: the search by name reads the shelf once for all its medicines. Each
+        group is still exactly what `search_listings` answers for that medicine alone."""
+        evenings = {weekday: [("18:00", "23:00")] for weekday in range(7)}
+        night = world.make.pharmacy(lat=33.9, lon=35.51, hours=evenings)
+        three_days = world.make.pharmacy(lat=33.88, lon=35.49, pickup_days=3)
+        names = ("Pamol", "Panadol Extra", "Paxil", "Pariet")
+        products = [setup["panadol"]] + [
+            product(world, name, public_price_lbp=500_000 + 100_000 * n)
+            for n, name in enumerate(names)
+        ]
+        shops = (setup["near"], setup["far"], night, three_days)
+        for n, medicine in enumerate(products):
+            for m, shop in enumerate(shops[: 1 + (n + 1) % 4]):
+                world.make.item(
+                    pharmacy_id=shop, product_id=medicine, days_left=5 + 30 * m + n, qty_on_hand=2
+                )
+        tx = world.tx()
+
+        found = search_by_name(
+            tx, client_id=setup["client"], query="p", location=HAMRA, per_medicine=2, **choices
+        )
+
+        assert {group.product.id for group in found.groups} == set(products)
+        for group in found.groups:
+            alone = search_listings(
+                tx,
+                client_id=setup["client"],
+                product_ids=[group.product.id],
+                location=HAMRA,
+                limit=2,
+                **choices,
+            )
+            assert group.result == alone
 
     def test_a_paused_or_unverified_client_can_still_search(
         self, world: World, setup: dict[str, uuid.UUID]

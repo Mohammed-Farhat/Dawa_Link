@@ -64,6 +64,10 @@ const STOCK_PAGE = 50 // the most the API gives at once (docs/04 N-31)
  * The pharmacy's boxes, soonest expiry first, one page at a time: [Show more] asks for
  * the next one. `zone: 'NEAR_EXPIRY'` is its listings.
  */
+/** The longest search the API takes (`q` of /pharmacy/inventory and /catalog/products):
+ * a longer one is refused, and the list would go blank. */
+export const SEARCH_MAX = 100
+
 export function useStock(zone: Zone | null, typed: string) {
   const pages = useInfiniteQuery({
     queryKey: ['pharmacy', 'stock', zone, typed],
@@ -83,6 +87,8 @@ export function useStock(zone: Zone | null, typed: string) {
   return {
     items: pages.data?.pages.flatMap((page) => page.items) ?? [],
     loaded: pages.isSuccess,
+    // The first page is still coming: nothing to show yet, not even an earlier search.
+    pending: pages.isPending,
     hasMore: pages.hasNextPage,
     more: () => void pages.fetchNextPage(),
   }

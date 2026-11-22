@@ -11,7 +11,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 
 from dawalink.agent.chat import post_team_reply
 from dawalink.agent.context import identity_of
@@ -73,8 +73,9 @@ def overview(_caller: AsAdmin, work: DoWork, settings: TheSettings) -> schemas.A
             reports_new=answer_reports.new_count(tx),
             flags_open=flags_open,
             flags_high=flags_high,
+            # One per missed trip: one contest covers every box of a plan card (R-N3).
             contests_waiting=tx.session.execute(
-                select(func.count())
+                select(func.count(distinct(orders.TRIP)))
                 .select_from(Order)
                 .where(Order.counts_as_no_show.is_(True), Order.contested_at.is_not(None))
             ).scalar_one(),
@@ -277,18 +278,40 @@ def _client_row(row: admin_clients.Listed) -> schemas.AdminClientRow:
     )
 
 
-def _contested(tx: Tx, client_id: uuid.UUID) -> list[schemas.ContestedReservation]:
+def _contested_rows(
+    tx: Tx, found: list[admin_clients.OrderLine]
+) -> list[schemas.ContestedReservation]:
     return [
         schemas.ContestedReservation(
-            id=found.order.id,
-            ref=found.order.ref,
-            product=found.product,
-            pharmacy=found.pharmacy,
-            expired_at=found.order.closed_at,
-            contested_at=found.order.contested_at or tx.now,
+            id=line.order.id,
+            ref=line.order.ref,
+            product=line.product,
+            pharmacy=line.pharmacy,
+            expired_at=line.order.closed_at,
+            contested_at=line.order.contested_at or tx.now,
+            counts_as_no_show=line.order.counts_as_no_show,
         )
-        for found in admin_clients.contested_orders(tx, client_id)
+        for line in found
     ]
+
+
+def _contested(tx: Tx, client_id: uuid.UUID) -> list[schemas.ContestedReservation]:
+    """The client's contests that still count: on their page, each waits for [Clear]."""
+    return _contested_rows(tx, admin_clients.contested_orders(tx, client_id))
+
+
+def _contested_in_case(tx: Tx, row: Escalation) -> list[schemas.ContestedReservation]:
+    """What this case is about, never what the client contests elsewhere (B#61): the
+    reservation pressed, with its trip and how it ended. Nothing for a case of another
+    kind. A complaint from before the case remembered its reservation is about the
+    contested reservations its summary names."""
+    pressed = escalations.contested_orders(row)
+    if pressed:
+        found = admin_clients.missed_trips_of(tx, row.client_id, pressed)
+    else:
+        refs = escalations.refs_in_complaints(row)
+        found = admin_clients.contested_by_number(tx, row.client_id, refs)
+    return _contested_rows(tx, found)
 
 
 def _flag(row: AbuseFlag) -> schemas.AbuseFlagRow:
@@ -594,7 +617,7 @@ def _escalation_detail(tx: Tx, row: Escalation) -> schemas.EscalationDetail:
             )
             for message in thread
         ],
-        contested=_contested(tx, row.client_id),
+        contested=_contested_in_case(tx, row),
     )
 
 

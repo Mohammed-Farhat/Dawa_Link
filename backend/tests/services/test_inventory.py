@@ -6,12 +6,14 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
+from sqlalchemy import event
 
 from dawalink.domain.expiry import Zone
 from dawalink.domain.inventory import ListingControl
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ClaimSource
 from dawalink.services import (
+    catalog,
     claims,
     controlled,
     inventory,
@@ -394,6 +396,83 @@ class TestUploads:
             9: "the batch is missing",
         }
         assert upload.errors[0]["did_you_mean"] == ["PANADOL"]
+
+    def test_a_quantity_no_box_can_hold_is_a_row_error_and_never_blocks_the_others(
+        self, store: Store, world: World
+    ) -> None:
+        """R-U5, A#9: a barcode pasted into the quantity column used to overflow the
+        database's number and fail the whole file. The form's most is the file's most,
+        for one row and for the rows of one box added up (R-U1)."""
+        upload = store.upload(
+            "product,batch,expiry,quantity\n"
+            "Panadol,B1,2026-12,6281086011234\n"
+            "Panadol,B2,2026-12,500000\n"
+            "Panadol,B3,2026-12,7²\n"
+            "Panadol,B4,2026-12,٣\n"
+            "Panadol,B5,2026-12,100000\n"
+            "Panadol,B6,2026-12,60000\n"
+            "Panadol,B6,2026-12,50000\n"
+            "Panadol,B7,2026-12,0\n"
+            "Panadol,B8,2026-12,0007\n"
+            # Too many digits for Python to turn into a number: never tried.
+            "Panadol,B9,2026-12," + "9" * 5000 + "\n"
+        )
+
+        assert (upload.rows_ok, upload.rows_error) == (4, 6)
+        problems = {error["row"]: error["problem"] for error in upload.errors}
+        assert problems == {
+            2: "the quantity must be 100,000 or fewer",
+            3: "the quantity must be 100,000 or fewer",
+            4: "the quantity must be a whole number, 0 or more",
+            5: "the quantity must be a whole number, 0 or more",
+            8: "with the rows above for the same box, the quantity is more than 100,000",
+            11: "the quantity must be 100,000 or fewer",
+        }
+        store.apply(upload.id)
+        assert {key: row.qty_on_hand for key, row in store.items().items()} == {
+            ("PANADOL", "B5"): 100_000,
+            ("PANADOL", "B6"): 60_000,
+            ("PANADOL", "B7"): 0,
+            ("PANADOL", "B8"): 7,
+        }
+
+    def test_unknown_names_are_searched_once_each_and_only_for_the_rows_shown(
+        self, store: Store, world: World, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A#7: a file in the pharmacy's own names (BLD-D44, Q65) is the expected failure,
+        and a fuzzy search costs about 50 ms on the real catalog. 10,000 such rows took
+        minutes; now the names are looked up in one query, a close name is searched once
+        per name, and only for the 500 rows that are shown."""
+        searched: list[str] = []
+        real_search = catalog.search_products
+
+        def counted(tx: Any, query: str, **options: Any) -> Any:
+            searched.append(query)
+            return real_search(tx, query, **options)
+
+        monkeypatch.setattr(catalog, "search_products", counted)
+        statements: list[str] = []
+        world.session.flush()
+        event.listen(world.connection, "before_cursor_execute", lambda *a: statements.append(a[2]))
+        header = "product,batch,expiry,quantity\n"
+
+        # 10,000 rows, 7 names: each name is searched once.
+        repeated = store.upload(
+            header + "".join(f"Ourname {n % 7},B{n},2026-12,1\n" for n in range(10_000))
+        )
+        searched_for_repeated, statements_for_repeated = len(searched), len(statements)
+        # 10,000 different names: only the 500 rows that are kept get a suggestion.
+        different = store.upload(
+            header + "".join(f"Ourname {n},B{n},2026-12,1\n" for n in range(10_000))
+        )
+
+        assert (repeated.rows_error, different.rows_error) == (10_000, 10_000)
+        assert len(different.errors) == 500
+        assert all("did_you_mean" in error for error in different.errors)
+        assert searched_for_repeated == 7
+        assert len(searched) - searched_for_repeated == 500
+        # Each search is a few statements; the rows themselves cost none.
+        assert statements_for_repeated < 100
 
     @pytest.mark.parametrize(
         ("content", "reason"),
@@ -865,6 +944,11 @@ class TestTheCodeColumn:
             ("Twinol,500mg,T1,2026-12,9,{concor}", "not the code of a medicine with this name"),
             ("Twinol,500mg,T1,2026-12,9,7099", "not the code of a medicine with this name"),
             ("Twinol,500mg,T1,2026-12,9,seven", "not the code of a medicine with this name"),
+            # Digits that aren't 0 to 9, and a number too long to be a code: a row
+            # error, never a crash of the whole file (A#9).
+            ("Twinol,500mg,T1,2026-12,9,70²", "not the code of a medicine with this name"),
+            ("Twinol,500mg,T1,2026-12,9,٧٠١٢", "not the code of a medicine"),
+            ("Twinol,500mg,T1,2026-12,9," + "7" * 5000, "not the code of a medicine"),
             # The row's strength is not the strength of the medicine its code names.
             ("Twinol,250mg,T1,2026-12,9,7024", "not the code of a medicine with this name"),
             # A code never replaces the name.

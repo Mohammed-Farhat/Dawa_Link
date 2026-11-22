@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { accountDeletedNoted, forgetAccountDeletedNote } from '../../api/session'
 import { ShieldIcon, WalkIcon } from '../../components/icons'
+import { Banner } from '../../components/layout'
 import { strings } from '../../strings/en'
 
 const s = strings.welcome
@@ -8,6 +11,10 @@ const s = strings.welcome
 /** CS-1: the public landing. No stock is shown before login (decision log D1).
  * On a phone the picture is above the words; on a computer they stand side by side. */
 export function WelcomePage() {
+  // Said once, after the client deleted their account (R-AU10): read on arrival, and
+  // gone from the tab's storage, so a reload doesn't say it again.
+  const [deleted] = useState(accountDeletedNoted)
+  useEffect(forgetAccountDeletedNote, [])
   return (
     <main className="screen screen--plain screen--white welcome">
       {/* An illustration of what the app does: invented numbers, read by nobody's screen reader. */}
@@ -19,7 +26,7 @@ export function WelcomePage() {
         <div className="hero__card hero__price">
           <span className="hint">{s.exampleProduct}</span>
           <span style={{ fontSize: 22, fontWeight: 600 }}>{s.examplePrice}</span>
-          <span className="saving" style={{ fontSize: 13, padding: '4px 10px' }}>
+          <span className="saving">
             {s.exampleSaving}
           </span>
         </div>
@@ -40,6 +47,7 @@ export function WelcomePage() {
       </section>
 
       <div className="stack welcome__words" style={{ flex: 1 }}>
+        {deleted && <Banner tone="green">{s.accountDeleted}</Banner>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
           <h1 className="page-title">
             {s.title}

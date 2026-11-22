@@ -1,21 +1,25 @@
 import { Modal, NumberInput } from '@mantine/core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { api, ApiFailure, newKey, type Schemas, unwrap } from '../../../api/client'
+import { api, ApiFailure, type Schemas, unwrap } from '../../../api/client'
 import { BackIcon, MapIcon, PhoneIcon, ShieldIcon } from '../../../components/icons'
 import { Banner, Screen } from '../../../components/layout'
-import { calendarDate, dayWord, directionsUrl, lbp, plainAmount } from '../../../format'
+import { aboutUsd, calendarDate, dayWord, directionsUrl, lbp, plainAmount } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
 import { MAX_DAYS_OF_USE, placeBody, useSearchChoices } from './choices'
 import { FitBadge, PrescriptionLine, PriceBlock } from './parts'
-import { openWords, travelWords } from './words'
+import { useTapKey } from './tapKey'
+import { lastsKnown, openWords, travelWords } from './words'
 
 const o = strings.offer
 const r = strings.reserve
 const s = strings.search
 const DAY_CHOICES = [7, 12, 30]
+/** The packs of one medicine a client may hold at a time (`MAX_UNITS_PER_GROUP` in the
+ * API, which checks again). */
+const MOST_PACKS = 3
 
 type Listing = Schemas['Listing']
 
@@ -102,7 +106,8 @@ export function OfferPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a className="pill-button pill-button--grey" href={directionsUrl(pharmacy.pin)} target="_blank" rel="noreferrer">
             <MapIcon small />
-            {strings.ticket.directions}
+            {strings.ticket.directions}{' '}
+            <span className="sr-only">{strings.common.opensNewTab}</span>
           </a>
           <a className="pill-button pill-button--grey" href={`tel:${pharmacy.phone}`}>
             <PhoneIcon small />
@@ -124,7 +129,8 @@ export function OfferPage() {
         <FitBadge listing={listing} daysOfUse={choices.daysOfUse} />
         {product.prescription_required && <PrescriptionLine />}
         <span className="hint">
-          {s.expires(calendarDate(listing.expiry_date))} ·{' '}
+          {/* The expiry date once: the line above says it unless the box is known to last. */}
+          {lastsKnown(listing, choices.daysOfUse) && `${s.expires(calendarDate(listing.expiry_date))} · `}
           {s.left(listing.available, listing.more_available)} · {s.off(listing.discount_pct)}
         </span>
         <span className="card__note" style={{ color: 'var(--green)' }}>
@@ -160,6 +166,24 @@ export function OfferPage() {
   )
 }
 
+/** Refusals after which this box can't be had here: the sheet points to the others. */
+const GONE_HERE = new Set(['NOT_ENOUGH_STOCK', 'LISTING_NOT_AVAILABLE'])
+
+/**
+ * What the reserve sheet says when the server refused. Two refusals have the sheet's own
+ * words (docs/11 §7): the general ones are written for the chat's cards, where "ask for
+ * fresh options" makes sense and the limit's words hide that what is held counts too.
+ */
+function refusalWords(failed: ApiFailure, listing: Listing): string {
+  if (failed.code === 'PRICE_CHANGED') {
+    // The server says the new price; the offer, read again, says it too.
+    const said = Number(failed.details.new_price)
+    return r.priceChanged(lbp(Number.isFinite(said) && said > 0 ? said : listing.price.lbp))
+  }
+  if (failed.code === 'LIMIT_GROUP_UNITS') return r.tooManyPacks
+  return errorMessage(failed.code)
+}
+
 /**
  * CS-8: how many, which day, for how long, then [Reserve].
  *
@@ -177,13 +201,18 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
   )
   const [sending, setSending] = useState(false)
   const [failed, setFailed] = useState<ApiFailure | null>(null)
-  // One key per tap: kept for a retry after a lost connection, so nothing is reserved
-  // twice; replaced once the server has answered (docs/06 §1).
-  const key = useRef(newKey())
+  // One key per tap: kept for a retry while the outcome is unknown, so nothing is
+  // reserved twice; replaced only after an answer that proves nothing was (A#28).
+  const key = useTapKey()
 
   const days = listing.pickup_days_allowed
   const day = choices.pickupDay && days.includes(choices.pickupDay) ? choices.pickupDay : days[0]
-  const most = Math.min(3, listing.available)
+  const most = Math.min(MOST_PACKS, listing.available)
+  // The total in dollars too, as every other price (docs/11 §8).
+  const totalUsd = aboutUsd({
+    lbp: listing.price.lbp * qty,
+    usd_approx: listing.price.usd_approx == null ? null : listing.price.usd_approx * qty,
+  })
 
   async function reserve() {
     setSending(true)
@@ -191,7 +220,7 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
     try {
       const reserved = await unwrap(
         api.POST('/api/v1/reservations', {
-          params: { header: { 'Idempotency-Key': key.current } },
+          params: { header: { 'Idempotency-Key': key.current() } },
           body: {
             listing_id: listing.id,
             qty,
@@ -201,11 +230,12 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
           },
         }),
       )
+      key.done()
       await queryClient.invalidateQueries({ queryKey: ['reservations'] })
       navigate(`/reservations/${reserved.id}`, { replace: true })
     } catch (error) {
       const failure = error instanceof ApiFailure ? error : new ApiFailure('INTERNAL_ERROR', 500)
-      if (failure.code !== 'UNREACHABLE') key.current = newKey()
+      key.failed(failure)
       setFailed(failure)
       // What the page shows may be out of date: read the offer again.
       await queryClient.invalidateQueries({ queryKey: ['listing'] })
@@ -236,6 +266,10 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
             +
           </button>
         </div>
+        {/* [+] stopped: say why, the limit or what is left here (B section 7). */}
+        {qty >= most && (
+          <span className="hint">{listing.available < MOST_PACKS ? r.onlyLeft(listing.available) : r.mostPacks}</span>
+        )}
       </fieldset>
 
       <fieldset className="choice">
@@ -316,14 +350,21 @@ function ReserveSheet({ listing, now, canReserve }: { listing: Listing; now: str
 
       {failed && (
         <Banner tone="red" alert>
-          {errorMessage(failed.code)}
+          {refusalWords(failed, listing)}
         </Banner>
+      )}
+      {failed && GONE_HERE.has(failed.code) && (
+        // The box went: the same medicine may still be at another pharmacy.
+        <Link to={`/search?product=${listing.product.id}`} className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
+          {r.otherPharmacies}
+        </Link>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span className="hint">{r.total}</span>
           <span style={{ fontSize: 20, fontWeight: 600 }}>{lbp(listing.price.lbp * qty)}</span>
+          {totalUsd && <span className="hint">{totalUsd}</span>}
           {listing.saving.lbp > 0 && (
             <span className="saving">{strings.common.save_(plainAmount(listing.saving.lbp * qty))}</span>
           )}

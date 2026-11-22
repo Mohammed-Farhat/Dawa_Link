@@ -82,8 +82,11 @@ describe("The admin's login and console", () => {
     expect(await accessibilityProblems(container)).toEqual([])
     await user.type(screen.getByLabelText(strings.login.email), 'admin@example.com')
     await user.type(screen.getByLabelText(strings.login.password), 'a long enough passphrase')
-    // Without the code the button stays off.
-    expect(screen.getByRole('button', { name: strings.login.submit })).toBeDisabled()
+    // Without the code a press says so on the code's box, and the focus goes there.
+    await user.click(screen.getByRole('button', { name: strings.login.submit }))
+    expect(screen.getByText(strings.login.codeMissing)).toBeInTheDocument()
+    expect(screen.getByLabelText(strings.login.code)).toHaveFocus()
+    expect(api.sent('POST', '/api/v1/auth/login')).toEqual([])
     await user.type(screen.getByLabelText(strings.login.code), '123456')
     await user.click(screen.getByRole('button', { name: strings.login.submit }))
 
@@ -138,7 +141,8 @@ describe("The admin's login and console", () => {
     expect(within(tabs).getByRole('link', { name: 'Escalations (2)' })).toBeInTheDocument()
     expect(within(tabs).getByRole('link', { name: s.tabs.reports })).toBeInTheDocument()
     expect(within(tabs).queryByRole('link', { name: s.tabs.clock })).not.toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: s.pharmacies.open('Hamra Pharmacy') })).toBeInTheDocument()
+    // A row is named by what it shows, its status included (WCAG 2.5.3).
+    expect(await screen.findByRole('link', { name: /^Hamra Pharmacy Waiting/ })).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
   })
 
@@ -222,6 +226,8 @@ describe('A registration that waits (AS-3)', () => {
     expect(await screen.findByText(one.asked)).toBeInTheDocument()
     expect(api.sent('POST', `${PHARMACY}/request-info`)[0].body).toEqual({ reason: 'Which street?' })
     expect(screen.getByRole('button', { name: one.approve })).toBeInTheDocument()
+    // The question closed: the focus is back on the button that opened it.
+    expect(screen.getByRole('button', { name: one.askMore })).toHaveFocus()
   })
 })
 
@@ -265,6 +271,32 @@ describe('An admin corrects a pharmacy (AS-4)', () => {
     expect(await screen.findByText(d.problems.phone)).toBeInTheDocument()
   })
 
+  it('says a refusal of a field it does not mark in its own panel, never nothing (A#35)', async () => {
+    adminApi({
+      [`PATCH ${PHARMACY}`]: refusal(422, 'VALIDATION_ERROR', { fields: [{ field: 'reason', problem: 'too long' }] }),
+    })
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+    const user = userEvent.setup()
+
+    const edit = await screen.findByRole('region', { name: one.edit })
+    await user.type(within(edit).getByLabelText(d.address), ' 2')
+    await user.type(within(edit).getByLabelText(new RegExp(`^${s.reason}`)), 'As on its sign.')
+    await user.click(within(edit).getByRole('button', { name: one.save }))
+
+    expect(await within(edit).findByText(strings.errors.VALIDATION_ERROR)).toBeInTheDocument()
+  })
+
+  it("never lets a text grow past the API's bound (A#35)", async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+
+    const edit = await screen.findByRole('region', { name: one.edit })
+    expect(within(edit).getByLabelText(d.name)).toHaveAttribute('maxlength', '120')
+    expect(within(edit).getByLabelText(d.license)).toHaveAttribute('maxlength', '40')
+    expect(within(edit).getByLabelText(d.phone)).toHaveAttribute('maxlength', '30')
+    expect(within(edit).getByLabelText(d.address)).toHaveAttribute('maxlength', '300')
+  })
+
   it('asks for a look at the pin of a pharmacy that moved, and notes it (Q45)', async () => {
     const moved = {
       ...WAITING,
@@ -289,8 +321,11 @@ describe('An admin corrects a pharmacy (AS-4)', () => {
     expect(await screen.findByText(s.pharmacies.movedWaiting(1))).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: s.pharmacies.showMoved }))
     expect(await screen.findByText(s.pharmacies.pinToCheck)).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: s.pharmacies.open('Hamra Pharmacy') }))
+    // Its status is in the row's spoken name, not hidden behind a label.
+    await user.click(screen.getByRole('link', { name: /^Hamra Pharmacy Pin to check/ }))
     expect(await screen.findByText(/The pharmacy changed its address or its pin on Sun 15 Nov/)).toBeInTheDocument()
+    // Its own page says why the admin is here, as the row did.
+    expect(screen.getByText(s.pharmacies.pinToCheck)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: one.pinIsRight }))
 
     expect(await screen.findByText(one.pinConfirmed)).toBeInTheDocument()
@@ -408,6 +443,23 @@ describe('Escalations (AS-6)', () => {
     expect(container.querySelector('[onerror]')).toBeNull()
   })
 
+  it("reads a client's words in Arabic letters with an Arabic voice, and the labels as English (B#10)", async () => {
+    adminApi({
+      [`GET ${ESCALATED}`]: {
+        ...ESCALATION_DETAIL,
+        thread: [
+          { seq: 1, author: 'client', text: 'بدي بنادول', cards: [], created_at: '2026-11-16T07:38:00Z' },
+          { seq: 2, author: 'agent', text: 'Which strength?', cards: [], created_at: '2026-11-16T07:39:00Z' },
+        ],
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+
+    expect(await screen.findByText('بدي بنادول')).toHaveAttribute('lang', 'ar')
+    expect(screen.getByText('Which strength?')).not.toHaveAttribute('lang')
+    for (const label of screen.getAllByText(e.authors.client)) expect(label).not.toHaveAttribute('lang')
+  })
+
   it('is closed with a note, and then offers nothing more to do', async () => {
     const resolved = {
       ...ESCALATION_DETAIL,
@@ -465,6 +517,7 @@ describe('Escalations (AS-6)', () => {
       pharmacy: 'Hamra Pharmacy',
       expired_at: '2026-11-15T19:00:00Z',
       contested_at: '2026-11-16T07:00:00Z',
+      counts_as_no_show: true,
     }
     const complaint = {
       escalation: {
@@ -496,6 +549,54 @@ describe('Escalations (AS-6)', () => {
     expect(api.sent('POST', clearing)[0].body).toEqual({ reason: 'The pharmacy confirmed.' })
   })
 
+  it('says how a closed contest ended, and offers [Clear] only while it counts (B#61)', async () => {
+    const missed = {
+      id: 'dddddddd-4444-4444-8444-dddddddddddd',
+      ref: 'R-7K3Q2F',
+      product: 'AUGMENTIN 1G',
+      pharmacy: 'Hamra Pharmacy',
+      expired_at: '2026-11-15T19:00:00Z',
+      contested_at: '2026-11-16T07:00:00Z',
+      counts_as_no_show: true,
+    }
+    const closed = { ...ESCALATION, reason: 'complaint', state: 'RESOLVED', resolved_at: CONFIG.server_now } as const
+    adminApi({
+      [`GET ${ESCALATED}`]: {
+        escalation: closed,
+        thread: [],
+        // A trip of two: one cleared, one that still counts.
+        contested: [
+          { ...missed, counts_as_no_show: false },
+          { ...missed, id: 'dddddddd-5555-4555-8555-dddddddddddd', ref: 'R-9PQ4ZD', counts_as_no_show: true },
+        ],
+      },
+    })
+    const { container } = renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+
+    const block = await screen.findByRole('region', { name: e.missed })
+    const [cleared, counting] = within(block).getAllByText(/^R-/).map((ref) => ref.closest('.row-card') as HTMLElement)
+    expect(within(cleared).getByText(s.clients.notCounted)).toHaveClass('status-pill--grey')
+    expect(within(cleared).queryByRole('button', { name: e.clear })).not.toBeInTheDocument()
+    expect(within(counting).getByText(s.clients.orderStates.EXPIRED_NO_SHOW)).toBeInTheDocument()
+    expect(within(counting).getByRole('button', { name: e.clear })).toBeInTheDocument()
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('has no missed pickup on a case of another kind (B#61)', async () => {
+    adminApi({
+      [`GET ${ESCALATED}`]: {
+        ...ESCALATION_DETAIL,
+        escalation: { ...ESCALATION, reason: 'client_asked_human' },
+        contested: [],
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+
+    expect(await screen.findByRole('heading', { name: e.summary })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: e.missed })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: e.clear })).not.toBeInTheDocument()
+  })
+
   it('says so when another admin resolved it first', async () => {
     adminApi({ [`POST ${ESCALATED}/reply`]: refusal(409, 'CHANGED_SINCE') })
     renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
@@ -516,7 +617,10 @@ describe('Reported answers (AS-8)', () => {
 
     expect(await screen.findByText('Take two tablets a day.')).toBeInTheDocument()
     expect(screen.getByText('How much Panadol can I take?')).toBeInTheDocument()
-    expect(screen.getByText(r.comment('It told me how much to take.'))).toBeInTheDocument()
+    // The client's comment stands apart from its English label, in its own direction.
+    const comment = screen.getByText('It told me how much to take.')
+    expect(comment).toHaveAttribute('dir', 'auto')
+    expect(comment.parentElement).toHaveTextContent(r.comment('It told me how much to take.'))
     // Nothing to file and nothing to download: no category, no model, no export.
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Take two tablets/ })).not.toBeInTheDocument()
@@ -530,6 +634,23 @@ describe('Reported answers (AS-8)', () => {
       category: 'other',
       add_to_regression: true,
     })
+  })
+
+  it("reads the client's and the assistant's words in their own language (B#10)", async () => {
+    adminApi({
+      'GET /api/v1/admin/answer-reports': {
+        items: [{ ...REPORT, asked: 'بدي بنادول', reply: 'أي عيار؟', comment: 'غلط' }],
+        next_cursor: null,
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/admin/reports' })
+
+    expect(await screen.findByText('بدي بنادول')).toHaveAttribute('lang', 'ar')
+    expect(screen.getByText('أي عيار؟')).toHaveAttribute('lang', 'ar')
+    expect(screen.getByText('غلط')).toHaveAttribute('lang', 'ar')
+    // The English labels beside them are read as English.
+    expect(screen.getByText(r.asked)).not.toHaveAttribute('lang')
+    expect(screen.getByText(r.commentLabel, { exact: false })).not.toHaveAttribute('lang')
   })
 
   it('dismisses a report that is not a problem', async () => {
@@ -566,6 +687,11 @@ describe('The audit log and the demo clock (AS-11, AS-12)', () => {
 
     expect(await screen.findByRole('rowheader', { name: 'pharmacy.approve' })).toBeInTheDocument()
     expect(screen.getByText('status: PENDING → status: APPROVED')).toBeInTheDocument()
+    // The short ID is a button of its own style: the wrapping style of the Change column
+    // made it run into that column.
+    const id = screen.getByRole('button', { name: PHARMACY_ID.slice(0, 8) })
+    expect(id).toHaveClass('audit-id')
+    expect(id).not.toHaveClass('audit-change')
     expect(await accessibilityProblems(container)).toEqual([])
     await user.selectOptions(screen.getByRole('combobox', { name: s.audit.kind }), 'escalation.')
 
@@ -599,5 +725,173 @@ describe('The audit log and the demo clock (AS-11, AS-12)', () => {
 
     expect(await screen.findByText(strings.notFound.title)).toBeInTheDocument()
     expect(errorMessage('DEMO_MODE_OFF')).toBe(strings.errors.DEMO_MODE_OFF)
+  })
+})
+
+describe("The console's lists and questions (design review B#27, B#28, B#44, B#56, B#63)", () => {
+  it('gives the focus to a question when it opens, back to its button when it closes, and starts each one empty', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: one.reject }))
+    expect(screen.getByLabelText(one.rejectReason)).toHaveFocus()
+    await user.type(screen.getByLabelText(one.rejectReason), 'test')
+    await user.click(screen.getByRole('button', { name: one.cancel }))
+    expect(screen.getByRole('button', { name: one.reject })).toHaveFocus()
+
+    // What was typed for Reject is not the question the pharmacy would read.
+    await user.click(screen.getByRole('button', { name: one.askMore }))
+    expect(screen.getByLabelText(one.askReason)).toHaveValue('')
+    expect(screen.getByLabelText(one.askReason)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: one.cancel }))
+    expect(screen.getByRole('button', { name: one.askMore })).toHaveFocus()
+    expect(api.calls.every((call) => call.method === 'GET')).toBe(true)
+  })
+
+  it('says a refusal in the panel whose button caused it', async () => {
+    adminApi({ [`POST ${PHARMACY}/approve`]: refusal(403, 'FORBIDDEN') })
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: one.approve }))
+
+    const decide = screen.getByRole('region', { name: one.decide })
+    expect(await within(decide).findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument()
+    // Said once, there: not also at the top of the page.
+    expect(screen.getAllByText(errorMessage('FORBIDDEN'))).toHaveLength(1)
+  })
+
+  it('keeps the Pharmacies tab lit on a pharmacy of the list', async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+
+    const tabs = await screen.findByRole('navigation', { name: s.nav })
+    expect(await within(tabs).findByRole('link', { name: 'Pharmacies (1)' })).toHaveAttribute('aria-current', 'page')
+    expect(within(tabs).getByRole('link', { name: 'Escalations (2)' })).not.toHaveAttribute('aria-current')
+    // [Log out] is not one of the tabs.
+    expect(within(tabs).queryByRole('button', { name: s.logOut })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.logOut })).toBeInTheDocument()
+  })
+
+  it('goes back to the list as it was left: its tab and what was typed', async () => {
+    const api = adminApi({ [`GET ${PHARMACY}`]: { ...WAITING, status: 'APPROVED' } })
+    renderApp(<AppRoutes />, { path: '/admin' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('tab', { name: s.pharmacies.statuses.APPROVED }))
+    await user.type(screen.getByLabelText(s.pharmacies.search), 'Ham')
+    await user.click(await screen.findByRole('link', { name: /^Hamra Pharmacy/ }))
+    await user.click(await screen.findByRole('link', { name: s.back }))
+
+    expect(await screen.findByRole('tab', { name: s.pharmacies.statuses.APPROVED })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByLabelText(s.pharmacies.search)).toHaveValue('Ham')
+    const asked = api.sent('GET', '/api/v1/admin/pharmacies?')
+    expect(asked[asked.length - 1].path).toContain('status=APPROVED')
+    expect(asked[asked.length - 1].path).toContain('q=Ham')
+  })
+
+  it('goes back to the closed escalations from a closed one', async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/escalations' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('tab', { name: e.resolved }))
+    await user.click(await screen.findByRole('link', { name: /Glucophage 850/ }))
+    await user.click(await screen.findByRole('link', { name: s.back }))
+
+    expect(await screen.findByRole('tab', { name: e.resolved })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('says in red when a page could not be read, and a mistyped address is a page not found', async () => {
+    adminApi({ [`GET ${PHARMACY}`]: refusal(422, 'VALIDATION_ERROR') })
+    renderApp(<AppRoutes />, { path: `/admin/pharmacies/${PHARMACY_ID}` })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(errorMessage('NOT_FOUND'))
+    expect(alert).toHaveClass('banner--red')
+    // A heading in the main area, for the focus and the tab's title (B#19, B#34).
+    const heading = screen.getByRole('heading', { level: 1, name: s.pharmacies.title })
+    expect(screen.getByRole('main')).toContainElement(heading)
+  })
+
+  it.each([
+    ['clients', '/admin/clients/', 'GET /api/v1/admin/clients/'],
+    ['escalations', '/admin/escalations/', 'GET /api/v1/admin/escalations/'],
+  ])('gives a %s page that could not be read its heading too', async (section, path, route) => {
+    const id = '99999999-9999-4999-8999-999999999999'
+    adminApi({ [`${route}${id}`]: refusal(503, 'SERVICE_UNAVAILABLE') })
+    const { container } = renderApp(<AppRoutes />, { path: `${path}${id}` })
+
+    const title = section === 'clients' ? s.clients.title : e.title
+    const heading = await screen.findByRole('heading', { level: 1, name: title })
+    expect(screen.getByRole('main')).toContainElement(heading)
+    expect(await screen.findByRole('alert')).toHaveTextContent(errorMessage('SERVICE_UNAVAILABLE'))
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('marks an emergency claim in amber, as on the design canvas', async () => {
+    adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/escalations' })
+
+    expect(await screen.findByText(e.reasons.emergency_claim)).toHaveClass('status-pill--amber')
+  })
+
+  it('says a refused clear under the missed pickup it is about', async () => {
+    const contested = {
+      id: 'dddddddd-4444-4444-8444-dddddddddddd',
+      ref: 'R-7K3Q2F',
+      product: 'AUGMENTIN 1G',
+      pharmacy: 'Hamra Pharmacy',
+      expired_at: '2026-11-15T19:00:00Z',
+      contested_at: '2026-11-16T07:00:00Z',
+      counts_as_no_show: true,
+    }
+    const clearing = `/api/v1/admin/reservations/${contested.id}/clear-no-show`
+    adminApi({
+      [`GET ${ESCALATED}`]: { ...ESCALATION_DETAIL, contested: [contested] },
+      [`POST ${clearing}`]: refusal(403, 'FORBIDDEN'),
+    })
+    renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: e.clear }))
+    await user.type(screen.getByLabelText(new RegExp(`^${e.clear}`)), 'Checked.')
+    await user.click(screen.getByRole('button', { name: e.clear }))
+
+    const missed = screen.getByRole('region', { name: e.missed })
+    expect(await within(missed).findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument()
+  })
+
+  it('says a refused review under the answer it is about', async () => {
+    adminApi({ [`POST ${REPORTED}/dismiss`]: refusal(403, 'FORBIDDEN') })
+    renderApp(<AppRoutes />, { path: '/admin/reports' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: r.dismiss }))
+
+    const row = screen.getByRole('article', { name: strings.chat.report.reasons.unsafe })
+    expect(await within(row).findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument()
+  })
+
+  it('filters the audit log by the actions on clients and on flags', async () => {
+    const api = adminApi()
+    renderApp(<AppRoutes />, { path: '/admin/audit' })
+    const user = userEvent.setup()
+
+    const kind = await screen.findByRole('combobox', { name: s.audit.kind })
+    await user.selectOptions(kind, 'client.')
+    await waitFor(() =>
+      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('action=client.'))).toBe(true),
+    )
+    await user.selectOptions(kind, 'abuse_flag.')
+    await waitFor(() =>
+      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('action=abuse_flag.'))).toBe(
+        true,
+      ),
+    )
   })
 })

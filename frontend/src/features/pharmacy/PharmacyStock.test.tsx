@@ -45,6 +45,8 @@ describe("The pharmacy's inventory (PS-6)", () => {
     expect(within(listed).getByText(/20 days left/)).toBeInTheDocument()
     expect(within(kept).getByText(stock.zoneOf.EARLY_RELEASE)).toBeInTheDocument()
     expect(screen.getByText(stock.private)).toBeInTheDocument()
+    // On a phone the medicine's column stays in place while the rest scrolls (global.css).
+    expect(listed.closest('table')).toHaveClass('stock-table--pinned')
     expect(await accessibilityProblems(container)).toEqual([])
   })
 
@@ -59,6 +61,8 @@ describe("The pharmacy's inventory (PS-6)", () => {
     const user = userEvent.setup()
 
     const quantity = await screen.findByLabelText(stock.quantityOf(BOX.product.name, 'A123'))
+    // Five digits at most: never above what the API takes (100,000; A#35).
+    expect(quantity).toHaveAttribute('maxlength', '5')
     expect(screen.queryByRole('button', { name: stock.saveQuantity })).not.toBeInTheDocument()
     await user.clear(quantity)
     await user.type(quantity, '0')
@@ -110,15 +114,13 @@ describe("The pharmacy's inventory (PS-6)", () => {
   it('adds a box typed by hand, the medicine chosen from the catalog', async () => {
     const api = stockApi({
       'GET /api/v1/catalog/products': { items: [RESERVATION.product], did_you_mean: [] },
-      'POST /api/v1/pharmacy/inventory/items': answer(201, BOX),
+      'POST /api/v1/pharmacy/inventory/items': answer(201, { ...BOX, batch: 'B77' }),
     })
     renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
     const user = userEvent.setup()
     const a = stock.add
 
-    await user.click(await screen.findByRole('button', { name: a.submit }))
-    expect(await screen.findByText(a.problem)).toBeInTheDocument()
-    await user.type(screen.getByLabelText(a.product), 'augm')
+    await user.type(await screen.findByLabelText(a.product), 'augm')
     // The pack, the price and the code are on the choice: a name and a strength can be
     // listed twice, and the code is what a stock file writes to say which one.
     await user.click(
@@ -127,17 +129,83 @@ describe("The pharmacy's inventory (PS-6)", () => {
       }),
     )
     await user.type(screen.getByLabelText(a.batch), 'B77')
-    await user.type(screen.getByLabelText(a.expiry), '2027-03-31')
+    // The expiry as printed on the box: a month and a year, never a day to invent.
+    await user.selectOptions(screen.getByLabelText(a.expiryMonth), '2')
+    await user.selectOptions(screen.getByLabelText(a.expiryYear), '2028')
     await user.type(screen.getByLabelText(a.quantity), '4')
     await user.click(screen.getByRole('button', { name: a.submit }))
 
-    expect(await screen.findByText(a.added)).toBeInTheDocument()
+    // It says whether clients see the box now.
+    expect(await screen.findByText(a.addedVisible(BOX.product.name, 'B77'))).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/pharmacy/inventory/items')[0].body).toEqual({
       product_id: RESERVATION.product.id,
       batch: 'B77',
-      expiry_date: '2027-03-31',
+      // The last day of February, in a leap year (R-D6).
+      expiry_date: '2028-02-29',
       qty: 4,
     })
+  })
+
+  it('says on each field what is missing, and moves the focus to the first', async () => {
+    const api = stockApi({
+      'GET /api/v1/catalog/products': { items: [RESERVATION.product], did_you_mean: [] },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+    const user = userEvent.setup()
+    const a = stock.add
+
+    await user.type(await screen.findByLabelText(a.product), 'augm')
+    await user.click(await screen.findByRole('button', { name: /AUGMENTIN 1G/ }))
+    await user.click(screen.getByRole('button', { name: a.submit }))
+
+    // The medicine was chosen: only the three empty fields are named.
+    expect(await screen.findByText(a.problems.batch)).toBeInTheDocument()
+    expect(screen.getByText(a.problems.expiry)).toBeInTheDocument()
+    expect(screen.getByText(a.problems.quantity)).toBeInTheDocument()
+    expect(screen.queryByText(a.problems.product)).not.toBeInTheDocument()
+    expect(screen.queryByText(a.problem)).not.toBeInTheDocument()
+    expect(screen.getByText(strings.forms.check(3))).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText(a.batch)).toHaveFocus())
+
+    // A month that has passed is not a box anyone can sell.
+    await user.type(screen.getByLabelText(a.batch), 'B77')
+    await user.selectOptions(screen.getByLabelText(a.expiryMonth), '1')
+    await user.selectOptions(screen.getByLabelText(a.expiryYear), '2026')
+    await user.type(screen.getByLabelText(a.quantity), '0')
+    await user.click(screen.getByRole('button', { name: a.submit }))
+    expect(await screen.findByText(a.problems.expired)).toBeInTheDocument()
+    expect(screen.getByText(a.problems.quantity)).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/pharmacy/inventory/items')).toEqual([])
+  })
+
+  it('comes before the stock table, and says when a box is not listed yet', async () => {
+    stockApi({
+      'GET /api/v1/catalog/products': { items: [RESERVATION.product], did_you_mean: [] },
+      'POST /api/v1/pharmacy/inventory/items': answer(201, {
+        ...BOX,
+        days_left: 120,
+        visible: false,
+        held_back: true,
+      }),
+      'GET /api/v1/pharmacy/me': { ...PROFILE, auto_list_days: 30 },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+    const user = userEvent.setup()
+    const a = stock.add
+
+    const add = await screen.findByRole('region', { name: a.title })
+    const table = await screen.findByRole('region', { name: stock.title })
+    expect(add.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await user.type(screen.getByLabelText(a.product), 'augm')
+    await user.click(await screen.findByRole('button', { name: /AUGMENTIN 1G/ }))
+    await user.type(screen.getByLabelText(a.batch), 'A123')
+    await user.selectOptions(screen.getByLabelText(a.expiryMonth), '3')
+    await user.selectOptions(screen.getByLabelText(a.expiryYear), '2027')
+    await user.type(screen.getByLabelText(a.quantity), '5')
+    await user.click(screen.getByRole('button', { name: a.submit }))
+
+    expect(await screen.findByText(a.addedHeld(BOX.product.name, 'A123', 30))).toBeInTheDocument()
   })
 })
 
@@ -211,8 +279,16 @@ describe('A stock file (SM-4)', () => {
     await user.upload(await screen.findByLabelText(u.choose), file)
 
     expect(await screen.findByText(u.waiting('stock.csv'))).toBeInTheDocument()
-    expect(screen.getByText(u.rows(3, 2, 1))).toBeInTheDocument()
-    expect(screen.getByText(u.changes(UPLOAD.summary))).toBeInTheDocument()
+    // Four counts, the one that takes stock away in red.
+    const tiles = screen.getByRole('group', { name: u.tilesLabel })
+    const count = (label: string) => within(tiles).getByText(label).parentElement as HTMLElement
+    expect(count(u.tiles.ready)).toHaveTextContent('2')
+    expect(count(u.tiles.fix)).toHaveTextContent('1')
+    expect(count(u.tiles.new)).toHaveTextContent('2')
+    expect(count(u.tiles.zeroed)).toHaveTextContent('1')
+    expect(count(u.tiles.zeroed)).toHaveClass('upload-tile--red')
+    // A refused row is never read: its box is one of those set to 0.
+    expect(screen.getByText(u.zeroedWarning)).toBeInTheDocument()
     expect(screen.getByText(u.reservedKept(1))).toBeInTheDocument()
     expect(screen.getByText(/Panadoll: no product with this name/)).toBeInTheDocument()
     expect(screen.getByText(new RegExp(u.didYouMean('PANADOL')))).toBeInTheDocument()
@@ -222,11 +298,23 @@ describe('A stock file (SM-4)', () => {
     expect(String(sent.body)).toContain('name="file"')
     expect(await accessibilityProblems(container)).toEqual([])
 
-    await user.click(screen.getByRole('button', { name: u.apply }))
+    await user.click(screen.getByRole('button', { name: u.applyRows(2) }))
 
     expect(await screen.findByText(u.applied)).toBeInTheDocument()
     expect(api.sent('POST', `/api/v1/pharmacy/inventory/uploads/${UPLOAD.id}/apply`)).toHaveLength(1)
     await waitFor(() => expect(screen.queryByText(u.waiting('stock.csv'))).not.toBeInTheDocument())
+  })
+
+  it('warns of nothing more when every row was read', async () => {
+    stockApi({
+      'GET /api/v1/pharmacy/inventory/uploads/waiting': {
+        upload: { ...UPLOAD, rows_ok: 3, rows_error: 0, errors: [] },
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+
+    expect(await screen.findByRole('button', { name: u.applyRows(3) })).toBeInTheDocument()
+    expect(screen.queryByText(u.zeroedWarning)).not.toBeInTheDocument()
   })
 
   it('is found again after a reload, and can be discarded', async () => {
@@ -283,6 +371,21 @@ describe("The pharmacy's listings (PS-7)", () => {
     expect(await accessibilityProblems(container)).toEqual([])
   })
 
+  it('shows the shapes of its cards while they load, and the words once there are none (B#43)', async () => {
+    let arrive: (body: unknown) => void = () => {}
+    listedApi({ 'GET /api/v1/pharmacy/inventory': () => new Promise((done) => (arrive = done)) })
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+
+    await screen.findByRole('heading', { name: l.title, level: 1 })
+    const loading = screen.getByText(strings.common.loading)
+    expect(loading.closest('[role="status"]')).toHaveClass('placeholder')
+    expect(screen.queryByText(l.none)).not.toBeInTheDocument()
+
+    arrive(stockOf([]))
+    expect(await screen.findByText(l.none)).toBeInTheDocument()
+    expect(screen.queryByText(strings.common.loading)).not.toBeInTheDocument()
+  })
+
   it('sets its own price, and goes back to the DawaLink price', async () => {
     const own = { ...BOX.price, effective: { lbp: 250_000, usd_approx: 2.8 }, override: { lbp: 250_000, usd_approx: 2.8 }, discount_pct: 75 }
     let item = BOX as typeof BOX | (Omit<typeof BOX, 'price'> & { price: typeof own })
@@ -298,10 +401,19 @@ describe("The pharmacy's listings (PS-7)", () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: l.setPrice }))
-    await user.type(screen.getByLabelText(l.priceOf(BOX.product.name)), '250000')
+    const box = screen.getByLabelText(l.priceLabel)
+    // The price clients see now is there to correct, and the focus is in it.
+    expect(box).toHaveValue('400,000')
+    expect(box).toHaveFocus()
+    await user.clear(box)
+    await user.type(box, '250000')
+    expect(box).toHaveValue('250,000')
+    // What clients will read, before it is saved.
+    expect(screen.getByText(l.priceLive(75, '1,000,000 LBP'))).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: l.savePrice }))
 
     expect(await screen.findByText(/250,000 LBP · 75% off/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: l.setPrice })).toHaveFocus()
     expect(screen.getByText(new RegExp(l.ownPrice))).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: l.backToSystem }))
 
@@ -313,7 +425,24 @@ describe("The pharmacy's listings (PS-7)", () => {
     )
   })
 
-  it('says when a price is above the public price', async () => {
+  it('says when a price is above the public price, and never cuts it down', async () => {
+    const api = listedApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: l.setPrice }))
+    const box = screen.getByLabelText(l.priceLabel)
+    await user.clear(box)
+    await user.type(box, '9999999')
+    await user.tab()
+
+    expect(box).toHaveValue('9,999,999')
+    expect(screen.getByText(l.priceRange('1,000,000'))).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: l.savePrice })).toBeDisabled()
+    expect(api.sent('PATCH', '/api/v1/pharmacy/inventory/items')).toEqual([])
+  })
+
+  it("says the API's refusal of a price", async () => {
     listedApi({
       [`PATCH /api/v1/pharmacy/inventory/items/${BOX.id}`]: refusal(422, 'PRICE_ABOVE_PUBLIC'),
     })
@@ -321,10 +450,28 @@ describe("The pharmacy's listings (PS-7)", () => {
     const user = userEvent.setup()
 
     await user.click(await screen.findByRole('button', { name: l.setPrice }))
-    await user.type(screen.getByLabelText(l.priceOf(BOX.product.name)), '99999999')
+    // Untouched, the DawaLink price would become the pharmacy's own: nothing to save.
+    expect(screen.getByRole('button', { name: l.savePrice })).toBeDisabled()
+    const box = screen.getByLabelText(l.priceLabel)
+    await user.clear(box)
+    await user.type(box, '900000')
     await user.click(screen.getByRole('button', { name: l.savePrice }))
 
     expect(await screen.findByText(strings.errors.PRICE_ABOVE_PUBLIC)).toBeInTheDocument()
+  })
+
+  it('finds a medicine or a batch among the listings', async () => {
+    const api = listedApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/listings' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(stock.search), 'A12')
+
+    await waitFor(() =>
+      expect(api.calls.map((call) => call.path)).toContainEqual(
+        expect.stringMatching(/inventory\?q=A12&zone=NEAR_EXPIRY/),
+      ),
+    )
   })
 
   it('says the rule the pharmacy chose, with the way to change it', async () => {
