@@ -106,3 +106,17 @@ def test_language_corrections_preserve_or_switch_explicitly(
     text: str, noted: str | None, wanted: str
 ) -> None:
     assert language_of(text, noted) == wanted
+
+
+def test_decimal_prices_do_not_break_comparison_subject_associations() -> None:
+    # Candidate1's live development failure: the reply named the pharmacy before
+    # a parenthesized dollar decimal; the guard lost the subject at that decimal.
+    good = "Pharmacy Two: 333,000 LBP (about $3.72), the lowest price."
+    bad = "Pharmacy One: 500,000 LBP (about $5.59), the lowest price."
+    assert not comparison_errors(good, options())
+    assert comparison_errors(bad, options())
+
+
+def test_spoken_closing_half_hour_must_use_exact_numeric_tool_hours() -> None:
+    assert comparison_errors("Pharmacy One btsakker 5 w noss (17:00).", options())
+    assert not comparison_errors("Pharmacy One closes at 17:00.", options())

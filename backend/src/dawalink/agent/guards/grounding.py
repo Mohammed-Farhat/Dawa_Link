@@ -40,6 +40,17 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
     Only one product's options can be compared here; basket tradeoffs remain a manual
     review obligation. A claim without an identifiable subject is not proven.
     """
+    errors = []
+    if re.search(
+        r"(?:closes?|b[ei]?tsakk[ae]r|بتسكر)[^.!?؟\n]{0,30}"
+        r"\d+\s*(?:w|and)\s*(?:noss?|half)",
+        text,
+        re.I,
+    ):
+        errors.append(
+            "Copy closing hours in numeric notation exactly as the tool gave them; "
+            "do not paraphrase them as a spoken half-hour."
+        )
     options: list[dict[str, Any]] = []
     for answer in answers:
         try:
@@ -49,10 +60,10 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
         if isinstance(decoded, dict) and isinstance(decoded.get("options"), list):
             options = decoded["options"]  # Latest search supersedes earlier constraints.
     if not options:
-        return []
+        return errors
     products = {str(o.get("product_id")) for o in options}
     if len(products) != 1:
-        return []
+        return errors
 
     def value(option: dict[str, Any], metric: str) -> Decimal | None:
         if metric == "price":
@@ -67,8 +78,7 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
             else None
         )
 
-    errors = []
-    for sentence in re.split(r"[.!?؟\n]+", text):
+    for sentence in re.split(r"(?<!\d)\.|\.(?!\d)|[!?؟\n]+", text):
         for metric, pattern in _METRICS.items():
             if not pattern.search(sentence):
                 continue
