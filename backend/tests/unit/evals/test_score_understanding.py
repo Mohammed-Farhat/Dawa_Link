@@ -516,3 +516,15 @@ def test_arabizi_strength_choices_and_public_notice_with_current_cards() -> None
     )
     assert checked(case(), with_cards)["refuses_wrongly"] is False
     assert checked(case(), Seen("Ask a pharmacist. I cannot help."))["refuses_wrongly"] is True
+
+
+def test_ayyon_after_strength_choices_is_a_question_not_a_free_pass() -> None:
+    which = case("arcoxia?", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("60 mg, 90 mg, w 120 mg. Ayyon bedak?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Ayyon bedak?"))["asks_when_it_must"]
+
+
+def test_english_explanation_does_not_switch_to_arabizi() -> None:
+    english = case("I need one box of Concor please")
+    assert checked(english, Seen("I found the medicine you requested."))["language"]
+    assert checked(english, Seen("Hayda li l2ayto, fik tekhtar yalli baddak."))["language"] is False

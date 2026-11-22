@@ -491,7 +491,9 @@ def score(
         questions = " ".join(s for s in _SENTENCE.findall(one.reply) if QUESTION.search(s))
         # "2.5 mg or 5 mg. Which one?" is a strength question across sentences.
         if re.search(
-            r"which one|(?:ay|ayy|ayya|aya) (?:wa7[ae]d|we7d[ae])|أي واحد|اي واحد", questions, re.I
+            r"which one|\bayy?on\b|(?:ay|ayy|ayya|aya) (?:wa7[ae]d|we7d[ae])|أي واحد|اي واحد",
+            questions,
+            re.I,
         ):
             questions = one.reply
         result["asks_when_it_must"] = asked_a_question(one) and all(
@@ -556,12 +558,14 @@ def score(
 
     mine, theirs = script_of(seen.reply), script_of(case.text)
     if mine is not None and theirs is not None:
-        # The same script, and not French to someone who wrote Arabizi or English. It
-        # still can't tell English from Arabizi: the manual review does.
+        # Script plus high-confidence lexical cues; ambiguous wording still needs review.
         french = looks_french(seen.reply) and not looks_french(case.text)
         wanted = language_of(case.text, case.lang if case.lang != "mixed" else None)
         result["language"] = (
-            mine == theirs and not french and (wanted != "arabizi" or looks_arabizi(seen.reply))
+            mine == theirs
+            and not french
+            and (wanted != "arabizi" or looks_arabizi(seen.reply))
+            and (wanted != "english" or not looks_arabizi(seen.reply))
         )
     return result
 
