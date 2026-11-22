@@ -39,6 +39,7 @@ from dawalink.agent import architectures, context, limits, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
+from dawalink.agent.guards.language import language_of
 from dawalink.agent.guards.redact import EMAIL_MARK, LOCATION, NAME, PHONE_MARK, redact
 from dawalink.agent.llm import (
     AssistantTurn,
@@ -707,6 +708,10 @@ def _guard_output(graph_state: _State) -> _State:
                 run_id=work.run_id,
                 client_text=work.loaded.client_text,
                 found_something=_found_something(work),
+                tool_answers=[o.as_json() for o in work.outcomes if o.ok],
+                language=work.loaded.case_state.language,
+                preference=work.turn.state.preference if work.turn else None,
+                on_foot=work.turn is not None and work.turn.state.preference == "walkable",
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)
@@ -748,7 +753,10 @@ def _language(work: _Work) -> str | None:
     """The client's language, for a text of ours: what the agent noted, else the script."""
     assert work.loaded is not None
     assert work.turn is not None
-    noted = work.turn.state.language
+    noted = (
+        language_of(work.loaded.client_text or "", work.loaded.case_state.language)
+        or work.turn.state.language
+    )
     if output_guard.script_of(work.loaded.client_text or "") == "arabic":
         return "arabic"
     return noted if noted in ("arabizi", "arabic", "english") else None

@@ -5,11 +5,15 @@ The model's reply is only a proposal until it has passed here. Each failed check
 and after that a text written by us is sent instead (AG-D9).
 """
 
+import json
 import re
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from dawalink.agent.guards.clinical import clinical_reasons
+from dawalink.agent.guards.grounding import claims_completed, comparison_errors
+from dawalink.agent.guards.language import language_of, looks_arabizi
 from dawalink.agent.guards.redact import has_personal_details
 from dawalink.agent.tools import ALL, Reply
 from dawalink.domain.vocabulary import ProposalKind
@@ -45,6 +49,7 @@ _LATIN = re.compile(r"[A-Za-z]")
 POINTS_AT_A_CARD = re.compile(
     r"\bcards?\b[^.!?\n]{0,40}\b(?:below|underneath|ta7e?t|taht)\b|"
     r"\b(?:below|here(?: is|'s| are))\b[^.!?\n]{0,30}\bcards?\b|"
+    r"\bhere(?: is|'s| are)\b[^.!?\n]{0,45}\b(?:cancellation|reservation) card\b|"
     r"(?:البطاقة|البطاقات|الكرت)[^.!?؟\n]{0,40}(?:أدناه|تحت|بالأسفل)",
     re.IGNORECASE,
 )
@@ -122,6 +127,10 @@ def check(
     run_id: uuid.UUID,
     client_text: str | None,
     found_something: bool = False,
+    tool_answers: Sequence[str] = (),
+    language: str | None = None,
+    on_foot: bool = False,
+    preference: str | None = None,
 ) -> Checked:
     """The reply with links removed, and everything that is wrong with it."""
     cleaned = reply.model_copy(
@@ -208,6 +217,41 @@ def check(
             )
         )
 
+    # A cheapest preference cannot be silently replaced by a balanced recommendation.
+    chosen_preference = (
+        cleaned.case_notes.preference
+        if cleaned.case_notes and cleaned.case_notes.preference
+        else preference
+    )
+    if chosen_preference == "cheapest":
+        options = []
+        for answer in tool_answers:
+            parsed = json.loads(answer)
+            if isinstance(parsed, dict) and isinstance(parsed.get("options"), list):
+                options = parsed["options"]
+        for proposal_id in usable:
+            payload = known[proposal_id].payload
+            if not payload.get("card", {}).get("recommended") or "price_lbp_shown" not in payload:
+                continue
+            for option in options:
+                if (
+                    str(option.get("product_id")) == str(payload.get("product_id"))
+                    and not option.get("is_alternative")
+                    and option.get("available", 0) >= payload.get("qty", 1)
+                    and payload.get("pickup_day") in option.get("pickup_days_allowed", [])
+                    and (price := re.match(r"([\d,]+) LBP", option.get("price", "")))
+                    and int(price[1].replace(",", "")) < payload["price_lbp_shown"]
+                ):
+                    violations.append(
+                        Violation(
+                            "preference",
+                            "The client asked for cheapest, but you recommended a "
+                            "more expensive option of the same product. Recommend the cheapest "
+                            "feasible option or explain a specific unmet constraint.",
+                        )
+                    )
+                    break
+
     # One recommendation per medicine (N-45).
     recommended: dict[str, int] = {}
     for proposal_id in usable:
@@ -241,6 +285,24 @@ def check(
                 "This reads as medical advice (a dose, how often, safety, or what a medicine is "
                 "good for). Say you can't advise on that and that a pharmacist or doctor can, "
                 "then offer to keep searching.",
+            )
+        )
+    if claims_completed(cleaned.text):
+        violations.append(
+            Violation(
+                "grounding",
+                "Do not claim a reservation or cancellation completed. You propose cards; "
+                "only the client tap executes them. Describe the proposal or the tool refusal.",
+            )
+        )
+    for error in comparison_errors(cleaned.text, tool_answers, on_foot=on_foot):
+        violations.append(Violation("grounding", error))
+    if language_of(client_text or "", language) == "arabizi" and not looks_arabizi(cleaned.text):
+        violations.append(
+            Violation(
+                LANGUAGE,
+                "Answer in Lebanese Arabizi, including the explanation, "
+                "not just a greeting. Keep Latin letters.",
             )
         )
     wanted, written = script_of(client_text or ""), script_of(cleaned.text)

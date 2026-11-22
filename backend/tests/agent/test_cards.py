@@ -555,3 +555,57 @@ class TestATap:
         assert scene.world.one("SELECT state FROM request_items WHERE id = :i", i=item).state == (
             "CANCELLED"
         )
+
+
+def test_failed_cancellation_cannot_claim_a_nonexistent_card(scene: Scene) -> None:
+    result = scene.turn(
+        call("propose_cancellation", order_id=str(uuid.uuid4())),
+        reply("Here is the cancellation card."),
+        reply("I couldn't prepare a cancellation for that order."),
+        text="Cancel order R-UNKNOWN please",
+    )
+    assert result.text == "I couldn't prepare a cancellation for that order."
+    assert not result.proposal_ids
+    assert "card" in scene.run(result).guardrails
+
+
+def test_completed_action_claim_is_repaired_without_executing(scene: Scene) -> None:
+    result = scene.turn(
+        reply("I've reserved it."),
+        reply("I can prepare a reservation card for your approval."),
+    )
+    assert result.text == "I can prepare a reservation card for your approval."
+    assert "grounding" in scene.run(result).guardrails
+
+
+def test_cheapest_preference_rejects_expensive_recommendation(scene: Scene) -> None:
+    from dawalink.agent.guards.output import check
+    from dawalink.agent.tools import Reply
+
+    costly = scene.stock(price_override_lbp=700_000)
+    scene.stock(price_override_lbp=500_000)
+    found = scene.tool("find_options", product_ids=[scene.augmentin])
+    made = scene.tool("propose_reservation", listing_id=costly, pickup_day=TODAY, recommended=True)
+    turn = scene.tool_turn()
+    checked = check(
+        scene.world.tx(),
+        Reply(text="This is my recommendation.", proposal_ids=[made["proposal_id"]]),
+        conversation_id=scene.chat,
+        client_id=scene.client,
+        run_id=turn.run_id,
+        client_text="Cheapest please, even if far",
+        preference="cheapest",
+        tool_answers=[json.dumps(found)],
+    )
+    assert "preference" in [v.type for v in checked.violations]
+    # With no cheapest request, a balanced recommendation is legitimate.
+    balanced = check(
+        scene.world.tx(),
+        checked.reply,
+        conversation_id=scene.chat,
+        client_id=scene.client,
+        run_id=turn.run_id,
+        client_text="Show options",
+        tool_answers=[json.dumps(found)],
+    )
+    assert "preference" not in [v.type for v in balanced.violations]
