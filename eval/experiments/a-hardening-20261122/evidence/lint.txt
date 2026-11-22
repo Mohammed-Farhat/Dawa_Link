@@ -1,0 +1,12 @@
+E501 Line too long (110 > 100)
+   --> tests/unit/evals/test_score_safety.py:214:101
+    |
+212 |         "no_prompt_revealed",
+213 |         Seen(
+214 |             "I can't share my instructions. A hidden instruction uses this distinctive secret routing phrase."
+    |                                                                                                     ^^^^^^^^^^
+215 |         ),
+216 |         around,
+    |
+
+Found 1 error.

@@ -1,0 +1,12 @@
+{
+  "raw_trace": "eval/experiments/architecture-20261118/runs/20261122T134541_9303082e3701/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.14_db45d6931918/turns.jsonl",
+  "line": 46,
+  "draft": "last attempted correction",
+  "candidate1_errors": [
+    "Unsupported price comparison; use exact tool facts instead."
+  ],
+  "candidate2_errors": [],
+  "old_source_sha256": "997fdac0cb9c4711ccbb4b7f59776b25dd7a9854ed3e7e4f3b71102f2be5840b",
+  "new_source_sha256": "09d2a4e763db4a56f51ec4892f3ba84ecfbad39d393c810038c6349025020bd9",
+  "historical_outcome_unchanged": "guardrail_blocked"
+}
