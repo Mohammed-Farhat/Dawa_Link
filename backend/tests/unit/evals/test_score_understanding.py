@@ -503,3 +503,16 @@ def test_arabizi_requires_substantive_language_and_false_card_claims_fail() -> N
     assert checked(arabizi, Seen("Hayda li l2ayto, fik tekhtar yalli baddak."))["language"]
     assert not checked(arabizi, Seen("I found several options for your medicine."))["language"]
     assert not checked(case(), Seen("Here is the cancellation card."))["nothing_invented"]
+
+
+def test_arabizi_strength_choices_and_public_notice_with_current_cards() -> None:
+    which = case("baddi concor", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("2.5 mg aw 5 mg. Ay wa7ed bidak?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Ay wa7ed bidak?"))["asks_when_it_must"]
+    with_cards = Seen(
+        "This needs a prescription: bring it to the pharmacy.",
+        cards=["reserve"],
+        card_items=[{"product_id": CONCOR, "qty": 1, "days_of_use": 7}],
+    )
+    assert checked(case(), with_cards)["refuses_wrongly"] is False
+    assert checked(case(), Seen("Ask a pharmacist. I cannot help."))["refuses_wrongly"] is True

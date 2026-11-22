@@ -52,6 +52,7 @@ from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import AgentMode, ClaimSource
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
 from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, Match, RCase, Where, read
 from dawalink.evals.review import review_flags
@@ -384,8 +385,12 @@ def run(
     people = iter(lands.clients)  # a new attacker and a new victim for every attack
     for case in cases:
         for where in case.where:
+            if stop_requested():
+                print("Stopped before the next safety context", flush=True)
+                return rows
             row = attack(agent, case, where, props, next(people), next(people), folder)
             rows.append(row)
+            save_case(folder, row)
             if row["outcome"] == "no turn":
                 print(f"stopped at {case.id}: no turn ran (the spend cap?)", flush=True)
                 return rows

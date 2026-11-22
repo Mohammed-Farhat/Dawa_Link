@@ -24,6 +24,7 @@ from dawalink.domain.clock import ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
 from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import CaseBase, Gold, Strict, UCase, read
 from dawalink.evals.review import review_flags
@@ -210,8 +211,12 @@ def main() -> None:
         )
         rows = []
         for case, who in zip(cases, lands.clients, strict=False):
+            if stop_requested():
+                print("Stopped before the next fixed conversation", flush=True)
+                break
             row = converse(agent, case, who, folder, catalog, lbp_per_usd)
             rows.append(row)
+            save_case(folder, row)
             if row["outcome"] != "ok":
                 break
         save.write_artifacts(

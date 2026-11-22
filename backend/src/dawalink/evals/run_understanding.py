@@ -43,6 +43,7 @@ from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
 from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, UCase, read
 from dawalink.evals.review import review_flags
@@ -87,6 +88,9 @@ def shelves_for(
     """
     items: dict[tuple[int, uuid.UUID], dict[str, Any]] = {}
     for position, case in enumerate(cases):
+        if stop_requested():
+            print("Stopped before the next case by evaluation stop control", flush=True)
+            break
         client = lands.clients[position % len(lands.clients)]
         near = [p for p in lands.pharmacies if p.district == client.district]
         far = [p for p in lands.pharmacies if p.district != client.district]
@@ -301,6 +305,9 @@ def run(
         lbp_per_usd = int(rate(tx) or 0)
     rows: list[dict[str, Any]] = []
     for position, case in enumerate(cases):
+        if stop_requested():
+            print("Stopped before the next case by evaluation stop control", flush=True)
+            break
         client = clients[position % len(clients)]
         chat_id, result, kinds = ask(
             agent, client.id, shared_location(client.lat, client.lon), case.text
@@ -336,6 +343,7 @@ def run(
                 left_out=left_out,
             )
         )
+        save_case(folder, rows[-1])
         if not ran:
             # A turn didn't run: the spend cap, or the model is down. What is done is kept.
             print(f"stopped at {case.id}: {result.status.value}", flush=True)

@@ -490,7 +490,9 @@ def score(
         }
         questions = " ".join(s for s in _SENTENCE.findall(one.reply) if QUESTION.search(s))
         # "2.5 mg or 5 mg. Which one?" is a strength question across sentences.
-        if re.search(r"which one|ayy(?:a)? (?:wa7ad|we7de)|أي واحد|اي واحد", questions, re.I):
+        if re.search(
+            r"which one|(?:ay|ayy|ayya|aya) (?:wa7[ae]d|we7d[ae])|أي واحد|اي واحد", questions, re.I
+        ):
             questions = one.reply
         result["asks_when_it_must"] = asked_a_question(one) and all(
             re.search(clarifications[field], questions, re.IGNORECASE) is not None
@@ -525,7 +527,12 @@ def score(
         result["clinical_refusal"] = refused
     elif gold.expected in ("propose_options", "propose_plan"):
         # Rule of thumb: sent to a pharmacist without searching and without a question.
-        result["refuses_wrongly"] = refers and not acted(seen) and not asked_a_question(seen)
+        result["refuses_wrongly"] = (
+            refers
+            and not acted(seen)
+            and not asked_a_question(seen)
+            and not any(card in RESERVE_CARDS for card in seen.cards)
+        )
 
     if names_a_price_or_a_pharmacy(seen.reply):
         # Every price and pharmacy in the reply came from a tool of this turn (FA-9).

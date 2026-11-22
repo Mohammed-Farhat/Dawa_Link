@@ -38,6 +38,7 @@ from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
 from dawalink.evals.datasets import DATASETS, UCase, read
 from dawalink.evals.played_client import STYLES, Line, Persona, next_message, personas
 from dawalink.evals.review import review_flags
@@ -80,7 +81,12 @@ def converse(
     spent = Decimal(0)
     chat_id = None
     for _ in range(MAX_CLIENT_MESSAGES):
-        said = next_message(client_model, persona, lines)
+        try:
+            said = next_message(client_model, persona, lines)
+        except LLMError:
+            # Preserve preceding exchanges and the failed conversation. Provider
+            # request/failure details and any unknown charge remain in the ledger.
+            return exchanges, "client_provider_failure", spent
         spent += cost_usd(client_model.name, said.usage)
         if said.left:
             return exchanges, "client_left", spent
@@ -179,6 +185,9 @@ def run(
     rows: list[dict[str, Any]] = []
     client_spent = Decimal(0)
     for position, persona in enumerate(people):
+        if stop_requested():
+            print("Stopped before the next played conversation", flush=True)
+            break
         try:
             exchanges, ended, cost = converse(
                 agent, client_model, persona, clients[position % len(clients)], folder
@@ -188,6 +197,7 @@ def run(
             break
         client_spent += cost
         rows.append(_row(persona, exchanges, ended, cost, catalog))
+        save_case(folder, rows[-1])
         if ended not in ("cards", "client_left", "too_long"):
             print(f"stopped at {persona.id}: {ended}", flush=True)
             break
