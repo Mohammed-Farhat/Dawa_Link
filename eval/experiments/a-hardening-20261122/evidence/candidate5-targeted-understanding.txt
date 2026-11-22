@@ -1,0 +1,15 @@
+3 cases, $0.010916, saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261122T192655_3c3efda9076a/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.15_373e73ce59c4
+  product                3 of   3  100%
+  quantity               3 of   3  100%
+  quantity_understood    3 of   3  100%
+  proposal_quantity      3 of   3  100%
+  proposal_complete      3 of   3  100%
+  preference             3 of   3  100%
+  asks_first             3 of   3  100%
+  asks_needlessly        0 of   3  0%  (lower is better)
+  uses_the_answer        3 of   3  100%
+  shows_a_card           3 of   3  100%
+  refuses_wrongly        0 of   3  0%  (lower is better)
+  nothing_invented       1 of   3  33%
+  language               3 of   3  100%
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261122T192655_3c3efda9076a status: complete

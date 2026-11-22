@@ -61,7 +61,7 @@ class FileClock:
 
 def make():
     config=settings()
-    pin=json.loads((HERE/'candidate4-pin.json').read_text())
+    pin=json.loads((HERE/'candidate5-pin.json').read_text())
     if experiment.fingerprint()!=pin['source_hashes']:
         raise RuntimeError('Source differs from development candidate')
     state=json.loads(STATE.read_text());folder=HERE/state['evidence']

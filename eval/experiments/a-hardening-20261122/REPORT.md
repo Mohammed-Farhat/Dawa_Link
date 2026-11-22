@@ -35,8 +35,26 @@ Runtime modelclaude-haiku-5-5, medium; promptv1.15. R0016pilot
 Original full backend2176 tests, candidate2 integrated601, candidate3 focused476 and
 candidate4 focused regressions provide distinct supporting checks; see evidence logs.
 
-Full development352, played conversations, primary paired simulation and live-model
-browser results remain pending. Ambiguous comparisons are unresolved manual-review
+Candidate4 full understanding produced230 rows, but its last30 reused conversations
+and are excluded from primary single-case validation. All flags in the first200 have
+assistant review. Safety attempted100 contexts before exhausting clients; a fresh
+continuation completed the remaining24, covering107 cases without duplicates. Seven
+flagged contexts are assistant-reviewed, including language failures, missing FIFO
+explanations and a missing pharmacist referral. Fixed conversations attempted13/15:
+12 completed, M0013 blocked, and M0014–15 unexecuted. These diagnostic outcomes remain
+separate; no claim of full candidate4 acceptance is made.
+
+Candidate5 source a6c231c fixes reference-ID language classification, universal
+same-price scope and history-based explicit nearest/cheapest recommendations. Rejected
+preference cards cannot reappear in fallback. Its517 affected tests, Ruff and mypy10
+files passed. Three targeted understanding cases and one safety context executed
+successfully; assistant judgments retain scorer false flags and ambiguous wording.
+Candidate5 primary pin SHA256
+fb8da0d66a6147e393f6b1e2608d3c9d91f792e8866196107757b7dd384a86c1.
+The pre-outcome matrix uses fresh understanding200+30, safety100+24 contexts, and15
+separate fixed-case invocations. Bootstrap rejects oversized batches before spending.
+Primary validation is currently running; results are not yet acceptance. Played
+conversations, paired simulation and live-model browser results remain pending. Ambiguous comparisons are unresolved manual-review
 flags; regex passes are not semantic acceptance. Assistant review files explicitly
 set human_reviewed=false and independent=false. REVIEW_GUIDE.md defines the required
 owner/teammate review; no independent findings have been accepted yet.
@@ -50,9 +68,13 @@ historical sealed records. Approved stage ceilings4/10/6/3/2 USD, total25. Histo
 17unknown holds$10.965 remain unreleased. Current exact totals are in PROGRESS.md and
 latest audit, not inferred from runner summary estimates. Do not reallocate stages.
 
-Reproduce new runs from backend using paid_v4.py SUITE --architecture current
---stage expanded --model claude-haiku-5-5 --effort medium --max-usd LIMIT; full suites
-understanding/safety/multiturn omit --cases. Use independent invocations for pilots.
+Candidate5 exact primary matrix is in candidate5-batches.json; commands, run IDs and
+statuses are recorded in evidence/candidate5-primary-queue.json. From backend the
+one-shot invocation is `.venv/bin/python ../eval/experiments/a-hardening-20261122/validate_candidate5.py`.
+Do not rerun an existing queue or duplicate attempted cases. Direct bounded invocation:
+`paid_v5.py SUITE --architecture current --stage expanded --model claude-haiku-5-5
+--effort medium --cases COMMA_SEPARATED_BATCH_IDS --max-usd LIMIT`. Omitting a bounded
+selection for full understanding/safety is rejected because it exceeds client capacity.
 Bootstrap verifies source/harness hashes, accepted freeze, canonical ledger and stops
 before transmission after any new billing uncertainty. Existing local.env and root
 .env are ignored prerequisites, never included in evidence. No reset/clean/push/deploy

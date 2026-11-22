@@ -1,0 +1,15 @@
+{
+  "run": "20261122T190243_4a27a43a3f69",
+  "attempted_cases": 13,
+  "accepted_cases": 15,
+  "completed_cases": 12,
+  "failed_case": "M-0013",
+  "unexecuted": [
+    "M-0014",
+    "M-0015"
+  ],
+  "reason": "Runner stops suite on first incomplete conversation. M0013 first turn guardrail_blocked; no second turn attempted.",
+  "assistant_review": "Draft falsely claims Beirut2 Mar16 expiry latest of three although Aley19 Apr25 is later. Repair calls Beirut1 545000 lowest price despite tool-returned 363000 options. Grounding blocks and uses fallback; failure retained. This is diagnostic candidate4, not candidate5 acceptance.",
+  "human_reviewed": false,
+  "independent": false
+}

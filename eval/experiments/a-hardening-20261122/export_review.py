@@ -19,13 +19,20 @@ def failed(row):
 
 
 def export(run_ids):
-    selected=[];conversations=[]
+    selected=[];conversations=[];coverage=[]
     for run_id in run_ids:
         folder=RUNS/run_id
         manifest=json.loads((folder/'manifest.json').read_text())
         suite=manifest['suite']
-        for path in sorted(folder.glob('*/*.jsonl')):
-            if path.name not in ('answers.jsonl','conversations.jsonl'):continue
+        paths=sorted(folder.glob('*/answers.jsonl'))+sorted(folder.glob('*/conversations.jsonl'))
+        if not paths:
+            paths=sorted(folder.glob('*/case-checkpoints.jsonl'))
+        row_count=sum(len(p.read_text().splitlines()) for p in paths)
+        completion=json.loads((folder/'completion.json').read_text()) if (folder/'completion.json').exists() else None
+        coverage.append(dict(run=run_id,suite=suite,expected=manifest['expected'],observed_rows=row_count,
+                             execution_status=completion['status'] if completion else 'in_progress',
+                             source_hashes=manifest['hashes'],partial=row_count!=manifest['expected']))
+        for path in paths:
             for n,line in enumerate(path.read_text().splitlines(),1):
                 row=json.loads(line)
                 record=dict(run=run_id,suite=suite,id=row['id'],where=row.get('where'),
@@ -45,7 +52,7 @@ def export(run_ids):
     for r in sample:
         if (r['run'],r['id'],r['where']) not in existing:
             r['selection_reason']='seed_20261122_conversation_sample';selected.append(r)
-    return selected,dict(seed=20261122,completed_played_conversations=len(complete),sampled_played_conversations=len(sample),
+    return selected,dict(seed=20261122,coverage=coverage,completed_played_conversations=len(complete),sampled_played_conversations=len(sample),
                          sampled_ids=[{'run':r['run'],'id':r['id']} for r in sample],
                          reviewer_status='Unreviewed selection. Assistant review must remain labeled; no independent acceptance.')
 

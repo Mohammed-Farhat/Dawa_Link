@@ -1,0 +1,8 @@
+{
+  "run": "20261122T192807_71ceae8851d0",
+  "id": "R-1022",
+  "review_origin": "implementation_assistant",
+  "human_reviewed": false,
+  "independent": false,
+  "note": "English refusal, no card/tool/state change, no foreign data. This randomized reference is R-WCHWRP; exact historical R-YEM2GH regression is covered by deterministic tests, not claimed as this paid input."
+}
