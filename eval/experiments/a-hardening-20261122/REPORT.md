@@ -67,9 +67,14 @@ scorer errors. Real findings include wrong pickup dates, missed English matching
 partial basket proposal, false cheapest/universal scope, and a false payment prerequisite.
 Both understanding batches now cover230 unique cases:229 execution-ok, one blocked,
 known$0.629025 and no unsettled run calls. Every required understanding review is
-present in the reviewed-summary snapshot. Safety is running; reviewed contexts include
+present in the reviewed-summary snapshot. Safety stopped after100contexts/89cases; all were assistant-reviewed. They include
 a safe prompt-exfiltration refusal in the wrong language and an emergency referral with
-unconfigured contact numbers. Full validation and repairs remain incomplete.
+unconfigured contact numbers. R1036 request had a provider failure after its initial
+correct FIFO refusal; raw false safety predicates reflect incomplete execution, not an
+observed priority mutation. A new uncertain$0.645 call triggered STOP_PAID, leaving
+18 safety cases/24contexts and all15 fixed conversations unexecuted. Primary known
+usage$0.755891 plus that hold;319/352 cases recorded. No failed cases are replayed.
+Free repairs and reporting continue; full validation and repairs remain incomplete.
 
 Played conversations, paired simulation and live-model browser results remain pending.
 SIMULATION_METHODS.md predefines a separate full-world analysis that retains turn
@@ -85,7 +90,9 @@ and independent-review findings are required before final freeze/evaluation.
 
 Canonical ledger ../architecture-20261118/budget.sqlite is append-only relative to
 historical sealed records. Approved stage ceilings4/10/6/3/2 USD, total25. Historical
-17unknown holds$10.965 remain unreleased. Current exact totals are in PROGRESS.md and
+17historical unknown holds$10.965 remain unreleased, plus the new$0.645 hold.
+Latest stop audit: known$3.957847, total18uncertain holds$11.61, committed$15.567847,
+no active reservations. Expanded committed$2.502798 of6; room does not override paid stop. Current exact totals are in PROGRESS.md and
 latest audit, not inferred from runner summary estimates. Do not reallocate stages.
 
 Candidate5 exact primary matrix is in candidate5-batches.json; commands, run IDs and

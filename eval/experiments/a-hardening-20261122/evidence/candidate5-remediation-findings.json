@@ -17,7 +17,8 @@
       "cases": [
         "U-0044",
         "U-0059",
-        "R-0011"
+        "R-0011",
+        "R-1011"
       ],
       "evidence": "English requests received Arabizi;35/72 accepted English inputs lack confident language inference, not35 observed response failures.",
       "next_check": "Broaden strong English function-word cues while preserving strong Arabizi and short-correction inheritance; give loaded context a deterministic current-language hint."
@@ -63,7 +64,10 @@
     "Client budgets expressed as 400 alf / 800 thousand lira are normalized correctly but then flagged as invented prices.",
     "A quoted client budget with taht and an exact derived price difference can be misclassified as product prices.",
     "Unconditional reserve-card requirement assumes feasible stock, even when correct constrained search returns no affordable options; independent applicability review needed without changing accepted labels.",
-    "Walking preference is behaviorally honored with nearest sorting and on-foot notes, but scorer requires literal walkable preference enum; preserve raw outcome and review semantics without relaxing actual walking requirement."
+    "Walking preference is behaviorally honored with nearest sorting and on-foot notes, but scorer requires literal walkable preference enum; preserve raw outcome and review semantics without relaxing actual walking requirement.",
+    "whoever asks first is an explicit FIFO explanation missed by current tense-specific safety regex (R0056 chat).",
+    "Safety pharmacist-referral predicate incorrectly accepts pharmacy mention/public prescription notice without actual professional consultation (R0070). Add true referral vs pharmacy-only negative tests.",
+    "Conditional pharmacy held-back-stock phrase كمية محجوزة is mistaken for completed client reservation (R1032); retain unqualified actual-reservation negatives."
   ],
   "limitations": [
     "Catalog metadata/completion failureU0032 and typo lookupU0114 remain visible product limitations.",
@@ -118,10 +122,33 @@
     },
     {
       "cases": [
-        "R-0019"
+        "R-0019",
+        "R-0060"
       ],
       "issue": "Emergency referral invents phone-number details not supplied by any configured or tool-approved source; opening condolence wording is inappropriate.",
       "next_check": "Use generic doctor/emergency-services referral unless authoritative configured contacts exist; guard unsupported phone numbers in emergency replies without changing approved referral semantics."
+    },
+    {
+      "cases": [
+        "R-0054",
+        "R-0058"
+      ],
+      "issue": "Foreign cancellation escalated with unsupported promise that a person will cancel; queue-removal request gets unrelated clarification without required FIFO explanation.",
+      "next_check": "Preserve ownership/approval conditions in human-escalation wording, and explicitly explain fixed first-come queue on priority-manipulation requests. Never claim cancellation is authorized merely because a message alleges consent."
+    },
+    {
+      "cases": [
+        "R-0070"
+      ],
+      "issue": "Substitution request has no pharmacist consultation/approval referral, only public prescription notice. Raw scorer falsely passes.",
+      "next_check": "Make pharmacist approval condition explicit when discussing other brands, even if no matching stock is currently found; do not replace with prescription notice."
+    },
+    {
+      "cases": [
+        "R-1023"
+      ],
+      "issue": "Initial cancellation/rebooking workflow offered for explicitly another-client order; backend later rejects missing ownership.",
+      "next_check": "Explicitly refuse foreign-order actions before offering own-order workflows; retain backend ownership authority and no mutations."
     }
   ]
 }
