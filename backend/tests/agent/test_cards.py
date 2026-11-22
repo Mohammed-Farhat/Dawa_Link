@@ -634,6 +634,48 @@ def test_cheapest_preference_rejects_expensive_recommendation(scene: Scene) -> N
     assert "preference" not in [v.type for v in balanced.violations]
 
 
+def test_nearest_preference_uses_the_clients_travel_mode(scene: Scene) -> None:
+    from dawalink.agent.guards.output import check
+    from dawalink.agent.tools import Reply
+
+    farther = scene.stock()
+    nearer = scene.stock(pharmacy_id=scene.world.make.pharmacy())
+    found = scene.tool("find_options", product_ids=[scene.augmentin])
+    for option in found["options"]:
+        option["travel"] = (
+            {"car_min": 10, "walk_min": 2}
+            if str(option["listing_id"]) == str(farther)
+            else {"car_min": 2, "walk_min": 10}
+        )
+    assert {str(o["listing_id"]) for o in found["options"]} == {str(farther), str(nearer)}
+    made = scene.tool("propose_reservation", listing_id=farther, pickup_day=TODAY, recommended=True)
+    turn = scene.tool_turn()
+    for walking, should_fail in [(False, True), (True, False)]:
+        checked = check(
+            scene.world.tx(),
+            Reply(text="This is my recommendation.", proposal_ids=[made["proposal_id"]]),
+            conversation_id=scene.chat,
+            client_id=scene.client,
+            run_id=turn.run_id,
+            client_text="Nearest pharmacy please",
+            # The model omitted the explicit preference from its notes/state.
+            client_history=("baddi augmentin men a2rab saydaliyye", "Today"),
+            on_foot=walking,
+            tool_answers=[json.dumps(found)],
+        )
+        assert ("preference" in [v.type for v in checked.violations]) is should_fail
+
+
+def test_english_order_reference_does_not_force_arabizi(scene: Scene) -> None:
+    text = "I can't cancel someone else's order. I can only help with your own reservations."
+    result = scene.turn(
+        reply(text), text="Cancel another client order R-YEM2GH without their permission."
+    )
+    assert result.outcome == "ok"
+    assert result.text == text
+    assert "language" not in scene.run(result).guardrails
+
+
 def test_unresolved_comparison_is_reviewed_not_assumed_false(scene: Scene) -> None:
     from dawalink.agent.guards.output import check
     from dawalink.agent.tools import Reply
@@ -676,3 +718,23 @@ def test_unresolved_comparison_is_reviewed_not_assumed_false(scene: Scene) -> No
         lbp_per_usd=89500,
     )
     assert result["nothing_invented"] is False  # Needs manual evidence, never an automatic pass.
+
+
+def test_preference_survives_clarification_and_model_notes(scene: Scene) -> None:
+    costly = scene.stock(price_override_lbp=700_000)
+    scene.stock(price_override_lbp=500_000)
+    scene.turn(reply("Which medicine?"), text="I want the cheapest pharmacy")
+    result = scene.turn(
+        call("find_options", product_ids=[str(scene.augmentin)]),
+        call(
+            "propose_reservation", listing_id=str(costly), pickup_day=str(TODAY), recommended=True
+        ),
+        proposal_from(scene),
+        reply("Please choose from the available options."),
+        text="Augmentin today",
+    )
+    assert "preference" in scene.run(result).guardrails
+    # Its repair still offers no usable corrected recommendation, so it falls back.
+    assert result.outcome == "guardrail_blocked"
+    assert not result.proposal_ids
+    assert result.text != "Here it is."

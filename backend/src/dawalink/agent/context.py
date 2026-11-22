@@ -87,6 +87,8 @@ class Loaded:
     client_text: str | None
     # The text block the model reads.
     block: str
+    # Client messages actually read by this turn, independent of model-written notes.
+    client_history: tuple[str, ...] = ()
 
 
 def identity_of(tx: Tx, client_id: uuid.UUID) -> Identity:
@@ -419,4 +421,7 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         last_seq=messages[-1].seq if messages else 0,
         client_text=client_text,
         block="\n".join(block),
+        client_history=tuple(
+            m.text_redacted for m in messages if m.author == "client" and m.text_redacted
+        ),
     )

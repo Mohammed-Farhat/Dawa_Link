@@ -2,6 +2,12 @@
 
 import re
 
+_REFERENCE = re.compile(
+    r"\b(?:R|REQ|W)-[A-Z0-9]{4,}\b|"
+    r"\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b",
+    re.I,
+)
+
 _ARABIZI = re.compile(
     r"\b(?:baddi|bade|badde|baddak|baddik|bdi|ana|ma|fi|fiyye|fiye|"
     r"bukra|bokra|lyom|halla2|hala2|shu|shou|3ande|3andi|3al|3a|"
@@ -12,6 +18,8 @@ _ARABIZI = re.compile(
 
 
 def looks_arabizi(text: str) -> bool:
+    # Opaque references such as R-YEM2GH are identifiers, not language cues.
+    text = _REFERENCE.sub("", text)
     return (
         bool(
             re.search(
@@ -33,7 +41,10 @@ def language_of(text: str, noted: str | None = None) -> str | None:
         len(re.findall(r"[a-z]+", text, re.I)) >= 3
         and len(
             re.findall(
-                r"\b(?:i|you|the|need|want|would|like|please|have|will|for|cancel)\b", text, re.I
+                r"\b(?:i|you|the|need|want|would|like|please|have|will|for|cancel|"
+                r"without|their|another|order|no|more|than|only)\b",
+                text,
+                re.I,
             )
         )
         >= 2

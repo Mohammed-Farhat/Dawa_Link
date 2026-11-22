@@ -707,6 +707,7 @@ def _guard_output(graph_state: _State) -> _State:
                 client_id=work.loaded.client_id,
                 run_id=work.run_id,
                 client_text=work.loaded.client_text,
+                client_history=work.loaded.client_history,
                 found_something=_found_something(work),
                 tool_answers=[o.as_json() for o in work.outcomes if o.ok],
                 language=work.loaded.case_state.language,
@@ -733,7 +734,13 @@ def _guard_output(graph_state: _State) -> _State:
     if work.repaired or work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
         clinical = any(v.type == output_guard.CLINICAL for v in blocking)
         work.outcome = RunOutcome.GUARDRAIL_BLOCKED
-        _use_template(work, Fixed.CLINICAL_REFUSAL if clinical else Fixed.NEUTRAL, None)
+        # A rejected recommendation must not reappear on the fallback card.
+        preference_failed = "preference" in work.guardrails
+        template = (
+            Fixed.CLINICAL_REFUSAL if clinical else Fixed.TRY_AGAIN
+            if preference_failed else Fixed.NEUTRAL
+        )
+        _use_template(work, template, None)
         return graph_state
     work.repaired = True
     feedback = "Your reply can't be sent. " + " ".join(v.feedback for v in blocking)

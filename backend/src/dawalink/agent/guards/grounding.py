@@ -27,6 +27,11 @@ _METRICS = {
         r"latest expiry|latest expiration|expires? (?:the )?latest|أبعد صلاحية", re.I
     ),
 }
+_GLOBAL_SAME_PRICE = re.compile(
+    r"\b(?:every|all) pharmac(?:y|ies)[^.!?\n]{0,80}(?:same price|price is the same)|"
+    r"\bprice is the same everywhere\b",
+    re.I,
+)
 
 
 def claims_completed(text: str) -> bool:
@@ -52,6 +57,7 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
             "do not paraphrase them as a spoken half-hour."
         )
     options: list[dict[str, Any]] = []
+    total_found: int | None = None
     for answer in answers:
         try:
             decoded = json.loads(answer)
@@ -59,6 +65,7 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
             continue
         if isinstance(decoded, dict) and isinstance(decoded.get("options"), list):
             options = decoded["options"]  # Latest search supersedes earlier constraints.
+            total_found = decoded.get("total_found")
     if not options:
         return errors
     products = {str(o.get("product_id")) for o in options}
@@ -77,6 +84,18 @@ def comparison_errors(text: str, answers: Sequence[str], *, on_foot: bool = Fals
             if option.get("expiry_date")
             else None
         )
+
+    if _GLOBAL_SAME_PRICE.search(text):
+        prices = {value(option, "price") for option in options}
+        if len(prices - {None}) > 1:
+            errors.append(
+                "The claim that every pharmacy has the same price contradicts the options."
+            )
+        elif total_found is None or total_found > len(options) or None in prices:
+            errors.append(
+                "The tool did not establish every pharmacy's price. Limit the equal-price "
+                "claim to the returned options instead of saying everywhere."
+            )
 
     for paragraph in re.split(r"\n\s*\n", text):
         previous: dict[str, Any] | None = None

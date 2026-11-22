@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from dawalink.agent.guards.clinical import clinical_reasons
 from dawalink.agent.guards.grounding import claims_completed, comparison_errors
 from dawalink.agent.guards.language import language_of, looks_arabizi
+from dawalink.agent.guards.preferences import explicit_preference
 from dawalink.agent.guards.redact import has_personal_details
 from dawalink.agent.tools import ALL, Reply
 from dawalink.domain.vocabulary import ProposalKind
@@ -127,6 +128,7 @@ def check(
     client_id: uuid.UUID,
     run_id: uuid.UUID,
     client_text: str | None,
+    client_history: Sequence[str] = (),
     found_something: bool = False,
     tool_answers: Sequence[str] = (),
     language: str | None = None,
@@ -218,13 +220,13 @@ def check(
             )
         )
 
-    # A cheapest preference cannot be silently replaced by a balanced recommendation.
-    chosen_preference = (
+    # An explicit preference cannot be silently replaced by a balanced recommendation.
+    chosen_preference = explicit_preference(client_history or (client_text or "",)) or (
         cleaned.case_notes.preference
         if cleaned.case_notes and cleaned.case_notes.preference
         else preference
     )
-    if chosen_preference == "cheapest":
+    if chosen_preference in ("cheapest", "nearest"):
         options = []
         for answer in tool_answers:
             parsed = json.loads(answer)
@@ -234,21 +236,42 @@ def check(
             payload = known[proposal_id].payload
             if not payload.get("card", {}).get("recommended") or "price_lbp_shown" not in payload:
                 continue
+            selected = next(
+                (o for o in options if str(o.get("listing_id")) == str(payload.get("listing_id"))),
+                None,
+            )
+            travel_key = "walk_min" if on_foot else "car_min"
             for option in options:
-                if (
+                feasible = (
                     str(option.get("product_id")) == str(payload.get("product_id"))
                     and not option.get("is_alternative")
                     and option.get("available", 0) >= payload.get("qty", 1)
                     and payload.get("pickup_day") in option.get("pickup_days_allowed", [])
-                    and (price := re.match(r"([\d,]+) LBP", option.get("price", "")))
+                )
+                if not feasible:
+                    continue
+                price = re.match(r"([\d,]+) LBP", option.get("price", ""))
+                costs_more = (
+                    chosen_preference == "cheapest"
+                    and price is not None
                     and int(price[1].replace(",", "")) < payload["price_lbp_shown"]
-                ):
+                )
+                chosen_minutes = selected.get("travel", {}).get(travel_key) if selected else None
+                other_minutes = option.get("travel", {}).get(travel_key)
+                farther = (
+                    chosen_preference == "nearest"
+                    and chosen_minutes is not None
+                    and other_minutes is not None
+                    and chosen_minutes > other_minutes
+                )
+                if costs_more or farther:
                     violations.append(
                         Violation(
                             "preference",
-                            "The client asked for cheapest, but you recommended a "
-                            "more expensive option of the same product. Recommend the cheapest "
-                            "feasible option or explain a specific unmet constraint.",
+                            f"The client asked for {chosen_preference}, but your recommended "
+                            "option does not follow that preference for the same product. "
+                            "Recommend the feasible option that meets the explicit preference "
+                            "or explain a specific unmet constraint.",
                         )
                     )
                     break

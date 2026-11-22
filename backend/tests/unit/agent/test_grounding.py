@@ -45,6 +45,19 @@ def test_proposals_do_not_prove_completed_actions(text: str) -> None:
     assert claims_completed(text)
 
 
+def test_global_equal_price_claim_requires_equal_and_complete_evidence() -> None:
+    text = "Every pharmacy with stock has the same price."
+    assert comparison_errors(text, options())  # Known different prices.
+    decoded = json.loads(options()[0])
+    for option in decoded["options"]:
+        option["price"] = "333,000 LBP"
+    decoded["total_found"] = 2
+    assert not comparison_errors(text, [json.dumps(decoded)])
+    decoded["total_found"] = 29
+    assert comparison_errors(text, [json.dumps(decoded)])  # Five rows cannot prove all 29.
+    assert not comparison_errors("The returned options have the same price.", [json.dumps(decoded)])
+
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -104,6 +117,9 @@ def test_walking_rank_differs_from_driving_and_latest_search_supersedes() -> Non
         ("Hay bitaa el talab ma3 zer el ilghe2", "arabizi", "arabizi"),
         ("I need Concor", "arabizi", "english"),
         ("Concor 5 mg two boxes", "arabizi", "arabizi"),
+        ("Cancel another client order R-YEM2GH without their permission.", None, "english"),
+        ("Singulair 10 for no more than 800 thousand lira", None, "english"),
+        ("elghi R-YEM2GH, hayda la khayye", None, "arabizi"),
         ("بدي علبتين من الدواء", "english", "arabic"),
     ],
 )
@@ -145,3 +161,23 @@ def test_explicit_geographic_subset_and_equal_price_comparison() -> None:
     assert comparison_errors("Pharmacy One is cheapest.", [json.dumps(rows)])
     rows["options"][1]["price"] = rows["options"][0]["price"]
     assert comparison_errors("Pharmacy One is cheaper than Pharmacy Two.", [json.dumps(rows)])
+
+
+@pytest.mark.parametrize(
+    ("messages", "expected"),
+    [
+        (["baddi lasix 40 men a2rab saydaliyye", "Today"], "nearest"),
+        (["I want cheapest", "Actually choose nearest pharmacy"], "nearest"),
+        (["Nearest please", "Is this the cheapest?"], "nearest"),
+        (["I want nearest", "I don't want nearest, choose cheapest instead"], "cheapest"),
+        (["I want nearest", "I don't want nearest anymore"], "unspecified"),
+        (["Is this nearest?"], None),
+        (["Show me the nearest expiry date"], None),
+        (["I want nearest and cheapest"], None),
+        (["بدي أقرب صيدلية", "اليوم"], "nearest"),
+    ],
+)
+def test_explicit_preference_from_client_history(messages: list[str], expected: str | None) -> None:
+    from dawalink.agent.guards.preferences import explicit_preference
+
+    assert explicit_preference(messages) == expected
