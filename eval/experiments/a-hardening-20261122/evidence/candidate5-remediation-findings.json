@@ -1,0 +1,97 @@
+{
+  "status": "development findings; repairs not implemented while primary queue is active",
+  "source_commit": "a6c231c",
+  "run": "20261122T192948_5707ce159e65",
+  "confirmed": [
+    {
+      "mechanism": "comparison subject and peer context",
+      "cases": [
+        "U-0037",
+        "U-0008"
+      ],
+      "evidence": "A false cheapest claim in a pronoun sentence escapes runtime; a corrected nearest comparison with explicit peer is falsely blocked.",
+      "next_check": "Resolve subject within paragraph/list item and distinguish explicit comparison peer. Keep product/mode/scope constraints and positive/negative counterexamples."
+    },
+    {
+      "mechanism": "English input cues and context",
+      "cases": [
+        "U-0044",
+        "U-0059"
+      ],
+      "evidence": "English requests received Arabizi;35/72 accepted English inputs lack confident language inference, not35 observed response failures.",
+      "next_check": "Broaden strong English function-word cues while preserving strong Arabizi and short-correction inheritance; give loaded context a deterministic current-language hint."
+    },
+    {
+      "mechanism": "explicit relative pickup date",
+      "cases": [
+        "U-0080"
+      ],
+      "evidence": "ba3dbukra repeated in client follow-up but all proposals useNov17 instead ofNov18.",
+      "next_check": "Check clear client-history relative-day instructions against proposal pickup days; latest corrections win; suppress wrong-date cards after failed repair."
+    },
+    {
+      "mechanism": "global price and stock-count scope paraphrase",
+      "cases": [
+        "U-1019"
+      ],
+      "evidence": "Says all three pharmacies that have it and cheapest is same everywhere despite five returned rows and total_found28. Existing universal-price pattern misses cheapest-is-the-same-everywhere paraphrase.",
+      "next_check": "Require supported scope for universal equivalent-price paraphrases and avoid global available-pharmacy counts from partial returned rows. Preserve explicitly scoped known-price summaries."
+    }
+  ],
+  "inspection_risks": [
+    {
+      "mechanism": "fallback paths after preference rejection",
+      "evidence": "Guard-path fallback is text-only after preference failure, but other Neutral template callers can still gather created proposals.",
+      "next_check": "Reproduce model refusal/timeout during repair after rejected recommendation, then enforce card suppression centrally if confirmed."
+    }
+  ],
+  "scorer_findings": [
+    "Contextual which-one questions after strength/form lists are missed.",
+    "Cheaper relative to the recommended option lacks an explicit peer in one sentence.",
+    "Closest spelling match is incorrectly treated as a travel claim.",
+    "Price beside a comparison peer is attributed to that peer instead of the bullet subject.",
+    "Multi-pharmacy basket total attribution is incomplete.",
+    "Client budgets expressed as 400 alf / 800 thousand lira are normalized correctly but then flagged as invented prices.",
+    "A quoted client budget with taht and an exact derived price difference can be misclassified as product prices.",
+    "Unconditional reserve-card requirement assumes feasible stock, even when correct constrained search returns no affordable options; independent applicability review needed without changing accepted labels.",
+    "Walking preference is behaviorally honored with nearest sorting and on-foot notes, but scorer requires literal walkable preference enum; preserve raw outcome and review semantics without relaxing actual walking requirement."
+  ],
+  "limitations": [
+    "Catalog metadata/completion failureU0032 and typo lookupU0114 remain visible product limitations.",
+    "Ambiguous expiry-versus-dose sufficiency wording and garbled Arabizi require independent review.",
+    "Do not alter accepted labels or replace original outcomes."
+  ],
+  "prompt_findings": [
+    {
+      "cases": [
+        "U-0029",
+        "U-0120"
+      ],
+      "issue": "Three-medicine basket is called both/lal dawayn; prompt guidance currently uses two-medicine wording.",
+      "next_check": "Use whole-basket total wording; both only for exactly two medicines."
+    },
+    {
+      "cases": [
+        "U-0070",
+        "U-0111",
+        "U-0106"
+      ],
+      "issue": "Pack-last-days or seven-day-box language ambiguously claims dosage sufficiency or hold duration.",
+      "next_check": "State expiry eligibility for requested use window; do not infer medicine sufficiency or promise a multi-day hold."
+    },
+    {
+      "cases": [
+        "U-0123"
+      ],
+      "issue": "Text describes full two-pharmacy alternative but propose_plan group_indexes[0] creates only one group.",
+      "next_check": "When describing a complete plan, propose all intended groups and show all returned cards; identify partial plans explicitly."
+    },
+    {
+      "cases": [
+        "U-1017"
+      ],
+      "issue": "No reservation until payment wording introduces nonexistent payment requirement.",
+      "next_check": "State that confirmation tap creates reservation; payment is at counter and is not an app prerequisite. Add explicit negative guard example if broad enough without blocking counter-payment facts."
+    }
+  ]
+}

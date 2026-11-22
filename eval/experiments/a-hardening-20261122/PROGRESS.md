@@ -43,18 +43,33 @@ Failures stay in denominators. Raw coverage is not semantic acceptance.
 No source or pinned harness edits while this queue runs.
 Incremental primary assistant review is in evidence/candidate5-primary-assistant-review.jsonl
 (raw-row hashes, human_reviewed=false, independent=false). All flags inspected through
-U0069 plus original U0025 regression. U0037 is a real false cheapest claim missed by
+raw row196 (through U1020), including original U0025/U0145/U0146/U0150/U1019 regressions.
+Budget-normalization and empty-affordable-stock scorer applicability findings are retained;
+U0137 over-budget recommendations remain a raw accepted-label failure despite soft wording. U0037 is a real false cheapest claim missed by
 runtime pronoun association; U0008 initially false price claim and false-blocked repair;
 Plavix catalog ambiguity prevents U0032 completion. These findings remain unresolved,
 not acceptance. U0044/U0059 expose missed English lexical cues and actual first-reply
 language failures; language-input diagnostic records35/72 English inputs without
 confident inference (not35 observed response failures). Other reviewed flags include genuine scorer association/clarification
 errors and language-quality concerns. Do not silently replace raw scores.
+U0080 repeats the clear day-after-tomorrow→tomorrow error, including wrong-date cards
+after the client repeats the intended day. evidence/candidate5-remediation-findings.json
+records confirmed mechanisms for the next distinct candidate after this matrix
+finishes, plus a fallback-path inspection risk that still needs scripted reproduction.
+U0123 really creates only one group of a two-pharmacy basket while describing the full
+plan. Repeated three-medicine both wording, ambiguous pack-duration claims and one
+stray Devanagari glyph remain explicit quality findings. U1017 falsely implies app
+reservation requires payment. U1019 honors cheapest preference but invents global
+three-pharmacy/equal-price scope from five returned rows/28 total; keep this real failure. Prompt findings are recorded
+separately; no runtime/prompt/source edits have been made during this matrix.
 Free-only report helpers: summarize_validation.py verifies completed matrix/source,
 coverage/costs and review gaps; exporter retains partial checkpoints and original
 regressions even if unflagged. compare_simulations.py rejects duplicate seed/contender,
 changed worlds/draws/source and excludes execution-incomplete pairs from seed estimates.
-Six offline integrity scenarios passed; actual paired comparison remains unexecuted.
+Six initial offline integrity scenarios passed. SIMULATION_METHODS.md prospectively adds
+a separate full-world analysis retaining turn failures/caps, alongside strict completed
+pairs; six secondary comparison and five raw-artifact fixture checks passed. These are
+helper checks only; actual paired comparison remains unexecuted.
 Browser fixture origin now explicitly matches localhost55173; configuration/isolated DB
 target verified without connections or model calls. Two completed candidate5 pilot
 archives passed privacy scan14files/0flags. Live journeys remain unverified.

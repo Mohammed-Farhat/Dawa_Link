@@ -36,7 +36,12 @@ def read(run):
     secured_times=sorted(n['minutes_to_secure'] for n in needs if n.get('minutes_to_secure') is not None)
     return dict(run=run,contender=config['contender'],seed=config['seed'],
                 request_coverage_complete=len(needs)==100 and len({n['n'] for n in needs})==100,
-                complete=len(needs)==100 and completion['status']=='complete', cost_complete=not unsettled,
+                complete=(len(needs)==100 and len({n['n'] for n in needs})==100
+                          and summary.get('needs')==100 and completion.get('error_type') is None
+                          and completion['status']=='complete' and not unsettled), cost_complete=not unsettled,
+                full_world_finished=(len(needs)==100 and len({n['n'] for n in needs})==100
+                                     and summary.get('needs')==100
+                                     and completion.get('error_type') is None and not unsettled),
                 execution_coverage_status=completion['status'],initial=initial,
                 source_hashes=manifest['hashes'],
                 arrivals=[{k:v for k,v in e.items() if k!='applied'} for e in events if e['kind']=='stock_arrival'],
@@ -63,7 +68,7 @@ def compare(run_ids):
             if r['contender'] in contenders:
                 raise ValueError('Duplicate contender/seed attempt: report attempts separately')
             contenders[r['contender']]=r
-    pairs=[];differences={}
+    pairs=[];differences={};full_world_differences={}
     for seed,contenders in groups.items():
         a=contenders.get('agent')
         if not a:continue
@@ -73,18 +78,25 @@ def compare(run_ids):
             mismatches=[k for k in shared if a['draws'][k]!=b['draws'][k]]
             comparable=a['initial']==b['initial'] and a['arrivals']==b['arrivals'] and not mismatches and a['source_hashes']==b['source_hashes']
             complete=a['complete'] and b['complete']
+            full_world=a['full_world_finished'] and b['full_world_finished']
             delta={k:a['metrics'][k]-b['metrics'][k] for k in ('units_secured','fully_served_requests','client_interactions','execution_failures')}
-            pairs.append(dict(seed=seed,baseline=name,world_event_comparable=comparable,shared_action_keys=len(shared),draw_mismatches=mismatches,complete_pair=complete,delta_A_minus_baseline=delta))
+            pairs.append(dict(seed=seed,baseline=name,world_event_comparable=comparable,shared_action_keys=len(shared),draw_mismatches=mismatches,complete_pair=complete,full_world_pair=full_world,delta_A_minus_baseline=delta))
             if comparable and complete:
                 for metric,value in delta.items():differences.setdefault((name,metric),[]).append(value)
-    estimates=[]
-    for (name,metric),values in differences.items():
-        rng=random.Random(20261122)
-        boot=sorted(statistics.mean(rng.choices(values,k=len(values))) for _ in range(10000)) if len(values)>1 else None
-        estimates.append(dict(baseline=name,metric=metric,seeds=len(values),paired_mean=statistics.mean(values),paired_95pct_bootstrap_interval=[boot[249],boot[9749]] if boot else None))
+            if comparable and full_world:
+                for metric,value in delta.items():full_world_differences.setdefault((name,metric),[]).append(value)
+    def estimates(deltas):
+        result=[]
+        for (name,metric),values in deltas.items():
+            rng=random.Random(20261122)
+            boot=sorted(statistics.mean(rng.choices(values,k=len(values))) for _ in range(10000)) if len(values)>1 else None
+            result.append(dict(baseline=name,metric=metric,seeds=len(values),paired_mean=statistics.mean(values),paired_95pct_bootstrap_interval=[boot[249],boot[9749]] if boot else None))
+        return result
     for r in rows:
         for key in ('draws','arrivals','source_hashes'):r.pop(key,None)
-    return dict(runs=rows,pairs=pairs,paired_seed_estimates=estimates,limitations=['One seed has no cross-world uncertainty estimate.','Simulation behavior is assumption-based, not measured pharmacy/client behavior.','Incomplete runs are retained in run tables and excluded from complete-pair estimates.',
+    return dict(runs=rows,pairs=pairs,paired_seed_estimates=estimates(differences),
+                secondary_full_world_estimates=estimates(full_world_differences),limitations=['One seed has no cross-world uncertainty estimate.','Simulation behavior is assumption-based, not measured pharmacy/client behavior.','Incomplete runs are retained in run tables and excluded from complete-pair estimates.',
+'Secondary full-world estimates include execution failures and turn caps when the entire simulation returned normally with 100 request records and settled costs; these remain separate from strict completed pairs.',
 'Units secured are locks obtained within each six-hour window, not proof of dispensing; the simulation includes no-shows.',
 'Turn latency sums recorded spans and omits untraced overhead; simulated minutes to fulfillment are a separate measure.'])
 
