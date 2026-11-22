@@ -31,7 +31,12 @@ Accepted freeze SHA256:
 9e8f67f313643d6721d8667ce7ea57f8dbea61c438702c0479cd19e5886d32f6.
 Runtime claude-haiku-5-5, medium, prompt1.15; accepted labels unchanged.
 
-One-shot validate_candidate5.py running, exec session54115. Read
+One-shot validate_candidate5.py running, exec session54115. First batch200/200 recorded
+(run20261122T192948_5707ce159e65); queue now understanding-2 (30 cases).
+First batch known$0.518497, no unsettled run calls, one guardrail-blocked U0008.
+Execution status remains incomplete despite full200 raw coverage. All60 flagged rows
+and required original regressions have62 assistant records; summary reports0missing.
+Snapshot: evidence/candidate5-first-batch-summary.json (not final matrix results). Read
  evidence/candidate5-primary-queue.json and *queue-log.txt before acting.
 DO NOT rerun this queue or old finish_development.py. Every batch log is exclusive.
 Pre-outcome matrix candidate5-batches.json: understanding200+30 fresh cases;
@@ -43,7 +48,7 @@ Failures stay in denominators. Raw coverage is not semantic acceptance.
 No source or pinned harness edits while this queue runs.
 Incremental primary assistant review is in evidence/candidate5-primary-assistant-review.jsonl
 (raw-row hashes, human_reviewed=false, independent=false). All flags inspected through
-raw row196 (through U1020), including original U0025/U0145/U0146/U0150/U1019 regressions.
+all200 first-batch rows (through U1024), including original U0025/U0145/U0146/U0150/U1019 regressions.
 Budget-normalization and empty-affordable-stock scorer applicability findings are retained;
 U0137 over-budget recommendations remain a raw accepted-label failure despite soft wording. U0037 is a real false cheapest claim missed by
 runtime pronoun association; U0008 initially false price claim and false-blocked repair;

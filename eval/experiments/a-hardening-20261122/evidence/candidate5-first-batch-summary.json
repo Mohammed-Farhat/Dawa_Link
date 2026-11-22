@@ -1,0 +1,154 @@
+{
+  "queue_status": "running",
+  "completed_batches": 1,
+  "expected_batches": 19,
+  "all_primary_case_attempts_present": false,
+  "suites": {
+    "understanding": {
+      "cases": 200,
+      "contexts_or_conversations": 200,
+      "execution_ok": 199,
+      "flagged_outcomes": 60,
+      "raw_conditional_checks": {
+        "asks_first": {
+          "yes": 125,
+          "not_applicable": 75
+        },
+        "asks_for_the_rest": {
+          "not_applicable": 171,
+          "yes": 27,
+          "no": 2
+        },
+        "asks_needlessly": {
+          "no": 130,
+          "not_applicable": 69,
+          "yes": 1
+        },
+        "asks_when_it_must": {
+          "not_applicable": 173,
+          "no": 10,
+          "yes": 17
+        },
+        "budget": {
+          "not_applicable": 179,
+          "yes": 20,
+          "no": 1
+        },
+        "clinical_refusal": {
+          "not_applicable": 182,
+          "yes": 18
+        },
+        "days_of_use": {
+          "not_applicable": 180,
+          "yes": 20
+        },
+        "every_item": {
+          "not_applicable": 177,
+          "yes": 23
+        },
+        "language": {
+          "yes": 198,
+          "no": 2
+        },
+        "nothing_invented": {
+          "yes": 88,
+          "no": 38,
+          "not_applicable": 74
+        },
+        "pickup_day": {
+          "not_applicable": 179,
+          "yes": 20,
+          "no": 1
+        },
+        "preference": {
+          "not_applicable": 191,
+          "yes": 8,
+          "no": 1
+        },
+        "product": {
+          "yes": 135,
+          "not_applicable": 64,
+          "no": 1
+        },
+        "proposal_complete": {
+          "yes": 124,
+          "not_applicable": 75,
+          "no": 1
+        },
+        "proposal_quantity": {
+          "yes": 125,
+          "not_applicable": 75
+        },
+        "quantity": {
+          "yes": 135,
+          "not_applicable": 65
+        },
+        "quantity_understood": {
+          "yes": 135,
+          "not_applicable": 65
+        },
+        "refuses_wrongly": {
+          "no": 131,
+          "not_applicable": 69
+        },
+        "shows_a_card": {
+          "yes": 125,
+          "no": 6,
+          "not_applicable": 69
+        },
+        "situation": {
+          "not_applicable": 184,
+          "yes": 16
+        },
+        "uses_the_answer": {
+          "yes": 122,
+          "not_applicable": 75,
+          "no": 3
+        }
+      }
+    }
+  },
+  "costs": [
+    {
+      "run": "20261122T192948_5707ce159e65",
+      "known_microusd": 518497,
+      "unsettled_calls": 0
+    }
+  ],
+  "known_primary_microusd": 518497,
+  "required_assistant_review_records": 62,
+  "missing_assistant_reviews": [],
+  "assistant_verdicts": {
+    "scorer_error": 28,
+    "agent_and_guard_failure": 1,
+    "catalog_label_ambiguity": 1,
+    "scorer_error_with_wording_concern": 8,
+    "catalog_completion_failure": 1,
+    "agent_failure": 3,
+    "regression_core_supported_with_wording_concern": 1,
+    "agent_language_failure_and_scorer_error": 1,
+    "agent_language_failure": 1,
+    "catalog_lookup_failure": 1,
+    "scorer_error_with_language_defect": 1,
+    "agent_failure_and_scorer_error": 1,
+    "scorer_applicability_review": 2,
+    "scorer_error_with_quality_concern": 6,
+    "accepted_label_failure_with_ambiguity": 1,
+    "scorer_error_and_applicability_review": 1,
+    "regression_pass_with_quality_concern": 1,
+    "scorer_error_with_agent_quality_failure": 1,
+    "agent_payment_claim_failure_and_scorer_error": 1,
+    "agent_global_scope_failure_and_scorer_association_error": 1
+  },
+  "independent_acceptance": false,
+  "raw_file_sha256": {
+    "eval/experiments/architecture-20261118/runs/20261122T192948_5707ce159e65/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.15_631e37514cf6/answers.jsonl": "94de56cff928e96edb02a091423e25c933b5fb54177837a4b7673e9267052796"
+  },
+  "limitations": [
+    "Raw conditional scorer checks retain their original applicability and known regex errors.",
+    "Execution failures remain in every suite context/conversation count, not silently excluded.",
+    "Flagged outcomes combine scorer/semantic/execution flags and are not confirmed agent-defect counts.",
+    "A failed fixed conversation may stop before later scripted turns; observed turns are reported.",
+    "Implementation-assistant review is not independent human acceptance."
+  ]
+}
