@@ -275,11 +275,12 @@ class TestWhatAReplyMayShow:
         assert result.text == "Which Panadol do you need?"
         assert scene.run(result).guardrails == ["internals"]
 
-    def test_the_wrong_language_is_fixed_or_sent_anyway(self, scene: Scene) -> None:
+    def test_persistent_wrong_language_uses_fixed_reply(self, scene: Scene) -> None:
         """FA-8: low risk, so a second miss is sent and counted."""
         result = scene.turn(reply("مرحبا"), reply("أهلا"), text="hello")
 
-        assert (result.outcome, result.text) == ("ok", "أهلا")
+        assert result.outcome == "guardrail_blocked"
+        assert result.text == "Sorry, I couldn't answer that. Could you say it another way?"
         assert scene.run(result).guardrails == ["language"]
 
     def test_french_is_not_the_answer_to_arabizi(self, scene: Scene) -> None:

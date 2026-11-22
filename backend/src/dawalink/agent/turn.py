@@ -718,9 +718,9 @@ def _guard_output(graph_state: _State) -> _State:
     for kind in kinds:
         if kind not in work.guardrails:
             work.guardrails.append(kind)
-    # A reply in the wrong language, or one without the cards of what it found, is sent
-    # after one try to fix it: low risk, and our fixed text would say less (FA-8, FA-40).
-    mild = (output_guard.LANGUAGE, output_guard.NO_CARD)
+    # Missing-card omissions retain the existing one-repair policy (FA-40).
+    # Persisting language violations use a fixed reply in the client's language.
+    mild = (output_guard.NO_CARD,)
     blocking = [
         violation
         for violation in checked.violations
