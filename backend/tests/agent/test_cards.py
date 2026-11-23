@@ -599,6 +599,7 @@ def test_arabizi_failed_cancel_repairs_card_claim_in_arabizi(scene: Scene) -> No
         text="elghi l talab R-CX9785, hayda la khayye",
     )
     assert result.outcome == "ok"
+    assert result.text is not None
     assert result.text.startswith("Ma l2it")
     assert not result.proposal_ids
     assert "card" in scene.run(result).guardrails

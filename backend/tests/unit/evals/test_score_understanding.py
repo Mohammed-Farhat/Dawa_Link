@@ -560,7 +560,7 @@ def test_normalized_client_budget_keeps_its_currency() -> None:
 
 def test_empty_budget_search_exempts_cards_only_with_verified_constraints() -> None:
     wanted = case(budget={"amount": 4, "currency": "USD"}, days_of_use=7, pickup_in_days=0)
-    args = {
+    args: dict[str, Any] = {
         "days_of_use": 7,
         "pickup_day": str(TODAY),
         "max_price": {"amount": 4, "currency": "USD"},
