@@ -1,8 +1,8 @@
 # DawaLink: Infrastructure and Deployment
 
-**Version:** v2.7 · **Date:** 2026-11-19
+**Version:** v2.8 · **Date:** 2026-11-23
 **Builds on:** `02` v3.1 §7 · `05` v3.1 §7, §9 · `06` v1.2 §2, §6.1 · `09` v1.2 (FX, FO rows) · `10` v1.1 · `11` v1.1 §10, §13
-**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.7** (the pre-production review, 2026-11-19): every setting of the three task definitions, and where each comes from (§8.1); `APP_ENV=aws` is the image's own default (§6); email through SES by SMTP (§9); the database secrets are full addresses, the ops task gets the retention login, and the master password is set by hand (§7, §8); the website's release keeps the previous build's files and never answers a missing file with the page (§4.1, §12); the load balancer's idle timeout, the stop times and the health checks (§5, §6); how the first admin is made before Cognito (§10.1); more checks after deploying (§14). Nothing here has been run on AWS yet. **v2.4:** the development budget setting is 20 (decision log BLD-D13), and Langfuse is proven with real keys (§2). **v2.3** (build step 5): the agent's settings, the development model (Claude, decision log BLD-D11) and the terminal chat command (§2). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
+**Status:** ✅ validated by the owner (2026-11-02, decision log §V). **v2.8** (2026-11-23): round A (BLD-D46 to BLD-D50) adds what "forgot my password", "delete my account" and "confirm, then log in" mean for SES and for the switch to Cognito (§9, §10), the Ministry's no-prescription list in the release's catalog check (§7, §12), CloudFront's own logs left off (§4.1), and two checks after deploying (§14); round B (BLD-D51 to BLD-D56) changed no deployment file. **v2.7** (the pre-production review, 2026-11-19): every setting of the three task definitions, and where each comes from (§8.1); `APP_ENV=aws` is the image's own default (§6); email through SES by SMTP (§9); the database secrets are full addresses, the ops task gets the retention login, and the master password is set by hand (§7, §8); the website's release keeps the previous build's files and never answers a missing file with the page (§4.1, §12); the load balancer's idle timeout, the stop times and the health checks (§5, §6); how the first admin is made before Cognito (§10.1); more checks after deploying (§14). Nothing here has been run on AWS yet. **v2.4:** the development budget setting is 20 (decision log BLD-D13), and Langfuse is proven with real keys (§2). **v2.3** (build step 5): the agent's settings, the development model (Claude, decision log BLD-D11) and the terminal chat command (§2). **v2.2** (build step 4): the mail catcher runs locally, and the worker's email settings are named (§2). **v2.1** (build step 3): §7 says where the catalog file comes from (O5 closed) and what `prepare_db` does as built. It replaces the v1.0 draft, which was never validated: the owner removed the pipelines, CDK and advanced GitHub features. Decisions INF-D1–INF-D15 are in §15.
 
 This is the last planning step. It says **how we work, where DawaLink runs, and how it gets there**. Everything is done by hand. Nothing here has been run yet, so the first deploy is also its first test.
 
@@ -49,7 +49,7 @@ This is the last planning step. It says **how we work, where DawaLink runs, and 
   - **Demo mode needs the catalog.** With `DEMO_MODE=true` (compose's default), the database step seeds demo pharmacies, and it stops with a sentence if the catalog file is missing (§7). Build the catalog first, or set `DEMO_MODE=false`.
   - Stopping takes up to 2 minutes: compose gives the API and the worker 120 s, as ECS does (§6), so a running agent turn can finish.
   - The local database is reachable at `127.0.0.1:5433`, because a locally installed PostgreSQL often holds port 5432.
-- **Mailpit** catches every email and shows it at `http://localhost:8025`.
+- **Mailpit** catches every email and shows it at `http://localhost:8025`, the links to confirm an email (CN-1) and to set a new password (CN-19) included.
 - **LLM:** set by `LLM_PROVIDER` in `.env`. `none` (the default) switches the assistant off, so nothing is spent by accident. `anthropic` uses Claude with `LLM_MODEL` and `ANTHROPIC_API_KEY`: **development uses Claude Haiku 5.5** (decision log BLD-D11). `ollama` is a free local spare. The tests always use a scripted model and can't reach a paid service.
   - `LLM_MONTHLY_BUDGET_USD` is the month's LLM budget; a day may use 10% of it (N-46). The example file says 20 for development (BLD-D13): a day can then spend $2 at most, far more than development needs, and far less than the credit.
   - **Talking to the agent without a website:** inside `backend/`, `uv run --env-file ../.env python -m dawalink.ops.chat "baddi panadol"` writes as a demo client; `--tap 1` taps a card, `--work` runs the worker's waiting turns, `--steps` prints every step of the turn.
@@ -143,6 +143,7 @@ The app's own addresses never have a dot in their last part (order and request n
 - Scripts run only from our own site. This matters more now, because the login token is readable by scripts (§4.3).
 - `'unsafe-inline'` for styles assumes Mantine needs it. We confirm this in the build.
 - Readex Pro is self-hosted, so no request goes to Google Fonts.
+- **Leave CloudFront's standard logs off** on the website's distribution (the default). The links to confirm an email and to set a new password carry their token in the page's address until the page reads it (`10` TH-66), and those logs would keep it.
 
 ### 4.2 API CloudFront
 
@@ -217,7 +218,7 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
   - the **worker** starts nothing new and waits up to 100 s for the agent turns it is running (`WORKER_STOP_WAIT_S`). With 30 s it would be killed in the middle of a turn, and the turn would run, and be paid, again (A#21).
 - **API health check** (the target group's): `/api/v1/health`, with a **timeout of 6 s or more**. `/health` waits at most 1 s for the database, then says `db: "down"`. Give the service a **health check grace period of 60 s** (in the service's settings; check in the console), so a task that is still starting isn't judged.
 - **`/health` always answers `200` while the process runs,** with `db: "ok"` or `"down"` in the body, and the image's `version`. If it answered `503` during a database outage, ECS would keep killing healthy API tasks instead of letting them answer "try again" (FX-10). This changes `06` §6.1.
-- **Worker health check** (the container's, in the task definition): command `CMD`, `python`, `-m`, `dawalink.worker.alive`; interval 30 s; timeout 5 s; 2 retries; **start period 60 s** (the first heartbeat is written after the first pass). Each clock-check pass writes a heartbeat, and the check fails if it's older than 2 minutes. ECS then replaces the worker, so a stuck worker restarts on its own (FX-13, FX-14). **A worker whose loop died exits by itself** (code 1), and ECS starts a new one. Not checked: the agent turns' own loop, if it hangs without dying.
+- **Worker health check** (the container's, in the task definition): command `CMD`, `python`, `-m`, `dawalink.worker.alive`; interval 30 s; timeout 5 s; 2 retries; **start period 60 s** (the first heartbeat is written after the first pass). Each clock-check pass writes a heartbeat, and the check fails if it's older than 2 minutes. ECS then replaces the worker, so a stuck worker restarts on its own (FX-13, FX-14). (Locally, `docker-compose.yml`'s own check retries once.) **A worker whose loop died exits by itself** (code 1), and ECS starts a new one. Not checked: the agent turns' own loop, if it hangs without dying.
 - **The worker runs up to 4 agent turns at once,** so it uses up to about 6 database connections.
 - **Two workers overlapping** during an update is safe (`SKIP LOCKED`, `05` §10).
 
@@ -247,7 +248,7 @@ The CloudFront rule on `dawalink-alb` is one choice in the security group's inbo
   `postgresql+psycopg://<login>:<password>@<RDS endpoint>:5432/dawalink?sslmode=require`
   - the logins are the master user you chose, `dawalink_migrator`, `dawalink_app` and `dawalink_retention`. The last three are fixed: a trigger and the grants name them, and `prepare_db` refuses another name. It creates them, with the passwords written in their addresses;
   - make each password with `python -c "import secrets;print(secrets.token_urlsafe(32))"`: letters, digits, `-` and `_` only, so nothing in it needs escaping in an address;
-  - `sslmode=require` makes every connection encrypted (RDS refuses one that isn't, too). **Not closed yet:** the server's certificate is not checked against AWS's own authority. That needs AWS's certificate bundle inside the image and `sslmode=verify-full&sslrootcert=<its path>` in each address (the code already passes both on). Until then, something inside our isolated subnets that posed as the database would not be noticed: the owner decides whether to close it or accept it (`10`).
+  - `sslmode=require` makes every connection encrypted (RDS refuses one that isn't, too). **Left open on purpose:** the server's certificate is not checked against AWS's own authority. That would need AWS's certificate bundle inside the image and `sslmode=verify-full&sslrootcert=<its path>` in each address (the code already passes both on). So something inside our isolated subnets that posed as the database would not be noticed: the owner accepted this for the demo on 2026-11-23 (`10` RR-28).
 - The API gets only `DATABASE_URL`; the worker also gets the retention one; the ops task gets all four (§8).
 - **A refused login fails at once,** naming the setting and the login, never the password (a wrong password, user or database name). Before, it waited 60 s and then blamed the database.
 - **If it fails, don't update the services.** The old version keeps running (FO-1).
@@ -328,7 +329,7 @@ Every setting the code reads (`config.py`), and where it comes from. **Plain** m
   - An email is sent **at least once**: if the database fails just after SES accepted it, it goes again on the next pass.
   - Locally, `mailpit` takes the same emails with no login and no TLS (§2).
 - **We stay in the SES sandbox by default.** It sends only to addresses verified one by one (each person clicks a link from AWS), up to 200 emails a day. That's enough for the demo accounts.
-- **Everyone else still sees every notification in the app** (FX-7). **Until the switch to Cognito (§10), the sign-up confirmation (CN-1) goes through SES too:** in the sandbox, only a verified address can confirm its account, and so reserve or chat. After the switch, Cognito sends it.
+- **Everyone else still sees every notification in the app** (FX-7). **Until the switch to Cognito (§10), the sign-up confirmation (CN-1) goes through SES too:** in the sandbox, only a verified address can confirm its account, and so reserve or chat. So do the link to set a new password (CN-19) and the notice that it was changed (CN-20): in the sandbox only a verified address can reset its password. After the switch, Cognito sends them. An email queued for a client who deleted their account is dropped, never sent. In demo mode someone may ask for a new password for a demo address (`…@demo.dawalink.test`): that email can't be delivered, ends as DEAD and raises the email alert; the account's caps bound how often (N-56).
 - **Production access is optional, if there's time.** It lifts that limit. The owner requests it once the site is live, because AWS asks for its URL. AWS answers within 96 hours, may take longer, and may refuse.
 - **Spam:** mail from a personal address may land in spam. We test it before the demo.
 - **Bounces:** SES's suppression list handles them; no bounce webhook (it would be a new public endpoint). AWS's request form asks you to confirm a bounce process, so we'll see if this satisfies it.
@@ -344,6 +345,8 @@ Every setting the code reads (`config.py`), and where it comes from. **Plain** m
 - **After the switch:**
   - React calls FastAPI, and FastAPI calls Cognito;
   - Cognito holds passwords, email verification and admin two-factor login;
+  - **what our own login does today and Cognito replaces** (built 2026-11-20 to 2026-11-22): the confirmation of an email, which confirms and logs nobody in (BLD-D49), and "Forgot my password" (R-AU9: `POST /auth/password/forgot` and `/auth/password/reset`, the reset functions of `services/auth.py`, the emails CN-19 and CN-20). The switch moves the reset to Cognito's own flow behind the same two routes, and the table `password_reset_tokens` can then be dropped. The rules stay: the same answer whoever asks, no link for an admin, every session ended after a reset;
+  - **deleting an account** (R-AU10) must then also delete the client's Cognito user;
   - our API still issues its own session token, so §4.3 stays the same.
 - **Sign-up email:** Cognito's built-in sender reaches any address with no SES review, up to a small daily limit. So a grader can sign up live.
 - **Registration must still never reveal an account:** Cognito reports existing emails, so our API hides that and always says "check your email".
@@ -364,7 +367,7 @@ On AWS there is no terminal: ECS Exec is off, so nobody can type the password, a
 4. **Read the key** in the task's log (CloudWatch, the `dawalink-admin` log group, this task's stream), type it into the authenticator app, and log in once at `https://<website-cloudfront>/admin/login` to prove it.
 5. **At once, delete what holds it:** the task's log stream (anyone who reads it could make the admin's codes, and logs are otherwise kept 30 days), the secret `dawalink/admin-setup` (Secrets Manager may keep a deleted secret for a recovery window; check in the console), and the task definition `dawalink-admin` (deregister it).
 
-What stays: the key was in CloudWatch between steps 3 and 5 (a row for `10` §8). The admin's console has no "change password" screen, so the password of step 1 stays the admin's: keep it in a password manager.
+What stays: the key was in CloudWatch between steps 3 and 5 (a row for `10` §8). The admin's console has no "change password" screen, and an admin gets no reset link (R-AU9), so the password of step 1 stays the admin's: keep it in a password manager. A lost one means running the command again.
 
 ---
 
@@ -400,6 +403,8 @@ The commands are for **PowerShell**, from the repo's root folder. (Git Bash woul
 ```powershell
 Test-Path backend/data/moph/catalog.csv, backend/data/moph/catalog.json
 ```
+
+   **And that it carries the Ministry's no-prescription list:** when the catalog was built, `fetch_otc_list` ran before `build_catalog`, and `build_catalog` said how many products the list marked (119 on the local catalog of 2026-11-22; never 0). A catalog built without it would put the prescription notice back on every product at `prepare_db` (§7, `09` FO-12).
 
 2. **Build it with its version** (the commit), and check that the catalog went in:
 
@@ -501,6 +506,8 @@ The $100 AWS credit covers about five weeks of this. The LLM isn't included: it'
 - [ ] Enough API credit is left for the demo. When it runs out, API calls stop and the agent falls back to "Use Search".
 - [ ] Sign up from scratch with a non-team email, and the verification email arrives. Before the switch to Cognito and while SES is in the sandbox, that email must first be verified in SES (§9); after the switch, any address.
 - [ ] A reservation email reaches a verified demo address, and the in-app notification shows for everyone.
+- [ ] "Forgot your password?" for a verified address brings the link (CN-19), the link sets a new password once, and the notice (CN-20) follows. Before the switch to Cognito and while SES is in the sandbox, only a verified address gets it (§9).
+- [ ] A confirmation link confirms the email and logs nobody in: the login page follows (BLD-D49).
 - [ ] Log in on an **iPhone and an Android phone**.
 - [ ] Chat works through CloudFront, including the streamed reply.
 - [ ] The browser console shows no CSP errors, and maps load.

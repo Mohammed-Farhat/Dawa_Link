@@ -1,7 +1,7 @@
 # DawaLink: Features (Scope)
 
-**Version:** v5.7 · **Date:** 2026-11-19
-**Status:** ✅ validated by the team (2026-10-20). **v5.6:** stock files are CSV only (the owner, decision log BLD-D32). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
+**Version:** v5.8 · **Date:** 2026-11-23
+**Status:** ✅ validated by the team (2026-10-20). **v5.8 (two rounds, 2026-11-20 to 2026-11-23):** **round A:** password reset and account deletion are built, no longer postponed (C1, §7; decision log BLD-D47, BLD-D48); the confirmation link confirms and the person then logs in (C1; BLD-D49); the prescription notice follows the Ministry's own no-prescription list (C2; BLD-D50). **Round B:** the assistant asks once (where, how many days, when), then always searches; a place named as where to look is searched as such; one medicine listed nowhere gets a watch and asks on the agent's own, then it tells; an empty answer says why; after a team reply the chat is with the team (C6, C9, §6 scenario 1; BLD-D52 to BLD-D55). Two older lines corrected on the way: a request starts only in the chat (C17, BLD-D30), and the search page's filters (C5, BLD-D42). **v5.6:** stock files are CSV only (the owner, decision log BLD-D32). **v5.5:** the first demo scenario shows the agent asking before it searches (decision log BLD-D28, BLD-D29); a sourcing request starts in the chat, with no form (BLD-D30). **v5.4** (decision log BLD-D17): another brand is shown with "ask the pharmacist first", never reserved or waited for automatically. **v5.3** applies the pickup-day decision (decision log §W): the pickup day is today or one of the pharmacy's next open days, 3 at most. **v5.2** records the Claude API choice and who writes the datasets. **v5.1** applies the threat model (`10`, decision log §T): admin two-factor login is back, and registration never reveals an account (C1, C13).
 - **v3.0 was the agent-first refocus** (decision log §K): an autonomous sourcing mode, multi-medicine planning, a fixed priority rule, units, simplified platform features.
 - **v4.0 applies design review #2** (decision log §N):
   - **needs are urgent:** a request or watch searches for 6 hours, during the day;
@@ -83,19 +83,22 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
    - quantity;
    - **days of use**;
    - **pickup day** (today, or one of the pharmacy's next open days, 3 at most; a later day leaves fewer days before the box expires);
-   - location (shared, or a district);
+   - location (shared, a place on the map, an area named in chat, or the profile's home);
+   - **where to look** (nearest, areas the client names, or anywhere): a place named as where to look is searched as such, and is not where the client is (BLD-D54);
    - budget;
    - whether they want to hear about other brands;
    - the client's situation (no car, free after 18:00…).
+
+   **It asks once, then always searches** (the owner, 2026-11-23; BLD-D53, `04` R-AG9): one short message asks for what the client hasn't said of where, how many days and when; "I don't know" or "any" is an answer; whatever the reply, it searches. It never asks car or on foot, nor the box size.
 3. **Decides where the client should go:**
    - compares the pharmacies whose boxes last long enough (travel time by car and on foot, opening hours, price, stock) with what the client said;
    - **recommends one**, with a reason, and shows up to 2 alternatives;
    - for **several medicines**, it plans the route (C18).
 4. **Proposes reservations.** The client's tap reserves. It **re-plans** when an option is taken or a pharmacy marks it not available.
-5. **When nothing fits:** early release (C8), a watch (C9), or it suggests turning the need into a **sourcing request** (C17).
+5. **When nothing fits:** it says why (listed nowhere, not in the areas named, over the budget, expires too early, not on that day, not enough in one box). For **one medicine no pharmacy lists**, it starts a watch (C9) and asks open pharmacies (C8) **on its own, in the same turn, then tells the client** (the owner: "Ask on its own, then tell"; BLD-D55, `04` R-RQ4). For several medicines, or "keep looking", it suggests a **sourcing request** (C17).
 6. **Shows the prescription notice** for items that need one.
 7. **Manages reservations and requests:** status, and cancelling (with a tap).
-8. **Escalates to a human:** when asked, when it's stuck, or when the client claims an **emergency** (nobody changes priority).
+8. **Escalates to a human:** when asked, when it's stuck, or when the client claims an **emergency** (nobody changes priority). From the team's first reply the chat is with the team, and the agent answers nothing written to them, until the case is closed, a new chat, or N-55 (BLD-D52).
 
 **Boundaries (enforced in code):**
 - no medical advice;
@@ -113,7 +116,7 @@ A chat in the client portal: English, Arabic, **Arabizi**, brand names, misspell
 - [ ] Every turn is traced.
 
 #### C17: Sourcing requests (autonomous mode)
-The client submits a **request** for **1–5 medicines** they need **now**, with a location (shared, or a district), the days of use of each medicine, and optionally a budget and "tell me about other brands" (they are shown, never reserved or waited for automatically; BLD-D17). They can do this through a form, from the chat (the agent prepares a summary card and the client taps [Start sourcing]), or from an empty search. Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
+The client submits a **request** for **1–5 medicines** they need **now**, with a location (shared, or a district), the days of use of each medicine, and optionally a budget and "tell me about other brands" (they are shown, never reserved or waited for automatically; BLD-D17). They do this **in the chat only**: the agent prepares a summary card and the client taps [Start sourcing]; an empty search opens the chat with the medicine named (there is no request form, decision log BLD-D30). The request's thread starts from what the client told the agent there, and the agent plans at once, asking nothing first (BLD-D53). Requests can be started **08:00–20:00** ("come back tomorrow" otherwise). **The agent owns the request for 6 hours:**
 
 | The agent may do on its own | The agent needs a client tap for |
 |---|---|
@@ -159,7 +162,7 @@ The client submits a **request** for **1–5 medicines** they need **now**, with
 - [ ] No leaks.
 
 #### C9: Watches and matching (first come, first served)
-- A **claim** is one need for one medicine. Two kinds exist: a client **watch** ([Notify me] on the search page, or set by the agent) and a **waiting request item**. A claim lasts **6 hours**.
+- A **claim** is one need for one medicine. Two kinds exist: a client **watch** ([Notify me] on a medicine's page in search, or set by the agent, on its own for one medicine listed nowhere, C6) and a **waiting request item**. A claim lasts **6 hours**.
 - When stock becomes available, **code** offers it to matching claims **first come, first served** (whoever started waiting first), within 30 minutes by car of the client, and only boxes that last their days of use.
 - The winner gets a **2-hour hold** (an offer). If it isn't taken, the next claim gets it.
 - **Nobody ranks clients**: not the agent, not an admin. Emergency claims get human help, not priority.
@@ -179,22 +182,22 @@ If the LLM is down or over budget:
 
 #### C1: Accounts and roles
 - Client, pharmacy and admin roles. **Server-side sessions** (logout and suspension take effect instantly).
-- **Pharmacies:** registration → admin approval → upload unlocks. Name, license and address are changed by an admin after approval.
-- **Clients:** log in to search; a **verified email** is needed for the assistant, requests, reserving and watches. Sign-ups are rate-limited per IP, and **never reveal whether an email already has an account**.
+- **Pharmacies:** registration → admin approval → upload unlocks. Name and license are changed by an admin after approval; the pharmacy changes its own phone, address and pin (BLD-D33).
+- **Clients:** log in to search; a **verified email** is needed for the assistant, requests, reserving and watches. Sign-ups are rate-limited per IP, and **never reveal whether an email already has an account**. **The confirmation link confirms the email and logs nobody in:** the person then logs in with their password (the owner, 2026-11-22; BLD-D49).
 - **Admins:** created from the command line.
 - **Admins** also log in with a one-time code from an authenticator app (TOTP, `10` TM-D8).
-- *Postponed:* password reset, account deletion.
+- **"Forgot your password?"** for clients and pharmacists, never admins: a link by email that works once (`04` R-AU9; BLD-D47). **"Delete my account"** for clients, with the password typed again (`04` R-AU10; BLD-D48); a pharmacy is suspended by an admin instead. Both were postponed (§7, P-1) until the owner asked for them; built on 2026-11-20.
 
 #### C2: Medicine catalog
 - **Imported by a script** from the MoPH price list (source and date stored).
 - Same-composition groups (conservative).
-- **Prescription required by default**, with an OTC list (seed file); used for the notice only.
+- **Prescription required by default**, except the medicines on the Ministry's own list of those sold without a prescription (`04` R-C7; BLD-D50, which closes O7); used for the notice only.
 - **Controlled substances removed entirely.**
 - Quantities in **units** (`units_per_pack = 1` by default; box splitting is a later add-on).
 - Admins get a read-only view.
 
 #### C3: Inventory
-- A **fixed CSV template** (a spreadsheet saves one): product, strength (optional), batch, expiry, quantity.
+- A **fixed CSV template** (a spreadsheet saves one): product, strength (optional), batch, expiry, quantity, code (optional, BLD-D33).
 - Row-level errors with "did you mean…" suggestions.
 - A **change summary → [Apply]**; reserved stock is never reduced by an upload or edit.
 - **Quick quantity edits** (e.g. after a sale in the shop), plus a manual add form.
@@ -207,9 +210,9 @@ If the LLM is down or over budget:
 - Prices are stored in LBP and **shown in LBP + ≈ USD**.
 
 #### C5: Search page (non-chat UI, baseline and fallback)
-- Search by name from your location (shared, or a district); filter by price, **days of use** and pickup day. Search shows the medicine that was searched, never another brand (BLD-D17).
+- Search by name among the medicines in stock, from your location (shared, a place on the map, or your home); filter by price, "open now" and the place. The **days of use** and the pickup day are asked in the reserve sheet, where the fit is checked (BLD-D42). Search shows the medicine that was searched, never another brand (BLD-D17).
 - Each result shows the pharmacy, its area and its **travel time** (car and on foot), price (LBP + USD), discount, expiry, the prescription notice, availability (exact up to 5) and [Reserve].
-- **Empty results:** [Notify me] (a 6-hour watch) or [Ask DawaLink to find it] (opens the chat with the medicine named; there is no request form, decision log BLD-D30).
+- **Empty results:** [Ask DawaLink to find it] (opens the chat with the medicine named; there is no request form, decision log BLD-D30); on a medicine's own empty page, also [Notify me] (a 6-hour watch).
 
 #### C7: Reservations and pickup
 - A tap **reserves immediately** and **locks the stock**. There is no confirmation step.
@@ -218,13 +221,13 @@ If the LLM is down or over budget:
 - **The box must last the client's days of use** from that day (if they don't know: 1 day, with the expiry date shown as a warning). Otherwise it isn't offered: "No match: the boxes expire too early for 12 days of use."
 - **At the counter:** the client shows the **order number**; the pharmacist checks the prescription if needed and presses **[Picked up]**.
 - **[Not available]** (all or some units) → the client is told and, for agent orders, the agent re-plans. No penalty.
-- **No-shows:** not picked up in time → back to stock; 2 in 30 days → 7-day pause.
+- **No-shows** (a "missed pickup" on screen): not picked up in time → back to stock; 2 in 30 days → 7-day pause. The boxes reserved with one tap count once (`04` R-N1, BLD-D46).
 - **Limits:** 5 open orders, 3 units per same-medicine group.
 - Pharmacies never see client identity.
 
 #### C10: Notifications (essential set)
 - **Email (SES) + in-app.**
-- **Clients:** verification, reserved, not available, reminder, expired, paused, offers, watch ended, request updates, admin reply.
+- **Clients:** verification, reserved, not available, reminder, missed pickup, paused, offers, watch ended, request updates, admin reply, a link to set a new password and "your password was changed" (BLD-D47).
 - **Pharmacies:** new reservation, early-release ask, client cancelled, suspension, stale inventory.
 - Templates only; WhatsApp later.
 
@@ -250,7 +253,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 - **Taps execute, the agent proposes; cards come only from tools.**
 - Schema-validated tools; injection treated as data; **no text typed by pharmacies reaches the LLM** except their admin-approved names; replies shown as plain text (no links); a clinical guardrail.
 - Rate limits; an audit log of every state change and its actor.
-- **Threat model:** `10` (assets, attackers, 55 threats with tests, accepted risks).
+- **Threat model:** `10` (assets, attackers, 72 threats with tests, 29 accepted risks).
 
 #### C14: Observability (AgentOps)
 - Langfuse traces for every turn, LLM call and tool call (latency, tokens, cost, retries, errors).
@@ -299,7 +302,7 @@ Dashboard, **reservations** ([Picked up] / [Not available]), inventory (upload a
 
 The **demo clock** (admin, demo mode only) fast-forwards time to show the time-based behavior live.
 
-1. **Chat, happy path (Arabizi):** "baddi augmentin 1g, ma fiye edfa3 aktar men 10$" → the agent asks car or on foot, the day and the days of use → the client answers → cards → [Reserve] → **reserved at once** → order number + "pick up by tomorrow 21:00".
+1. **Chat, happy path (Arabizi):** "baddi augmentin 1g, ma fiye edfa3 aktar men 10$" → the agent asks once where the pharmacy should be, for how many days and when ("I don't know" is fine) → the client answers → it searches, whatever the answer → cards → [Reserve] → **reserved at once** → order number + "pick up by tomorrow 21:00".
 2. **Ambiguous** "augmentin" → chips for strength.
 3. **Option taken, or the pharmacy marks it not available** → the agent re-plans.
 4. **Sourcing request, 3 medicines:**
@@ -334,7 +337,7 @@ The **demo clock** (admin, demo mode only) fast-forwards time to show the time-b
 | A7 | Impact dashboard | Demo value |
 | A8 | Arabic (RTL) interface | Accessibility |
 | A9 | Optional pre-authorized auto-reserve within the client's limits | More autonomy; needs a careful consent design |
-| P-1 | Password reset, account deletion *(admin 2FA moved into the core by §T)* | Platform security and privacy extras |
+| P-1 | ~~Password reset, account deletion~~ *(admin 2FA moved into the core by §T)*: **built on 2026-11-20 at the owner's request** (C1; BLD-D47, BLD-D48) | Platform security and privacy extras |
 | P-2 | Pharmacy closures and vacation mode; license document upload; editable discount tiers; catalog admin UI; extra abuse rules | Platform features, not the agent |
 
 ## 8. Out of scope

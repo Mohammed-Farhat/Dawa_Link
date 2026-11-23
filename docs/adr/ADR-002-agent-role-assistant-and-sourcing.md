@@ -1,6 +1,6 @@
 # ADR-002: The agent's role: interactive assistant + autonomous sourcing
 
-**Status:** Accepted (2026-10-13, decision log §K AF-3) · **Amended** (2026-10-13, design review #2): requests are **urgent** (a 6-hour window, started 08:00–20:00) instead of having a need-by date; the evaluation adds a **no-AI scripted baseline**.
+**Status:** Accepted (2026-10-13, decision log §K AF-3) · **Amended** (2026-10-13, design review #2): requests are **urgent** (a 6-hour window, started 08:00–20:00) instead of having a need-by date; the evaluation adds a **no-AI scripted baseline**. · **Note, not an amendment** (2026-11-23, decision log BLD-D55, the owner: "Ask on its own, then tell"): in a chat, for one medicine that no pharmacy lists, the agent starts a watch and asks pharmacies for unlisted stock **without asking the client first**, then says what it did. **The autonomy boundary below is unchanged:** watches and early-release asks were already acts the agent may do alone; a tap is still needed to reserve, accept an offer, start or cancel a request, or change its constraints.
 **Date:** 2026-10-13
 **Deciders:** DawaLink team
 
@@ -18,7 +18,7 @@ Our first design had a **chat assistant** that finds options and proposes reserv
 
 **One agent, two modes, sharing the same tools, guardrails and memory model (ADR-001):**
 
-1. **Assistant (interactive):** the chat. The agent understands the client, explains options and proposes reservations.
+1. **Assistant (interactive):** the chat. The agent understands the client, explains options and proposes reservations. *Since 2026-11-23:* for one medicine listed nowhere it also starts a watch and asks pharmacies in the same turn, and then tells the client; two medicines or more get the [Start sourcing] card.
 2. **Sourcing (autonomous):** the client submits a **sourcing request** (1–5 medicines needed now, district, budget). **The agent owns it for its 6-hour window**:
    - it plans (`plan_basket`);
    - it proposes;
@@ -29,7 +29,7 @@ Our first design had a **chat assistant** that finds options and proposes reserv
    - it escalates.
 
 **Autonomy boundary (`04` R-RQ4):**
-- **The agent acts alone on:** search, planning, claims, early-release asks, follow-ups, escalation.
+- **The agent acts alone on:** search, planning, claims (a watch in a chat, a waiting item in a request), early-release asks, follow-ups, escalation.
 - **A client tap is required for:** reserving, accepting offers, starting or cancelling a request, changing its constraints.
 - **The agent never** ranks clients (ADR-003), creates orders, or changes prices or stock.
 

@@ -1,8 +1,8 @@
 # DawaLink: UI Design
 
-**Version:** v1.12 · **Date:** 2026-11-19
+**Version:** v1.13 · **Date:** 2026-11-23
 **Builds on:** `03` v4.1 (screens and flows) · `04` v4.1 (rules, numbers) · `06` v1.2 (SSE, polling, errors) · `07` v1.2 (cards, plain-text replies) · `10` v1.0 (security)
-**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.12** (the owner's findings on the admin's side, decision log BLD-D45): the admin's console as built (§3.3): its tabs, an action's reason asked where its button is, a block shown only when it has something to say. **v1.11** (decision log BLD-D44): the pharmacy's Settings has its listing rule; a box's card says "Not listed yet" with [List now]. **v1.10** (the owner's third findings of 2026-11-18, decision log BLD-D43): [Directions] opens Google Maps; on Home every reservation to pick up is the same ticket. **v1.9** (the owner's second findings of 2026-11-18, decision log BLD-D42): no assistant beside the page, it is a page of its own; Home shows what needs the client now and has no search box; the phone's menu has a Search tab; search shows the last searches and has filters for the order, the price and "open now"; where a client lives is a place on a map or an area. **v1.8** (the owner's findings of 2026-11-18, decision log BLD-D40): the client's portal has a real desktop layout (§3.1), search shows results as the name is typed, the assistant's page lists the earlier chats, a new password's rule is a checklist. **v1.7** (decision log BLD-D30): no request form and no cart; Home has the search and one tile, Ask DawaLink; a request starts from the agent's card in the chat. The CS-15 board of the canvas is history. **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
+**Status:** ✅ validated by the team (2026-10-22, decision log §U). **v1.13 (two rounds, 2026-11-20 to 2026-11-23):** **round A** (the fixes of the two reviews of the finished website, decision log BLD-D46 to BLD-D49): one colour per reservation state in the three portals (§2.1); the "Forgot your password?" pages and "Delete my account" (§3.1); "missed pickup", never "expired", for a reservation (§4, §8); quick replies that read as phrases, a live region that is only the list of messages (§6); loading, offline and reload states, notices that stay until the next tap (§7); a skip link, page titles, the focus on the heading after a move, one rule for a refused form (§9); emails corrected to what is built: a link only in the account emails, and the website's ways of writing (§12). **Round B** (BLD-D51, BLD-D52): one shared pager for every long list (§4, §13); the pharmacy's and the admin's top bar stays at the top on a computer (§3.2, §3.3); the "with the team" line and cards in the chat (§6); the pharmacy's Today with "Asks from DawaLink" (§3.2); the audit log in sentences (§3.3); the budgets measured on the last build (§10). **v1.12** (the owner's findings on the admin's side, decision log BLD-D45): the admin's console as built (§3.3): its tabs, an action's reason asked where its button is, a block shown only when it has something to say. **v1.11** (decision log BLD-D44): the pharmacy's Settings has its listing rule; a box's card says "Not listed yet" with [List now]. **v1.10** (the owner's third findings of 2026-11-18, decision log BLD-D43): [Directions] opens Google Maps; on Home every reservation to pick up is the same ticket. **v1.9** (the owner's second findings of 2026-11-18, decision log BLD-D42): no assistant beside the page, it is a page of its own; Home shows what needs the client now and has no search box; the phone's menu has a Search tab; search shows the last searches and has filters for the order, the price and "open now"; where a client lives is a place on a map or an area. **v1.8** (the owner's findings of 2026-11-18, decision log BLD-D40): the client's portal has a real desktop layout (§3.1), search shows results as the name is typed, the assistant's page lists the earlier chats, a new password's rule is a checklist. **v1.7** (decision log BLD-D30): no request form and no cart; Home has the search and one tile, Ask DawaLink; a request starts from the agent's card in the chat. The CS-15 board of the canvas is history. **v1.6** (decision log BLD-D17): the "another brand" card, with [Call] and no [Reserve] (§4). **v1.5** (decision log BLD-D16): a client can pick their place on a map (§11). **v1.4** (decision log §W): the reserve sheet shows one card per allowed pickup day, not only today and tomorrow. **It can change during the build:**
 - changes to the look and layout go on the canvas;
 - changes to the rules go here;
 - changing a validated decision gets a row in the decision log.
@@ -76,6 +76,8 @@
 - **One meaning per color:** blue = act or searching · green = ready or fits · amber = your tap needed · red = failed · yellow = what you save.
 - **Light theme only** for now; a dark theme could come later.
 - **Disabled controls** are exempt from the contrast rule. They always come with a word ("Reserved", "Expired").
+- **One colour per reservation state, the same in the three portals** (`components/reservationTone.ts`; BLD-D46): waiting at the counter and picked up are green; not available and missed pickup are red; cancelled is grey; an offer waiting for the client's tap is amber, everywhere (a watch on My medicines and an item on a request's page included).
+- **Fields:** one edge colour (`field`), one height and one corner for every text box, the component library's and the hand-made ones alike; the chat's box and the counter's order-number box keep their larger canvas shapes. Selected is blue in every picker.
 
 ### 2.2 Type, shapes, icons
 
@@ -100,24 +102,27 @@
   - **Search:** the search of what is in stock (§5).
   - **Medicines** ("My medicines"): **one tracker per medicine**, from searching to ready to pick up, whether it came from a search, a request or a watch. It replaces separate lists of requests, reservations and watches.
   - **Ask:** the assistant, full screen (no menu, so the message box has room).
-  - **Me:** account and settings.
+  - **Me:** account and settings. Its last section is **"Delete my account"** (BLD-D48, `03` CS-13): a quiet row that opens what will happen, then the password and a red [Delete my account] beside a grey [Keep my account]. The focus moves into it when it opens and back to its button when it closes.
+- **Long lists** (History on My medicines, Notifications) have **numbered pages** under them (§4, Pager); a list that the rules keep short (Active, the watches, the requests) has none.
 - **Detail pages** (a pharmacy, a request, the ticket) open full screen with a round back button.
 - **Wider than 992 px: a desktop layout** (the owner, 2026-11-18, BLD-D40; it replaces "a phone's column with the assistant beside it"):
   - **a top bar:** the brand, Home · Search · My medicines, **Ask DawaLink**, and the account's menu (Profile and settings, Notifications, Log out). No floating menu;
   - **pages use the window's width:** cards in as many columns as fit, the search with its filters in a left column and the results beside them, the profile in two columns. A page that is one card or one form keeps a readable width;
   - **the assistant is a page of its own, never beside another page** (the owner, BLD-D42; the side panel of BLD-D40 lasted a morning). "Ask DawaLink" in the top bar is a link to it. The client's chats are in a left column, the conversation in the middle. A request's thread is framed the same way;
-  - **the public pages** (welcome, sign up, log in): the form beside a navy panel that says what DawaLink is.
+  - **the public pages** (welcome, sign up, log in, and since BLD-D47 "Forgot your password?" and "Set a new password"): the form beside a navy panel that says what DawaLink is. The two password pages use the sign-up's checklist for the new password and the same rule for a refused form (§9).
 - **Reserve:** a tall bottom sheet on phones (a centered dialog on desktop), with the total and [Reserve] pinned at the bottom.
 
 ### 3.2 Pharmacy portal (desktop first)
-- **A top bar with pill tabs:** Today · Reservations · Inventory · Listings · Early release · Settings. It wraps on phones, and every page works on a phone (P-D10).
+- **A top bar with pill tabs:** Today · Reservations · Inventory · Listings · Early release · Settings. It wraps on phones, and every page works on a phone (P-D10). **On a computer (992 px and wider) it stays at the top while the page scrolls** (BLD-D51), like the client's: over the page, under the menus and sheets. On a phone it scrolls away, because it takes several lines there. The bar says the pharmacy's state in colour and words: approved green, waiting or email not confirmed amber, rejected or suspended red.
+- **Inventory, Listings, Reservations and Notifications** have numbered pages (§4, Pager), with their tab, zone and **order** in the address. The order is a choice of two, **"Soonest expiry first"** or **"By medicine"**, which puts the boxes of one medicine side by side (`03` PS-6).
 - **Listings** (BLD-D44): the pharmacy's rule in a line under the title, with a link to Settings. Each box's card has one state pill (Listed · Listed by you · Not listed yet · Paused · None left) and **one way out of that state**: [List now], [Back to my rule], or [Pause] / [Resume]. A box that waits says when clients will see it.
 - **Settings** has "When your boxes are listed": five choices as radio buttons (180, 90, 60 or 30 days left, or "Never: I list each box myself"), saved by its own button.
-- **Today** is the home (PS-3):
-  - a big **order-number box for the counter**;
-  - the found reservation, with large [Picked up] and [Not available] buttons;
-  - what's due today;
-  - any early-release ask, with the time left to answer.
+- **Today** is the home (PS-3), in this order (BLD-D46, BLD-D51):
+  - a big **order-number box for the counter**, with a visible label "Order number";
+  - the found reservation, with large [Picked up] and [Not available] buttons; it scrolls into view and takes the focus;
+  - **"Asks from DawaLink"**, always shown to an approved pharmacy: the open asks with the time left to answer, or one line that says what will appear there; under them "Answered lately" (`03` PS-3);
+  - what's due today, then later; past N-31 waiting reservations, a link "N more on Reservations" instead of a pager;
+  - today in numbers.
 
 ### 3.3 Admin console (desktop)
 - A **dark navy top bar**, so nobody confuses the admin console with the pharmacy portal.
@@ -126,6 +131,10 @@
   - **an action that needs a reason asks for it where its button is** (`ReasonedButton`): the button is always live, and pressing it opens "…: why?" with [Cancel]. Never a reason box elsewhere on the page with grey buttons;
   - **a block is on the page only when it has something to say:** a contested missed pickup, a flag, the line about priority (on an emergency claim), the chat's note;
   - **an admin's words are the client's words:** "missed pickup", not "no-show"; "close this case", not "resolve"; nothing of the tracing tool.
+- **The bar on a computer stays at the top** (BLD-D51). From 992 to 1279 px its tabs take two lines and the bar is a little tighter; on a window shorter than 720 px in that range it scrolls away, so it never covers much of the page. [Log out] stands outside the tabs. Every page keeps its scroll padding so a heading brought into view lands below the bar (§9).
+- **Every long list has numbered pages** (§4, Pager): Pharmacies, Clients, Escalations (both tabs), Reported answers, Catalog, Audit log. The page and the list's own choices are in the address, so "Back to the list" finds the same page.
+- **An escalation on the list** shows a pill for each of its reasons (an emergency claim's pill is amber), the newest ask's summary, and the marks "New ask since your reply" and "The client wrote at …". On the case's page, "Another chat of this client" divides the chats of its asks, and while the client's chat is with the team, a hint under the reply box says until when (`03` AS-6).
+- **An audit row is a sentence** (BLD-D51, `03` AS-11): When · Who · What happened · About · Reason. The sentence for each kind of event is in the strings file, one per code the backend writes (`domain/audit_actions.py`): a new code without a sentence fails the website's typecheck and a test. A row never shows the value of a field, only its name. [Only this] on a row replaces the box where an ID was typed.
 
 ---
 
@@ -146,14 +155,15 @@
 | **Offer card** | CS-9, CS-16, CS-11 | **Amber border** · "valid until 13:05" · pharmacy + fact row · fit · price | [Accept and reserve] · [No thanks] | Accepted · expired · withdrawn ("No longer available") |
 | **Request summary card** | CS-9 (AF-24) | Items + quantities + days of use · from (location or district) · "searches up to 6 hours" | [Start sourcing] | Used · outside request hours (button disabled + "from 08:00") |
 | **Change card** | CS-16 | "Tell you about other brands?" / "Raise the max price to 800,000 LBP?" | [Yes] | Used · expired |
-| **Status card** | Chat and request threads | Template text (reserved, picked up, not available, expired, cancelled) | [Show at the counter] or [I picked it up] | none |
+| **Status card** | Chat and request threads | Template text (reserved, picked up, not available, missed pickup, cancelled; the team closed the case, the assistant answers again) | [Show at the counter] or [I picked it up]; a reserved card whose reservation ended links to it in plain words | none |
 | **Progress line** | Chat | "Searching…", "Planning your route…", "Asking pharmacies…" (`07` §3.2) | none | none |
 | **Quick-reply chips** | Chat | ≤ 4 chips, ≤ 40 characters each (`07` §4.5) | Sends the text | none |
 | **Status pill** | Lists, request items | One word or phrase in the color of its meaning (Foundations board) | none | none |
 | **Medicine tracker** (v2) | My medicines, request tracker | One card per medicine: its status in words, a 3-step bar (searching → found → reserved), the next action | [Show ticket] · [See the offer] · [Stop] | Ready · your tap needed · searching · done |
 | **Banner** | Top of a screen | Degraded mode (amber, [Use Search]) · night (grey) · paused (amber) · unverified (grey, [Send the link again]) | Optional | none |
-| **Toast** | After a failed tap | Red, plain message + next step ("Someone reserved this a moment ago. Other options") | Link | Disappears after 6 s; also announced to screen readers |
-| **Pickup ticket** (v2) | CS-10 | A dark, high-contrast screen: **the order number in large letter-spaced type**, product, quantity, pick up by, amount to pay, the prescription reminder | [Directions] | Picked up · expired (+ [I picked it up]) |
+| **Toast** (as built: the chat's notice above its box) | After a failed tap | Red, plain message + next step ("Someone reserved this a moment ago. Other options") | Link | A red, amber or grey notice stays until the next tap or message, with [Close]; only a green notice disappears after 6 s (BLD-D46). Always announced to screen readers |
+| **Pickup ticket** (v2) | CS-10 | A dark, high-contrast screen: **the order number in large letter-spaced type**, product, quantity, pick up by, amount to pay, the prescription reminder | [Directions] | A reservation no longer waiting opens on a ticket headed by how it ended (Picked up · Missed pickup, + [I picked it up] · Not available · Cancelled), with no "Show this at the counter" and the amount as "Total" |
+| **Pager** (BLD-D51) | Every long list of the three portals | "[Previous] 1 2 … 7 [Next]" and "Page 2 of 7 · 134 in all", N-59 rows a page, under the list | A page number | The page is in the address (`?page=2`; page 1 has none); a filter goes back to page 1; Back returns to the previous page. `components/Pager.tsx` and `usePage.ts`, the one place the rows per page are set. **A short list keeps [Show more]:** a medicine's own page in search, up to N-31 rows. Lists the rules keep short (Active, watches, requests, open asks) and Today have no pager |
 
 ---
 
@@ -173,8 +183,8 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | ~~Find medicines for me~~ | CS-15 | **Removed (BLD-D30):** a request starts from the agent's request summary card in the chat ([Start sourcing]). The board on the canvas is history. |
 | Request tracker | CS-16 | A ring "2 of 3 reserved" + time left → each medicine with a 3-step bar → the offer (amber) with [Accept and reserve] → what DawaLink did. [Cancel request] lives in the ⋯ menu. |
 | My medicines | CS-10, CS-11, CS-16 | Active / History → one card per medicine: Ready (Show ticket) · Offer waiting (See the offer) · Watching (Stop) |
-| Me | CS-13 | Account → **where you live: "On the map" (with [Use my location]) or "By area"**, one of the two shown at a time (BLD-D42) → tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
-| Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → due today → the early-release ask → today in numbers. *(Later: Undo on [Picked up].)* |
+| Me | CS-13 | Account → **where you live: "On the map" (with [Use my location]) or "By area"**, one of the two shown at a time (BLD-D42) → tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out → as built, **Delete my account** last (BLD-D48). *(Later: the text-size setting.)* |
+| Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → **"Asks from DawaLink"** (as built: before due today, BLD-D46, BLD-D51) → due today → today in numbers. *(Later: Undo on [Picked up].)* |
 | Pharmacy · Inventory | PS-6 | 4 steps → summary tiles (ready, need fixing, new, set to 0) → "1 reserved box kept" → rows to fix with "Did you mean…?" → [Discard] [Apply 1,191 rows] |
 | Admin · Overview | AS-2, AS-10 | Navy bar → needs-attention tiles → the agent's 7 days (fulfilled, safety violations, turn time, cost per fulfilled request) with a daily chart → escalations |
 | Foundations v2 | none | Colors and meanings, the font in English and Arabic, buttons, chips, statuses, principles |
@@ -190,14 +200,16 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 3. **Cards under the message**, in the order the agent chose:
    - **at most one "Recommended" card per medicine**, shown in full;
    - its alternatives (≤ 2, N-45) are folded under **"See N other options"**, so the screen stays short on a phone.
-4. **Chips** in the client's language (≤ 4). Tapping a chip sends its text as a message. It never acts on its own.
+4. **Chips** in the client's language (≤ 4). Tapping a chip sends its text as a message. It never acts on its own. **They stand under "Or answer with one tap:" and look like phrases, not buttons** (BLD-D46), so they are not taken for a card's [Reserve]; next to a card, a chip that would reserve or accept is left out.
 5. **👎 under every agent reply** opens a reason + comment (AS-8).
 6. **Busy:** "One moment…", and the message sends itself when the turn ends (`06` API-D8).
 7. **Degraded mode:** an amber banner with [Use Search]. **Cards already shown keep working.**
 8. **Cards never vanish:** a used or expired card shows its state ("Reserved ✓", "This option expired").
-9. **New messages are announced** to screen readers (`aria-live="polite"`) and are kept when the page reloads. Polling picks up messages posted by the worker (N-28).
+9. **New messages are announced** to screen readers and are kept when the page reloads. Polling picks up messages posted by the worker (N-28). As built (BLD-D46): the live region is only the list of messages (`role="log"`), mounted with the history already in it, so a reload reads nothing out again; the progress line and the notices are in their own `role="status"` area; each bubble names its speaker; Arabic text carries `lang="ar"`.
 10. **The agent has no human name or face.** It's "DawaLink" with the logo mark, and the header says "Finds medicine. You confirm. No medical advice."
 11. **The AI notice is always visible** at the top of the chat and above a request's thread, as one small line that can't be dismissed: "You're chatting with an AI assistant, not a pharmacist." Anthropic's Usage Policy requires this (UI-D14).
+12. **When DawaLink's team has the chat** (BLD-D52, `03` CS-9): one grey line between the messages and the box, "You are writing to the DawaLink team. The assistant answers again when they close the case."; no quick replies and no progress line; the box and the AI notice stay. The chat goes back to the assistant with a system card in the thread ("The DawaLink team closed your case…" or "The assistant answers you here again."). A request's thread looks the same.
+13. **The location button** above the box names where travel times are counted from (`03` CS-9), never a place the client only named as where to look.
 
 ---
 
@@ -205,11 +217,13 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 
 | State | Rule |
 |---|---|
-| **Loading** | Lists show grey placeholder blocks shaped like the cards. Chat shows the progress line. Never a blank screen. |
-| **Empty** | Always a next step. Empty search → [Ask DawaLink to find it] (opens the chat with the medicine named, BLD-D30) + [Notify me if it appears]. No box lasts → the latest expiry + "Ask DawaLink to find a box that lasts". |
-| **Error after a tap** | A red toast in plain words + the next step (`09` P7). The message comes from the error **code** (`06` §3.2), never from raw server text. |
-| **Validation** | The error text sits next to the field ("must be between 1 and 3"). |
-| **Slow or no network** | "Can't reach DawaLink. Retrying…" An unsent message stays in the box. A tap that failed is retried with the **same idempotency key**, so nothing is created twice. |
+| **Loading** | Lists show grey placeholder blocks shaped like the cards, with no animation (the pharmacy's Inventory and Listings included). A single page (a ticket, an offer, a request, a conversation) and the moment before the website knows who is logged in say "Loading…". Chat shows the progress line. Never a blank screen. |
+| **Empty** | Always a next step. Empty search → [Ask DawaLink to find it] (opens the chat with the medicine named, BLD-D30); [Notify me] is on a medicine's own empty page (BLD-D42). Empty because of the client's own filters → [Clear the filters]. No box lasts → the latest expiry + "Ask DawaLink to find a box that lasts". |
+| **Error after a tap** | A red toast in plain words + the next step (`09` P7). The message comes from the error **code** (`06` §3.2), never from raw server text. A limit says when it opens again, from the server's own wait. |
+| **Validation** | The error text sits next to the field ("must be between 1 and 3"). A refused form also moves the focus to the first field in error and says by its button how many to check (§9). |
+| **Busy** | "DawaLink is busy. Please try again in a moment." when the server asks to wait (no password slot free, `04` R-AU1, or the chat still busy after its retries); the form keeps everything typed. |
+| **Slow or no network** | "Can't reach DawaLink. Retrying…" An unsent message stays in the box. A tap that failed is retried with the **same idempotency key**, so nothing is created twice. When the website starts and can't reach the API, it shows this line and tries again: it never sends the person to the welcome or login page for that. |
+| **A part that can't load** | After a new release, a part of the old one may be gone: the page reloads once, then shows "This page needs reloading" with [Reload the page]. |
 | **Session expired** | Log in, then return to the same screen (`03` §1.8). |
 | **Night, paused, unverified, degraded** | The banners on the States board |
 
@@ -238,9 +252,9 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
   | What | Format |
   |---|---|
   | Money | `436,000 LBP` + "about $4.9" (LBP first; USD rounded to 0.1) + "Save 145,750" where there's a saving |
-  | Times | 24-hour Beirut time with a day word: "Today 23:00", "Fri 23:00" |
+  | Times | 24-hour Beirut time with a day word: "Today 23:00", "Fri 23:00". Inside a sentence: "23:00" today, "tomorrow 01:30", or "Fri 20 Nov 10:00" (`format.ts`, `clockInSentence`). A deadline at midnight is the day before at 24:00 ("Wed 18 Nov, 24:00"), in emails too |
   | Dates | "14 Mar 2027" |
-  | Durations | "9 min walk", "4 min by car", "4 h 25 min left" |
+  | Durations | "9 min walk", "4 min by car", "4 h 25 min left". A trip is one formatter (`format.ts`, `tripWords`): "4 min by car · 9 min on foot", the car first, hours from an hour on ("1 h 20 min"), and the walk left out when it is longer than an hour |
   | References | Order and request numbers, letter-spaced: `R-7K3Q2F`, `Q-4HX9TM` |
   | Digits | Western digits everywhere |
 
@@ -256,6 +270,8 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
   | My medicines | Requests, reservations, watches (as tab names) |
   | Same medicine, another brand | Equivalent, alternative composition |
   | Lasts your 12 days | Expiry fit |
+  | Missed pickup (a reservation nobody collected) | Expired, no-show: "expired" is kept for a box's date (BLD-D46) |
+  | You are writing to the DawaLink team | Escalated, held (the client's words for the team's chat) |
 
 ---
 
@@ -270,8 +286,12 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Live updates | The chat and the request timeline use `aria-live="polite"`; error toasts use `role="alert"` |
 | Color | Never the only signal: words and icons on every status (§1) |
 | Zoom and motion | Works at 200% zoom; respects "reduce motion" (no animations then) |
-| Forms | Labels always visible; errors next to the field, in words |
-| **Checks** | `axe` runs in component tests. Before the demo: a keyboard-only pass and a screen-reader pass (TalkBack on Android, NVDA on Windows) through the demo scenarios. |
+| Forms | Labels always visible; errors next to the field, in words. **A refused form** (`components/FormProblems.tsx`; BLD-D46) moves the focus to the first field in error and says by its button how many fields to check ("Check the 3 fields marked in red above.", `role="alert"`). On the login forms the button is never greyed out: an empty box says so. A password box carries the password rule in its own description, so a screen reader hears it on arrival |
+| Pages and moves (BLD-D46) | One **"Skip to content"** link first on every page (`components/SkipLink.tsx`); one main area per page; each browser tab is titled "<the page's heading> · DawaLink"; after a move to another page the focus goes to its heading (`components/arrival.ts`), in the three portals |
+| Not hidden by the bars | On a computer the top bars stay in place (§3.2, §3.3), and `scroll-padding-top` keeps what a link, the skip link or the keyboard brings into view below them (WCAG 2.4.11) |
+| Language of a text | A text written by a person or the model in Arabic letters carries `lang="ar"` on its own element: the chat, the search box and the last searches, an escalation's summary, thread and reply box, a reported answer |
+| Links | [Directions] says "(opens in a new tab)" to a screen reader |
+| **Checks** | `axe` runs in component tests. `axe` can't measure contrast in the test browser, so a test computes it from the colours of §2.1. Before the demo: a keyboard-only pass and a screen-reader pass (TalkBack on Android, NVDA on Windows) through the demo scenarios. |
 
 ---
 
@@ -283,8 +303,8 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 - **Fonts:** Readex Pro, self-hosted (no request to Google Fonts) and split into a Latin and an Arabic subset with `unicode-range`, so the Arabic part downloads only when Arabic text appears.
 - **Polling runs only while the chat or request page is visible:** it pauses when the tab is hidden and resumes when it's shown (N-28).
 - **Budgets, measured before the demo:**
-  - client start-up JavaScript ≤ 250 KB compressed;
-  - Lighthouse mobile performance ≥ 80 on Home and Search results.
+  - client start-up JavaScript ≤ 250 KB compressed. **Last measured on the build of 2026-11-23** (after round B): the start-up script is about 173 KB and the strings file it preloads about 24 KB, gzip: about 197 KB of the 250 KB. The map (about 44 KB) and the pharmacy's and admin's portals load only when needed;
+  - Lighthouse mobile performance ≥ 80 on Home and Search results (95 on the public pages, measured on 2026-11-17; to measure again before the demo).
 
 ---
 
@@ -307,8 +327,9 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 ## 12. Emails
 
 - Simple HTML plus a plain-text version, with the same colors and the order number in monospace.
-- **No images, no tracking pixels.** The only link opens DawaLink: the reservation, request or offer.
-- One template per notification (CN-, PN-). They are written by us, never by the LLM (S10).
+- **No images, no tracking pixels.** **Only the account emails carry a link** (confirm the email, "you already have an account", set a new password: CN-1, CN-18, CN-19). Every other email names DawaLink and holds no link.
+- One template per notification (CN-, PN-). They are written by us, never by the LLM (S10). The in-app notification shows the same title and lines.
+- They follow the website's ways of writing (§8): dollars to one decimal, a midnight deadline as 24:00 the day before, "missed pickup" and "held for you" (an offer is held, not reserved), and they end with one plain next step (`03` §1.7).
 
 ---
 
@@ -321,6 +342,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | API | Types **generated from the OpenAPI file** (`06` §9), plus one small client that: adds the login token in the `Authorization` header (`06` §2.1); adds the `Idempotency-Key` to creating taps; turns error codes into messages (§7); handles `401` (log in again) and `409 CONVERSATION_BUSY` (retry) |
 | Live data | Chat: SSE through `fetch` streaming (`06` §6.6.1). Everything else: TanStack Query, with 3 s polling while visible. |
 | Folders | `frontend/src/{app, api, theme, strings, components/{cards,facts,feedback,layout}, features/{client,pharmacy,admin}}` |
+| Shared pieces (as built, BLD-D46, BLD-D51) | In `frontend/src/components/`: `Pager.tsx` and `usePage.ts` (numbered pages, the rows per page set once), `FormProblems.tsx` (a refused form), `SkipLink.tsx` and `arrival.ts` (the skip link, titles and focus on arrival), `Placeholder.tsx` and `Waiting.tsx` (loading), `PageError.tsx` and `reload.ts` (a part that can't load), `reservationTone.ts` (one colour per reservation state). A list's answer from the API carries `total`, so the pager knows how many pages there are |
 | Tests | Vitest + Testing Library + `axe` for components; **a few Playwright flows** for the demo scenarios (bonus B-8) |
 | Review help | Every frontend change comes with **screenshots** (phone and desktop) and lists the strings it adds, so the owner can check it without reading TypeScript in depth |
 

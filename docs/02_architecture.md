@@ -1,6 +1,6 @@
 # DawaLink: Architecture and Tech Stack
 
-**Version:** v3.6 (v3.6: the `show_other_brand` tool, BLD-D17; v3.5: the `set_area` tool; v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-14
+**Version:** v3.7 (v3.7: what the build changed by 2026-11-23: "Forgot my password" and a client's "Delete my account" (BLD-D47, BLD-D48); `find_options` and `plan_basket` take areas to look in (BLD-D54); a chat the DawaLink team holds runs no turn (BLD-D52); the repository's layout as it is; v3.6: the `show_other_brand` tool, BLD-D17; v3.5: the `set_area` tool; v3.4: the agent's libraries and the development model as built) · **Date:** 2026-11-23
 **Builds on:** `01` v5.1 · `03` v4.1 · `04` v4.1 · `05` v3.1 · ADR-001–ADR-004 · `10` (threat model) · `12` (infrastructure) · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Repository:** https://github.com/Mohammed-Farhat/Dawa_Link (public)
 **Status:** ✅ Stack validated. **v3.2 applies step 12** (`12`, decision log §V): Ireland, AWS set up by hand, two CloudFronts and a public ALB, the login token in a header, no CI/CD; Cognito comes after the project works. **v3.1 applies the threat model** (`10`, decision log §T): admin two-factor login; global LLM spend caps plus the provider's own spend limit; plain-text agent replies.
@@ -46,7 +46,7 @@ The team's strongest language is Python, and the team must be able to read, revi
 | Email | **AWS SES** via an outbox table | Retries; templates | Sending email directly from the app |
 | Frontend | **React + TypeScript (Vite), Mantine, TanStack Query, React Router**, types from OpenAPI | Role portals + a chat that renders cards + request pages | Streamlit, Next.js |
 | Chat transport | **SSE** for streaming a reply (15 s heartbeat) + **polling every few seconds** for new messages and cards posted by the worker | Fast-feeling replies; simple, reliable updates | WebSockets |
-| Auth | **Server-side sessions:** a random token sent in the `Authorization` header and kept in the browser's `localStorage`; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification. **Cognito replaces** password storage, email verification and admin two-factor login after the project works, behind our API (`12` §10). | Less code than JWT + refresh tokens; logout and suspension take effect instantly. The website and the API are two separate sites (two CloudFronts), and Safari blocks third-party cookies, so the token can't be a cookie and the API uses CORS (`12` §4.3). **Admins also use TOTP two-factor login** (`pyotp`, `10` TM-D8). *(Password reset postponed.)* | JWT + refresh rotation; a cookie |
+| Auth | **Server-side sessions:** a random token sent in the `Authorization` header and kept in the browser's `localStorage`; its hash in a `sessions` table; argon2id passwords; role and ownership checks; slowapi rate limits; email verification. **Cognito replaces** password storage, email verification and admin two-factor login after the project works, behind our API (`12` §10). | Less code than JWT + refresh tokens; logout and suspension take effect instantly. The website and the API are two separate sites (two CloudFronts), and Safari blocks third-party cookies, so the token can't be a cookie and the API uses CORS (`12` §4.3). **Admins also use TOTP two-factor login** (`pyotp`, `10` TM-D8). *Since 2026-11-22: "Forgot my password" by an emailed link (`04` R-AU9, BLD-D47), and "Delete my account" for clients (R-AU10, BLD-D48).* | JWT + refresh rotation; a cookie |
 | Files | **No file storage.** Uploads are processed in memory and discarded. | Smaller attack surface | A private S3 bucket |
 | **Routing** | **OpenRouteService** (free tier, API key; built on OpenStreetMap data, attribution shown): road travel time **by car and on foot**, and the best visiting order for plans. Cached 24 h; **straight-line fallback** when it fails (`04` R-RT). | Real routes, as the professor asked; open data; no cost at our scale | Google Maps (paid), straight-line only (not a real route) |
 | **Maps (browser)** | **Leaflet + OpenStreetMap tiles**: the pharmacy pins itself at registration; clients see the pharmacy on a map | Free and open; drawn in the browser, so nothing goes to the AI | Google Maps |
@@ -100,7 +100,8 @@ flowchart LR
 | **Decision event:** a reservation marked not available, early release unfulfilled, the 1-hour-left window check, unticked items after a group reserve | Worker | ✅ |
 | **Informational event:** reserved, picked up, expired, cancelled, offer, admin reply, closed | API or worker posts a **template card** | ❌ |
 
-- **One turn at a time per conversation** (a turn lease on the conversation row).
+- **One turn at a time per conversation** (a turn lease on the conversation row). The worker runs a few turns at once, each on another conversation (`07` §8).
+- **A chat the DawaLink team holds runs no turn** (after a team reply, until the case is closed or N-55 has passed; `04` SM-9, BLD-D52): the client's messages there are the team's.
 - **Allocation of scarce stock** (matching) is **pure code**, first come, first served (R-PRI, ADR-003).
 - **Search-page reservations never trigger agent turns** (keeps the baseline agent-free, R-AG5).
 
@@ -133,8 +134,8 @@ flowchart TD
 | `search_catalog(text)` | Candidate products | No controlled products |
 | `get_equivalents(product_id)` | Same-composition products | Exact equivalence group only |
 | **`show_other_brand(listing_id, instead_of_product_id)`** (BLD-D17) | A card for another brand at one pharmacy: where it is, price, expiry, "ask the pharmacist first", [Call] | No [Reserve]; only with the client's consent; the phone number never passes the LLM |
-| `find_options(product_ids, qty, days_of_use, pickup, max_price, sort)` | Visible listings **whose box lasts the days of use**, with travel time by car and on foot from the client's location | Visible stock only; **never returns coordinates** |
-| **`plan_basket(items, constraints, preference)`** | Candidate plans for several medicines, each with its **route** (visiting order, total travel time); quantities may be split across pharmacies | Deterministic; only boxes that last |
+| `find_options(product_ids, qty, days_of_use, pickup_day, max_price, sort, areas)` | Visible listings **whose box lasts the days of use**, with travel time by car and on foot from the client's location; `areas`: only the pharmacies of the places the client named to look in (BLD-D54); an empty answer says why (`why_none`) | Visible stock only; **never returns coordinates** |
+| **`plan_basket(items, constraints, preference, areas)`** | Candidate plans for several medicines, each with its **route** (visiting order, total travel time); quantities may be split across pharmacies | Deterministic; only boxes that last |
 | `propose_reservation(listing_id, qty)` / **`propose_plan(plan_id)`** | A **proposal** for a [Reserve] or [Reserve these] card, or the reason it isn't allowed (limits) | Creates a stored proposal only; the tap reserves |
 | `propose_cancellation(order_id)` | A [Cancel] proposal | Only the tap cancels |
 | **`prepare_request_summary(items, district, budget)`** | A request summary proposal with [Start sourcing] | Creates nothing else; the tap creates the request (request hours checked) |
@@ -143,7 +144,7 @@ flowchart TD
 | **`propose_constraint_change(request_id, change)`** | A proposal: also show other brands, or raise an item's max price | Applied only on tap |
 | **`propose_remove_item(request_id, item_id)`** | A proposal to stop sourcing one item | Applied only on tap |
 | **`open_claim(request_item_id)`** / `create_watch(product_id, district, max_price, qty)` | Waits for stock for 6 hours; matching decides first come, first served | Idempotent; limits; request hours |
-| **`set_area(place)`** (added 2026-11-14) | Sets the chat's location from an area the client named ("I'm in Hamra"), looked up in our own list | Names in, names out, never a coordinate; exact names only; chat only (`07` §14.6) |
+| **`set_area(place)`** (added 2026-11-14) | Sets the chat's location from an area the client says they are in ("I'm in Hamra"), looked up in our own list; never a place they only want to look in, which goes into `areas` | Names in, names out, never a coordinate; exact names only; chat only (`07` §14.6) |
 | `request_early_release(claim_id)` | Asks up to 3 open pharmacies | Returns only "asked N"; anti-spam; idempotent |
 | `schedule_followup(in_minutes)` | One later check-in, inside the window (`04` N-39) | Bounded; one pending per request |
 | `escalate(reason, summary)` | Hands off to an admin (including `emergency_claim`) | Admin-only visibility; no priority power |
@@ -163,7 +164,7 @@ flowchart TD
 
 ### 3.4 Guardrails, limits, baselines
 - **Input:** PII redaction (known account identifiers + patterns), length cap, rate limit.
-- **Output:** clinical check, only proposal IDs that this turn's tools created, no PII, no links (shown as plain text).
+- **Output:** clinical check, only proposal IDs that this conversation's tools created and are still open, no PII, no links (shown as plain text), the client's language (decided by code), no hand-over that no tool made (`04` R-AG10); a reply written beside other tool calls is written again from their results (`07` §3.1, §7.2).
 - **Limits:** 6 tool calls per turn, 20 turns per request, a daily token budget per client.
 - **Degraded mode:** chat → "use Search". Requests keep their state; turns resume later.
 - **Baselines (evaluation, `08`):**
@@ -176,7 +177,7 @@ flowchart TD
 
 | Area | Entities |
 |---|---|
-| Identity | users, sessions, email-verification tokens, pharmacies (weekly opening hours, pickup time, **map pin**), districts (governorate, reference point) |
+| Identity | users, sessions, email-verification tokens, password-reset tokens, pharmacies (weekly opening hours, pickup time, **map pin**), districts (governorate, reference point) |
 | Catalog | products (flags, `units_per_pack`), equivalence groups. Loaded by script from the MoPH list + team overrides and OTC files. |
 | Inventory | inventory_uploads + staging rows (until Apply), inventory_items (private; a listing is an item's publication state) |
 | Marketplace | orders (offer → reservation → pickup; units; order number) |
@@ -190,10 +191,10 @@ flowchart TD
 
 | Area | Examples | Role |
 |---|---|---|
-| Auth | register (client / pharmacy), login, logout, me, verify email | public / any |
+| Auth | register (client / pharmacy), login, logout, me, verify email, forgot and reset password | public / any |
 | Catalog | search products, equivalents | logged-in |
-| Client | search listings; reserve (single, group, from a proposal); accept or decline offers; cancel; watches; notifications; preferences | client (own) |
-| **Requests** | create (tap on a proposal or the form), get, list, cancel, apply a proposed change (tap), post a message | client (own) |
+| Client | search listings; reserve (single, group, from a proposal); accept or decline offers; cancel; watches; notifications; preferences; delete my account | client (own) |
+| **Requests** | create (only by the tap on the agent's [Start sourcing] card; there is no form, BLD-D30), get, list, cancel, apply a proposed change (tap), post a message | client (own) |
 | Conversations | `POST /api/v1/conversations/{id}/messages` (chat: SSE; request thread: 202), `GET …/messages?after_seq=` (polling), new chat, report a message (👎) | client (own) |
 | **Proposals** | `POST /api/v1/proposals/{id}/execute`: the only way an agent card's button acts | client (own) |
 | Pharmacy | profile, hours, pickup time; template download; upload → validate → apply; inventory edits; listings (override, pause); **reservations (picked up, not available)**; early-release asks | pharmacist (own, approved) |
@@ -211,22 +212,32 @@ dawalink/
 │   ├── pyproject.toml · uv.lock · Dockerfile · alembic.ini
 │   ├── src/dawalink/
 │   │   ├── config.py
-│   │   ├── domain/        # pure: state machines, rules, deadlines, pricing, zones, allocator, plan_basket
+│   │   ├── domain/        # pure: state machines, rules, deadlines, pricing, zones, allocator, plan_basket,
+│   │   │                  #   numbers.py (every number), audit_actions.py (a sentence per audit event)
 │   │   ├── db/            # models, session, logins and their privileges, reference data
 │   │   ├── catalog/       # the Ministry's lists: reading, joining, "same medicine" keys, import
-│   │   ├── services/      # use cases (reservations, requests, matching, uploads…)
+│   │   ├── services/      # use cases (reservations, requests, matching, uploads…); paging.py (counts
+│   │   │                  #   for numbered pages), account_deletion.py (a client deletes their account)
 │   │   ├── api/           # routers, auth (sessions), SSE, errors
-│   │   ├── agent/         # the turn graph, tools/, guards/, llm/, prompts/, tracing
+│   │   ├── agent/         # the turn graph, tools/, guards/, llm/, prompts/, tracing, language.py
+│   │   │                  #   (which language a client's message is in)
 │   │   ├── routing.py     # road travel times from OpenRouteService
-│   │   ├── worker/        # the clock check loop, email outbox
-│   │   ├── ops/           # one-off commands: prepare_db, fetch_moph, build_catalog,
-│   │   │                  #   import_catalog, seed_demo (create_admin comes with logins)
+│   │   ├── osm_places.py  # reading OpenStreetMap's places (only to rebuild the list of areas)
+│   │   ├── worker/        # the clock check loop, the agent turns' loop, email outbox
+│   │   ├── ops/           # one-off commands: prepare_db, fetch_moph, fetch_otc_list, build_catalog,
+│   │   │                  #   import_catalog, seed_demo, create_admin, chat, export_openapi,
+│   │   │                  #   fetch_osm_places, build_areas
+│   │   ├── sim/           # the simulated world, clients and contenders (`08` E2)
+│   │   ├── evals/         # the suites' runners and scorers, statistics, report (`08`)
 │   │   └── observability/
-│   ├── data/              # districts.csv, catalog_overrides.toml; moph/ (downloads, not in git)
+│   ├── data/              # districts.csv, areas.csv, areas_osm.csv (generated), catalog_overrides.toml;
+│   │                      #   moph/ (downloads, not in git)
 │   ├── migrations/
 │   └── tests/
-├── frontend/              # client (search, assistant, requests), pharmacy, admin
-├── sim/  ·  eval/  ·  docs/
+├── frontend/              # client (search, assistant, requests), pharmacy, admin;
+│                          #   components/ holds the shared parts (Pager, usePage: numbered pages)
+├── eval/                  # datasets, the frozen world, saved results (`08` §6.2)
+├── docs/
 ```
 
 ---

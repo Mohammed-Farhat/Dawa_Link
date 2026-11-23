@@ -1,6 +1,6 @@
 # ADR-001: Conversation state and how agent turns run
 
-**Status:** Accepted (2026-10-13, design review #1 DR-1) · **Amended** (2026-10-13, design review #2): a turn **lease** instead of an advisory lock; decision events run through the **clock check** (no jobs table). See "Amendment" at the end.
+**Status:** Accepted (2026-10-13, design review #1 DR-1) · **Amended** (2026-10-13, design review #2): a turn **lease** instead of an advisory lock; decision events run through the **clock check** (no jobs table). See "Amendment" at the end. · **Amended** (2026-11-23, decision log BLD-D52): one turn at a time per conversation is unchanged; **a chat the DawaLink team holds runs no turn** at all. See "Amendment of 2026-11-23" at the end.
 **Date:** 2026-10-13
 **Deciders:** DawaLink team (Mohammed Farhat, Mohamad Natafgi, Anthony John Kanaan)
 
@@ -12,7 +12,7 @@ The assistant (C6) runs a **turn** in two situations:
 
 The current design (`02` §3) uses LangGraph **with its Postgres checkpointer** as conversation memory. We also need our own `chat_messages` table, because:
 - the UI shows the conversation;
-- retention is 30 days (R-AS4);
+- retention is 30 days (R-AS);
 - "delete my account" erases chats (SM-2);
 - admins read escalated or reported conversations (A-D4).
 
@@ -110,3 +110,12 @@ The decision stands: **our tables are the source of truth, and LangGraph is stat
 | Events re-queued through a **jobs table** with retries | Events stored as **system messages** + `pending_turn_at` on the conversation; the worker's **clock check** runs pending turns and retries failures (1 m, 5 m, 15 m, then escalate) | There's no jobs table any more (`04` R-T10). Events also become visible in the conversation history the next turn reads. |
 
 Also new: **cards come only from tools** (proposals stored server-side; `04` R-AG7), and **text typed by pharmacies never reaches the LLM** (`04` R-AG8).
+
+## Amendment of 2026-11-23 (decision log BLD-D52, and BLD-D46 for the worker)
+
+The decision stands: our tables are the source of truth, LangGraph is stateless per turn, and **one turn runs at a time per conversation**. What changed around it:
+- **A chat the DawaLink team holds runs no turn.** After a team reply in a chat, the client's messages there are the team's until the admin closes the case or N-55 has passed (`04` SM-9). They are stored and start no turn; a decision event that arrives meanwhile waits until the hold ends, and closing the case brings it forward. A request's thread still runs its event turns, and never answers what the client wrote to the team. Whether a chat is held is worked out from the tables for every turn (`escalations.held_by_team`), never stored.
+- **A reply written while the team replied is dropped.** The save checks the hold again: the reply isn't sent on top of the team's, and what the turn read and noted is kept, so the same message isn't answered twice.
+- **[New chat] takes an event that waits along** to the new chat, which runs its turn; an earlier chat runs none.
+- **The worker runs a few turns at once,** each on another conversation; the lease still keeps one turn per conversation (`07` §8).
+

@@ -1,9 +1,9 @@
 # DawaLink: Database Design
 
-**Version:** v3.13 · **Date:** 2026-11-19
+**Version:** v3.14 · **Date:** 2026-11-23
 **Builds on:** `04_domain_rules.md` v4.1 (every rule ID referenced here is defined there) · `02` v3.0 · ADR-001–004 · [design review #2](reviews/design_review_02.md) · the professor's guidance (decision log §S)
 **Database:** PostgreSQL 16 · SQLAlchemy 2.0 · Alembic
-**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
+**Status:** ✅ v1.0 validated (DB-D1–DB-D10). **v3.14, round A (2026-11-20 to 2026-11-22):** the ninth migration, `password_reset_tokens`, the 37th table ("Forgot my password", BLD-D47); the tenth, a client account can be DELETED and a queued email DROPPED ("Delete my account", BLD-D48); the retention login empties a deleted account (§7, §8); the catalog reads the Ministry's no-prescription list (§9, BLD-D50); the lock order names the user row and the escalation (§6). **v3.14, round B (2026-11-22 to 2026-11-23):** no schema change; an escalation's notes remember each team reply, which is what holds a chat for the team (§3.7, BLD-D52). **v3.8 adds the fifth migration** (§12, decision log BLD-D17): nothing waits for another brand, so `include_equivalents` leaves `claims` and `early_release_requests`; a new card kind, `other_brand`. **v3.7 fills the `areas` table from two files** (§9, decision log BLD-D15): our hand-written list and the places of OpenStreetMap; no schema change. **v3.6 adds the fourth migration** (§12, decision log BLD-D14): the `areas` table, the 35th, and the area a conversation's location comes from. **v3.4 adds the second migration** (build step 4, §12): where a claim came from, the pickup reminder's mark, and one open early-release request per claim. **v3.3 is the schema as built** (build step 3): §12 lists what changed while building and why (DB-D19–DB-D23). **v3.2 applies step 12** (`12`, decision log §V): the roles and migrations run through `prepare_db`, by hand, before each service update; no CI. **v3.1 applies the threat model** (`10`, decision log §T): random order and request numbers (DB-D1 amended) and the admins' TOTP secret (DB-D18).
 
 **v3.0 applies the professor's guidance** (decision log §S):
 - **locations:** a map pin on pharmacies, a reference point on districts, and the client's rounded location on conversations, requests and claims (kept out of the LLM context);
@@ -24,7 +24,7 @@
 
 ## In short
 
-- **36 tables in 7 areas:**
+- **37 tables in 7 areas:**
   - identity;
   - catalog;
   - inventory;
@@ -47,7 +47,7 @@
   - `SKIP LOCKED` in the clock check;
   - one idempotency key per order.
 - **Privacy:**
-  - PII lives in 3 user columns (`users.email`, `full_name`, `phone`), plus the client's **rounded location** on conversations, requests and claims, which is never sent to the LLM;
+  - PII lives in 3 user columns (`users.email`, `full_name`, `phone`), plus the client's **rounded location** on conversations, requests and claims, which is never sent to the LLM; a client who deletes their account has all of it erased at once (`04` R-AU10);
   - chats are stored redacted;
   - the audit log stores IDs, never PII values;
   - three database roles with least privilege.
@@ -121,23 +121,24 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | Column | Type | Rules |
 |---|---|---|
 | id | uuid | PK |
-| email | citext | NN, U · *PII* |
-| password_hash | text | NN (argon2id, `04` R-AU1) |
+| email | citext | NN, U · *PII*. A deleted account's becomes a placeholder that nobody can type or mail, unique by the account's ID (`04` R-AU10) |
+| password_hash | text | NN (argon2id, `04` R-AU1). A deleted account's is a value no password matches |
 | role | text | NN · `IN ('client','pharmacist','admin')` |
-| full_name | text | NN · length 2–80 · *PII* · **never sent to the LLM** |
+| full_name | text | NN · length 2–80 · *PII* · **never sent to the LLM**. A deleted account's is a fixed placeholder |
 | phone | text | nullable · *PII* |
 | email_verified_at | timestamptz | nullable |
 | failed_logins / locked_until | smallint / timestamptz | `04` R-AU2 |
 | totp_secret | bytea | Admins only: the TOTP secret, **encrypted** with a key from Secrets Manager (`04` R-AU6). `CHECK (role <> 'admin' OR totp_secret IS NOT NULL)` |
 | totp_last_step | bigint | The last accepted 30-second step, so a code can't be used twice |
-| signup_ip_hash | bytea | HMAC of the sign-up IP (not reversible), for `04` R-AU5 |
+| signup_ip_hash | bytea | HMAC of the sign-up IP (not reversible), for `04` R-AU5. NULL when the address isn't known (in AWS, CloudFront's header missing, `04` R-AU8) and after the account is deleted |
 | created_at / updated_at | timestamptz | NN |
 
 **`client_profiles`** (1:1 with client users)
 | Column | Type | Rules |
 |---|---|---|
 | user_id | uuid | PK, FK users |
-| status | text | `IN ('UNVERIFIED','ACTIVE','PAUSED','SUSPENDED')` (`04` SM-2) |
+| status | text | `IN ('UNVERIFIED','ACTIVE','PAUSED','SUSPENDED','DELETED')` (`04` SM-2; DELETED since the tenth migration, R-AU10) |
+| deleted_at / emptied_at | timestamptz / timestamptz | When the client deleted the account (real time), and when the clean-up emptied what was left. `CHECK ((status = 'DELETED') = (deleted_at IS NOT NULL))` and `CHECK (emptied_at IS NULL OR deleted_at IS NOT NULL)`; a partial index on the accounts deleted and not yet emptied, for the clean-up |
 | paused_until | timestamptz | `CHECK (status <> 'PAUSED' OR paused_until IS NOT NULL)` |
 | district_id | smallint | FK districts |
 | alternatives_ok_default | boolean | default false. "Tell me about other brands" (R-C10) |
@@ -155,6 +156,8 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 
 **`email_verification_tokens`**: id uuid PK · user_id FK · `token_hash` bytea U · expires_at (24 h) · used_at.
 
+**`password_reset_tokens`** (the ninth migration, 2026-11-20, BLD-D47): the same shape. id uuid PK · user_id FK (`ON DELETE RESTRICT`, indexed) · `token_hash` bytea U (the email holds the token; only its hash is stored) · expires_at (N-56, real time) · used_at. A link works once; a newer one ends the older ones when its email is written (`04` R-AU9).
+
 **`districts`**: id smallint PK · name U · `governorate` text NN · `ref_lat`, `ref_lon` numeric(8,5): the point used when a client picks a district instead of sharing their location (`04` R-S2).
 
 **`areas`** (added 2026-11-14, BLD-D14): id smallint PK · name NN · district_id FK · `other_names` text[] (other spellings, Arabic script) · `whole_district` boolean · `ref_lat`, `ref_lon` numeric(8,5): the area's centre. U (name, district_id). The places a client can name in chat instead of sharing a location (`04` R-S2): the 26 districts as a whole (same ids), the well-known neighbourhoods and towns written by hand (ids 101 to 999), then the towns and villages of OpenStreetMap (ids from 1000; BLD-D15). Reference data: the app only reads it.
@@ -169,7 +172,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | phone | text | NN, U |
 | district_id | smallint | FK |
 | **lat / lon** | numeric(8,5) | NN: the **map pin** set at registration (`04` R-S2) |
-| location_checked_at / _by | timestamptz / uuid | set by the admin at approval; only an admin can move the pin afterwards |
+| location_checked_at / _by | timestamptz / uuid | set by the admin at approval; emptied when the approved pharmacy moves its own address or pin, and set again when an admin confirms or corrects it ("pin to check", `04` SM-1, BLD-D33) |
 | **pickup_days** | smallint | NN, default 1, `CHECK (pickup_days BETWEEN 1 AND 3)` (`04` N-6) |
 | **auto_list_days** | smallint | NN, default 180, `CHECK (auto_list_days BETWEEN 0 AND 180)`. The pharmacy's own listing rule: its boxes are listed by themselves at this many days left or fewer; 0: never (`04` N-54, BLD-D44) |
 | status | text | `IN ('PENDING','APPROVED','REJECTED','SUSPENDED')` (`04` SM-1) |
@@ -269,7 +272,7 @@ Notation: **PK** primary key · **FK** foreign key · **U** unique · **NN** not
 | offer_expires_at | timestamptz | **`CHECK (state <> 'OFFERED' OR offer_expires_at IS NOT NULL)`** |
 | deadline | timestamptz | **`CHECK (state <> 'RESERVED' OR deadline IS NOT NULL)`**; **never changes once set (trigger)** (INV-15) |
 | counts_as_no_show | boolean | set at O4; an admin may clear it after a contest (`04` R-N3) |
-| contested_at | timestamptz | when the client pressed [I picked it up] (one contest per order) |
+| contested_at | timestamptz | when the client pressed [I picked it up]: one contest per missed trip, set on every box of it (`04` R-N3). A trip is the orders of one `group_id`, or one order alone (`04` R-N1) |
 | close_reason | text | `IN ('not_available','client_cancel','declined','expired','withdrawn','system')` |
 | idempotency_key | text | NN; **`UNIQUE (client_id, idempotency_key)`**: one key per order: the client sends one `Idempotency-Key` per tap, and a group reserve stores `<key>:<position>` for each of its orders (DR2-A12, `06` API-D5) |
 | created_at, reserved_at, closed_at, updated_at | timestamptz | |
@@ -417,6 +420,7 @@ When a tap arrives, the API checks the owner, `used_at IS NULL`, `expires_at > n
 
 **`escalations`**: id uuid · client_id · conversation_id (`ON DELETE SET NULL`, so the 30-day chat purge isn't blocked) · request_id nullable · `reason IN ('client_asked_human','emergency_claim','cannot_resolve','window_ending','suspicious','complaint')` · `summary` (≤ 300) · `notes` jsonb (later escalations appended while this one is open) · `state IN ('OPEN','IN_PROGRESS','RESOLVED')` · resolution_note · resolved_by · created_at · resolved_at.
 - `UNIQUE (client_id) WHERE state <> 'RESOLVED'` gives one open escalation per client; a new one is **appended** to `notes` (`04` SM-9).
+- `notes` (jsonb, appended to, never rewritten) also holds, since 2026-11-22 to 2026-11-23, notes of the app's own kinds: `replied` (one per team reply: the conversation, the message's `seq`, and `at` on the app clock), `answered_in` (a reply went to a chat the case did not come from) and `contested_order` (the reservation of a contested missed pickup). **Whether a chat is held for the team** (`04` SM-9, N-55) is worked out from the case's state and its `replied` notes, never stored (BLD-D52). No migration: the column was already there. A case answered before replies were remembered holds nothing.
 - Admin replies are stored as `chat_messages` with `author='admin'`.
 - **There is no priority column anywhere:** priority can't be changed (`04` R-PRI4).
 
@@ -427,7 +431,7 @@ When a tap arrives, the API checks the owner, `used_at IS NULL`, `expires_at > n
 
 **There is no jobs table** (DR2-A10). The clock check (§6) reads the deadlines on the rows: `orders.offer_expires_at`, `orders.deadline`, `sourcing_requests.ends_at`, `claims.ends_at`, `early_release_asks.respond_by`, `conversations.pending_turn_at`, `conversations.followup_at`, `email_outbox.next_attempt_at`.
 
-**`email_outbox`**: id bigint · user_id FK · template · params jsonb (**no email address stored**; it's resolved at send time) · `dedupe_key` U · `state IN ('QUEUED','SENT','FAILED','DEAD')` · attempts · next_attempt_at · last_error · created_at · sent_at.
+**`email_outbox`**: id bigint · user_id FK · template · params jsonb (**no email address stored**; it's resolved at send time) · `dedupe_key` U · `state IN ('QUEUED','SENT','FAILED','DEAD','DROPPED')` (DROPPED since the tenth migration: not sent on purpose, its recipient deleted the account, `04` SM-12) · attempts · next_attempt_at · last_error · created_at · sent_at.
 Index `(next_attempt_at) WHERE state IN ('QUEUED','FAILED')`.
 
 **`notifications`**: id bigint · user_id · type · payload jsonb · `dedupe_key` U (one per event per recipient, R-NT) · read_at · created_at. Index `(user_id, created_at DESC)`.
@@ -467,7 +471,7 @@ Indexes: (entity_type, entity_id, occurred_at) and (occurred_at).
 | INV-6 controlled never listed | | Filtered in every query; rejected at creation | property test |
 | INV-7 picked up once, own pharmacy, before the deadline | State CHECKs + terminal trigger | Ownership + deadline check | API test |
 | INV-8/9 privacy | | API and tool schemas never expose those columns | contract tests |
-| INV-10 no PII in LLM traffic | | Redaction before insert and before every LLM call | trace scan test |
+| INV-10 no PII in LLM traffic | | Redaction before insert and before every LLM call. A message written to the team while it holds the chat is stored redacted like any client message | trace scan test |
 | INV-11 agent never creates orders | | No code path from tools to order creation | architecture test |
 | INV-12 one hold per unit | `qty_locked` accounting | Matching under an advisory lock | |
 | INV-13 audit for every change | | Written in the same transaction | |
@@ -481,7 +485,7 @@ Indexes: (entity_type, entity_id, occurred_at) and (occurred_at).
 | INV-21 cards from proposals | FK from the tap to `proposals` | Owner, expiry, one use, re-validation | API test with a forged payload |
 | INV-22 request hours | | Checked at creation with the app clock | boundary tests (07:59, 08:00, 20:00) |
 | INV-23 no pharmacy text to the LLM (except the approved name) | | Tool output schemas carry codes, numbers, IDs and the pharmacy name only | schema test |
-| INV-24 no coordinates to the LLM | Location columns live outside `case_state` | Tools return minutes, km and area names only | trace scan test |
+| INV-24 no coordinates to the LLM | Location columns live outside `case_state` | Tools return minutes, km and area names only. Areas to look in (`04` R-S2) go to the tools as names and are turned into districts by code | trace scan test |
 | INV-25 only boxes that fit | `fits()` function | Checked in search, tools, taps, matching and offer acceptance | boundary tests |
 
 **Example reconciliation query (INV-2):** run in tests and once a day by the clock check, which raises an alert on any row.
@@ -553,7 +557,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 
 ## 6. Concurrency and the clock check
 
-**Global lock order** (prevents deadlocks): `client_profiles` → `inventory_items` (sorted by id) → `orders` → request rows (`sourcing_requests`, `request_items`, `claims`, `early_release_*`) → `conversations`.
+**Global lock order** (prevents deadlocks): `client_profiles` → `users` → a user's links (`email_verification_tokens`, `password_reset_tokens`) → `inventory_items` (sorted by id) → `orders` → request rows (`sourcing_requests`, `request_items`, `claims`, `early_release_*`) → `escalations` → `conversations`. **The client's profile is the first lock of a flow that changes what a client has**, and since 2026-11-20 of the client's own account actions too; the conversation is the last. A flow may skip a step.
 
 | Operation | Pattern |
 |---|---|
@@ -562,8 +566,11 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | **Pharmacy [Picked up] / [Not available]** (O2, O3) | Lock the item, then the order; re-check that the state is RESERVED and the pharmacy is the owner; update both; update the linked item and claim; for a decision event, add an `event` message and set `pending_turn_at` on the conversation; audit; commit. Two clicks at once → the second finds a terminal order and returns "already done". |
 | **Matching / allocation** (R-PRI) | 1. `pg_advisory_xact_lock(hashtext('match:' || equivalence_key))`: one allocator per medicine group.<br>2. Load the candidate ACTIVE claims `ORDER BY created_at, id` (deterministic, INV-17) and the available items within reach.<br>3. Lock the candidates' `client_profiles` (sorted by id), then the items (sorted by id), following the global order.<br>4. Allocate in order: **skip** clients who aren't ACTIVE or are at a limit (R-PRI3); create OFFERED orders while stock remains; update the claims; audit with the reason. |
 | **Agent turn** (R-AG2) | **Lease:** `UPDATE conversations SET turn_lease_until = :now + interval '2 min', turn_owner = :me WHERE id = :id AND (turn_lease_until IS NULL OR turn_lease_until < :now) RETURNING id`. No row → busy. The lease is renewed during long turns and cleared at the end. **No database connection is held while the LLM thinks.** After a crash, the lease simply expires. |
-| **Clock check** (`04` R-T10) | Every pass (N-26) runs a few small queries, each selecting due rows, for example `SELECT id FROM orders WHERE state='OFFERED' AND offer_expires_at <= :now ORDER BY offer_expires_at LIMIT 50 FOR UPDATE SKIP LOCKED`. Each row is handled in **its own transaction** with a state re-check, so two workers or a restart never process a row twice. The steps, in order:<br>1. expire offers;<br>2. expire reservations;<br>3. expire asks;<br>4. the window check;<br>5. end windows;<br>6. matching sweep;<br>7. pending agent turns;<br>8. emails;<br>9. the daily tasks (via `app_state`). |
+| **Clock check** (`04` R-T10) | Every pass (N-26) runs a few small queries, each selecting due rows, for example `SELECT id FROM orders WHERE state='OFFERED' AND offer_expires_at <= :now ORDER BY offer_expires_at LIMIT 50 FOR UPDATE SKIP LOCKED`. Each row is handled in **its own transaction** with a state re-check, so two workers or a restart never process a row twice. The steps, in order (as built, `services/clock_check.py`):<br>1. expire offers;<br>2. expire reservations;<br>3. expire asks;<br>4. end early-release requests whose asks all ended;<br>5. pickup reminders (N-8);<br>6. lift pauses that ran out;<br>7. the window check;<br>8. end windows;<br>9. end watches;<br>10. matching sweep;<br>11. emails;<br>12. empty the accounts their clients deleted (retention login, since 2026-11-20);<br>13. the daily tasks (via `app_state`).<br>Pending agent turns run in the worker's own loop (`07` §14). |
 | **Upload apply / manual edit** (SM-4, R-U3) | Lock the upload and every affected item (sorted); apply R-U1–R-U5; delete the staging rows; commit; run matching for the affected equivalence keys. |
+| **An account's own action** (`04` R-AU4, R-AU7, R-AU10) | **Delete my account:** the client's profile, then the user's row (the password check), then what they have going in the global order (items, orders, request rows); in the same transaction the conversations are archived, the open escalations closed and the queued emails dropped. **A confirmation link, a sign-up again for an unconfirmed email:** the profile, the user's row, then the link. **A reset link** (R-AU9): the user's row, then the link (a reset touches no client row). A change of the client's own details, saved place or last searches takes the profile first and finds a deleted account refused, so nothing is written back onto the emptied rows. Race tests: `tests/races/test_account_races.py`. |
+| **Reply to or close an escalation** (`04` SM-9) | The escalation, then each conversation it posts in (a reply, the `team_closed` card), then the client's notification. No profile lock. |
+| **Empty a deleted account** (`04` R-AU10, the clean-up) | A task of the clock check under the retention login: the profile row `FOR UPDATE SKIP LOCKED`, one account per transaction, then its chats, notifications, emails, sessions, links and last searches are deleted and `emptied_at` is set. |
 
 ---
 
@@ -577,7 +584,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | Audit log | IDs and states only. Admin views of personal data are logged as `pii.view` events. |
 | Email | The address is resolved at send time, not copied into the outbox |
 | Secrets | Password hashes (argon2id), session and token hashes, and the admins' TOTP secrets encrypted with a key from Secrets Manager. No plain-text secrets in tables. |
-| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours, claim skips and a client's own search history.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims. **Since 2026-11-17 (the owner's Q49)** it also deletes a pharmacy registration whose email was never confirmed: for that it may delete rows of `users`, `pharmacies`, `pharmacy_hours` and `email_outbox`, and read **only the columns that find such a registration**, never an email, a name, a phone, a password hash or a licence. A client, or a pharmacy with stock or reservations, can't be deleted by it: the rows that hang on them are in tables it may not touch. Nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
+| **Database logins** | `dawalink_migrator` owns the tables and runs migrations and imports; nothing else uses it.<br>`dawalink_app` (the API and the worker): reads and writes rows; **read-only on the catalog and reference data; INSERT and SELECT only on `audit_events`**; no schema changes; no deletes except staged upload rows, opening hours, claim skips and a client's own search history.<br>`dawalink_retention`: deletes what has passed its retention time, and erases the location on kept requests and claims. **Since 2026-11-17 (the owner's Q49)** it also deletes a pharmacy registration whose email was never confirmed: for that it may delete rows of `users`, `pharmacies`, `pharmacy_hours` and `email_outbox`, and read **only the columns that find such a registration**, never an email, a name, a phone, a password hash or a licence. A client, or a pharmacy with stock or reservations, can't be deleted by it: the rows that hang on them are in tables it may not touch. **Since 2026-11-20** (`04` R-AU10) it also empties an account its client deleted: it deletes `password_reset_tokens` rows like the other links, may read only `user_id`, `status` and `emptied_at` of `client_profiles` (never a name, a date of birth or a place) and may set only `emptied_at`, which also lets it lock the row; the chats, notifications, emails, sessions, links and last searches it deletes are tables it could already delete from. Nothing else.<br>`prepare_db` creates them with the master login and rebuilds their privileges from the lists in `db/roles.py` on every run (`12` §7). |
 | At rest / in transit | RDS encryption at rest; TLS required for connections; credentials in Secrets Manager |
 
 ---
@@ -590,7 +597,8 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 | `agent_runs`, `agent_tool_calls` | Kept (no PII); `conversation_id` set to NULL when the conversation is deleted |
 | `answer_reports.snapshot` | Kept while the report is open or exported to regression (redacted) |
 | Notifications | 90 days |
-| Sessions and verification tokens | Deleted after expiry or revocation |
+| Sessions, verification tokens and reset tokens | Deleted after expiry, use or revocation |
+| An account its client deleted (`04` R-AU10) | **At once, by the app in the deletion's transaction:** the name, phone, date of birth, district, town, saved place and settings; the email and password become placeholders; the sign-up address hash; the last searches; the locations on the client's requests and claims; conversations archived, open proposals expired, queued emails DROPPED. **Within seconds, by the clean-up** (a clock-check task with the retention login): the conversations with their messages and proposals, notifications, every outbox row of the user, sessions, verification and reset tokens, search history; then `emptied_at`. **Kept, naming nobody:** the user and profile rows (DELETED), orders, requests and claims without a location, the audit log, `agent_runs` and `agent_tool_calls`, answer reports, escalations (their conversation set to NULL) |
 | A pharmacy registration whose email was never confirmed | Deleted with its login once it is older than 24 real hours and no confirmation link is still good or still waiting to be sent (the owner, 2026-11-17, Q49) |
 | Client location | Deleted with its conversation, request or claim |
 | `search_history` | Rows older than 30 days (N-53); a client's [Clear] deletes theirs at once |
@@ -604,7 +612,7 @@ Travel times aren't computed in SQL: the routing service is called from Python (
 
 | What | How |
 |---|---|
-| **Catalog** | Three commands, run inside `backend/`:<br>1. `python -m dawalink.ops.fetch_moph --date <list date>` downloads the Ministry's price list (.xls) and its drug database pages into `backend/data/moph/`, which is **never committed** (decision log O5);<br>2. `python -m dawalink.ops.build_catalog` joins them into `catalog.csv` (the date and exchange rate are read from the list);<br>3. `python -m dawalink.ops.import_catalog` creates a `catalog_imports` row, then inserts or updates products (matched on the Ministry's code) and their ingredients.<br>The import applies the team file `backend/data/catalog_overrides.toml` (controlled medicines, the no-prescription list, corrections for single products). |
+| **Catalog** | Four commands, run inside `backend/`:<br>1. `python -m dawalink.ops.fetch_moph --date <list date>` downloads the Ministry's price list (.xls) and its drug database pages into `backend/data/moph/`, which is **never committed** (decision log O5);<br>2. `python -m dawalink.ops.fetch_otc_list` downloads the Ministry's no-prescription list (a PDF) into the same folder and writes the products it names to `otc_list.csv` beside it (since 2026-11-22, BLD-D50);<br>3. `python -m dawalink.ops.build_catalog` joins them into `catalog.csv` (the date and exchange rate are read from the list) and marks the products the no-prescription list names by their code **and** registration number (`04` R-C7);<br>4. `python -m dawalink.ops.import_catalog` creates a `catalog_imports` row, then inserts or updates products (matched on the Ministry's code) and their ingredients.<br>The import applies the team file `backend/data/catalog_overrides.toml` (controlled medicines, optional no-prescription ingredient words, empty on purpose, and corrections for single products).<br>**A database that already has a catalog:** `prepare_db` imports only into an empty catalog, so on one that has a catalog it sets the prescription marks again from `catalog.csv`, both ways (`catalog/importer.py`, `refresh_prescription_marks`). The notice is put back by the code alone; it is taken away only when the code, the registration number and the name all match. Running it again changes nothing. Tested in `tests/db/test_catalog_import.py`. |
 | Districts | `backend/data/districts.csv` (26 districts, 9 governorates, a reference point each; written by `prepare_db`) |
 | Areas | Two files, written by `prepare_db` after the districts (1,853 places in all):<br>• `backend/data/areas.csv`, **written by hand:** the 26 districts as a whole and 94 well-known neighbourhoods and towns, each with the ways people spell it. A row here wins over the map's row for the same place;<br>• `backend/data/areas_osm.csv`, **generated from OpenStreetMap** (© OpenStreetMap contributors, Open Database License): 1,733 towns, villages and neighbourhoods with their centres and their English, French and Arabic names. Do not edit it by hand.<br>**To build it again**, inside `backend/`: `python -m dawalink.ops.fetch_osm_places` (one small download, kept outside git), then `python -m dawalink.ops.build_areas`. A place keeps its id; a place the map dropped stays listed.<br>**The join rules** (`dawalink/osm_places.py`): a place in no district we know is left out; inside a district a name means one place; names are plain Latin or Arabic letters only (`10` TH-58).<br>The hand-written centres are the map's own since 2026-11-14 (Beirut as a whole and 9 places the map has no point for are still by hand). |
 | Pricing tiers | Seeded from config (`04` N-4) |
@@ -771,3 +779,13 @@ A request copies the point and its source; its thread also copies `loc_area_id`.
 **The eighth migration (2026-11-19, decision log BLD-D44):** `pharmacies` gets `auto_list_days` (every pharmacy starts at 180, which is what happened before); `inventory_items.listing_control` may also be `LISTED`; `visible_listings` is replaced, with the same columns, so everything that reads it reads it as before. Going back turns the boxes listed by hand into ordinary ones and drops the column.
 
 **Tested:** the function against `domain/inventory.py` on every edge: the day a box reaches the pharmacy's number and the day before, 180 and 181 days, and "never" with a box that expires today (`tests/db/test_functions.py`); the new check (`tests/db/test_constraints.py`).
+
+**The ninth migration (2026-11-20, `e5b0c3a9d417`, decision log BLD-D47):** a new table, `password_reset_tokens` (§3.1), the 37th, shaped like `email_verification_tokens`. The app login reads and writes it; the retention login deletes its used and expired rows (§7, §8). Going back drops the table, and the links still good stop working.
+
+**The tenth migration (2026-11-20, `f3c8a1d6b920`, decision log BLD-D48):** `client_profiles.status` may be `DELETED`, with `deleted_at` and `emptied_at` and their two checks, and a partial index on the accounts deleted and not yet emptied (§3.1); `email_outbox.state` may be `DROPPED` (§3.8). The retention login gets the few columns it needs on `client_profiles` (§7). **Going back is refused while a deleted account exists:** its row would fit none of the statuses left. Otherwise DROPPED emails become DEAD and the columns go. The head of the chain is now `f3c8a1d6b920`; `prepare_db` must run (migrations and grants) before a worker that empties deleted accounts.
+
+**Stored in existing columns (round A):** `proposals.payload.card` may also hold `box` (the card's price, saving, expiry, days of use, the pharmacy's hours on the pickup day and the travel time, shown by the website as search shows a box) and `screen_lines` (the card's lines as the screen shows them); the model reads the card's `lines` only, as before. Cards stored earlier have neither. `users.signup_ip_hash` may be NULL when the address isn't known (the column was already nullable).
+
+**Tested:** the 37 tables (`tests/db/test_schema.py`); the new unique token, the DELETED checks (`tests/db/test_more_constraints.py`); what the retention login may read and set on `client_profiles` (`tests/db/test_roles.py`); the clean-up of a deleted account and of reset tokens (`tests/services/test_daily.py`); the deletion and the reset through the API (`tests/api/test_account_deletion.py`, `tests/api/test_password_reset.py`); a deletion against a case being opened, a confirmation link, a sign-up again, and two resets at once, with two real connections (`tests/races/test_account_races.py`).
+
+**Round B (2026-11-22 to 2026-11-23, decision log BLD-D51, BLD-D52): no schema change, no migration.** An escalation's `notes` gain the `replied` kind, one per team reply, and whether a chat is held for the team is worked out from them (§3.7). The numbered pages of the website count each list's rows with the very statement that reads the page (`services/paging.py`). **Tested:** `tests/api/test_escalation_holds.py`, `tests/api/test_counted_pages.py`.

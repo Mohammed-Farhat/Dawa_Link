@@ -1,6 +1,6 @@
 # ADR-004: The agent decides which pharmacy; code computes the route facts; location stays out of the LLM
 
-**Status:** Accepted (2026-10-20, the professor's guidance, decision log §S) · **Amended** (2026-10-22, `10` TM-D3): "reliability" removed from the facts. Nothing measures it; the team assumes the stock on the app is real, and [Not available] handles the rare exception.
+**Status:** Accepted (2026-10-20, the professor's guidance, decision log §S) · **Amended** (2026-10-22, `10` TM-D3): "reliability" removed from the facts. Nothing measures it; the team assumes the stock on the app is real, and [Not available] handles the rare exception. · **Amended** (2026-11-23, decision log BLD-D53, BLD-D54): the agent **asks once**, before its first search, where the client wants the pharmacy (nearest, an area they name, or anywhere), for how many days and when, and then always searches; it **never asks whether the client has a car** (by car is assumed, and the walking time is shown too). **A place named as where to look is not where the client is:** only the pharmacies of the areas named are weighed, all together, and the travel times still count from where the client is.
 **Date:** 2026-10-20
 **Deciders:** DawaLink team, following the course professor's guidance
 
@@ -28,11 +28,12 @@ The professor described the agent's purpose as: *"we only help in bringing the c
    - opening hours compared with when the client can go;
    - price and stock;
    - **the expiry fit** (`expiry ≥ pickup day + days of use − 1`).
-2. **The agent decides.** It weighs those facts together with what the client said ("no car", "I finish at 6", "cheapest"). It **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives. The client still taps to reserve.
+2. **The agent decides.** It weighs those facts together with what the client said ("no car", "I finish at 6", "cheapest", "in Saida or Beirut"). It **recommends one** pharmacy or plan with a one-sentence reason, and shows up to 2 alternatives. The client still taps to reserve. *Since 2026-11-23:* what the client hasn't said of where, how many days and when is asked once, in one message; an open answer is no preference, and the agent searches whatever comes back. It never asks car or on foot.
 3. **Location stays out of the LLM.**
    - The client shares a location ("Use my location") or picks a district. It's stored rounded to ~100 m, outside the agent's case state, and purged with its conversation or request.
    - Pharmacies pin themselves on a map, and an admin checks the pin.
    - **The agent sees only "12 min on foot, Hamra".**
+   - *Since 2026-11-23:* places the client names as where to look narrow the pharmacies searched; they are looked up by name in our own list, and the agent is given names, never a point (`04` R-S2).
 4. **The expiry fit replaces the fixed minimum.**
    - Any unexpired box can be listed.
    - It's offered to a client only if it lasts their days of use (unknown → 1 day, with a clear expiry warning).

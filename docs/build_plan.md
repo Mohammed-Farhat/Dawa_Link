@@ -1,6 +1,6 @@
 # DawaLink: Build Plan and Progress
 
-**Updated:** 2026-11-18 · **Status:** 🟡 living: updated at the end of every build step.
+**Updated:** 2026-11-23 · **Status:** 🟡 living: updated at the end of every build step.
 
 This is the one place that says **what is built, what comes next, and what was left for later**. A new session reads it to continue exactly where the last one stopped. Decisions stay in the [decision log](00_decision_log.md); this file only tracks the build.
 
@@ -8,6 +8,7 @@ This is the one place that says **what is built, what comes next, and what was l
 
 ## In short
 
+- **Where it stands (2026-11-23):** the API and the website are built (steps 7 and 8), hardened (step 9), and fixed after two reviews and the owner's own rounds on the client's, the pharmacy's and the admin's sides (§3, "After step 9"; decision log BLD-D40 to BLD-D56). "Forgot my password" and "delete my account" are built. The agent is at prompts v1.14: it asks once, then always searches (BLD-D53). **Next: the agent's final evaluation, with the owner** (slice 6b of §2): the architecture trials, the held-out data, the checks that still encode the old questions, and the choice of model (O1). **Then** Cognito and AWS (steps 10 and 11, the owner's), the report, and the demo on 2026-11-30. The rest of this summary is the history of how it got here.
 - **Done:** steps 1 to 5: the code skeleton, the domain core (the exact rules as tested code), the database (tables, logins, the real catalog, demo data), the services (everything the app does with those tables, and the worker's tasks) and **the agent** (the turn, the tools, cards, guards, prompts, the models, worker turns, routing, tracing). **After step 5 (2026-11-14):** the 18th tool, `set_area` ("I'm in Hamra"), and tracing proven on the real Langfuse.
 - **Answered on 2026-11-15** (§5): Q18, a closed request opens again when one of its boxes is lost before its 6 hours are over (built: `04` R-RQ12, BLD-D21); Q19, Q20 and the other-brand split, the simulation's assumptions (BLD-D22); and the owner read the first batch of evaluation cases: "everything looks clear and good", so the rest of the development cases can be written. Q21 to Q23, three details of these: a reopened request may be a third open one; a system cancel reopens too; and "the nearest pharmacies" of a plan are the nearest by road, not in a straight line. **Nothing waits for the owner now.**
 - **In progress:** step 6, the simulator and the evaluation, started on 2026-11-14 (the slices are in §3). **On 2026-11-15:** slices E2, E6, E7 and E8 done, E9 nearly; the first paid runs on Claude Haiku: the agent went from 136 to 168 of 241 units on seed 1 over prompts v1.4 to v1.8 and four new guards, level with plain search and clearly ahead of the policy with no AI; suite E1 (understanding) on 180 cases and suite E4 (safety) on 70 attacks; seeds 2 to 5, never tuned on, are running. **The same afternoon the owner changed what the agent does first** (BLD-D28: it asks, waits for the answer, then searches); prompt v1.10 and the two suites follow, and the runs on it are recorded below as development results: E1 on 180 cases, E4 on 70 attacks, the agent on 5 seeds (749 of 1,198 units, against 795 on the earlier prompt, 824 for search and 592 for the no-AI policy), the three ablations on seed 1, the sweep of the search baseline. **The same evening the owner answered Q27 to Q34** (§5, BLD-D29): the agent asks again for what an answer left out (prompt v1.11); a second model plays the client (suite E7 of `08`, slice E13); and the order from here is agreed (§2): step 6 closes as "tools built, development results", the website comes next, one side at a time, and the final evaluation runs on the finished agent. **Later the same evening he answered the last three** (BLD-D30): no cart on the search page; no request form, a request starts in the chat; a simulated client answers a question within 1 to 3 minutes. **Nothing waits for a decision; the second batch of cases waits for his read.** Moved to the final evaluation (slice 6b of §2): the final runs, the other sweeps (E6), the model comparison (E11), the held-out data in a separate session (E12).
@@ -68,6 +69,8 @@ The owner agreed to move on to the website before the agent's final evaluation, 
 | 6b | **The final evaluation, on the finished agent** | The held-out data (written in the owner's separate session), the final runs of E1 to E7, the model comparison and the choice of model (O1), the failure analysis, the regression cases | – | ⏳ |
 | 10, 11 | **Cognito, then AWS** | "When we finish the project" (the owner, Q33) | – | ⏳ |
 | 12 | **Report and demo** | The final report, the demo script and its rehearsal | all | ⏳ |
+
+**On 2026-11-23** everything above slice 6b is done, with the rounds of fixes that followed step 9 (§3). Slice 6b is next, then 10, 11 and 12.
 
 **While the website is built, the team talks to the agent in the browser** from slice 7a on: every bad reply they mark becomes a regression case (`08` §5). That is the check no simulated or played client replaces.
 
@@ -1041,7 +1044,7 @@ Round 3 of the client's side is pushed. The owner registered a pharmacy, had it 
 
 **Committed and pushed by the owner on 2026-11-19.**
 
-### After step 9: the owner tries the admin's side (2026-11-19) 🔨
+### After step 9: the owner tries the admin's side (2026-11-19) ✅
 
 So that every page had something waiting, one example of each kind was added to the local database first (a pharmacy to approve, a pin to check, an escalation, a reported answer, a contested missed pickup). The owner then went through the console and wrote five findings, with screenshots, and one rule: **"Do not add a lot of stuff we do not need… we want to easily know the clients, who has open requests, who picked up the order, and a basic escalation when the user tells the agent to talk to us."**
 
@@ -1082,11 +1085,44 @@ So that every page had something waiting, one example of each kind was added to 
 
 **Not checked:** a screen reader on the new pages (the `axe` checks pass in the website's tests); the console on a phone's width.
 
+**Committed and pushed by the owner on 2026-11-19** (`28cf4f1`).
+
 ---
 
-### After step 9: the owner's list for the three sides (2026-11-22 to 2026-11-23) 🔨
+### After step 9: two reviews and their fixes, forgot my password, delete my account (2026-11-20 to 2026-11-22) ✅
 
-The owner tried the pharmacy's, the admin's and the client's sides and sent 26 points. Each was checked first against the code, his own test chats and the local database (5 checkers), then fixed. **The docs of steps 01 to 12 are not updated for this round yet, nor for the round before it** (the fixes of the two reviews, "forgot my password", "delete my account", committed on 2026-11-22): one docs pass covers both, after the owner has tried these fixes. `CLAUDE.md` §4 already holds the new rules.
+Before the owner's own round on the three sides, the finished website was reviewed twice: a review for production (41 points) and a review of the design and its use (64 points). **96 of the 105 were fixed.** The two reports stay outside the repository: they list weaknesses, and the repository is public. What was decided is in the decision log (BLD-D46 to BLD-D50); what is true now is in the docs of each step.
+
+**Built, at the owner's request:**
+- **"Forgot my password"** (BLD-D47, `04` R-AU9): a "Forgot your password?" link on the login page, always the same answer whoever asks; a link only for an account that could log in today; a hashed token that works once, for N-56, and only the newest; every session ends after a reset; emails CN-19 and CN-20. The ninth migration (`password_reset_tokens`, the 37th table).
+- **"Delete my account", for clients** (BLD-D48, `04` R-AU10): the last section of the Me page, the password typed again; what the client has going ends in the same order as a suspension; the personal details are erased at once and the rest within seconds; the account stays as an ID marked "Deleted". The tenth migration (DELETED, and DROPPED for emails). Pharmacies have none: an admin suspends one.
+
+**Decided by the owner on 2026-11-22:** "Confirm, then log in" (BLD-D49): the confirmation link confirms the email and logs nobody in; the person then logs in with their password.
+
+**Built from the reviews (Claude, BLD-D46), the main points:**
+- a missed pickup is counted per trip: the boxes of one tap count once, and one contest or one [Clear] covers them all (`04` R-N1, R-N3). **This changes how the pause counts; the owner confirmed it on 2026-11-23 ("Count as 1");**
+- search by name never leads to another brand of the medicine named;
+- a stock file's box holds at most N-57 units, and its quantities are plain digits;
+- passwords hashed at OWASP's minimum, a few at a time, with "DawaLink is busy" when a request waits too long;
+- "Missed pickup" everywhere "Expired" was said; emails that end with the next step; the privacy note reworded to stay true;
+- the deployment guide (`12`): the database's master password as a full address in a secret, SES through SMTP credentials in a secret, a stop timeout of 120 s, a CloudFront Function for the website's pages, a temporary secret for the admin's set-up; compose refuses to start without `APP_SECRET_KEY`;
+- the worker stops when one of its loops dies; the routing service rests a minute after a failure, for the search page and the agent alike.
+
+**And the Ministry's no-prescription list** (BLD-D50, closes O7): `fetch_otc_list` runs between `fetch_moph` and `build_catalog`, and `prepare_db` refreshes the marks of a catalog already in the database. On the local catalog 119 products are on the list; the 118 that are not controlled lose the prescription notice.
+
+**Left, on purpose or small** (§4): the admin's set-up on Fargate, partly; the component library's own stylesheet, kept on purpose; quick replies that read like buttons (the agent's final evaluation); a few small points of the screens.
+
+**Checks** (the integration pass of 2026-11-22): the backend suite, 2,349 tests, folder by folder; the website's 430 tests, then 467 after the last small pass; lint, types and the build clean; the start-up script within its budget; `before_commit`: the planner exact on the P-set and the no-AI policy at 133 of 241.
+
+**Not checked by the engineers in a browser.** The owner's local stack was rebuilt on 2026-11-20 with the ninth and tenth migrations, and he tried the result in the round below.
+
+**Committed and pushed by the owner on 2026-11-22** (`8de0bc6`). **The docs of steps 01 to 12 were brought up to date on 2026-11-23**, in one pass with the round below.
+
+---
+
+### After step 9: the owner's list for the three sides (2026-11-22 to 2026-11-23) ✅
+
+The owner tried the pharmacy's, the admin's and the client's sides and sent 26 points. Each was checked first against the code, his own test chats and the local database (5 checkers), then fixed. The decisions are in the decision log (BLD-D51 to BLD-D56). **The docs of steps 01 to 12 were brought up to date for this round and the one before it on 2026-11-23,** after the commit.
 
 **What the checks found (not all 26 were defects):**
 - already working: one medicine with two expiry dates (one box per batch);
@@ -1102,7 +1138,7 @@ The owner tried the pharmacy's, the admin's and the client's sides and sent 26 p
 
 **Built, the website (4 engineers on Opus, then checked live):**
 - the pharmacy's and the admin's top bar stays in place on a computer;
-- numbered pages of 25 on every list of the three portals (one `Pager`, the page in the address, a `total` from the API); lists that stopped silently at 20 or 50 rows now page;
+- numbered pages (N-59 rows each) on every list of the three portals (one `Pager`, the page in the address, a `total` from the API); lists that stopped silently at 20 or 50 rows now page;
 - the audit log reads as sentences, with who did it and a link to what it is about, and still never a value of a changed field (`domain/audit_actions.py`: a new audit event without a sentence fails a test);
 - escalations: a new ask on an open case shows as a new ask, with its chat; the closed cases are listed newest first;
 - Health shows the limits per client beside the budget for everyone; the catalog shows strength, form and pack in their own columns;
@@ -1124,6 +1160,8 @@ The owner tried the pharmacy's, the admin's and the client's sides and sent 26 p
 
 **Left open:** a watch or a request started after "in Beirut" still counts from where the client is, not from Beirut (it would need new columns); an ask is not sent later when a closed pharmacy opens (the owner: leave it for now); a [Use my saved place] button on the chat's location sheet.
 
+**Committed and pushed by the owner on 2026-11-23** (`cad4150`).
+
 ## 4. Left for a later step
 
 **For the agent's final evaluation (slice 6b), seen in the browser on 2026-11-16:** the agent offers quick replies that read like buttons: "Yes, start sourcing" next to the [Start sourcing] card, "Reserve at Pharmacy C" next to a [Reserve] card. A quick reply only sends its words as a message and never acts, so nothing wrong happens; but a client may think they reserved. To add as regression cases and to the prompt's rules then. Also: `03` PS-10 lets a pharmacy change its phone in its settings, while `10` TH-59 says only an admin changes it (the number is shown to clients). Claude follows TH-59, the newer and stricter one, in slice 7e.
@@ -1134,6 +1172,12 @@ The owner tried the pharmacy's, the admin's and the client's sides and sent 26 p
 
 | What | Joins in |
 |---|---|
+| **Left by the reviews and "forgot my password" (2026-11-22), all low:** someone who knows an email can use up that account's reset emails for the day (N-56; the recommended answer is to count the daily cap per network address and let older links live out their N-56); the pharmacy's Inventory and Listings go blank when their request fails, instead of saying so; the pharmacy details form accepts wider bounds than the domain rule (`domain/pharmacy_details.py`), which the API still enforces; the agent turn's hand-over paths take the client's profile lock after the conversation's lock, against the one lock order; compose's worker health check retries once where `12` says twice | Before the deploy (step 11) |
+| **Left by the two reviews, on purpose or small:** the admin's set-up on Fargate is only partly scripted (`12`); the component library's own stylesheet is kept on purpose; quick replies that read like buttons wait for the agent's final evaluation (above); a few small points of the screens' look and focus | Before the demo, if time allows |
+| **Left by BLD-D49:** if a stranger signs up last and the owner of the mailbox then confirms, the stranger's password stays until the owner uses "Forgot your password?". A residual risk for `10` | Accepted; to re-read with Cognito (step 10) |
+| **Left by the owner's list (2026-11-23):** a watch or a request started after "in Beirut" still counts from where the client is (it needs new columns); an ask is not sent later when a closed pharmacy opens (the owner: "Leave it for now"); no [Use my saved place] on the chat's location sheet | After the final evaluation, if wanted |
+| **For the agent's final evaluation (slice 6b), from prompts v1.14:** suite E1's "asks first" checks, the simulated client's answers and `rules_asking` still encode the questions BLD-D53 removed; suite E4's `no_state_change` check fails twice where the assistant now starts a watch as BLD-D55 says; the saved runs of prompts v1.4 to v1.13 are history; the simulated world keeps the old prescription marks until it is rebuilt (BLD-D50); the architecture trials ("Leave the loop for now") | Slice 6b, with the owner |
+| **Before the demo:** the per-client daily limit in tokens or in dollars, and the real value of the monthly budget (development's $20 now, BLD-D13), once the model is chosen (O1) | Slice 6b |
 | *(The admin's side of an abuse flag was built in slice 7f, second half.)* | done |
 | **One hunt for inputs that can break or lock a page, across the three sides** (the owner, 2026-11-18, after 999 days of use locked every offer, `09` FI-33): every number, date and text box of the client's, the pharmacy's and the admin's pages, typed with too much, too little and the wrong kind; every page's answer to a refusal of the server. The API itself was walked and fuzzed in step 9; this is about what the pages do with it | After the owner has tried the pharmacy's and the admin's sides |
 | The chat endpoint and its stream, the message limits of N-17 (20 per minute, 100 per day), and `409 CONVERSATION_BUSY`. The turn function they call exists. **To settle there:** a chat message that arrives while a turn is running. | Step 7 |
@@ -1164,6 +1208,10 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 
 | What | Result |
 |---|---|
+| **The owner's 26 points of 2026-11-22 and 2026-11-23: were they all defects?** Five checkers read each one against the code, his own test chats and the local database before anything changed. | No. Already working: one medicine with two expiry dates (one box per batch). By design, and explained: the Ministry decides a medicine's name, strength and form, and a "%" in a name is a strength; an ask goes only to a pharmacy that is open (his test was on a Sunday, with the pharmacy closed on Sundays). Everything else was true, in whole or in part, and fixed (BLD-D51 to BLD-D55). |
+| **The Ministry's no-prescription marks never reached a database that already had a catalog** (2026-11-20): `prepare_db` skips the import when products exist. | `prepare_db` now refreshes the marks from the catalog file, both ways (BLD-D50). Counted on the local catalog: 119 products on the list, 118 of them not controlled and without the notice. |
+| **Does the new strength check of a stock file change a match on the real catalog?** (2.5 mg must never be 25 mg.) | Counted on the real catalog, nothing copied: no name's strengths split or merged, none whose key depends on spaces (BLD-D51). |
+| **The agent's tool count after prompts v1.14.** | Still 19 tools and `reply`: `find_options` and `plan_basket` gained `areas`, `set_area` is only for where the client is (AG-D2). |
 | **Refusals the client can understand showed "Something went wrong on our side"** (second review, slices 7b to 7d): the website had words for about half of the API's error codes. An offer that had just expired, a closed request or a price above the public one all fell back to the general sentence. | Every code of `06` §3.2 has its own words in `strings/en.ts`, and a website test reads the codes from the document and fails when one has none. |
 | **The website's test data was loose objects,** so a change of the API's shapes would not have failed the type check. | Each one is marked with the API's generated type (`satisfies Schemas[…]`). It found two loose spots at once. |
 | **The pharmacy's bar said "open until" the end of the day's last range,** wrong for a pharmacy that closes at midday and reopens. | The profile carries `closes_at`, the end of the range that is open now. |
@@ -1311,11 +1359,21 @@ The owner's rule (2026-11-10): **don't follow the docs blindly.** Anything that 
 | Q68 | **What to do with "Reported answers"?** He found it useless. One simple list (recommended, it keeps the checklist's T-12); remove it everywhere; or leave it. | **2026-11-19: one simple list.** Built. |
 | Q69 | **Keep [I picked it up] on a missed pickup?** Keep it, made clear (recommended); or remove it. Explained first: only the pharmacy marks a pickup; the button marks nothing. | **2026-11-19: keep it, made clear.** Built. |
 | Q70 | **What does the Clients list show: an ID with the name one click away (recommended), or names in the list?** | **2026-11-19: neither as asked: "I meant that i want to know clients that have reservations, ordered and picked, like to know each client what he has".** Read as: what each client has, on their page and in the list's filters; no names were asked for, so a client stays an ID. Built. |
+| Q71 | **"Forgot my password"** (D3, postponed since §K). | **The owner asked for it;** built on 2026-11-20 (BLD-D47, `04` R-AU9). |
+| Q72 | **"Delete my account"** (D4, postponed since §K). | **The owner asked for it;** built on 2026-11-20 for clients (BLD-D48, `04` R-AU10); a pharmacy has none, an admin suspends it (Claude's, reported). |
+| Q73 | **What the confirmation link does.** A sign-up for an email never confirmed replaces the earlier one, so a link that logs its user in could log the owner of the mailbox in to a stranger's password. | **2026-11-22: "Confirm, then log in".** Built (BLD-D49): the link logs nobody in. What it leaves is in §4. |
+| Q74 | **An admin replies to an escalation: who answers the client's next message?** | **2026-11-22:** "We must separate when an admin replies to an escalation, and only when admin presses close chat, then every new input is considered for the AI agent. So like the same chat, but when the admin sends a reply, the chat is only between them, but when it closes, back to normal." Built (BLD-D52, `04` SM-9). |
+| Q75 | **A case nobody closes: when does the chat go back to the assistant?** | **2026-11-23: "After 12 hours"** after the team's last reply there (N-55). |
+| Q76 | **What the agent asks before it searches.** | **2026-11-23:** "The agent must ask about some categories for the user, because the user won't know the agent can do that…", then **"Ask once, then always search".** Built (BLD-D53, prompts v1.14): one message asks where, for how many days and when; whatever comes back, it searches. Replaces Q28's "asks again". |
+| Q77 | **"Saida or Beirut": where does the agent look?** | **2026-11-23:** "the agent must search for pharmacies in Saida and Beirut not one of them, then propose, and if the agent did not find any, the agent must tell the client that there is no medicine in these areas." Built (BLD-D54, `04` R-S2). |
+| Q78 | **A medicine no pharmacy lists, in a chat: ask the client first, or act?** | **2026-11-23: "Ask on its own, then tell".** Built (BLD-D55): a watch and asks to pharmacies in the same turn, then the agent says what it did. |
+| Q79 | **Asks to a pharmacy that is closed now?** | **2026-11-23: "Leave it for now".** Asks still go only to open pharmacies (`04` R-E2). |
+| Q80 | **Change the agent's loop?** | **2026-11-23: "Leave the loop for now".** It is already a loop that reasons, acts and reads the result; it is looked at in the architecture trials of slice 6b. |
 | – | **The rule "an estimate before each paid run".** | **2026-11-15:** lifted by the owner after he compared the Anthropic console with the app's own count. Each run keeps a hard limit and its cost is reported. |
 
 ### Waiting for a decision
 
-**No question waits** (2026-11-19).
+**No question waits** (2026-11-23). To settle with the owner in the final evaluation: the points of §4 marked for slice 6b. Confirmed by him on 2026-11-23: the Ministry's no-prescription list is wanted (BLD-D50); "Forgot your password?" stays open to a logged-in person (BLD-D47); a client who deleted their account may sign up again with the same email, as a new account (BLD-D48); closing a case nobody answered still tells the client that the team closed it (BLD-D52). a missed pickup is counted per trip, asked with an example ("Count as 1", BLD-D46); the database's certificate stays unchecked for the demo, as an accepted risk ("Accept it", `10` RR-28).
 
 The owner still has the second batch of cases to read (U-0061 to U-0180, R-0029 to R-0070).
 

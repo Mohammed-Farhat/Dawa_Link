@@ -9,7 +9,7 @@ and every action that matters needs the client's tap.
 Course project: Agentic Systems 503N/798S, Fall 2026 (Path A).
 
 - **The plan and every decision:** [docs/README.md](docs/README.md)
-- **Status:** the build has started. The code skeleton is in place; features come next.
+- **Status:** the website, its API and the agent are built and tested. What is left: the agent's final evaluation, the deployment to AWS, the report and the demo.
 
 ## Run it on your machine
 
@@ -18,6 +18,14 @@ You need [Docker Desktop](https://www.docker.com/products/docker-desktop/). Then
 ```bash
 cp .env.example .env
 ```
+
+Then fill in two values in `.env`, each with the one-line command written above it in the file:
+`APP_SECRET_KEY` (required: `docker compose` stops and says so while it is empty) and
+`DEMO_ACCOUNTS_PASSWORD` (the demo accounts' password; empty, they can't log in).
+`.env.example` leaves both empty because it is public.
+
+Demo mode is on by default, and it needs the medicine catalog (see [The medicine catalog](#the-medicine-catalog)):
+without it the database step stops. Build the catalog first, or set `DEMO_MODE=false` in `.env`.
 
 ```bash
 docker compose up --build
@@ -28,9 +36,9 @@ docker compose up --build
 | http://localhost:5173 | The website |
 | http://localhost:8000/api/v1/health | The API's health check |
 | http://localhost:8000/api/v1/docs | The API's interactive documentation (local only) |
-| http://localhost:8025 | Every email the app sends, caught locally (nothing leaves this machine) |
+| http://localhost:8025 | Every email the app sends, caught locally (nothing leaves this machine): the links to confirm a new account and to set a new password ("Forgot your password?") arrive here |
 
-**To log in:** create an account on the website (a client's, or a pharmacy's from "Are you a pharmacy?" on the welcome page) and open the confirmation email in the local mailbox above, or use a demo account: `client01@demo.dawalink.test` to `client06@demo.dawalink.test`, or a demo pharmacy, `pharmacy01@demo.dawalink.test` to `pharmacy16@demo.dawalink.test` (it opens the pharmacy's portal), with the password you set as `DEMO_ACCOUNTS_PASSWORD` in `.env` (`.env.example` has one for your own machine). Without that setting the demo accounts can't log in.
+**To log in:** create an account on the website (a client's, or a pharmacy's from "Are you a pharmacy?" on the welcome page) and open the confirmation email in the local mailbox above (the link confirms the email; then log in with your password), or use a demo account: `client01@demo.dawalink.test` to `client06@demo.dawalink.test`, or a demo pharmacy, `pharmacy01@demo.dawalink.test` to `pharmacy16@demo.dawalink.test` (it opens the pharmacy's portal), with the password you set as `DEMO_ACCOUNTS_PASSWORD` in `.env`. Without that setting the demo accounts can't log in.
 
 **The assistant** answers only when `LLM_PROVIDER` is set in `.env` (`anthropic` spends API credit, a few cents per conversation). With `none`, the chat says the assistant isn't available, and everything else works.
 
@@ -83,14 +91,15 @@ are **not in this repository**: download them once, inside `backend/`:
 | Step | Command |
 |---|---|
 | 1. Download the price list and the database pages (about 5 minutes) | `uv run python -m dawalink.ops.fetch_moph --date 2026-11-11` |
-| 2. Join them into `data/moph/catalog.csv` | `uv run python -m dawalink.ops.build_catalog` |
-| 3. Load them (also done by "Prepare the database" when there are no products yet) | `uv run --env-file ../.env python -m dawalink.ops.import_catalog` |
+| 2. Download the Ministry's list of medicines sold without a prescription (skip it, and every product shows the prescription notice) | `uv run python -m dawalink.ops.fetch_otc_list` |
+| 3. Join them into `data/moph/catalog.csv` | `uv run python -m dawalink.ops.build_catalog` |
+| 4. Load them (also done by "Prepare the database" when there are no products yet; when there are, "Prepare the database" only refreshes their prescription marks from the file) | `uv run --env-file ../.env python -m dawalink.ops.import_catalog` |
 
 `--date` is the date of a list on the Ministry's
 [price list page](https://www.moph.gov.lb/en/DynamicPages/index/3/37424/drugs-public-price-list-).
-The team's own rules (controlled medicines, the no-prescription list, corrections) are in
-`backend/data/catalog_overrides.toml`. Without the catalog file everything still runs, with
-nothing to search for.
+The team's own rules (controlled medicines, extra words for the no-prescription marks, corrections) are in
+`backend/data/catalog_overrides.toml`. Without the catalog file everything still runs with
+`DEMO_MODE=false`, with nothing to search for; in demo mode the database step stops.
 
 ## The places a client can name
 
@@ -141,6 +150,7 @@ eval/       the evaluation's data: the written cases, the simulated world, the r
 ## How this project uses AI
 
 - **The product:** DawaLink's agent runs on a large language model. Tests use a scripted fake
-  model, development uses a local model, and the evaluation and demo use Anthropic's Claude API.
+  model, development uses Claude Haiku 5.5 (a local model is a spare for when there is no
+  network), and the evaluation and demo use Anthropic's Claude API.
 - **The code:** it is written with Claude Code (Anthropic's coding assistant), following the plan
   in `docs/`. The repository owner checks every change before committing it.
