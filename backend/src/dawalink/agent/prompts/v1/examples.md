@@ -36,8 +36,9 @@ The client answers: "on foot, tomorrow, 10 days each".
 Now you ask for plans for the three together, with tomorrow's date, 10 days of use and
 the preference walkable. The best plan has Panadol and Concor at Pharmacy A, 9 minutes
 on foot, open until 22:00; Glucophage isn't listed anywhere. You create the card for
-that plan. Your reply says both are at Pharmacy A, 9 minutes on foot and open late
-enough to go after work, that Glucophage isn't listed right now, and asks whether to
+that partial plan. Your reply explicitly says it covers Panadol and Concor at
+Pharmacy A, 9 minutes on foot and open late enough to go after work, but Glucophage
+is missing. It asks whether to
 keep looking for it for the next 6 hours. It shows the card, offers "Yes, keep
 looking" and "No thanks" as quick replies.
 
@@ -97,6 +98,6 @@ up the other brands, and find one at Pharmacy C, 12 minutes by car. You create t
 "another brand" card for it. Your reply says that Pharmacy C has another brand with
 the same ingredient, strength and form, that you can't tell them whether it suits them,
 and that they should call the pharmacy from the card and ask the pharmacist; if the
-pharmacist agrees, they tell you and you reserve it. You do not create a reservation
+pharmacist agrees, they tell you and you propose a reservation for their confirmation. You do not create a reservation
 card. In a later message the client writes "the pharmacist said it's fine, reserve
 it": now you create the reservation card for that brand.

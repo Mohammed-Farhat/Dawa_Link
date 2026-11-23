@@ -403,6 +403,9 @@ def propose_plan(turn: Turn, tx: Tx, args: ProposePlan) -> ProposedPlan:
         )
         payload: dict[str, object] = {
             "pharmacy_id": str(group.pharmacy_id),
+            "plan_id": args.plan_id,
+            "plan_group_index": index,
+            "plan_group_count": len(plan.groups),
             "pickup_day": plan.pickup_day.isoformat(),
             "items": [
                 {

@@ -737,7 +737,9 @@ def _guard_output(graph_state: _State) -> _State:
         clinical = any(v.type == output_guard.CLINICAL for v in blocking)
         work.outcome = RunOutcome.GUARDRAIL_BLOCKED
         # A rejected recommendation must not reappear on the fallback card.
-        preference_failed = bool({"preference", "budget", "pickup_day"} & set(work.guardrails))
+        preference_failed = bool(
+            {"preference", "budget", "pickup_day", "basket"} & set(work.guardrails)
+        )
         template = (
             Fixed.CLINICAL_REFUSAL
             if clinical
@@ -781,7 +783,9 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
         work.guardrails.append(note)
     cards: list[uuid.UUID] = []
     # A refusal/error during repair must not undo a rejected card constraint.
-    if which is Fixed.NEUTRAL and {"preference", "budget", "pickup_day"} & set(work.guardrails):
+    if which is Fixed.NEUTRAL and {"preference", "budget", "pickup_day", "basket"} & set(
+        work.guardrails
+    ):
         which = Fixed.TRY_AGAIN
     if which is Fixed.NEUTRAL:
         with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
@@ -820,6 +824,7 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
                         "preference",
                         "budget",
                         "pickup_day",
+                        "basket",
                     )
                 }
                 for kind in sorted(failed):

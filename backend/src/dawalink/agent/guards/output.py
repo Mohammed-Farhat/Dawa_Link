@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from dawalink.agent import display
+from dawalink.agent.guards.baskets import incomplete_plan_cards
 from dawalink.agent.guards.budget import explicit_budget
 from dawalink.agent.guards.clinical import clinical_reasons
 from dawalink.agent.guards.grounding import claims_completed, comparison_errors
@@ -207,6 +208,17 @@ def check(
                 "Next to another brand's card, don't offer a quick reply that says the "
                 "pharmacist agreed or that reserves the brand. The client writes that "
                 "themselves after calling the pharmacy.",
+            )
+        )
+
+    if incomplete_plan_cards(cleaned.text, [known[p].payload for p in usable]):
+        violations.append(
+            Violation(
+                "basket",
+                "Your displayed cards omit a pharmacy group of a plan. "
+                "For a complete option, propose every group and show all its returned cards. "
+                "If only part can be offered, explicitly label it partial/incomplete "
+                "and name the missing medicines or pharmacy group.",
             )
         )
 

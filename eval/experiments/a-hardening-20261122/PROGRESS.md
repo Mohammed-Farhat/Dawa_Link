@@ -157,3 +157,14 @@ corrected nearest acceptance, U0037 false cheapest rejection and U1019 false sto
 These are diagnostic checks, not rewritten original evaluation results. No paid calls.
 Next: remaining basket/prompt repairs, then separately committed scorer repairs and
 one integrated full backend/free validation, review pack, simulations and report.
+
+## Resumed bounded completion pass — 2026-11-23
+
+Basket/prompt work preserved across pause; 172 targeted tests passed in the completed
+pre-pause batch. Provenance tags track every plan pharmacy group; omitted groups
+require explicit partial wording, including in fallback validation. Promptv1.16
+clarifies whole-basket totals/route totals, full groups, counter payment, ownership,
+FIFO, pharmacist consultation and generic emergency referral. Examples aligned.
+Checks/source hashes: evidence/candidate6-basket-checks.json. No paid calls.
+Remaining pass: separately repair confirmed scorer errors, integrated validation once,
+free baselines/review pack/report/reproduction. No optional paid loops or stress sweeps.

@@ -906,3 +906,53 @@ def test_explicit_pickup_survives_clarification_and_conflicting_model_notes(
     )
     assert bool(result.proposal_ids) == (offset == 1)
     assert ("pickup_day" in scene.run(result).guardrails) == (offset != 1)
+
+
+@pytest.mark.parametrize(
+    ("subset", "omit_card", "partial", "blocked"),
+    [
+        (False, False, False, False),
+        (True, False, False, True),
+        (False, True, False, True),
+        (True, False, True, False),
+    ],
+)
+def test_complete_basket_choice_needs_all_pharmacy_group_cards(
+    scene: Scene, subset: bool, omit_card: bool, partial: bool, blocked: bool
+) -> None:
+    far = scene.world.make.pharmacy(name="Far Pharmacy", lat=33.95, lon=35.60)
+    scene.stock(scene.augmentin)
+    scene.stock(scene.concor, pharmacy_id=far)
+
+    def propose(prompt: Prompt) -> ModelReply:
+        results = prompt.messages[-1]
+        assert isinstance(results, ToolResults)
+        plan = json.loads(results.results[-1].content)["plans"][0]
+        return call("propose_plan", plan_id=plan["plan_id"], group_indexes=[0] if subset else None)
+
+    def describe(prompt: Prompt) -> ModelReply:
+        results = prompt.messages[-1]
+        assert isinstance(results, ToolResults)
+        cards = json.loads(results.results[-1].content)["proposals"]
+        ids = [c["proposal_id"] for c in cards]
+        return reply(
+            "Partial plan: the second pharmacy group is missing."
+            if partial
+            else "Both medicines are in this complete basket option.",
+            proposal_ids=ids[:1] if omit_card else ids,
+        )
+
+    result = scene.turn(
+        call(
+            "plan_basket",
+            items=[{"product_id": str(scene.augmentin)}, {"product_id": str(scene.concor)}],
+            pickup_day=str(TODAY),
+        ),
+        propose,
+        describe,
+        LLMRefused("cannot repair"),
+        text="I need Augmentin and Concor today",
+    )
+    assert ("basket" in scene.run(result).guardrails) is blocked
+    assert bool(result.proposal_ids) is not blocked
+    assert scene.world.one("SELECT count(*) AS n FROM orders").n == 0
