@@ -9,12 +9,13 @@ Two rules run through everything here:
 import csv
 import io
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.orm import aliased
 
 from dawalink.catalog.composition import normalize
@@ -42,6 +43,7 @@ from dawalink.domain.state_machine import Actor
 from dawalink.services import audit, catalog, matching, orders
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 MAX_FILE_BYTES = 5 * 1024 * 1024  # N-15
 MAX_ROWS = 10_000  # N-15
@@ -304,8 +306,15 @@ def _read_rows(content: bytes) -> list[dict[str, str]]:
 
 def _choice(product: Product) -> str:
     """One of several medicines with the same name, as the errors file lists it: what
-    tells it apart (its form, its pack, its maker), then the code to copy into the file."""
-    what = " ".join(filter(None, (product.form_text, product.presentation_text)))
+    tells it apart (its form, its pack, its maker), then the code to copy into the file.
+
+    A pack the Ministry writes as a bare number ("30") is said as "Pack: 30", as the
+    website says it: after a form it would read as part of it ("Tablet, film coated 30").
+    """
+    pack = (product.presentation_text or "").strip()
+    if pack.isascii() and pack.isdigit():
+        pack = f"Pack: {pack}"
+    what = " ".join(filter(None, (product.form_text, pack)))
     told_apart = ", ".join(filter(None, (what, product.manufacturer)))
     return f"{told_apart or product.moph_name}: code {product.moph_code}"
 
@@ -321,6 +330,45 @@ def _products_named(tx: Tx, rows: list[dict[str, str]]) -> dict[str, list[Produc
         ).scalars():
             by_name.setdefault(product.search_name, []).append(product)
     return by_name
+
+
+# How a strength's numbers are written. The Ministry groups thousands with a comma
+# ("100,000 IU"); a spreadsheet set to French writes the decimal point as a comma
+# ("2,5 mg", in a file saved with semicolons).
+_THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?!\d))")
+_DECIMAL_COMMA = re.compile(r"(?<=\d),(?=\d)")
+_BARE_POINT = re.compile(r"(?<!\d)\.(?=\d)")
+_STRENGTH_PARTS = re.compile(r"\d+(?:\.\d+)?|[a-z]+")
+
+
+def _strength_key(text: str) -> str:
+    """A strength as two strengths are compared: "2.5 mg", "2.5MG", "2,5mg" and "2.50 mg"
+    are one strength, **"25 mg" is another**. A number keeps its decimal point; capitals,
+    spaces and every other sign only separate the parts, so "5mg/5ml" matches
+    "5 mg / 5 ml" and "100,000 IU" matches "100000 IU".
+
+    Before, every sign was dropped, so 2.5 mg and 25 mg were the same strength.
+    """
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    plain = _THOUSANDS_COMMA.sub("", plain.lower())
+    plain = _DECIMAL_COMMA.sub(".", plain)
+    plain = _BARE_POINT.sub("0.", plain)  # ".5 mg" is 0.5 mg, never 5 mg
+    key = ""
+    for part in _STRENGTH_PARTS.findall(plain):
+        # Two numbers in a row stay apart ("1/25" is not "12/5"); words are joined, as
+        # they were before, so "mg/ml" is "mgml".
+        if key and key[-1].isdigit() and part[0].isdigit():
+            key += " "
+        key += _plain_number(part)
+    return key
+
+
+def _plain_number(part: str) -> str:
+    """A number without the zeros that change nothing after its point: "2.50" is "2.5",
+    "2.0" is "2". A word is left as it is."""
+    if "." not in part or not part[0].isdigit():
+        return part
+    return part.rstrip("0").rstrip(".")
 
 
 def _match_product(
@@ -339,8 +387,8 @@ def _match_product(
     # contradiction, and the row is refused: the code may not overrule what the row says.
     strength_is_wrong = False
     if strength:
-        compact = normalize(strength).replace(" ", "")
-        with_it = [p for p in by_name if normalize(p.dosage_text or "").replace(" ", "") == compact]
+        wanted = _strength_key(strength)
+        with_it = [p for p in by_name if _strength_key(p.dosage_text or "") == wanted]
         strength_is_wrong = not with_it
         found = with_it or by_name
     if any(product.controlled for product in found):
@@ -754,6 +802,11 @@ class StockLine:
     system_price_lbp: int | None
 
 
+# The orders of the stock's list: the soonest expiry first, or one medicine's boxes side
+# by side (two batches of one medicine, each with its own expiry), the soonest first.
+STOCK_SORTS = ("expiry", "medicine")
+
+
 def stock_lines(
     tx: Tx,
     pharmacy_id: uuid.UUID,
@@ -761,26 +814,78 @@ def stock_lines(
     query: str = "",
     zone: Zone | None = None,
     item_ids: list[uuid.UUID] | None = None,
+    sort: str = "expiry",
     offset: int = 0,
     limit: int = 50,
 ) -> list[StockLine]:
-    """The pharmacy's boxes, soonest expiry first. Private: only the pharmacy reads this."""
+    """The pharmacy's boxes, soonest expiry first, or by medicine (`STOCK_SORTS`).
+    Private: only the pharmacy reads this."""
     days = InventoryItem.expiry_date - tx.today
-    zone_now = func.expiry_zone(days, Product.controlled.is_(False))
-    statement = (
+    statement = _stock_filtered(
         select(
             InventoryItem,
             Product,
             days,
-            zone_now,
+            func.expiry_zone(days, Product.controlled.is_(False)),
             func.effective_price_lbp(
                 Product.public_price_lbp, InventoryItem.price_override_lbp, days
             ),
             func.effective_price_lbp(Product.public_price_lbp, None, days),
+        ),
+        tx,
+        pharmacy_id,
+        query=query,
+        zone=zone,
+        item_ids=item_ids,
+    )
+    if sort == "medicine":
+        statement = statement.order_by(
+            Product.moph_name, Product.id, InventoryItem.expiry_date, InventoryItem.id
         )
-        .join(Product, Product.id == InventoryItem.product_id)
-        .where(InventoryItem.pharmacy_id == pharmacy_id)
-        .order_by(InventoryItem.expiry_date, Product.moph_name, InventoryItem.id)
+    else:
+        statement = statement.order_by(
+            InventoryItem.expiry_date, Product.moph_name, InventoryItem.id
+        )
+    return [
+        StockLine(
+            item=item,
+            product=product,
+            days_left=int(left),
+            zone=Zone(zone_text),
+            price_lbp=int(price) if price is not None and zone_text == Zone.NEAR_EXPIRY else None,
+            system_price_lbp=int(system) if system is not None else None,
+        )
+        for item, product, left, zone_text, price, system in tx.session.execute(
+            statement.offset(offset).limit(limit)
+        )
+    ]
+
+
+def count_stock(
+    tx: Tx, pharmacy_id: uuid.UUID, *, query: str = "", zone: Zone | None = None
+) -> int:
+    """How many boxes `stock_lines` lists with these choices, on every page: the same
+    filters, counted (the "134 in all" under the list)."""
+    return count_rows(
+        tx, _stock_filtered(select(InventoryItem.id), tx, pharmacy_id, query=query, zone=zone)
+    )
+
+
+def _stock_filtered(
+    statement: Select[Any],
+    tx: Tx,
+    pharmacy_id: uuid.UUID,
+    *,
+    query: str,
+    zone: Zone | None,
+    item_ids: list[uuid.UUID] | None = None,
+) -> Select[Any]:
+    """The pharmacy's boxes that the choices keep, in one place for the list and its
+    count, so that the two never disagree about what a choice means."""
+    days = InventoryItem.expiry_date - tx.today
+    zone_now = func.expiry_zone(days, Product.controlled.is_(False))
+    statement = statement.join(Product, Product.id == InventoryItem.product_id).where(
+        InventoryItem.pharmacy_id == pharmacy_id
     )
     if item_ids is not None:
         statement = statement.where(InventoryItem.id.in_(item_ids))
@@ -795,16 +900,4 @@ def stock_lines(
         )
     if zone is not None:
         statement = statement.where(zone_now == zone.value)
-    return [
-        StockLine(
-            item=item,
-            product=product,
-            days_left=int(left),
-            zone=Zone(zone_text),
-            price_lbp=int(price) if price is not None and zone_text == Zone.NEAR_EXPIRY else None,
-            system_price_lbp=int(system) if system is not None else None,
-        )
-        for item, product, left, zone_text, price, system in tx.session.execute(
-            statement.offset(offset).limit(limit)
-        )
-    ]
+    return statement

@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from dawalink.api import present
 from dawalink.api.deps import AsClient, DoWork
-from dawalink.api.schemas.common import Skip
+from dawalink.api.schemas.common import Skip, next_cursor
 from dawalink.api.schemas.orders import Reservation, ReservationsPage
 from dawalink.db.models import Order
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
@@ -18,6 +18,7 @@ from dawalink.domain.vocabulary import EscalationReason
 from dawalink.services import escalations, orders
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 router = APIRouter(tags=["reservations"])
 
@@ -33,7 +34,7 @@ def list_reservations(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> ReservationsPage:
     """`active`: what is reserved now, the soonest pickup first. `history`: the rest,
-    the newest first."""
+    the newest first. `total` counts the reservations of the view, on every page."""
     with work.tx() as tx:
         statement = select(Order).where(Order.client_id == caller.user_id)
         if view == "active":
@@ -45,10 +46,10 @@ def list_reservations(
                 Order.state.in_(_SHOWN), Order.state != OrderState.RESERVED.value
             ).order_by(Order.closed_at.desc(), Order.id)
         rows = tx.session.execute(statement.offset(cursor).limit(limit + 1)).scalars().all()
-        more = len(rows) > limit
         return ReservationsPage(
             items=present.reservations(tx, rows[:limit]),
-            next_cursor=str(cursor + limit) if more else None,
+            next_cursor=next_cursor(cursor, limit, len(rows)),
+            total=count_rows(tx, statement),
             server_now=tx.now,
         )
 

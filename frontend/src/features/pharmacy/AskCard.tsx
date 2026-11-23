@@ -102,7 +102,8 @@ export function AskCard({
   return (
     <section className="ask-card" aria-label={a.title(ask.qty_needed, ask.product.name)}>
       <span className="ask-card__label">{a.needed(timeLeft(ask.respond_by, now))}</span>
-      <h2 className="ask-card__title">{a.title(ask.qty_needed, ask.product.name)}</h2>
+      {/* Under the heading "Asks from DawaLink" of Today. */}
+      <h3 className="ask-card__title">{a.title(ask.qty_needed, ask.product.name)}</h3>
       <span className="soft" style={{ fontSize: 15 }}>
         {a.youHold(
           ask.private_item.qty_available,

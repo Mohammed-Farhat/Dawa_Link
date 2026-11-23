@@ -20,7 +20,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import distinct, func, or_, select
+from sqlalchemy import ScalarSelect, Select, distinct, func, or_, select
 from sqlalchemy.orm import aliased
 
 from dawalink.db.models import (
@@ -46,6 +46,7 @@ from dawalink.domain.vocabulary import ClaimKind, FlagState, FlagSubject
 from dawalink.services import audit, auth, claims, clients, orders, requests
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 CONTACT_VIEWS_PER_HOUR = 30  # N-47
 PII_VIEW = "pii.view"
@@ -192,19 +193,39 @@ def _rows(tx: Tx, found: Sequence[tuple[ClientProfile, str | None]]) -> list[Lis
     ]
 
 
-def listed(
-    tx: Tx,
-    *,
-    status: ClientStatus | None = None,
-    having: str | None = None,
-    ref: str = "",
-    offset: int = 0,
-    limit: int = 50,
-) -> list[Listed]:
-    """Clients, without a name or a contact detail. `ref` finds the client of an order
-    number or a request number (`R-7K3Q2F`, `Q-4HX9TM`): what a complaint quotes.
-    `having` keeps those with a reservation going, who picked an order up, with an
-    open request, or who need a look (a contested no-show, or an open flag)."""
+def _contests_waiting() -> ScalarSelect[int]:
+    """A client's missed pickups they contest, waiting for an admin's look."""
+    return (
+        select(func.count())
+        .select_from(Order)
+        .where(
+            Order.client_id == ClientProfile.user_id,
+            Order.counts_as_no_show.is_(True),
+            Order.contested_at.is_not(None),
+        )
+        .scalar_subquery()
+    )
+
+
+def _flags_open() -> ScalarSelect[int]:
+    """The flags about a client that nobody handled yet."""
+    return (
+        select(func.count())
+        .select_from(AbuseFlag)
+        .where(
+            AbuseFlag.subject_type == FlagSubject.CLIENT.value,
+            AbuseFlag.subject_id == ClientProfile.user_id,
+            AbuseFlag.state == FlagState.OPEN.value,
+        )
+        .scalar_subquery()
+    )
+
+
+def _filtered(
+    status: ClientStatus | None, having: str | None, ref: str
+) -> Select[ClientProfile, str]:
+    """The clients an admin's choices keep, with their district: what a page of the list
+    reads, and what its total counts."""
     statement = select(ClientProfile, District.name).outerjoin(
         District, District.id == ClientProfile.district_id
     )
@@ -220,26 +241,6 @@ def listed(
                 ),
             )
         )
-    waiting = (
-        select(func.count())
-        .select_from(Order)
-        .where(
-            Order.client_id == ClientProfile.user_id,
-            Order.counts_as_no_show.is_(True),
-            Order.contested_at.is_not(None),
-        )
-        .scalar_subquery()
-    )
-    flagged = (
-        select(func.count())
-        .select_from(AbuseFlag)
-        .where(
-            AbuseFlag.subject_type == FlagSubject.CLIENT.value,
-            AbuseFlag.subject_id == ClientProfile.user_id,
-            AbuseFlag.state == FlagState.OPEN.value,
-        )
-        .scalar_subquery()
-    )
     if having == "reservation":
         statement = statement.where(
             ClientProfile.user_id.in_(
@@ -265,16 +266,42 @@ def listed(
     elif having == "look":
         # A deleted account needs no look: there is nobody left to answer (R-AU10).
         statement = statement.where(
-            (waiting > 0) | (flagged > 0), ClientProfile.status != ClientStatus.DELETED.value
+            (_contests_waiting() > 0) | (_flags_open() > 0),
+            ClientProfile.status != ClientStatus.DELETED.value,
         )
+    return statement
+
+
+def listed_total(
+    tx: Tx, *, status: ClientStatus | None = None, having: str | None = None, ref: str = ""
+) -> int:
+    """How many clients the same choices keep, on every page of the list."""
+    # Counted by its clients: the same rows, one column (what `count_rows` takes).
+    return count_rows(tx, _filtered(status, having, ref).with_only_columns(ClientProfile.user_id))
+
+
+def listed(
+    tx: Tx,
+    *,
+    status: ClientStatus | None = None,
+    having: str | None = None,
+    ref: str = "",
+    offset: int = 0,
+    limit: int = 50,
+) -> list[Listed]:
+    """Clients, without a name or a contact detail. `ref` finds the client of an order
+    number or a request number (`R-7K3Q2F`, `Q-4HX9TM`): what a complaint quotes.
+    `having` keeps those with a reservation going, who picked an order up, with an
+    open request, or who need a look (a contested no-show, or an open flag)."""
+    statement = _filtered(status, having, ref)
     # Who needs a look comes first: a contest waiting, a flag, then the paused and the
     # suspended. Deleted accounts come last, whatever they left behind.
     deleted = ClientProfile.status == ClientStatus.DELETED.value
     found = tx.session.execute(
         statement.order_by(
             deleted,
-            waiting.desc(),
-            flagged.desc(),
+            _contests_waiting().desc(),
+            _flags_open().desc(),
             ClientProfile.status.desc(),
             ClientProfile.user_id,
         )

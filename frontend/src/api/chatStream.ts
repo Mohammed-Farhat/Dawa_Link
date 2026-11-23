@@ -49,7 +49,9 @@ export function parseEvent(block: string): ChatEvent | null {
  * Sends a message in a conversation and reports each event of the answer.
  *
  * In a chat the answer is the stream. In a request's thread the API answers at once
- * (202) and the reply arrives later by polling: then no event is reported.
+ * (202) and the reply arrives later by polling: then no event is reported. In a
+ * conversation DawaLink's team has, the API also answers at once (202), with
+ * `withTeam`: the message went to the team, and no reply of the assistant is coming.
  *
  * - Throws an `ApiFailure` when the message was refused: **nothing was stored**.
  * - Throws `StreamDropped` when the answer's stream broke after it opened: the message
@@ -61,7 +63,7 @@ export async function sendMessage(
   text: string,
   clientMessageId: string,
   onEvent: (event: ChatEvent) => void,
-): Promise<void> {
+): Promise<{ withTeam: boolean }> {
   const token = getToken()
   let response: Response
   try {
@@ -86,7 +88,8 @@ export async function sendMessage(
     throw failure
   }
   if (!response.headers.get('Content-Type')?.startsWith('text/event-stream') || !response.body) {
-    return
+    const accepted = (await response.json().catch(() => null)) as Partial<Schemas['MessageAccepted']> | null
+    return { withTeam: accepted?.with_team === true }
   }
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -113,7 +116,7 @@ export async function sendMessage(
     if (done) {
       // A stream closed before its last event (a proxy that cut it) is a dropped one.
       if (!finished) throw new StreamDropped()
-      return
+      return { withTeam: false }
     }
   }
 }

@@ -35,7 +35,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.orm import Session, sessionmaker
 
-from dawalink.agent import context, limits, state
+from dawalink.agent import context, language, limits, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
@@ -73,6 +73,7 @@ from dawalink.db.models import (
     AgentToolCall,
     ChatMessage,
     Conversation,
+    Product,
     SourcingRequest,
 )
 from dawalink.domain.clock import Clock
@@ -88,6 +89,7 @@ from dawalink.domain.numbers import (
 from dawalink.domain.vocabulary import EscalationReason, RunOutcome, TurnTrigger
 from dawalink.services import conversations, escalations, proposals
 from dawalink.services.context import Tx, unit_of_work
+from dawalink.services.escalations import AskState
 from dawalink.services.travel import RoutingService
 
 log = structlog.get_logger(__name__)
@@ -99,6 +101,15 @@ NO_TOOL_CALLS_LEFT = (
     "using what you have; any other tool call will be refused."
 )
 # A guardrail note for a turn the model never ended with a usable reply.
+# A reply may come in the same model message as these tools only: their answer adds
+# nothing the reply needs. With any other tool the reply was written blind, before the
+# tool's result existed (seen on 2026-11-22: "I asked the pharmacies", when nobody was).
+REPLY_MAY_COME_WITH = frozenset({"escalate"})
+REPLIED_TOO_EARLY = (
+    "You wrote this reply before you had the results of the tool calls sent with it. Read "
+    "those results now, then reply again: say only what they show. If a call failed, "
+    "say plainly what you could not do, and never that it was done."
+)
 NO_REPLY = "no_reply"
 INJECTION = "injection"
 MODEL_REFUSAL = "model_refusal"
@@ -236,6 +247,17 @@ def _load_context(graph_state: _State) -> _State:
             return graph_state
 
         if conversation.request_id and _request_is_over(tx, conversation):
+            conversations.release_lease(conversation, work.owner)
+            work.result = TurnResult(Status.NOTHING)
+            return graph_state
+
+        if conversation.kind == "chat" and escalations.held_by_team(tx, conversation.id):
+            # DawaLink's team has this chat (the owner, 2026-11-22): the assistant says
+            # nothing in it until the case is closed or the hold runs out. An event that
+            # waits is looked at then (closing the case brings the turn forward).
+            hold_ends = escalations.team_hold_ends_at(tx, conversation.id)
+            if conversation.pending_turn_at is not None and hold_ends is not None:
+                conversation.pending_turn_at = hold_ends
             conversations.release_lease(conversation, work.owner)
             work.result = TurnResult(Status.NOTHING)
             return graph_state
@@ -514,6 +536,8 @@ def _tools(graph_state: _State) -> _State:
     work.pending_results = []
     work.candidate = None
     replied = False
+    # The other tools of this model message, with whether each worked.
+    came_with: list[tuple[str, bool]] = []
     for call in last.reply.tool_calls:
         if call.name == REPLY:
             # Only the first reply of a model call counts, valid or not. Seen on real runs:
@@ -540,6 +564,8 @@ def _tools(graph_state: _State) -> _State:
                 )
             continue
         if work.tool_calls >= MAX_TOOL_CALLS_PER_TURN:
+            # Not counted in `came_with`: the tool never ran, so a reply sent with it
+            # can't be wrong about it.
             work.pending_results.append(
                 _error(
                     call.id,
@@ -561,12 +587,19 @@ def _tools(graph_state: _State) -> _State:
             )
         work.tool_calls += 1
         work.outcomes.append(outcome)
+        came_with.append((call.name, outcome.ok))
         work.pending_results.append(
             ToolResult(call.id, call.name, outcome.as_json(), is_error=not outcome.ok)
         )
     if work.outcomes and not _renew_lease(work):
         work.route = "lost"
         return graph_state
+    if work.candidate is not None and _replied_too_early(work, came_with):
+        assert work.candidate_call_id is not None
+        work.pending_results.append(
+            _error(work.candidate_call_id, REPLY, ToolError.INVALID_ARGUMENTS, REPLIED_TOO_EARLY)
+        )
+        work.candidate = None
     if work.candidate is not None:
         work.route = "guard_output"
         return graph_state
@@ -576,6 +609,24 @@ def _tools(graph_state: _State) -> _State:
     )
     work.route = "agent"
     return graph_state
+
+
+def _replied_too_early(work: _Work, came_with: list[tuple[str, bool]]) -> bool:
+    """Was this reply written before the model could read what its tools answered?
+
+    A reply sent in the same model message as other tool calls can't know their results.
+    It is refused, and the model answers again from the results, when:
+    - one of those calls failed: the reply can't be right about it (on 2026-11-22 a failed
+      hand-over was announced to the client as done);
+    - or one of them is a tool whose answer the reply needs, and a model call is left.
+    A reply next to a successful `escalate` alone is kept: the answer adds nothing.
+    """
+    if not came_with:
+        return False
+    if any(not worked for _, worked in came_with):
+        return True
+    needs_the_answer = any(name not in REPLY_MAY_COME_WITH for name, _ in came_with)
+    return needs_the_answer and work.llm_calls < MAX_LLM_CALLS_PER_TURN
 
 
 def _error(call_id: str, name: str, code: ToolError, hint: str) -> ToolResult:
@@ -601,6 +652,44 @@ def _found_something(work: _Work) -> bool:
     return False
 
 
+def _product_names(tx: Tx, work: _Work) -> set[str]:
+    """The names of the products this turn is about: what its tools returned, and the
+    medicines the conversation holds. The reply guard doesn't read them as dosing words."""
+    assert work.turn is not None
+    names: set[str] = set()
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                if key in ("name", "product") and isinstance(inner, str):
+                    names.add(inner)
+                else:
+                    collect(inner)
+        elif isinstance(value, list):
+            for inner in value:
+                collect(inner)
+
+    for outcome in work.outcomes:
+        collect(outcome.content)
+    kept = {item.product_id for item in work.turn.state.items_in_focus}
+    kept |= set(work.turn.state.asked_product_ids)
+    if kept:
+        names |= set(
+            tx.session.execute(select(Product.moph_name).where(Product.id.in_(kept))).scalars()
+        )
+    return names
+
+
+def _a_person_has_it(tx: Tx, work: _Work) -> bool:
+    """May the reply say that a person from DawaLink has the case? Yes when this turn told
+    one, or when the client has a case open (read from the table)."""
+    assert work.loaded is not None
+    if any(outcome.name == "escalate" and outcome.ok for outcome in work.outcomes):
+        return True
+    ask = escalations.person_ask(tx, work.loaded.client_id, work.loaded.conversation_id)
+    return ask.state in (AskState.ASKED, AskState.ANSWERED)
+
+
 def _guard_output(graph_state: _State) -> _State:
     """Checks the reply. One chance to fix it, then our own words (docs/07 §7.2, AG-D9)."""
     work = graph_state["work"]
@@ -617,6 +706,9 @@ def _guard_output(graph_state: _State) -> _State:
                 run_id=work.run_id,
                 client_text=work.loaded.client_text,
                 found_something=_found_something(work),
+                client_language=language.language_of(work.loaded.client_text),
+                product_names=_product_names(tx, work),
+                a_person_has_it=_a_person_has_it(tx, work),
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)
@@ -659,8 +751,9 @@ def _language(work: _Work) -> str | None:
     assert work.loaded is not None
     assert work.turn is not None
     noted = work.turn.state.language
-    if output_guard.script_of(work.loaded.client_text or "") == "arabic":
-        return "arabic"
+    written = language.language_of(work.loaded.client_text)
+    if written is not None:
+        return written
     return noted if noted in ("arabizi", "arabic", "english") else None
 
 
@@ -810,6 +903,18 @@ def _save(graph_state: _State) -> _State:
                     # The turn outlived its lease, and another one may have run: saving
                     # now could write a second reply. Nothing is saved; it is retried (FA-16).
                     raise _LeaseLost
+                if conversation.kind == "chat" and escalations.held_by_team(tx, conversation.id):
+                    # The team replied while this turn ran: their word stands, and the
+                    # assistant's reply is not sent on top of it. What the turn read and
+                    # noted is kept, so the same message is not answered again later
+                    # (its tools may already have started a watch).
+                    noted = state.apply_notes(work.turn.state, reply.case_notes, work.turn.clean)
+                    noted.read_up_to = loaded.last_seq
+                    conversation.case_state = state.dump(state.tidy(noted, tx.today))
+                    _finish_run(tx, work, work.outcome)
+                    conversations.release_lease(conversation, work.owner)
+                    work.result = TurnResult(Status.NOTHING, work.outcome, run_id=work.run_id)
+                    return graph_state
                 noted = state.apply_notes(work.turn.state, reply.case_notes, work.turn.clean)
                 noted.read_up_to = loaded.last_seq
                 conversation.case_state = state.dump(state.tidy(noted, tx.today))
@@ -887,6 +992,12 @@ def _try_again_later(tx: Tx, conversation: Conversation, *, counted: bool) -> No
 def _hand_to_a_person(tx: Tx, conversation: Conversation, summary: str) -> None:
     """Escalates `cannot_resolve`, tells the client once, and stops asking for turns."""
     case = state.load(conversation.case_state)
+    # Read from the table, never from the chat's memory: a case closed since then means
+    # the client is told again.
+    told_before = escalations.person_ask(tx, conversation.client_id, conversation.id).state in (
+        AskState.ASKED,
+        AskState.ANSWERED,
+    )
     escalations.escalate(
         tx,
         client_id=conversation.client_id,
@@ -895,9 +1006,7 @@ def _hand_to_a_person(tx: Tx, conversation: Conversation, summary: str) -> None:
         conversation_id=conversation.id,
         request_id=conversation.request_id,
     )
-    if not case.escalated:
-        case.escalated = True
-        conversation.case_state = state.dump(case)
+    if not told_before:
         conversations.append(
             tx,
             conversation,

@@ -1,9 +1,11 @@
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
 import { api, unwrap } from '../../api/client'
 import { Screen } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { PAGE_ROWS, usePage } from '../../components/usePage'
 import { dateAndClock, langOf } from '../../format'
 import { strings } from '../../strings/en'
 
@@ -16,16 +18,20 @@ const s = strings.notifications
  */
 export function NotificationsList() {
   const queryClient = useQueryClient()
-  const pages = useInfiniteQuery({
-    queryKey: ['notifications'],
-    queryFn: ({ pageParam }) =>
-      unwrap(api.GET('/api/v1/notifications', { params: { query: { cursor: pageParam ?? undefined, limit: 20 } } })),
-    initialPageParam: null as number | null,
-    getNextPageParam: (last) => (last.next_cursor ? Number(last.next_cursor) : undefined),
+  // Numbered pages, the page in the address (the owner, 2026-11-23). The API goes on
+  // "before this ID" too; the pages only send how many to skip.
+  const paging = usePage()
+  const pages = useQuery({
+    queryKey: ['notifications', paging.offset],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/notifications', { params: { query: { offset: paging.offset, limit: PAGE_ROWS } } }),
+      ),
     refetchInterval: 30_000,
+    placeholderData: keepPreviousData,
   })
-  const items = pages.data?.pages.flatMap((page) => page.items) ?? []
-  const unread = pages.data?.pages[0]?.unread ?? 0
+  const items = pages.data?.items ?? []
+  const unread = pages.data?.unread ?? 0
 
   async function read(body: { ids: number[]; all: boolean }) {
     await api.POST('/api/v1/notifications/read', { body })
@@ -43,7 +49,7 @@ export function NotificationsList() {
         )}
       </div>
       {pages.isPending && <Placeholder height={72} />}
-      {pages.isSuccess && items.length === 0 && <div className="empty">{s.none}</div>}
+      {pages.isSuccess && items.length === 0 && !pages.data.total && <div className="empty">{s.none}</div>}
       <ul className="plain-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {items.map((note) => {
           const body = (
@@ -77,11 +83,7 @@ export function NotificationsList() {
           )
         })}
       </ul>
-      {pages.hasNextPage && (
-        <button type="button" className="text-button" onClick={() => void pages.fetchNextPage()}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={pages.data?.total} settled={pages.isSuccess && !pages.isPlaceholderData} />
     </>
   )
 }

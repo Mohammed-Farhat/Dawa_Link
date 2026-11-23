@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import In, Lbp, Money, Out, ProductSummary
+from dawalink.api.schemas.common import CountedPage, In, Lbp, Money, Out, ProductSummary
 from dawalink.domain.numbers import MAX_BOX_QUANTITY
 
 
@@ -48,7 +48,7 @@ class StockItem(Out):
     last_edited_at: datetime | None
 
 
-class Stock(Out):
+class Stock(CountedPage):
     items: list[StockItem]
     next_cursor: str | None
     server_now: datetime

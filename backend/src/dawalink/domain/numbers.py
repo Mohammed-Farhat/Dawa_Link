@@ -30,6 +30,10 @@ OFFER_VALIDITY = timedelta(hours=2)  # N-12
 WINDOW_CHECK_BEFORE_END = timedelta(hours=1)  # N-24
 DEFAULT_DAYS_OF_USE = 1  # N-44
 UPCOMING_DAYS_NAMED = 7  # N-49: the days given to the agent, one of each weekday
+# N-55: after a reply of DawaLink's team, the client's messages in that chat go to the
+# team, not the assistant, until the case is closed or this long after the team's last
+# reply there, on the app's clock (SM-9, the owner, 2026-11-22). Asked of the owner.
+TEAM_HOLD = timedelta(hours=12)
 
 # --- Client limits (N-10) ---
 MAX_OPEN_ORDERS = 5

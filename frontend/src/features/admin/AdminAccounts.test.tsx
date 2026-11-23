@@ -442,7 +442,7 @@ describe('Flags, the catalog and health (AS-7, AS-9, AS-10)', () => {
     expect(screen.getByText('2,310')).toBeInTheDocument()
     expect(screen.getByText('2.1 s · 4.2 s')).toBeInTheDocument()
     expect(screen.getByText('71%')).toBeInTheDocument()
-    expect(screen.getByText('$12.40 / $20.00')).toBeInTheDocument()
+    expect(screen.getByText(h.spentOf('$12.40', '$20.00'))).toBeInTheDocument()
     expect(screen.getByText('v1.13')).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
   })

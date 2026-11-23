@@ -9,6 +9,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
+from enum import StrEnum
 
 from sqlalchemy import select, text
 
@@ -58,6 +59,24 @@ class NoMatch:
     latest_pickup_day: date | None
 
 
+class WhyNone(StrEnum):
+    """Why a search found nothing to offer. One reason, the first that applies, so that
+    whoever explains it to the client never has to guess (the owner, 2026-11-23: a
+    medicine listed nowhere must not be answered with "try another day")."""
+
+    # No pharmacy lists the medicine at all. Another day changes nothing.
+    NONE_LISTED = "none_listed"
+    # Listed, but in no pharmacy of the areas the client asked for.
+    NOT_IN_THESE_AREAS = "not_in_these_areas"
+    # Listed, but every box costs more than the client's limit.
+    OVER_BUDGET = "over_budget"
+    # Listed, but no box lasts the client's days of use, whatever the pickup day.
+    EXPIRES_TOO_EARLY = "expires_too_early"
+    # A box lasts, but not when picked up on the day asked for: the pharmacy is closed
+    # that day, or the box would not last from it. `days_that_work` says which days do.
+    NOT_ON_THAT_DAY = "not_on_that_day"
+
+
 @dataclass(frozen=True)
 class SearchResult:
     listings: list[Listing]
@@ -65,6 +84,14 @@ class SearchResult:
     # Boxes that an earlier pickup day would add (R-F6).
     left_out_by_pickup_day: int
     no_match: NoMatch | None
+    # Set only when `listings` is empty and nothing was skipped by paging.
+    why_none: WhyNone | None = None
+    # NOT_ON_THAT_DAY: the pickup days on which some box can be had and still lasts.
+    days_that_work: tuple[date, ...] = ()
+    # NOT_IN_THESE_AREAS: how many boxes other areas have (0: none anywhere else either).
+    elsewhere: int = 0
+    # OVER_BUDGET: the cheapest box there is.
+    cheapest_lbp: int | None = None
 
 
 @dataclass(frozen=True)
@@ -183,7 +210,11 @@ def search_listings(
     open_now: bool = False,
     limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
+    districts: frozenset[str] | None = None,
 ) -> SearchResult:
+    """`districts`: only the pharmacies of these districts, by name: the areas a client
+    asked to look in ("in Saida or Beirut"). Travel times still count from `location`,
+    which is where the client is (the owner, 2026-11-23)."""
     clients.require_search(clients.profile(tx, client_id))
     _check(tx, days_of_use, pickup_day)
 
@@ -208,6 +239,7 @@ def search_listings(
         open_now=open_now,
         limit=limit,
         offset=offset,
+        districts=districts,
     )
 
 
@@ -256,14 +288,20 @@ def _result(
     open_now: bool,
     limit: int,
     offset: int,
+    districts: frozenset[str] | None = None,
 ) -> SearchResult:
     """One answer, from these boxes of the shelf. Reads nothing more: the search by name
     builds one per medicine from a single shelf (review A#29)."""
     limit = max(1, min(limit, MAX_PAGE_SIZE))
     days = days_of_use or DEFAULT_DAYS_OF_USE
     choices = {box.item_id: box.choice(days) for box in boxes}
+    listed = boxes
+    if districts is not None:
+        boxes = [box for box in boxes if shelf.cards[box.pharmacy_id].district in districts]
+    in_the_areas = boxes
     if max_price_lbp is not None:
         boxes = [box for box in boxes if box.price_lbp <= max_price_lbp]
+    affordable = boxes
     if open_now:
         boxes = [box for box in boxes if is_open(shelf.hours[box.pharmacy_id], tx.now)]
 
@@ -326,7 +364,46 @@ def _result(
             latest_expiry=max(box.expiry_date for box in boxes),
             latest_pickup_day=max(possible) if possible else None,
         )
-    return SearchResult(listings, len(kept), left_out_by_pickup_day, no_match)
+    why_none: WhyNone | None = None
+    days_that_work: tuple[date, ...] = ()
+    if not kept and not open_now:
+        # "Open now" is the search page's own filter; the page explains itself.
+        why_none, days_that_work = _why_none(listed, in_the_areas, affordable, choices)
+    return SearchResult(
+        listings,
+        len(kept),
+        left_out_by_pickup_day,
+        no_match,
+        why_none=why_none,
+        days_that_work=days_that_work,
+        elsewhere=len(listed) - len(in_the_areas) if why_none is WhyNone.NOT_IN_THESE_AREAS else 0,
+        cheapest_lbp=(
+            min(box.price_lbp for box in in_the_areas) if why_none is WhyNone.OVER_BUDGET else None
+        ),
+    )
+
+
+def _why_none(
+    listed: Sequence[Box],
+    in_the_areas: Sequence[Box],
+    affordable: Sequence[Box],
+    choices: Mapping[uuid.UUID, PickupChoice],
+) -> tuple[WhyNone, tuple[date, ...]]:
+    """The one reason nothing can be offered, and the days that would work if any.
+
+    The filters are looked at in the order they were applied: listed at all, in the areas
+    asked for, within the price limit, lasting the days of use, on the day asked for.
+    """
+    if not listed:
+        return WhyNone.NONE_LISTED, ()
+    if not in_the_areas:
+        return WhyNone.NOT_IN_THESE_AREAS, ()
+    if not affordable:
+        return WhyNone.OVER_BUDGET, ()
+    days = sorted({day for box in affordable for day in choices[box.item_id].days})
+    if not days:
+        return WhyNone.EXPIRES_TOO_EARLY, ()
+    return WhyNone.NOT_ON_THAT_DAY, tuple(days)
 
 
 @dataclass(frozen=True)

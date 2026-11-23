@@ -2,10 +2,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { api, type Schemas, unwrap } from '../../api/client'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { langOf } from '../../format'
 import { strings } from '../../strings/en'
-import { type Note, refusal, type ReportState, useAnswerReports, when } from './data'
+import { type Note, oneOf, refusal, type ReportState, useAnswerReports, when } from './data'
 import { ListFailed } from './ListFailed'
 import { Said } from './said'
 
@@ -29,10 +31,12 @@ function reasonText(reason: string): string {
  */
 export function ReportsPage() {
   const queryClient = useQueryClient()
-  const [state, setState] = useState<ReportState>('NEW')
+  // The tab and the page live in the address: "Back" finds the list as it was left.
+  const paging = usePage()
+  const state = oneOf(paging.params.get('state'), STATES, 'NEW') as ReportState
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState<Note | null>(null)
-  const found = useAnswerReports(state)
+  const found = useAnswerReports(state, paging.offset)
   const items = found.data?.items ?? []
   // A refusal is said under the answer it is about, while that answer is listed.
   const present = items.map((row) => row.id)
@@ -76,7 +80,7 @@ export function ReportsPage() {
             className="tabs__tab"
             onClick={() => {
               setSaid(null)
-              setState(choice)
+              paging.choose('state', choice === 'NEW' ? null : choice)
             }}
           >
             {r.states[choice]}
@@ -138,6 +142,7 @@ export function ReportsPage() {
           )}
         </article>
       ))}
+      <Pager paging={paging} total={found.data?.total} settled={!found.isPlaceholderData} />
     </main>
   )
 }

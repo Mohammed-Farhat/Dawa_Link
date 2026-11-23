@@ -5,10 +5,22 @@ import { type FormEvent, useRef, useState } from 'react'
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { FormProblems } from '../../components/FormProblems'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { calendarDate, lbp } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
-import { saveFile, SEARCH_MAX, sendStockFile, usePharmacy, useStock, useWaitingUpload, type Zone } from './data'
+import {
+  saveFile,
+  SEARCH_MAX,
+  sendStockFile,
+  STOCK_SORTS,
+  type StockSort,
+  usePharmacy,
+  useStock,
+  useWaitingUpload,
+  type Zone,
+} from './data'
 import { BATCH_MAX, batchFits, tidyBatch } from './draft'
 
 const s = strings.pharmacy.stock
@@ -240,13 +252,24 @@ function UploadSummary({
   )
 }
 
+/** A choice of the address that is one of `choices`, or null: an old or edited address
+ * never reaches the API with a value it would refuse. */
+function oneOf<T extends string>(value: string | null, choices: readonly (T | null)[]): T | null {
+  return (choices as readonly (string | null)[]).includes(value) ? (value as T) : null
+}
+
 function StockTable() {
-  const [zone, setZone] = useState<Zone | null>(null)
+  // The page, the zone and the order are in the address: a reload, or Back from
+  // another tab, finds the same page. The typed search stays in memory.
+  const paging = usePage()
+  const zone = oneOf<Zone>(paging.params.get('zone'), ZONES)
+  const sort: StockSort = oneOf<StockSort>(paging.params.get('sort'), STOCK_SORTS) ?? 'expiry'
   const [typed, setTyped] = useState('')
-  const stock = useStock(zone, typed.trim())
+  const stock = useStock(zone, typed.trim(), sort, paging.offset)
   const items = stock.items
+  const top = useRef<HTMLElement>(null)
   return (
-    <section className="panel" aria-labelledby="stock">
+    <section ref={top} className="panel" aria-labelledby="stock">
       <div>
         <h2 id="stock" className="panel__title">
           {s.title}
@@ -258,7 +281,10 @@ function StockTable() {
         size="md"
         maxLength={SEARCH_MAX}
         value={typed}
-        onChange={(event) => setTyped(event.currentTarget.value)}
+        onChange={(event) => {
+          setTyped(event.currentTarget.value)
+          paging.firstPage()
+        }}
       />
       <div className="chips" role="group" aria-label={s.zone}>
         {ZONES.map((choice) => (
@@ -267,14 +293,15 @@ function StockTable() {
             type="button"
             className="chip"
             aria-pressed={zone === choice}
-            onClick={() => setZone(choice)}
+            onClick={() => paging.choose('zone', choice)}
           >
             {s.zones[choice ?? 'ALL']}
           </button>
         ))}
       </div>
+      <StockOrder sort={sort} onSort={(chosen) => paging.choose('sort', chosen === 'expiry' ? null : chosen)} />
       {stock.pending && <Placeholder height={56} />}
-      {stock.loaded && items.length === 0 && (
+      {stock.loaded && items.length === 0 && !stock.total && (
         <span className="soft">{typed.trim() || zone ? s.noneFound : s.none}</span>
       )}
       {items.length > 0 && (
@@ -301,12 +328,25 @@ function StockTable() {
           </table>
         </div>
       )}
-      {stock.hasMore && (
-        <button type="button" className="text-button" onClick={stock.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={stock.total} settled={stock.settled} top={top} />
     </section>
+  )
+}
+
+/**
+ * The order of a stock list: the soonest expiry first, or by medicine, where the boxes
+ * of one medicine (one per batch and expiry) stand side by side. Used by Inventory and
+ * Listings.
+ */
+export function StockOrder({ sort, onSort }: { sort: StockSort; onSort: (sort: StockSort) => void }) {
+  return (
+    <div className="chips" role="group" aria-label={s.sortLabel}>
+      {STOCK_SORTS.map((choice) => (
+        <button key={choice} type="button" className="chip" aria-pressed={sort === choice} onClick={() => onSort(choice)}>
+          {s.sorts[choice]}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -402,8 +442,17 @@ function StockRow({ item }: { item: Item }) {
  * several times, for other packs or makers: the pack and the public price tell them
  * apart, and the code is what a stock file writes to say which one it means. */
 function fullName(product: Schemas['ProductSummary']): string {
-  const parts = [product.name, product.strength, product.form, product.pack]
+  const parts = [product.name, product.strength, product.form, packWords(product.pack)]
   return `${parts.filter(Boolean).join(' · ')} · ${lbp(product.public_price.lbp)} · ${s.add.code(product.code)}`
+}
+
+/** A pack as the Ministry writes it. A bare number ("30") read after a form would look
+ * like part of it ("Tablet, film coated 30"): it is said as "Pack: 30". A pack with its
+ * unit ("100ml") is shown as written. */
+function packWords(pack: string | null | undefined): string | null {
+  const written = (pack ?? '').trim()
+  if (!written) return null
+  return /^\d+$/.test(written) ? s.pack(written) : written
 }
 
 /** How many years ahead a box's expiry can be chosen: a box rarely lasts longer. */

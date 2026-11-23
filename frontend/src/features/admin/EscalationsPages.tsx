@@ -5,8 +5,10 @@ import { Link, useParams } from 'react-router-dom'
 
 import { api, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
 import { reservationTone } from '../../components/reservationTone'
+import { usePage } from '../../components/usePage'
 import { langOf } from '../../format'
 import { strings } from '../../strings/en'
 import {
@@ -17,7 +19,6 @@ import {
   useEscalation,
   useEscalations,
   useFromList,
-  useListChoices,
   when,
 } from './data'
 import { ListFailed } from './ListFailed'
@@ -36,12 +37,21 @@ const LIST = '/admin/escalations'
 /** The panels of an escalation's page whose buttons can be refused. */
 type Place = 'missed' | 'reply' | 'close'
 
+// A few pills side by side, wrapping on a narrow screen.
+const PILLS = { display: 'flex', flexWrap: 'wrap', gap: 6, alignSelf: 'flex-start' } as const
+
 function Head({ row }: { row: Row }) {
-  const emergency = row.reason === 'emergency_claim'
   return (
     <div className="row-card__top">
-      {/* Amber, as on the design canvas: it asks for attention, nothing has failed. */}
-      <span className={`status-pill status-pill--${emergency ? 'amber' : 'grey'}`}>{e.reasons[row.reason]}</span>
+      {/* Every reason of the case, each once. Amber, as on the design canvas, for an
+          emergency claim: it asks for attention, nothing has failed. */}
+      <span style={PILLS}>
+        {row.reasons.map((reason) => (
+          <span key={reason} className={`status-pill status-pill--${reason === 'emergency_claim' ? 'amber' : 'grey'}`}>
+            {e.reasons[reason]}
+          </span>
+        ))}
+      </span>
       <span className="hint">
         {e.states[row.state]}
         {row.request_ref && ` · ${e.request(row.request_ref)}`} · {e.opened(when(row.created_at))}
@@ -50,11 +60,24 @@ function Head({ row }: { row: Row }) {
   )
 }
 
-/** AS-6: who waits for a person. Emergency claims are first. */
+/** What waits for the team on an open case: a new ask, or a message of the client. */
+function Marks({ row }: { row: Row }) {
+  if (row.state === 'RESOLVED' || (!row.new_ask_since_reply && !row.client_wrote_at)) return null
+  return (
+    <span style={PILLS}>
+      {row.new_ask_since_reply && <span className="status-pill status-pill--blue">{e.newAsk}</span>}
+      {row.client_wrote_at && <span className="status-pill status-pill--blue">{e.clientWrote(when(row.client_wrote_at))}</span>}
+    </span>
+  )
+}
+
+/** AS-6: who waits for a person. Emergency claims are first, then the cases that wait for
+ * the team (never answered, asked again, or the client wrote since the reply). Closed
+ * cases are the newest first. Both lists are numbered pages. */
 export function EscalationsPage() {
-  const [choices, choose] = useListChoices()
-  const resolved = choices.get('closed') === '1'
-  const found = useEscalations(resolved)
+  const paging = usePage()
+  const resolved = paging.params.get('closed') === '1'
+  const found = useEscalations(resolved, paging.offset)
   const items = found.data?.items ?? []
   const from = useFromList()
   return (
@@ -71,7 +94,7 @@ export function EscalationsPage() {
             role="tab"
             aria-selected={resolved === choice}
             className="tabs__tab"
-            onClick={() => choose('closed', choice ? '1' : null)}
+            onClick={() => paging.choose('closed', choice ? '1' : null)}
           >
             {choice ? e.resolved : e.open}
           </button>
@@ -86,10 +109,16 @@ export function EscalationsPage() {
         <article key={row.id} className="row-card">
           <Link to={`/admin/escalations/${row.id}`} state={from} className="row-link">
             <Head row={row} />
-            <span>{row.summary}</span>
+            <Marks row={row} />
+            {/* The newest ask: what the client needs now. In the assistant's words, in the
+                client's language. */}
+            <span dir="auto" lang={langOf(row.last_summary)}>
+              {row.last_summary}
+            </span>
           </Link>
         </article>
       ))}
+      <Pager paging={paging} total={found.data?.total} settled={!found.isPlaceholderData} />
     </main>
   )
 }
@@ -216,6 +245,7 @@ export function EscalationPage() {
         </Link>
         <section className="panel" aria-labelledby="summary">
           <Head row={escalation} />
+          <Marks row={escalation} />
           <span className="soft" style={{ fontSize: 15 }}>
             <span className="audit-change">{e.client(short)}</span> (
             <Link to={`/admin/clients/${escalation.client_id}`}>{e.openClient}</Link>)
@@ -290,11 +320,13 @@ export function EscalationPage() {
             {thread.length > 0 && <span className="hint">{e.threadNote}</span>}
           </div>
           {thread.length === 0 && <span className="soft">{e.noThread}</span>}
-          <div>
+          {/* Read out as it grows: the client may be writing to the team now. */}
+          <div role="log" aria-label={e.thread}>
             {thread.map((line, index) => (
               // Two conversations may follow each other here: a number is not unique.
               // The direction is the message's own, not that of the English label above it.
               <div key={index} className="thread-line">
+                {line.starts_another_chat && <span className="hint">{e.anotherChat}</span>}
                 <span className="thread-line__who">{e.authors[line.author]}</span>
                 {line.text && (
                   <span dir="auto" lang={langOf(line.text)}>
@@ -337,6 +369,7 @@ export function EscalationPage() {
               <span id="team-reply-hint" className="hint">
                 {e.replyHint} {e.left(MAX_REPLY - reply.length)}
               </span>
+              {escalation.hold_ends_at && <span className="hint">{e.withTeam(when(escalation.hold_ends_at))}</span>}
               <button type="submit" className="pill-button" disabled={busy || !reply.trim()}>
                 {e.send}
               </button>

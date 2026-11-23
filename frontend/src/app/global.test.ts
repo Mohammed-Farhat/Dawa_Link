@@ -88,5 +88,25 @@ describe('The stylesheet', () => {
     const zoom = declarations('.map.leaflet-container .leaflet-bar a')
     expect([zoom.width, zoom.height]).toEqual(['44px', '44px'])
     expect(declarations('.radio-row')['min-height']).toBe('44px')
+    const pager = declarations('.pager__button')
+    expect([pager['min-width'], pager['min-height']]).toEqual(['44px', '44px'])
+  })
+
+  it('keeps every portal’s top bar at the top on a computer, under the menus and the sheets', () => {
+    for (const bar of ['.bar', '.topbar']) {
+      const rule = declarations(bar)
+      expect([rule.position, rule.top], bar).toEqual(['sticky', '0'])
+      expect(Number(rule['z-index']), bar).toBeLessThan(Number(declarations('.menu__list')['z-index']))
+    }
+    // On a phone the pharmacy's and the admin's bar take several lines: they scroll away.
+    const sticky = /@media \(min-width: 992px\) \{\s*\.bar \{\s*position: sticky;/
+    expect(text).toMatch(sticky)
+    // What the keyboard reaches is never hidden under the bar (WCAG 2.4.11): the
+    // pharmacy's bar is about 73 px on one line, the admin's about 110 px on two.
+    expect(px(declarations('html')['scroll-padding-top'])).toBeGreaterThanOrEqual(80)
+    const admin = RULES.filter((rule) => rule.selector === 'html:has(.bar--admin)').map((rule) =>
+      px(/scroll-padding-top:\s*([^;]+)/.exec(rule.body)?.[1]),
+    )
+    expect(Math.max(...admin)).toBeGreaterThanOrEqual(110)
   })
 })

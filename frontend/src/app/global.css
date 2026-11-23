@@ -1668,6 +1668,44 @@ body {
     justify-content: flex-start;
   }
 }
+/* On a computer the pharmacy's and the admin's bar stays at the top while the page
+   scrolls, as the client's top bar does (the owner, 2026-11-23: "when I scroll it is
+   gone"). Under the menus (30), the library's sheets and popovers (200, 300) and the skip
+   link (1000); over the page, the stock table's pinned column (1) included. On a phone it
+   scrolls away: it takes two to four lines there.
+   `scroll-padding-top` keeps what a link, "Skip to content" or the keyboard brings into
+   view below the bar instead of under it (WCAG 2.4.11): the pharmacy's bar is about
+   73 px on one line, the client's 64 px. */
+@media (min-width: 992px) {
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  html {
+    scroll-padding-top: 88px;
+  }
+}
+/* Below 1280 px the admin's tabs take a second line inside their box (about 122 px with
+   the counts and the demo clock showing). The bar stays at the top, a little tighter
+   (about 110 px); on a window too short for that it scrolls away instead, so that it
+   never covers a large part of the page. */
+@media (min-width: 992px) and (max-width: 1279px) {
+  .bar--admin {
+    padding-block: 8px;
+  }
+  html:has(.bar--admin) {
+    scroll-padding-top: 126px;
+  }
+}
+@media (min-width: 992px) and (max-width: 1279px) and (max-height: 719px) {
+  .bar--admin {
+    position: static;
+  }
+  html:has(.bar--admin) {
+    scroll-padding-top: 16px;
+  }
+}
 /* A row of choices that wraps on a narrow screen instead of widening the page, each
    choice on one line, under a visible name ("Account", "Show"). */
 .tabs--wrap {
@@ -2517,4 +2555,73 @@ form.search-pill:focus-within {
   font-size: 20px;
   font-weight: 600;
   color: var(--white);
+}
+
+/* --- The pager under a long list (components/Pager.tsx) --------------------------------
+   [Previous] 1 2 … 7 [Next], and "Page 2 of 7 · 134 in all" under it. Every button is
+   44 px for a finger; the page shown is blue, as every chosen choice is (B#46). */
+.pager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-block: 8px;
+}
+.pager__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pager__button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.pager__button:hover {
+  background: var(--page);
+}
+.pager__button[aria-current='page'] {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--white);
+  font-weight: 600;
+}
+/* Previous on the first page, Next on the last: still reachable, so that the focus is
+   never lost when the last page is reached, but plainly doing nothing. */
+.pager__button[aria-disabled='true'] {
+  color: var(--ink-hint);
+  background: var(--white);
+  cursor: default;
+}
+.pager__gap {
+  min-width: 24px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.pager__summary {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+/* On a phone the numbers give way to the line "Page 2 of 7": Previous and Next stay. */
+@media (max-width: 600px) {
+  .pager__number {
+    display: none;
+  }
 }

@@ -1,19 +1,23 @@
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { NavLink, Route, Routes, useSearchParams } from 'react-router-dom'
+import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import { ApiFailure, type Schemas } from '../../api/client'
 import { useSession } from '../../api/session'
 import { NotFoundPage } from '../../app/NotFoundPage'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
-import { clock, dayAndClock } from '../../format'
+import { usePage } from '../../components/usePage'
+import { clock, dateAndClock, dayAndClock } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
 import { UnverifiedBanner } from '../client/HomePage'
 import { NotificationsList } from '../client/NotificationsPage'
 import { AskCard } from './AskCard'
 import {
+  useAnsweredAsks,
   useAsks,
   useDashboard,
+  useDueReservations,
   usePharmacy,
   usePharmacyReservations,
   useReservationByNumber,
@@ -192,17 +196,22 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
   const results = useRef<HTMLDivElement>(null)
   const [notice, setNotice] = useState<CardNotice | null>(null)
   const found = useReservationByNumber(asked)
-  const active = usePharmacyReservations('active')
+  const active = useDueReservations()
   const approved = pharmacy.status === 'APPROVED'
   const numbers = useDashboard(true)
   const asks = useAsks(approved)
+  const answered = useAnsweredAsks(approved)
   const openAsks = asks.data?.items ?? []
   const now = active.data?.server_now ?? pharmacy.server_now
   const isToday = (item: Schemas['PharmacyReservation']) =>
     Boolean(item.deadline && dayAndClock(item.deadline, now).startsWith(strings.common.today))
-  const dueToday = (active.data?.items ?? []).filter(isToday)
+  const waiting = active.data?.items ?? []
+  const dueToday = waiting.filter(isToday)
   // Reserved for a later day: the box must be put aside now all the same (PS-3).
-  const later = (active.data?.items ?? []).filter((item) => !isToday(item))
+  const later = waiting.filter((item) => !isToday(item))
+  // Today is the counter, not a list to page: past its 50 the rest is on Reservations,
+  // the latest deadlines (the list is in deadline order).
+  const notShown = (active.data?.total ?? 0) - waiting.length
   const shown = new Set([
     ...openAsks.map((ask) => ask.id),
     ...(found.data?.items ?? []).map((reservation) => reservation.id),
@@ -318,15 +327,26 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
             {leftOver.text}
           </Banner>
         )}
-        {openAsks.map((ask) => (
-          <AskCard
-            key={ask.id}
-            ask={ask}
-            now={asks.data?.server_now ?? now}
-            notice={noticeFor(notice, ask.id)}
-            onNotice={setNotice}
-          />
-        ))}
+        {/* Always on Today, so that a pharmacist knows where an ask will appear
+            (PS-9): the open ones, or what will come here, and the last ones answered. */}
+        {approved && (
+          <section className="panel" aria-labelledby="asks">
+            <h2 id="asks" className="panel__title">
+              {s.ask.section}
+            </h2>
+            {openAsks.map((ask) => (
+              <AskCard
+                key={ask.id}
+                ask={ask}
+                now={asks.data?.server_now ?? now}
+                notice={noticeFor(notice, ask.id)}
+                onNotice={setNotice}
+              />
+            ))}
+            {asks.isSuccess && openAsks.length === 0 && <span className="soft">{s.ask.empty}</span>}
+            <AnsweredAsks asks={answered.data ?? []} />
+          </section>
+        )}
 
         <section className="panel" aria-labelledby="due">
           <h2 id="due" className="panel__title">
@@ -344,6 +364,13 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
             {later.map((item) => row(item, 'later'))}
           </section>
         )}
+        {notShown > 0 && (
+          <p style={{ margin: 0 }}>
+            <Link to="/pharmacy/reservations" className="text-button" style={{ paddingInlineStart: 0 }}>
+              {s.moreOnReservations(notShown)}
+            </Link>
+          </p>
+        )}
       </main>
 
       <aside className="portal__aside">
@@ -360,6 +387,31 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
         )}
       </aside>
     </div>
+  )
+}
+
+/** The last asks answered, or ended, under the open ones: what happened to each. Nothing
+ * when there are none. */
+function AnsweredAsks({ asks }: { asks: Schemas['EarlyReleaseAsk'][] }) {
+  if (asks.length === 0) return null
+  return (
+    <>
+      <h3 className="ask-card__title" style={{ fontSize: 17 }}>
+        {s.ask.answeredTitle}
+      </h3>
+      <ul className="plain-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {asks.map((ask) => (
+          <li key={ask.id} style={{ fontSize: 15 }}>
+            <strong>
+              {ask.qty_needed} × {ask.product.name}
+            </strong>{' '}
+            · {s.ask.answered[ask.state] ?? ask.state}
+            {/* An ask that ran out or was withdrawn may have no answer: its deadline. */}
+            <span className="hint"> · {dateAndClock(ask.answered_at ?? ask.respond_by)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
@@ -381,11 +433,11 @@ function Number({ label, value }: { label: string; value: ReactNode }) {
  * (`?view=history`), so that a notification about a cancelled reservation opens where
  * that reservation is, never an empty "To hand over" (B#52). */
 function ReservationsPage() {
-  const [address, setAddress] = useSearchParams()
-  const view = address.get('view') === 'history' ? 'history' : 'active'
-  const setView = (tab: 'active' | 'history') =>
-    setAddress(tab === 'history' ? { view: tab } : {}, { replace: true })
-  const found = usePharmacyReservations(view)
+  const paging = usePage()
+  const view = paging.params.get('view') === 'history' ? 'history' : 'active'
+  // A tab is a choice of the list: back to its first page in the same change.
+  const setView = (tab: 'active' | 'history') => paging.choose('view', tab === 'history' ? tab : null)
+  const found = usePharmacyReservations(view, paging.offset)
   const items = found.data?.items ?? []
   const [notice, setNotice] = useState<CardNotice | null>(null)
   // A reservation handed over leaves "To hand over": what the server said stays here.
@@ -416,7 +468,7 @@ function ReservationsPage() {
         </Banner>
       )}
       {found.isPending && <Placeholder />}
-      {found.isSuccess && items.length === 0 && (
+      {found.isSuccess && items.length === 0 && !found.data.total && (
         <span className="soft">{view === 'active' ? s.nothingActive : s.nothingBefore}</span>
       )}
       {items.map((reservation) => (
@@ -427,6 +479,7 @@ function ReservationsPage() {
           onNotice={setNotice}
         />
       ))}
+      <Pager paging={paging} total={found.data?.total} settled={found.isSuccess && !found.isPlaceholderData} />
     </main>
   )
 }

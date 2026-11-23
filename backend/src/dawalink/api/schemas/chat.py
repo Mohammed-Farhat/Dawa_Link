@@ -114,6 +114,10 @@ class MessagesPage(Out):
     busy: bool
     # An earlier chat, put away by [New chat]: it can be read, not written in.
     archived: bool
+    # DawaLink's team has this chat: it replied to the client's case and has not closed
+    # it. What the client writes goes to the team, and the assistant doesn't answer until
+    # the case is closed (or N-55 after the team's last reply here).
+    with_team: bool
     # Where the agent's tools count travel times from, as words. Never coordinates.
     location: "LocationSummary"
     server_now: datetime
@@ -138,6 +142,9 @@ class SendMessage(In):
 
 class MessageAccepted(Out):
     message_seq: int
+    # The message went to DawaLink's team, which has this chat: no agent turn runs for
+    # it, and none is coming (`MessagesPage.with_team`).
+    with_team: bool = False
 
 
 class ExecuteProposal(In):

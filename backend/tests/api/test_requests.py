@@ -111,7 +111,8 @@ class TestARequestsPage:
         )
 
         # Not a stream: the worker runs the turn, and the page sees the reply by polling.
-        assert (answer.status_code, set(answer.json())) == (202, {"message_seq"})
+        assert (answer.status_code, set(answer.json())) == (202, {"message_seq", "with_team"})
+        assert answer.json()["with_team"] is False  # nobody of the team has this thread
 
     def test_the_client_stops_the_search_once(self, sourcing: Sourcing) -> None:
         stopped = sourcing.post(f"/requests/{sourcing.request}/cancel")

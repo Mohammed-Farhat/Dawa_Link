@@ -499,7 +499,12 @@ describe('Escalations (AS-6)', () => {
     adminApi({
       [`GET ${ESCALATED}`]: {
         ...ESCALATION_DETAIL,
-        escalation: { ...ESCALATION, reason: 'client_asked_human', request_ref: null },
+        escalation: {
+          ...ESCALATION,
+          reason: 'client_asked_human',
+          reasons: ['client_asked_human'],
+          request_ref: null,
+        },
       },
     })
     renderApp(<AppRoutes />, { path: `/admin/escalations/${ESCALATION_ID}` })
@@ -685,18 +690,24 @@ describe('The audit log and the demo clock (AS-11, AS-12)', () => {
     const { container } = renderApp(<AppRoutes />, { path: '/admin/audit' })
     const user = userEvent.setup()
 
-    expect(await screen.findByRole('rowheader', { name: 'pharmacy.approve' })).toBeInTheDocument()
-    expect(screen.getByText('status: PENDING → status: APPROVED')).toBeInTheDocument()
-    // The short ID is a button of its own style: the wrapping style of the Change column
-    // made it run into that column.
-    const id = screen.getByRole('button', { name: PHARMACY_ID.slice(0, 8) })
-    expect(id).toHaveClass('audit-id')
-    expect(id).not.toHaveClass('audit-change')
+    // In words: who by name, what happened, the move between two states, the page.
+    expect(await screen.findByRole('rowheader', { name: /approved a pharmacy/ })).toBeInTheDocument()
+    expect(screen.getByText('Rania Admin')).toBeInTheDocument()
+    expect(screen.getByText(s.audit.moved('waiting', 'approved'))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: s.audit.links.pharmacy })).toHaveAttribute(
+      'href',
+      `/admin/pharmacies/${PHARMACY_ID}`,
+    )
+    // [Only this] is a button of its own style: the wrapping style of the column next to
+    // it made it run into that column.
+    const only = screen.getByRole('button', { name: s.audit.onlyLabel('pharmacy') })
+    expect(only).toHaveClass('audit-id')
+    expect(only).not.toHaveClass('audit-change')
     expect(await accessibilityProblems(container)).toEqual([])
-    await user.selectOptions(screen.getByRole('combobox', { name: s.audit.kind }), 'escalation.')
+    await user.selectOptions(screen.getByRole('combobox', { name: s.audit.kind }), 'escalations')
 
     await waitFor(() =>
-      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('action=escalation.'))).toBe(true),
+      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('kind=escalations'))).toBe(true),
     )
     // No button on this page changes anything.
     expect(api.calls.every((call) => call.method === 'GET')).toBe(true)
@@ -883,15 +894,13 @@ describe("The console's lists and questions (design review B#27, B#28, B#44, B#5
     const user = userEvent.setup()
 
     const kind = await screen.findByRole('combobox', { name: s.audit.kind })
-    await user.selectOptions(kind, 'client.')
+    await user.selectOptions(kind, 'clients')
     await waitFor(() =>
-      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('action=client.'))).toBe(true),
+      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('kind=clients'))).toBe(true),
     )
-    await user.selectOptions(kind, 'abuse_flag.')
+    await user.selectOptions(kind, 'flags')
     await waitFor(() =>
-      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('action=abuse_flag.'))).toBe(
-        true,
-      ),
+      expect(api.sent('GET', '/api/v1/admin/audit').some((call) => call.path.includes('kind=flags'))).toBe(true),
     )
   })
 })

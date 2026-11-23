@@ -249,6 +249,8 @@ export function SystemCard({
     expired: t.expired(ref),
     request_reopened: t.request_reopened(ref),
     request_closed: t.request_closed(ref),
+    team_closed: t.team_closed,
+    assistant_back: t.assistant_back,
     offer: t.offer,
     offer_ended: t.offer_ended,
   }

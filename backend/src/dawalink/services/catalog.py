@@ -15,6 +15,7 @@ from dawalink.catalog.composition import normalize
 from dawalink.db.models import CatalogImport, Product
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 # Below this score a match is a guess: the client is asked "did you mean…?".
 CONFIDENT = 0.6
@@ -443,23 +444,28 @@ def products_in_group(tx: Tx, product: Product, *, with_equivalents: bool) -> Se
     return [product.id, *(other.id for other in equivalents(tx, product.id))]
 
 
-def admin_products(tx: Tx, query: str, *, offset: int = 0, limit: int = 50) -> list[Product]:
+def admin_products(
+    tx: Tx, query: str, *, offset: int = 0, limit: int = 50
+) -> tuple[list[Product], int]:
     """The catalog as an admin reads it (AS-9): every product, **the controlled ones
     included**, which nobody else ever sees (R-C6). Read-only: the catalog changes by the
-    import script and the team's override files."""
+    import script and the team's override files.
+
+    Returns a page of it and how many products the same text matches (numbered pages)."""
     statement = select(Product)
     wanted = normalize(query)
     if query.strip() and not wanted:
         # Typed, but no letter or digit in it ("%", "_"): that names no product. Without
         # this it would list the whole catalog, as an empty search does.
-        return []
+        return [], 0
     if wanted:
         statement = statement.where(Product.search_name.contains(wanted, autoescape=True))
-    return list(
+    page = list(
         tx.session.execute(
             statement.order_by(Product.moph_name, Product.moph_code).offset(offset).limit(limit)
         ).scalars()
     )
+    return page, count_rows(tx, statement)
 
 
 def group_sizes(tx: Tx, keys: Sequence[str]) -> dict[str, int]:

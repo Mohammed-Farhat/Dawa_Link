@@ -79,6 +79,9 @@ class CaseState(BaseModel):
     pickup_day: date | None = None
     situation_notes: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    # The agent asked its one round of questions in this conversation (where, for how
+    # many days, when). It is never asked twice: once true, it stays true.
+    questions_asked: bool = False
     # Written by code.
     shown_listing_ids: list[uuid.UUID] = Field(default_factory=list)
     open_proposal_ids: list[uuid.UUID] = Field(default_factory=list)
@@ -87,6 +90,8 @@ class CaseState(BaseModel):
     # chat: shown, never proposed for reserving unless the client asks for it (R-C10).
     asked_product_ids: list[uuid.UUID] = Field(default_factory=list)
     plans: dict[str, PlanRef] = Field(default_factory=dict)
+    # Kept for conversations stored before 2026-11-23. Nothing reads it: where a client's
+    # ask for a person stands comes from the escalations table (`escalations.person_ask`).
     escalated: bool = False
     followups_used: int = 0
     # The newest message the last turn read. What came after it is what the next
@@ -106,6 +111,10 @@ class CaseNotes(BaseModel):
     situation_notes: list[str] | None = Field(default=None, max_length=MAX_SITUATION_NOTES)
     alternatives_ok: bool | None = None
     items_in_focus: list[FocusItem] | None = Field(default=None, max_length=MAX_FOCUS_ITEMS)
+    questions_asked: bool | None = Field(
+        default=None,
+        description="Set true in the turn where you ask your one round of questions.",
+    )
     add_note: str | None = Field(default=None, max_length=200)
     remove_note_index: int | None = Field(default=None, ge=0)
 
@@ -127,6 +136,8 @@ def apply_notes(state: CaseState, notes: CaseNotes | None, clean: Any) -> CaseSt
         value = getattr(notes, field)
         if value is not None:
             setattr(changed, field, value)
+    if notes.questions_asked:
+        changed.questions_asked = True
     if notes.items_in_focus is not None:
         changed.items_in_focus = [
             item.model_copy(update={"note": clean(item.note)}) for item in notes.items_in_focus
@@ -190,6 +201,7 @@ def for_model(state: CaseState) -> dict[str, Any]:
             "plans",
             "followups_used",
             "read_up_to",
+            "escalated",
         },
     )
     if state.plans:

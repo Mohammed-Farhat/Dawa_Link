@@ -14,7 +14,7 @@ from sqlalchemy import func, select, text
 from dawalink.api import present
 from dawalink.api.deps import AsPharmacist, DoWork, Work, get_work
 from dawalink.api.schemas.accounts import OpeningRange
-from dawalink.api.schemas.common import Pin, Skip
+from dawalink.api.schemas.common import Pin, Skip, next_cursor
 from dawalink.api.schemas.pharmacy import (
     AcceptAsk,
     AskAnswered,
@@ -60,6 +60,7 @@ from dawalink.domain.pricing import release_suggested_price_lbp
 from dawalink.services import auth, counter, early_release, pharmacies, pharmacy_profile
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 router = APIRouter(prefix="/pharmacy", tags=["pharmacy"])
 
@@ -335,14 +336,14 @@ def list_pharmacy_reservations(
 ) -> PharmacyReservations:
     """The pharmacy's reservations. With `q`, the one with that order number, however it
     was typed ("r7k3q2f" finds R-7K3Q2F), whatever its state: the counter needs to see
-    "already picked up" too."""
+    "already picked up" too. `total` counts the reservations of the view, on every page."""
     with work.tx() as tx:
         _require(tx, pharmacy_id)
         if q is not None and q.strip():
             found = counter.find_by_number(tx, pharmacy_id, q)
             rows = [found] if found is not None and found.state in _SHOWN else []
             return PharmacyReservations(
-                items=_reservations(tx, rows), next_cursor=None, server_now=tx.now
+                items=_reservations(tx, rows), next_cursor=None, total=len(rows), server_now=tx.now
             )
         statement = select(Order).where(Order.pharmacy_id == pharmacy_id)
         if view == "active":
@@ -356,7 +357,8 @@ def list_pharmacy_reservations(
         rows = list(tx.session.execute(statement.offset(cursor).limit(limit + 1)).scalars())
         return PharmacyReservations(
             items=_reservations(tx, rows[:limit]),
-            next_cursor=str(cursor + limit) if len(rows) > limit else None,
+            next_cursor=next_cursor(cursor, limit, len(rows)),
+            total=count_rows(tx, statement),
             server_now=tx.now,
         )
 

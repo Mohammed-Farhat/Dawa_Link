@@ -73,13 +73,34 @@ export const ESCALATION = {
   created_at: '2026-11-16T07:40:00Z',
   resolved_at: null,
   resolution_note: null,
+  reasons: ['emergency_claim'],
+  last_summary: 'Client says the need is urgent; Glucophage 850 still missing.',
+  last_asked_at: '2026-11-16T07:40:00Z',
+  last_replied_at: null,
+  new_ask_since_reply: false,
+  client_wrote_at: null,
+  hold_ends_at: null,
 } satisfies Schemas['EscalationRow']
 
 export const ESCALATION_DETAIL = {
   escalation: ESCALATION,
   thread: [
-    { seq: 1, author: 'client', text: 'I need it today, call me on [phone].', cards: [], created_at: '2026-11-16T07:38:00Z' },
-    { seq: 2, author: 'agent', text: 'I asked a person from DawaLink to help you.', cards: ['reserve'], created_at: '2026-11-16T07:39:00Z' },
+    {
+      seq: 1,
+      author: 'client',
+      text: 'I need it today, call me on [phone].',
+      cards: [],
+      created_at: '2026-11-16T07:38:00Z',
+      starts_another_chat: false,
+    },
+    {
+      seq: 2,
+      author: 'agent',
+      text: 'I asked a person from DawaLink to help you.',
+      cards: ['reserve'],
+      created_at: '2026-11-16T07:39:00Z',
+      starts_another_chat: false,
+    },
   ],
   contested: [],
 } satisfies Schemas['EscalationDetail']
@@ -106,8 +127,14 @@ export const AUDIT_EVENT = {
   entity_type: 'pharmacy',
   entity_id: PHARMACY_ID,
   action: 'pharmacy.approve',
-  before: { status: 'PENDING' },
-  after: { status: 'APPROVED' },
+  known_action: 'pharmacy.approve',
+  who: { kind: 'admin', name: 'Rania Admin', id: null },
+  subject: { kind: 'pharmacy', id: PHARMACY_ID },
+  changed: [],
+  state_from: 'PENDING',
+  state_to: 'APPROVED',
+  counts: {},
+  code: null,
   reason: null,
 } satisfies Schemas['AuditRow']
 
@@ -232,6 +259,13 @@ export const HEALTH = {
     prompt_version: 'v1.13',
     month_spend_usd: 12.4,
     month_budget_usd: 20,
+    day_spend_usd: 0.35,
+    day_budget_usd: 2,
+    day_share_percent: 10,
+    messages_per_day_per_client: 100,
+    tokens_per_day_per_client: 3_000_000,
+    clients_at_token_limit_today: 2,
+    clients_at_message_limit_today: 1,
   },
   requests: {
     closed: 64,

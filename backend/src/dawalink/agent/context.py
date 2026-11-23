@@ -18,7 +18,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from dawalink.agent import display, state
+from dawalink.agent import display, language, state
 from dawalink.agent.guards.redact import Identity, redact
 from dawalink.agent.state import CaseState
 from dawalink.agent.tools.base import rate
@@ -30,6 +30,7 @@ from dawalink.db.models import (
     ClientProfile,
     Conversation,
     District,
+    EarlyReleaseAsk,
     EarlyReleaseRequest,
     Order,
     Pharmacy,
@@ -51,8 +52,9 @@ from dawalink.domain.numbers import (
 from dawalink.domain.pickup import upcoming_days
 from dawalink.domain.vocabulary import AgentMode, TurnTrigger
 from dawalink.domain.windows import in_request_hours
-from dawalink.services import clients, conversations, proposals
+from dawalink.services import clients, conversations, escalations, proposals
 from dawalink.services.context import Tx
+from dawalink.services.escalations import AskState
 from dawalink.services.events import Decision
 
 # The facts of a system card the model may read, by card template.
@@ -67,6 +69,15 @@ _CARD_FACTS = {
     "offer_ended": ("state",),
     "request_closed": ("request_ref", "outcome"),
     "request_reopened": ("request_ref", "order_ref"),
+}
+# Cards that carry no fact, only what they mean: said in our own words.
+_CARD_MEANS = {
+    escalations.TEAM_CLOSED_CARD: (
+        "the DawaLink team closed the client's case. You answer the client again from here."
+    ),
+    escalations.ASSISTANT_BACK_CARD: (
+        "the DawaLink team stopped answering. You answer the client again from here."
+    ),
 }
 
 
@@ -102,16 +113,28 @@ def identity_of(tx: Tx, client_id: uuid.UUID) -> Identity:
 
 
 def _order_facts(tx: Tx, order_id: Any) -> str:
+    """An order as a turn needs it to search again without asking: which box exactly, how
+    many, for how many days, and the day it was reserved for. A "not available" event can
+    arrive in a chat that knows nothing of the order (the client pressed [New chat])."""
     found = tx.session.execute(
-        select(Order.ref, Product.moph_name, Pharmacy.name, Order.qty_requested)
+        select(Order, Product, Pharmacy.name)
         .join(Product, Product.id == Order.product_id)
         .join(Pharmacy, Pharmacy.id == Order.pharmacy_id)
         .where(Order.id == uuid.UUID(str(order_id)))
     ).one_or_none()
     if found is None:
         return "an order"
-    ref, product, pharmacy, units = found
-    return f"order {ref} ({product} x {units} at {pharmacy})"
+    order, product, pharmacy = found
+    which = " ".join(
+        part for part in (product.moph_name, product.dosage_text, product.form_text) if part
+    )
+    facts = [f"{which} x {order.qty_requested} at {pharmacy}", f"product_id {product.id}"]
+    if product.presentation_text:
+        facts.append(f"pack {product.presentation_text}")
+    facts.append(f"for {order.days_of_use} day(s) of use")
+    if order.pickup_day is not None:
+        facts.append(f"reserved for {display.day(order.pickup_day)}")
+    return f"order {order.ref} ({'; '.join(facts)})"
 
 
 def _event_line(tx: Tx, body: dict[str, Any]) -> str:
@@ -167,6 +190,8 @@ def _event_line(tx: Tx, body: dict[str, Any]) -> str:
 
 def _card_line(tx: Tx, card: dict[str, Any], money: Any) -> str:
     template = str(card.get("template"))
+    if template in _CARD_MEANS:
+        return f"{template}: {_CARD_MEANS[template]}"
     facts = []
     for name in _CARD_FACTS.get(template, ()):
         value = card.get(name)
@@ -200,6 +225,7 @@ def _transcript(
     messages: Sequence[ChatMessage],
     money: Any,
     identity: Identity,
+    to_team: set[int],
 ) -> list[str]:
     ids = []
     for message in messages:
@@ -232,23 +258,29 @@ def _transcript(
             # removed from it, before the model.
             said = redact(message.text_redacted or "", identity).text
             lines.append(f"{head} DawaLink team: {said}")
+        elif message.seq in to_team:
+            # Written while the team had the chat: theirs to answer, never yours.
+            lines.append(
+                f"{head} client, to the DawaLink team (not to you): {message.text_redacted or ''}"
+            )
         else:
             lines.append(f"{head} client: {message.text_redacted or ''}")
     return lines
 
 
 def _trigger(
-    messages: Sequence[ChatMessage], followup: bool, read_up_to: int
+    messages: Sequence[ChatMessage], followup: bool, read_up_to: int, to_team: set[int]
 ) -> tuple[TurnTrigger | None, str | None]:
     """Why this turn runs, from what arrived since the last turn read the conversation.
 
-    None: nothing arrived and no follow-up is due, so there is nothing to answer.
+    None: nothing arrived and no follow-up is due, so there is nothing to answer. A
+    message the client wrote to DawaLink's team is not something to answer.
     """
     # Newest first: everything after the last message the previous turn read.
     fresh = [
         message
         for message in reversed(messages)
-        if message.seq > read_up_to and message.author != "agent"
+        if message.seq > read_up_to and message.author != "agent" and message.seq not in to_team
     ]
     events = []
     for message in fresh:
@@ -273,12 +305,14 @@ def _trigger(
 _WHAT_NOW = {
     TurnTrigger.CLIENT_MESSAGE: "The client wrote the last message. Answer it.",
     TurnTrigger.REQUEST_SUBMITTED: (
-        "The client just started this request. If you don't know yet how they get there or "
-        "which day they will come, ask and wait. Otherwise plan what is listed, start waiting "
-        "for what isn't, ask pharmacies where it helps, and report medicine by medicine."
+        "The client just started this request. Plan now what is listed, start waiting for "
+        "what isn't, ask pharmacies where it helps, and report medicine by medicine. Ask "
+        "nothing first: the request holds the medicines and their days of use."
     ),
     TurnTrigger.DECISION_EVENT: (
-        "Something changed (see the newest events). Re-plan only what changed and tell the client."
+        "Something changed (see the newest events). Re-plan only what changed and tell the "
+        "client. A box that was lost: search that same medicine again now, with the days of "
+        "use and the product the event gives, and ask nothing first."
     ),
     TurnTrigger.WINDOW_CHECK: (
         "One hour is left in this request's window and some medicines aren't secured. Propose "
@@ -315,6 +349,69 @@ def _location_line(tx: Tx, conversation: Conversation, *, has_home_area: bool) -
     return "Location: not known yet. "
 
 
+def _person_line(tx: Tx, client_id: uuid.UUID, conversation_id: uuid.UUID) -> str:
+    """Where the client's ask for a person stands, read from the escalations table: never
+    from the agent's own memory, which kept saying "a person has it" after the case was
+    closed (the owner's finding, 2026-11-22)."""
+    ask = escalations.person_ask(tx, client_id, conversation_id)
+    when = f" ({display.when(ask.at)})" if ask.at else ""
+    if ask.state is AskState.ASKED:
+        return (
+            f"A person from DawaLink: asked for{when}, nobody has replied yet. Don't escalate "
+            "again for the same ask; if the client asks again, say a person was told."
+        )
+    if ask.state is AskState.ANSWERED:
+        return (
+            f"A person from DawaLink: the team replied in the chat{when} and the case is "
+            "still open."
+        )
+    if ask.state is AskState.CLOSED:
+        return (
+            f"A person from DawaLink: the team closed the client's earlier case{when}. Nobody "
+            "is waiting on it now. If the client asks for a person again, escalate again."
+        )
+    return "A person from DawaLink: not asked for."
+
+
+def _watch_lines(tx: Tx, client_id: uuid.UUID) -> list[str]:
+    """The client's running watches, with the ID an ask to pharmacies needs. Without them
+    a later turn could not ask for a watch it started itself (seen on 2026-11-22)."""
+    rows = tx.session.execute(
+        select(Claim, Product)
+        .join(Product, Product.id == Claim.product_id)
+        .where(
+            Claim.client_id == client_id,
+            Claim.kind == "WATCH",
+            Claim.state.in_([s.value for s in LIVE_STATES]),
+        )
+        .order_by(Claim.created_at)
+    ).all()
+    lines = []
+    for claim, product in rows:
+        asked = tx.session.execute(
+            select(func.count())
+            .select_from(EarlyReleaseAsk)
+            .join(EarlyReleaseRequest, EarlyReleaseRequest.id == EarlyReleaseAsk.er_request_id)
+            .where(EarlyReleaseRequest.claim_id == claim.id)
+        ).scalar_one()
+        which = " ".join(part for part in (product.moph_name, product.dosage_text) if part)
+        lines.append(
+            f"- watch_id {claim.id}: {which}, until {display.when(claim.ends_at)}; "
+            + (f"pharmacies asked so far: {asked}" if asked else "no pharmacy asked yet")
+        )
+    return lines
+
+
+def _language_line(client_text: str | None, noted: str | None) -> str:
+    """Which language to answer in, decided by code from the client's own message."""
+    written = language.language_of(client_text)
+    if written is not None:
+        return f"The client's last message is in {language.NAMES[written]}: answer in it."
+    if noted in language.NAMES:
+        return f"Answer in {language.NAMES[noted]}, the language the client has been using."
+    return "The language of the client's message can't be told: answer in English."
+
+
 def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loaded | None:
     """Everything a turn reads. None when there is nothing for a turn to answer."""
     conversation = tx.session.get_one(Conversation, conversation_id)
@@ -322,7 +419,8 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     mode = AgentMode.SOURCING if conversation.kind == "request" else AgentMode.ASSISTANT
     messages = conversations.history(tx, conversation_id)
     case = state.tidy(state.load(conversation.case_state), tx.today)
-    trigger, client_text = _trigger(messages, followup, case.read_up_to)
+    to_team = escalations.to_the_team(tx, conversation_id, messages)
+    trigger, client_text = _trigger(messages, followup, case.read_up_to, to_team)
     if trigger is None:
         return None
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
@@ -391,6 +489,13 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         f"Limits used: reservations {open_orders}/{MAX_OPEN_ORDERS}, "
         f"requests {open_requests}/{MAX_OPEN_REQUESTS}, watches {watches}/{MAX_WATCHES}, "
         f"early-release requests {asks}/{MAX_OPEN_EARLY_RELEASE_REQUESTS}.",
+        _person_line(tx, client_id, conversation_id),
+    ]
+    watching = _watch_lines(tx, client_id) if mode is AgentMode.ASSISTANT else []
+    if watching:
+        block += ["Watches running for this client (pass a watch_id to request_early_release):"]
+        block += watching
+    block += [
         "",
         "## What you remember (case state)",
         json.dumps(state.for_model(case), ensure_ascii=False),
@@ -405,8 +510,20 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         ]
     block += ["", "## The conversation so far (oldest first)"]
     identity = identity_of(tx, client_id)
-    block += _transcript(tx, conversation_id, messages, money, identity) or ["(nothing yet)"]
+    block += _transcript(tx, conversation_id, messages, money, identity, to_team) or [
+        "(nothing yet)"
+    ]
     block += ["", "## What to do now", _WHAT_NOW[trigger]]
+    if trigger is TurnTrigger.CLIENT_MESSAGE:
+        block.append(_language_line(client_text, case.language))
+        if case.questions_asked:
+            block.append(
+                "You already asked your one round of questions in this conversation. Do not "
+                "ask them again: search now with what you know. What the client left out is "
+                "no preference."
+            )
+    elif case.language in language.NAMES:
+        block.append(f"Write in {language.NAMES[case.language]}, the client's language.")
 
     return Loaded(
         conversation_id=conversation_id,

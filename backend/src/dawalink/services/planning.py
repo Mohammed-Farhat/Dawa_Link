@@ -81,6 +81,8 @@ class Planned:
     trips: list[PlannedTrip]
     # Medicines no plan can include at all, and why.
     unplannable: list[StillMissing]
+    # Of those: the medicines pharmacies do have, but none in the areas asked for.
+    only_elsewhere: tuple[uuid.UUID, ...] = ()
 
 
 def _checked(tx: Tx, lines: Sequence[BasketLine]) -> dict[uuid.UUID, Product]:
@@ -98,17 +100,34 @@ def _checked(tx: Tx, lines: Sequence[BasketLine]) -> dict[uuid.UUID, Product]:
     return products
 
 
-def _boxes_by_line(tx: Tx, lines: Sequence[BasketLine]) -> dict[uuid.UUID, list[Box]]:
-    """The visible boxes of each asked medicine itself.
+def _boxes_by_line(
+    tx: Tx, lines: Sequence[BasketLine], districts: frozenset[str] | None = None
+) -> tuple[dict[uuid.UUID, list[Box]], tuple[uuid.UUID, ...]]:
+    """The visible boxes of each asked medicine itself, and the medicines that only
+    pharmacies outside `districts` have.
 
     Never another brand: a plan's card reserves everything with one tap, and only a
     pharmacist can say another brand suits the client (R-C10).
+
+    `districts`: only the pharmacies of the areas the client asked to look in, by district
+    name (the owner, 2026-11-23). A medicine with boxes elsewhere and none there is
+    reported apart, so the client is told "not in these areas", not "not listed".
     """
     boxes = visible_boxes(tx, product_ids=[line.product_id for line in lines])
-    return {
+    everywhere = {box.product_id for box in boxes}
+    if districts is not None:
+        district_of = pharmacies.district_names(tx, sorted({box.pharmacy_id for box in boxes}))
+        boxes = [box for box in boxes if district_of.get(box.pharmacy_id) in districts]
+    by_line = {
         line.product_id: [box for box in boxes if box.product_id == line.product_id]
         for line in lines
     }
+    only_elsewhere = tuple(
+        line.product_id
+        for line in lines
+        if line.product_id in everywhere and not by_line[line.product_id]
+    )
+    return by_line, only_elsewhere
 
 
 def _usable(
@@ -139,10 +158,17 @@ class _Basket:
     items: list[BasketItem]
     usable: list[planning.Box]
     by_listing: dict[str, Box]
+    # Medicines that pharmacies have, but none in the areas asked for.
+    only_elsewhere: tuple[uuid.UUID, ...] = ()
 
 
-def _basket(tx: Tx, lines: Sequence[BasketLine], pickup_day: date | None) -> _Basket:
-    by_line = _boxes_by_line(tx, lines)
+def _basket(
+    tx: Tx,
+    lines: Sequence[BasketLine],
+    pickup_day: date | None,
+    districts: frozenset[str] | None = None,
+) -> _Basket:
+    by_line, only_elsewhere = _boxes_by_line(tx, lines, districts)
     every_box = [box for boxes in by_line.values() for box in boxes]
     first_days = [box.pharmacy_days[0] for box in every_box if box.pharmacy_days]
     # Without a day from the client: the earliest day a pharmacy with a wanted box accepts.
@@ -165,7 +191,7 @@ def _basket(tx: Tx, lines: Sequence[BasketLine], pickup_day: date | None) -> _Ba
                     available=box.qty_available,
                 )
             )
-    return _Basket(day, items, usable, by_listing)
+    return _Basket(day, items, usable, by_listing, only_elsewhere)
 
 
 def _weighed(tx: Tx, location: Location, usable: Sequence[planning.Box]) -> list[uuid.UUID]:
@@ -198,7 +224,11 @@ def _weighed(tx: Tx, location: Location, usable: Sequence[planning.Box]) -> list
 
 
 def pharmacies_stocking(
-    tx: Tx, *, lines: Sequence[BasketLine], pickup_day: date | None = None
+    tx: Tx,
+    *,
+    lines: Sequence[BasketLine],
+    pickup_day: date | None = None,
+    districts: frozenset[str] | None = None,
 ) -> list[uuid.UUID]:
     """Every pharmacy with a box that can serve this basket, when there are more of them
     than the planner weighs; otherwise none.
@@ -207,18 +237,23 @@ def pharmacies_stocking(
     ones can be chosen. With few pharmacies there is no choice to make, and nothing to ask.
     """
     _checked(tx, lines)
-    usable = _basket(tx, lines, pickup_day).usable
+    usable = _basket(tx, lines, pickup_day, districts).usable
     stocking = sorted({uuid.UUID(box.pharmacy_id) for box in usable})
     return stocking if len(stocking) > PLAN_MAX_CANDIDATE_PHARMACIES else []
 
 
 def pharmacies_to_weigh(
-    tx: Tx, *, lines: Sequence[BasketLine], location: Location, pickup_day: date | None = None
+    tx: Tx,
+    *,
+    lines: Sequence[BasketLine],
+    location: Location,
+    pickup_day: date | None = None,
+    districts: frozenset[str] | None = None,
 ) -> list[uuid.UUID]:
     """The pharmacies `plan` will weigh for this basket: the trips between them, and from
     the client to them, are the road times a plan needs."""
     _checked(tx, lines)
-    return _weighed(tx, location, _basket(tx, lines, pickup_day).usable)
+    return _weighed(tx, location, _basket(tx, lines, pickup_day, districts).usable)
 
 
 def plan(
@@ -230,12 +265,15 @@ def plan(
     pickup_day: date | None = None,
     preference: Preference | None = None,
     max_plans: int = 3,
+    districts: frozenset[str] | None = None,
 ) -> Planned:
+    """`districts`: only the pharmacies of the areas the client asked to look in. The
+    trips still start from `location`, where the client is."""
     clients.require_search(clients.profile(tx, client_id))
     if pickup_day is not None and pickup_day < tx.today:
         raise ServiceError(Code.PICKUP_DAY_INVALID, "The pickup day can't be in the past.")
     _checked(tx, lines)
-    basket = _basket(tx, lines, pickup_day)
+    basket = _basket(tx, lines, pickup_day, districts)
     day, items, usable, by_listing = basket.day, basket.items, basket.usable, basket.by_listing
 
     unplannable = [
@@ -244,7 +282,7 @@ def plan(
         if not any(box.item_key == item.key for box in usable)
     ]
     if day is None or not usable:
-        return Planned(day, [], unplannable)
+        return Planned(day, [], unplannable, basket.only_elsewhere)
 
     in_play = _weighed(tx, location, usable)
     legs = travel.legs(tx, location, in_play)
@@ -288,4 +326,4 @@ def plan(
         )
         for trip in found
     ]
-    return Planned(day, trips, unplannable)
+    return Planned(day, trips, unplannable, basket.only_elsewhere)

@@ -1,6 +1,7 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { api, type Schemas, unwrap } from '../../api/client'
+import { PAGE_ROWS } from '../../components/usePage'
 
 // What the pharmacy's screens read. The counter's lists ask again every few seconds:
 // a new reservation must appear without anyone pressing a button.
@@ -24,13 +25,37 @@ export function useDashboard(enabled: boolean) {
   })
 }
 
-export function usePharmacyReservations(view: 'active' | 'history', enabled = true) {
+/** One page of the Reservations tab: `offset` is the paging's (`offsetOf(page)`). */
+export function usePharmacyReservations(view: 'active' | 'history', offset: number) {
   return useQuery({
-    queryKey: ['pharmacy', 'reservations', view],
+    queryKey: ['pharmacy', 'reservations', view, offset],
     queryFn: () =>
-      unwrap(api.GET('/api/v1/pharmacy/reservations', { params: { query: { view } } })),
-    enabled,
+      unwrap(
+        api.GET('/api/v1/pharmacy/reservations', {
+          params: { query: { view, cursor: offset, limit: PAGE_ROWS } },
+        }),
+      ),
     refetchInterval: view === 'active' ? REFRESH_MS : false,
+    // The rows, and the pager under them, stay while the next page comes.
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** The most reservations Today shows at once: the API's own most (docs/04 N-31). More
+ * are said as "N more on Reservations". */
+export const TODAY_ROWS = 50
+
+/** What is waiting to be handed over, the soonest deadline first, for Today. */
+export function useDueReservations() {
+  return useQuery({
+    queryKey: ['pharmacy', 'reservations', 'today'],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/pharmacy/reservations', {
+          params: { query: { view: 'active', limit: TODAY_ROWS } },
+        }),
+      ),
+    refetchInterval: REFRESH_MS,
   })
 }
 
@@ -54,43 +79,60 @@ export function useAsks(enabled: boolean) {
   })
 }
 
+/** How many answered asks Today shows under the open ones. */
+export const ASKS_ANSWERED_SHOWN = 5
+
+/** The asks the pharmacy answered, or that ended, the newest first (PS-9). */
+export function useAnsweredAsks(enabled: boolean) {
+  return useQuery({
+    queryKey: ['pharmacy', 'asks', 'history'],
+    queryFn: () =>
+      unwrap(api.GET('/api/v1/pharmacy/early-release-asks', { params: { query: { view: 'history' } } })),
+    enabled,
+    refetchInterval: REFRESH_MS,
+    select: (answer) => answer.items.slice(0, ASKS_ANSWERED_SHOWN),
+  })
+}
+
 // --- The stock (docs/03 PS-6, PS-7) -------------------------------------------------------
 
 export type Zone = 'NEAR_EXPIRY' | 'EARLY_RELEASE' | 'PRIVATE' | 'EXPIRED'
 
-const STOCK_PAGE = 50 // the most the API gives at once (docs/04 N-31)
+/** The orders of the stock's list: the soonest expiry first, or one medicine's boxes
+ * side by side (`sort` of GET /pharmacy/inventory). */
+export const STOCK_SORTS = ['expiry', 'medicine'] as const
+export type StockSort = (typeof STOCK_SORTS)[number]
 
-/**
- * The pharmacy's boxes, soonest expiry first, one page at a time: [Show more] asks for
- * the next one. `zone: 'NEAR_EXPIRY'` is its listings.
- */
 /** The longest search the API takes (`q` of /pharmacy/inventory and /catalog/products):
  * a longer one is refused, and the list would go blank. */
 export const SEARCH_MAX = 100
 
-export function useStock(zone: Zone | null, typed: string) {
-  const pages = useInfiniteQuery({
-    queryKey: ['pharmacy', 'stock', zone, typed],
-    queryFn: ({ pageParam }) =>
+/**
+ * One page of the pharmacy's boxes. `zone: 'NEAR_EXPIRY'` is its listings; `offset` is
+ * the paging's (`offsetOf(page)`).
+ */
+export function useStock(zone: Zone | null, typed: string, sort: StockSort, offset: number) {
+  const page = useQuery({
+    queryKey: ['pharmacy', 'stock', zone, typed, sort, offset],
+    queryFn: () =>
       unwrap(
         api.GET('/api/v1/pharmacy/inventory', {
           params: {
-            query: { q: typed, zone: zone ?? undefined, cursor: pageParam, limit: STOCK_PAGE },
+            query: { q: typed, zone: zone ?? undefined, sort, cursor: offset, limit: PAGE_ROWS },
           },
         }),
       ),
-    initialPageParam: 0,
-    getNextPageParam: (last) => (last.next_cursor ? Number(last.next_cursor) : undefined),
-    // While another search is fetched the rows already shown stay on the screen.
-    placeholderData: (before) => before,
+    // While another page or search is fetched the rows already shown stay on the screen.
+    placeholderData: keepPreviousData,
   })
   return {
-    items: pages.data?.pages.flatMap((page) => page.items) ?? [],
-    loaded: pages.isSuccess,
+    items: page.data?.items ?? [],
+    total: page.data?.total,
+    loaded: page.isSuccess,
+    // The answer shown is the one for these choices, not the one kept while it comes.
+    settled: page.isSuccess && !page.isPlaceholderData,
     // The first page is still coming: nothing to show yet, not even an earlier search.
-    pending: pages.isPending,
-    hasMore: pages.hasNextPage,
-    more: () => void pages.fetchNextPage(),
+    pending: page.isPending,
   }
 }
 

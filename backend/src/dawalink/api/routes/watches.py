@@ -25,12 +25,14 @@ from dawalink.api.deps import AsClient, DoWork, SignedIn
 from dawalink.api.routes.search import count_the_point, location_of
 from dawalink.api.schemas.common import (
     BeforeId,
+    CountedPage,
     In,
     LocationIn,
     Money,
     MoneyIn,
     Out,
     ProductSummary,
+    Skip,
 )
 from dawalink.db.models import Claim, District, Notification, Product
 from dawalink.domain.claims import LIVE_STATES
@@ -40,6 +42,7 @@ from dawalink.domain.vocabulary import ClaimKind, ClaimSource, UserRole
 from dawalink.services import claims, email
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 router = APIRouter(tags=["watches and notifications"])
 
@@ -169,7 +172,7 @@ class NotificationOut(Out):
     created_at: datetime
 
 
-class NotificationsPage(Out):
+class NotificationsPage(CountedPage):
     items: list[NotificationOut]
     next_cursor: str | None
     unread: int
@@ -240,15 +243,21 @@ def list_notifications(
     caller: SignedIn,
     work: DoWork,
     cursor: BeforeId = None,
+    offset: Skip = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> NotificationsPage:
-    """The caller's own notifications, the newest first. `cursor` is the last ID seen."""
+    """The caller's own notifications, the newest first. `cursor` is the last ID seen;
+    `offset` skips that many of what is left (the website's numbered pages send only
+    `offset`). `total` counts all of the caller's notifications, wherever the page is."""
     with work.tx() as tx:
-        statement = select(Notification).where(Notification.user_id == caller.user_id)
+        everything = select(Notification).where(Notification.user_id == caller.user_id)
+        statement = everything
         if cursor is not None:
             statement = statement.where(Notification.id < cursor)
         rows = (
-            tx.session.execute(statement.order_by(Notification.id.desc()).limit(limit + 1))
+            tx.session.execute(
+                statement.order_by(Notification.id.desc()).offset(offset).limit(limit + 1)
+            )
             .scalars()
             .all()
         )
@@ -256,6 +265,7 @@ def list_notifications(
         return NotificationsPage(
             items=[_notification(tx, row, caller.role) for row in shown],
             next_cursor=str(shown[-1].id) if len(rows) > limit and shown else None,
+            total=count_rows(tx, everything),
             unread=_unread(tx, caller.user_id),
         )
 

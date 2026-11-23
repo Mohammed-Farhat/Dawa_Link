@@ -87,28 +87,73 @@ describe("The pharmacy's inventory (PS-6)", () => {
     )
   })
 
-  it('shows more boxes a page at a time, as the API gives them', async () => {
+  it('shows the boxes in numbered pages of 25, the page in the address', async () => {
     const api = stockApi({
       'GET /api/v1/pharmacy/inventory': (call: { path: string }) =>
-        call.path.includes('cursor=50')
-          ? stockOf([PRIVATE_BOX])
-          : { ...stockOf([BOX]), next_cursor: '50' },
+        call.path.includes('cursor=25')
+          ? { ...stockOf([PRIVATE_BOX]), total: 26 }
+          : { ...stockOf([BOX]), next_cursor: '25', total: 26 },
     })
     renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
     const user = userEvent.setup()
 
     expect(await screen.findByText('A123')).toBeInTheDocument()
-    expect(screen.queryByText('Z9')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: stock.more }))
+    const pages = screen.getByRole('navigation', { name: strings.pager.label })
+    expect(within(pages).getByText(strings.pager.summary(1, 2, 26))).toBeInTheDocument()
+    await user.click(within(pages).getByRole('button', { name: strings.pager.page(2) }))
 
     expect(await screen.findByText('Z9')).toBeInTheDocument()
-    expect(screen.getByText('A123')).toBeInTheDocument()
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: stock.more })).not.toBeInTheDocument(),
-    )
-    // Never more than the API allows in one call (N-31).
+    expect(screen.queryByText('A123')).not.toBeInTheDocument()
+    // 25 a page, never more than the API allows in one call (N-31).
     const asked = api.sent('GET', '/api/v1/pharmacy/inventory?').map((call) => call.path)
-    expect(asked.every((path) => path.includes('limit=50'))).toBe(true)
+    expect(asked.every((path) => path.includes('limit=25'))).toBe(true)
+    expect(asked).toContainEqual(expect.stringContaining('cursor=25'))
+  })
+
+  it('puts the boxes of one medicine side by side, back on the first page', async () => {
+    const api = stockApi({
+      'GET /api/v1/pharmacy/inventory': { ...stockOf([BOX, PRIVATE_BOX]), total: 30 },
+    })
+    const { container } = renderApp(<AppRoutes />, { path: '/pharmacy/inventory?page=2' })
+    const user = userEvent.setup()
+
+    await screen.findByText('A123')
+    const order = screen.getByRole('group', { name: stock.sortLabel })
+    expect(within(order).getByRole('button', { name: stock.sorts.expiry })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(order).getByRole('button', { name: stock.sorts.medicine }))
+
+    await waitFor(() =>
+      expect(api.calls.map((call) => call.path)).toContainEqual(
+        expect.stringMatching(/inventory\?q=&sort=medicine&cursor=0&limit=25/),
+      ),
+    )
+    expect(within(order).getByRole('button', { name: stock.sorts.medicine })).toHaveAttribute('aria-pressed', 'true')
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it("says how to write a medicine's name in a stock file", async () => {
+    stockApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+
+    expect(await screen.findByText(/as the Ministry's price list writes it/)).toBeInTheDocument()
+    expect(screen.getByText(/2\.5mg is not 25mg/)).toBeInTheDocument()
+  })
+
+  it('writes a pack that is a bare number as "Pack: N" on the add-box choices', async () => {
+    stockApi({
+      'GET /api/v1/catalog/products': {
+        items: [{ ...RESERVATION.product, form: 'Tablet, film coated', pack: '30' }],
+        did_you_mean: [],
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(stock.add.product), 'augm')
+
+    expect(
+      await screen.findByRole('button', { name: /Tablet, film coated · Pack: 30 · 1,000,000 LBP/ }),
+    ).toBeInTheDocument()
   })
 
   it('adds a box typed by hand, the medicine chosen from the catalog', async () => {
@@ -472,6 +517,28 @@ describe("The pharmacy's listings (PS-7)", () => {
         expect.stringMatching(/inventory\?q=A12&zone=NEAR_EXPIRY/),
       ),
     )
+  })
+
+  it('comes in numbered pages, and puts two batches of one medicine side by side', async () => {
+    const api = listedApi({
+      'GET /api/v1/pharmacy/inventory': (call: { path: string }) => ({
+        ...stockOf([call.path.includes('cursor=25') ? { ...BOX, batch: 'LATE2' } : BOX]),
+        total: 27,
+      }),
+    })
+    const { container } = renderApp(<AppRoutes />, { path: '/pharmacy/listings?page=2' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(/Batch LATE2/)).toBeInTheDocument()
+    expect(screen.getByText(strings.pager.summary(2, 2, 27))).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: stock.sorts.medicine }))
+
+    await waitFor(() =>
+      expect(api.calls.map((call) => call.path)).toContainEqual(
+        expect.stringMatching(/zone=NEAR_EXPIRY&sort=medicine&cursor=0&limit=25/),
+      ),
+    )
+    expect(await accessibilityProblems(container)).toEqual([])
   })
 
   it('says the rule the pharmacy chose, with the way to change it', async () => {

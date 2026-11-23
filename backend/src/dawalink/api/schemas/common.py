@@ -60,6 +60,30 @@ DistrictId = Annotated[int, Field(ge=1, le=32_767)]
 AreaId = Annotated[int, Field(ge=1, le=32_767)]
 
 
+# --- Numbered pages ---------------------------------------------------------------------------
+# The website shows a long list as numbered pages ("Page 2 of 7 · 134 in all"). For that
+# a list's answer says how many rows its choices match, next to its own `items` and
+# `next_cursor`. The page itself is asked for as before: `cursor` is the rows to skip
+# (`Skip`); a list that goes on "before this ID" also takes `offset: Skip`, applied after
+# every filter, the ID included.
+
+
+class CountedPage(Out):
+    """Inherited by a list's answer (`class AdminPharmacies(CountedPage)`), so that its
+    name, and the website's types made from it, stay as they are."""
+
+    # The rows the list's filters match, counted with the same filters, never with the
+    # place in the list (`cursor`, `offset`, `limit`): the same on every page, and given
+    # with an empty page too, so that the website can move to the last page there is.
+    total: int = Field(ge=0)
+
+
+def next_cursor(skipped: int, limit: int, got: int) -> str | None:
+    """Where the next page starts, for a list that skips rows: `got` is what one row more
+    than the page brought back, so a row past the page means there is one."""
+    return str(skipped + limit) if got > limit else None
+
+
 class Message(Out):
     """A plain sentence, for the answers that say nothing else."""
 

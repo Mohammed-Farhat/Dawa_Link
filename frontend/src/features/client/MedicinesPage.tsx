@@ -1,11 +1,13 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type KeyboardEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner, Screen } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { reservationTone } from '../../components/reservationTone'
 import { Placeholder } from '../../components/Placeholder'
+import { PAGE_ROWS, usePage } from '../../components/usePage'
 import { dayClockInSentence, lbp, reservationWords } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
 import { useReservations, useWatches } from './data'
@@ -91,10 +93,33 @@ function Watching() {
   )
 }
 
+/**
+ * The History tab, one numbered page at a time (the owner, 2026-11-23): it grows with
+ * every reservation. "Active" needs no pages: a client holds a few reservations at most
+ * (docs/04 R-D24).
+ */
+function useHistory(offset: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['reservations', 'history', offset],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/reservations', { params: { query: { view: 'history', cursor: offset, limit: PAGE_ROWS } } }),
+      ),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
 /** "My medicines": one card per medicine (docs/11 §3.1), the watches first. */
 export function MedicinesPage() {
-  const [view, setView] = useState<Tab>('active')
-  const found = useReservations(view)
+  // The tab and the page are in the address: "Back to the list" from a reservation's
+  // details finds the same page of the history.
+  const paging = usePage()
+  const view: Tab = paging.params.get('view') === 'history' ? 'history' : 'active'
+  const setView = (tab: Tab) => paging.choose('view', tab === 'history' ? tab : null)
+  const active = useReservations('active')
+  const history = useHistory(paging.offset, view === 'history')
+  const found = view === 'active' ? active : history
   const items = found.data?.items ?? []
 
   // The tab pattern's keys: the arrows move between the two tabs (WAI-ARIA tabs).
@@ -131,7 +156,7 @@ export function MedicinesPage() {
       <div id="medicines-panel" role="tabpanel" aria-labelledby={`medicines-tab-${view}`} className="stack">
         {view === 'active' && <Watching />}
         {found.isPending && <Placeholder />}
-        {found.isSuccess && items.length === 0 && (
+        {found.isSuccess && items.length === 0 && !found.data.total && (
           <div className="empty">
             <span className="soft">{view === 'active' ? s.nothingActive : s.nothingBefore}</span>
             {/* Nothing to pick up: the ways to find something, as on Home. */}
@@ -179,6 +204,9 @@ export function MedicinesPage() {
             </article>
           ))}
         </div>
+        {view === 'history' && (
+          <Pager paging={paging} total={history.data?.total} settled={history.isSuccess && !history.isPlaceholderData} />
+        )}
       </div>
     </Screen>
   )

@@ -4,13 +4,16 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { calendarDate, lbp, plainAmount } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
 import { usePublicConfig } from '../client/data'
 import { Link } from 'react-router-dom'
 
-import { SEARCH_MAX, usePharmacy, useStock } from './data'
+import { SEARCH_MAX, type StockSort, usePharmacy, useStock } from './data'
+import { StockOrder } from './InventoryPage'
 
 const s = strings.pharmacy.listing
 const stockWords = strings.pharmacy.stock
@@ -27,7 +30,10 @@ export function ListingsPage() {
   // Forty tall cards are too many to scroll through for one box: the list endpoint
   // takes the same words as the inventory's search.
   const [typed, setTyped] = useState('')
-  const listed = useStock('NEAR_EXPIRY', typed.trim())
+  // The page and the order are in the address; the typed search stays in memory.
+  const paging = usePage()
+  const sort: StockSort = paging.params.get('sort') === 'medicine' ? 'medicine' : 'expiry'
+  const listed = useStock('NEAR_EXPIRY', typed.trim(), sort, paging.offset)
   const config = usePublicConfig()
   const pharmacy = usePharmacy()
   const rule = pharmacy.data?.auto_list_days
@@ -52,20 +58,20 @@ export function ListingsPage() {
           size="md"
           maxLength={SEARCH_MAX}
           value={typed}
-          onChange={(event) => setTyped(event.currentTarget.value)}
+          onChange={(event) => {
+            setTyped(event.currentTarget.value)
+            paging.firstPage()
+          }}
         />
+        <StockOrder sort={sort} onSort={(chosen) => paging.choose('sort', chosen === 'expiry' ? null : chosen)} />
         {listed.pending && <Placeholder height={160} />}
-        {listed.loaded && items.length === 0 && (
+        {listed.loaded && items.length === 0 && !listed.total && (
           <div className="empty">{typed.trim() ? stockWords.noneFound : s.none}</div>
         )}
         {items.map((item) => (
           <Listing key={item.id} item={item} rule={rule ?? 0} />
         ))}
-        {listed.hasMore && (
-          <button type="button" className="text-button" onClick={listed.more}>
-            {stockWords.more}
-          </button>
-        )}
+        <Pager paging={paging} total={listed.total} settled={listed.settled} />
       </main>
       <aside className="portal__aside">
         <section className="panel" aria-labelledby="tiers">

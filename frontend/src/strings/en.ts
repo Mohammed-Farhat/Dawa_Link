@@ -31,6 +31,18 @@ export const strings = {
     // The browser tab's name of a page that shows no heading (B#19).
     reservationTitle: 'Your reservation',
   },
+  // The pager under a long list (components/Pager.tsx). `label` is the default name of
+  // its menu; a page with two pagers gives each its own ("Pages of the audit log").
+  pager: {
+    label: 'Pages',
+    previous: 'Previous',
+    next: 'Next',
+    page: (page: number) => `Page ${page}`,
+    // Between two numbers that aren't next to each other ("1 … 7"); not read out.
+    gap: '…',
+    summary: (page: number, pages: number, total: number) =>
+      `Page ${page} of ${pages} · ${total.toLocaleString('en-US')} in all`,
+  },
   common: {
     back: 'Back',
     close: 'Close',
@@ -288,6 +300,8 @@ export const strings = {
     },
     tooLong: (max: number) => `A message has ${max.toLocaleString('en')} characters at most.`,
     team: 'DawaLink team',
+    // Above the box while DawaLink's team has the chat (the owner, 2026-11-22).
+    withTeam: 'You are writing to the DawaLink team. The assistant answers again when they close the case.',
     report: {
       open: 'Report this answer',
       title: 'What is wrong with this answer?',
@@ -323,6 +337,8 @@ export const strings = {
       home: (area: string) => `${area}, your home area`,
       chooseDistrict: 'Choose…',
       savedPlace: 'Your saved place',
+      // An area the client said they are in, in this chat: only this chat counts from it.
+      named: (area: string) => `${area} (you said you are here, for this chat)`,
     },
     system: {
       reserved: (ref: string) => `Reserved: ${ref}`,
@@ -336,6 +352,10 @@ export const strings = {
       expired: (ref: string) => `Missed pickup: ${ref} wasn't picked up in time`,
       request_reopened: (ref: string) => `Request ${ref} is open again: one box was lost.`,
       request_closed: (ref: string) => `Request ${ref} is closed.`,
+      // The team closed the client's case: the chat is the assistant's again.
+      team_closed: 'The DawaLink team closed your case. The assistant answers you here again.',
+      // The team stopped answering and the client wrote again (N-55).
+      assistant_back: 'The assistant answers you here again.',
       offer: 'A pharmacy has it for you.',
       // A box held for the client (B#15): what, until when, and where to accept it.
       offerHeld: (product: string, until: string) =>
@@ -353,7 +373,6 @@ export const strings = {
     unread: 'New',
     count: (count: number) => `${count} new`,
     markAll: 'Mark all as read',
-    more: 'Show older ones',
   },
   search: {
     title: 'Find a medicine',
@@ -665,6 +684,9 @@ export const strings = {
     nothingActive: 'No reservation is waiting.',
     nothingBefore: 'Nothing here yet.',
     numbers: 'Today in numbers',
+    // Today shows 50 waiting reservations at most; the rest are on the Reservations tab.
+    moreOnReservations: (count: number) =>
+      count === 1 ? '1 more on Reservations' : `${count} more on Reservations`,
     newReservations: 'New reservations',
     unitsReserved: 'Packs reserved',
     liveListings: 'Packs listed',
@@ -700,6 +722,19 @@ export const strings = {
       none: 'No pharmacy ask is waiting for you.',
       timeLeft: (hours: number, minutes: number) =>
         hours > 0 ? `${hours} H ${minutes} MIN` : `${minutes} MIN`,
+      // The section of Today where asks appear (PS-9), always shown to an approved
+      // pharmacy. Asks are sent only while the pharmacy is open (R-E2), with an email (PN-7).
+      section: 'Asks from DawaLink',
+      empty:
+        'When a client nearby needs a medicine you keep unlisted, DawaLink asks you here, while you are open. You also get an email.',
+      answeredTitle: 'Answered lately',
+      answered: {
+        ACCEPTED: 'you released it',
+        DECLINED: 'you declined',
+        EXPIRED: 'not answered in time',
+        // The need was met elsewhere or ended (a suspended pharmacy doesn't see Today's asks).
+        WITHDRAWN: 'no longer needed: withdrawn by DawaLink',
+      } as Record<string, string>,
     },
     notConfirmed: 'Email not confirmed',
     inventory: 'Inventory',
@@ -823,7 +858,12 @@ export const strings = {
         `${kept} reserved for clients were kept. To give one up, press Not available on its reservation.`,
       none: 'No box here yet. Upload your stock file, or add a box above.',
       noneFound: 'Nothing matches.',
-      more: 'Show more',
+      // The order of Inventory and Listings: by medicine, the boxes of one medicine (one
+      // per batch and expiry) stand side by side.
+      sortLabel: 'Order',
+      sorts: { expiry: 'Soonest expiry first', medicine: 'By medicine' },
+      // A pack the Ministry writes as a bare number ("30"), told apart from the form.
+      pack: (count: string) => `Pack: ${count}`,
       add: {
         title: 'Add one box',
         product: 'Medicine',
@@ -881,6 +921,9 @@ export const strings = {
       steps: [
         'Download the template and open it in Excel.',
         'One row per batch: the medicine, its batch, its expiry and how many packs you have.',
+        // True to services/inventory.py: a name is compared by its letters and numbers
+        // only (catalog.composition.normalize); a strength keeps its decimal point.
+        "Write the medicine's name as the Ministry's price list writes it, with the same letters and numbers. Capitals don't matter, and a sign such as %, - or . counts as a space. When one name has several strengths, add the strength (2.5mg is not 25mg).",
         'In Excel: File, Save As, and choose CSV. Then choose that file here.',
       ],
       expiryHint:
@@ -1246,7 +1289,24 @@ export const strings = {
       search: 'Name of a medicine',
       none: 'No product with this name.',
       table: 'Products',
-      columns: { name: 'Medicine', code: 'Code', pack: 'Form and pack', price: 'Public price', flags: 'Rules', same: 'Same medicine' },
+      // One line above the table: what the columns are, and what a "%" in a name means.
+      help: "Names, strengths, forms and packs are written as the Ministry's list writes them. A percentage in a name is that product's strength (a 0.9% solution, a 1% cream).",
+      columns: {
+        name: 'Medicine',
+        strength: 'Strength',
+        form: 'Form',
+        pack: 'Pack',
+        maker: 'Maker',
+        code: 'Code',
+        price: 'Public price',
+        flags: 'Rules',
+        same: 'Same medicine',
+      },
+      // A pack written as a bare number ("30") is said to be one, whatever the form.
+      packOf: (count: string) => `Pack: ${count}`,
+      // An empty value: shown as a dash, read out as "not given".
+      empty: '—',
+      emptyLabel: 'not given',
       controlled: 'Controlled: never shown',
       prescription: 'Prescription notice',
       // What the list is, never "no prescription needed": DawaLink never tells anyone that.
@@ -1284,7 +1344,21 @@ export const strings = {
       tools: 'Tool calls · tool errors',
       tokens: 'Tokens read · written',
       cost: 'Cost',
-      month: 'This month / budget',
+      limits: "The assistant's limits",
+      perClient: 'Limit per client',
+      perClientValue: (messages: number, tokens: number) =>
+        `${messages.toLocaleString('en')} messages and ${tokens.toLocaleString('en')} tokens a day`,
+      atLimit: 'Clients who reached a daily limit today',
+      atLimitValue: (byTokens: number, byMessages: number) =>
+        `${byTokens.toLocaleString('en')} by tokens · ${byMessages.toLocaleString('en')} by messages`,
+      perClientHint:
+        'Each client has their own limit. At either one, the assistant is off for that client until midnight (Beirut time); search and reserving still work.',
+      budget: 'Budget for everyone (a setting of this deployment)',
+      budgetMonth: 'This month',
+      budgetDay: (share: number) => `Today (${share}% of the month's)`,
+      spentOf: (spent: string, budget: string) => `${spent} of ${budget}`,
+      budgetHint:
+        "One budget for all the clients together. When the day's share is used, the assistant is off for everyone until midnight; when the month's is used, until the next month. Search and reserving still work. It is changed in the deployment's settings, not here.",
       model: 'Model',
       prompt: 'Prompt version',
       requests: 'Requests',
@@ -1355,6 +1429,14 @@ export const strings = {
       noteHint: 'What was done, for the team. The client does not see it.',
       closed: 'Closed.',
       resolvedNote: (note: string) => `Closed: ${note}`,
+      // The marks of a case on the list (the owner, 2026-11-22).
+      newAsk: 'New ask since your reply',
+      clientWrote: (when: string) => `The client wrote at ${when}`,
+      // Where the chat of a later ask, or of a reply, starts on the case's page.
+      anotherChat: 'Another chat of this client',
+      // While the client's chat is with the team: their messages come here, not to the assistant.
+      withTeam: (until: string) =>
+        `The client's messages in this chat come to you, not to the assistant. The assistant answers again when you close the case, or at ${until}.`,
     },
     reports: {
       title: 'Reported answers',
@@ -1374,19 +1456,22 @@ export const strings = {
     },
     audit: {
       title: 'Audit log',
-      intro: 'Who changed what. Nothing here can be edited or deleted.',
+      intro:
+        'Who did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.',
       kind: 'Kind of action',
+      // The families of `backend/src/dawalink/domain/audit_actions.py` (KINDS).
       kinds: {
         '': 'All',
-        'pharmacy.': 'Pharmacies',
-        'escalation.': 'Escalations',
-        'answer_report.': 'Reported answers',
-        'order.': 'Reservations',
-        'inventory.': 'Stock',
-        'clock.': 'Demo clock',
-        'pii.': 'Views of personal data',
-        'client.': 'Clients',
-        'abuse_flag.': 'Flags',
+        pharmacies: 'Pharmacies',
+        stock: 'Stock',
+        reservations: 'Reservations and offers',
+        clients: 'Clients',
+        requests: 'Requests and watches',
+        escalations: 'Escalations',
+        reports: 'Reported answers',
+        flags: 'Flags',
+        accounts: 'Logins, passwords and contact views',
+        clock: 'Demo clock',
       },
       actor: 'Who',
       actors: {
@@ -1397,10 +1482,244 @@ export const strings = {
         AGENT: 'Assistant',
         SYSTEM: 'System',
       },
-      entity: 'ID of the thing changed',
-      columns: { when: 'When', who: 'Who', action: 'Action', what: 'On', change: 'Change', reason: 'Reason' },
+      // [Only this] on a row: the events about that one thing.
+      only: 'Only this',
+      // Begins with the button's own words (WCAG 2.5.3).
+      onlyLabel: (thing: string) => `Only this ${thing}: show its events only`,
+      about: (thing: string) => `Showing only the events about one ${thing}.`,
+      showAll: 'Show every event',
+      // What a row is about, by its kind of row.
+      things: {
+        pharmacy: 'pharmacy',
+        inventory_item: 'box of stock',
+        inventory_upload: 'stock file',
+        order: 'reservation',
+        client: 'client',
+        claim: 'wait for a medicine',
+        sourcing_request: 'request',
+        request_item: 'medicine of a request',
+        early_release_request: 'ask to release stock',
+        early_release_ask: 'ask to a pharmacy',
+        escalation: 'case',
+        answer_report: 'reported answer',
+        abuse_flag: 'flag',
+        user: 'account',
+        app_state: 'demo clock',
+      } as Record<string, string>,
+      thing: 'thing',
+      columns: { when: 'When', who: 'Who', what: 'What happened', about: 'About', reason: 'Reason' },
       none: 'No event matches.',
       table: 'Audit events',
+      // Who did it. A client is an ID, never a name.
+      who: {
+        admin: 'An admin',
+        pharmacy: 'A pharmacy',
+        client: 'A client',
+        agent: 'The assistant',
+        system: 'The system',
+      },
+      // The link to the page an event is about.
+      links: {
+        pharmacy: 'The pharmacy',
+        client: (short: string) => `Client ${short}`,
+        escalation: 'The case',
+        reports: 'Reported answers',
+        clock: 'Demo clock',
+      },
+      // What happened, said after who did it ("An admin" + "approved a pharmacy"). Every
+      // code the backend writes has one (`AuditAction` in docs/openapi.json; a test says so).
+      actions: {
+        'pharmacy.registered': 'registered as a pharmacy (email not confirmed yet)',
+        'pharmacy.in_queue': 'confirmed its email and waits for approval',
+        'pharmacy.registration_edit': 'corrected its registration',
+        'pharmacy.resubmitted': 'sent its registration again after a rejection',
+        'pharmacy.approve': 'approved a pharmacy',
+        'pharmacy.reject': 'rejected a pharmacy',
+        'pharmacy.request_info': 'asked a pharmacy for more information',
+        'pharmacy.admin_edit': "corrected a pharmacy's details",
+        'pharmacy.pin_checked': "confirmed a pharmacy's map pin",
+        'pharmacy.suspend': 'suspended a pharmacy',
+        'pharmacy.reinstate': 'reinstated a pharmacy',
+        'pharmacy.phone_changed': 'changed its phone number',
+        'pharmacy.moved': 'changed its address or its map pin',
+        'pharmacy.listing_rule': 'changed when its boxes are listed by themselves',
+        'pharmacy.settings': 'changed its opening hours or its pickup time',
+        'inventory.add': 'added a box to its stock',
+        'inventory.edit': 'changed a box of its stock',
+        'inventory.upload_apply': 'applied a stock file',
+        'order.reserve': 'reserved a medicine',
+        'order.cancel': 'cancelled a reservation',
+        'order.system_cancel': 'cancelled a reservation',
+        'order.picked_up': 'handed over a reservation at the counter',
+        'order.not_available': 'marked a reservation not available',
+        'order.no_show': 'counted a missed pickup: not collected by its deadline',
+        'order.no_show_contested': 'contested a missed pickup: says it was collected',
+        'order.no_show_cleared': 'cleared a missed pickup',
+        'order.offer': 'held a box for a waiting client (an offer)',
+        'order.accept_offer': 'accepted an offer',
+        'order.decline_offer': 'declined an offer',
+        'order.offer_expired': 'ended an offer that got no answer',
+        'order.withdraw': 'withdrew an offer',
+        'client.registered': 'signed up',
+        'client.registered_again': 'signed up again before confirming their email',
+        'client.verified': 'confirmed their email',
+        'client.pause': "paused a client's reservations after missed pickups",
+        'client.pause_lifted': "lifted a client's pause",
+        'client.pause_ended': "ended a client's pause: its time was over",
+        'client.suspend': 'suspended a client',
+        'client.reinstate': 'reinstated a client',
+        'client.deleted': 'deleted their account',
+        'claim.create': 'started waiting for a medicine',
+        'claim.state': 'changed a wait for a medicine',
+        'request.create': 'started a sourcing request',
+        'request.change_constraints': 'changed whether a request may take other brands',
+        'request.close': 'closed a request',
+        'request.reopen': 'opened a request again: a reserved box was lost at the pharmacy',
+        'request_item.state': 'changed a medicine of a request',
+        'early_release.request': 'asked pharmacies to release stock they keep private',
+        'early_release.close': 'closed an ask to release stock',
+        'early_release_ask.state': 'changed an ask to a pharmacy',
+        'escalation.open': 'asked for a person',
+        'escalation.append': 'added a new ask to an open case',
+        'escalation.reply': 'replied to a client',
+        'escalation.resolve': 'closed a case',
+        'answer_report.new': 'reported an answer of the assistant',
+        'answer_report.confirm': 'marked a reported answer as a real problem',
+        'answer_report.dismiss': 'marked a reported answer as not a problem',
+        'answer_report.export': 'downloaded the regression cases',
+        'abuse_flag.dismiss': 'dismissed a flag',
+        'abuse_flag.warn': 'noted a warning on a flag',
+        'abuse_flag.suspend': 'suspended an account from a flag',
+        'pii.view': "viewed a client's contact details",
+        'pii.view_limit': 'reached the limit of contact views in an hour',
+        'login.locked': 'locked a login after too many wrong tries',
+        'password.changed': 'changed their password',
+        'password.reset': 'reset their password with an email link',
+        'admin.created': 'created an admin account, from the command line',
+        'clock.advance': 'moved the demo clock forward',
+      },
+      // The events whose sentence depends on the state they moved to.
+      byState: {
+        'claim.state': {
+          ACTIVE: 'started waiting for a medicine again',
+          OFFER_PENDING: 'offered a box to a waiting client',
+          FULFILLED: 'ended a wait: the medicine was reserved',
+          EXPIRED: 'ended a wait: its time ran out',
+          CANCELLED: 'stopped a wait for a medicine',
+        },
+        'request.close': {
+          FULFILLED: 'closed a request: everything was found',
+          PARTIAL: 'closed a request: some of it was found',
+          UNFULFILLED: 'closed a request: nothing was found',
+          CANCELLED: 'cancelled a request',
+        },
+        'request_item.state': {
+          SEARCHING: 'searched again for a medicine of a request',
+          PROPOSED: 'proposed a plan for a medicine of a request',
+          WAITING: 'set a medicine of a request to wait for stock',
+          SECURED: 'reserved every pack of a medicine of a request',
+          UNAVAILABLE: 'marked a medicine of a request not found',
+          CANCELLED: 'gave up a medicine of a request',
+        },
+        'early_release.close': {
+          FULFILLED: 'closed an ask to release stock: the client accepted',
+          UNFULFILLED: 'closed an ask to release stock: no pharmacy could',
+          CANCELLED: 'stopped an ask to release stock',
+        },
+        'early_release_ask.state': {
+          ACCEPTED: 'agreed to release a box',
+          DECLINED: 'declined to release a box',
+          EXPIRED: 'did not answer an ask in time',
+          WITHDRAWN: 'withdrew an ask to a pharmacy',
+        },
+      } as Record<string, Record<string, string>>,
+      // A code no sentence knows (an event older than this page): said as it is stored.
+      unknownAction: (code: string) => `recorded "${code}"`,
+      changed: (fields: string) => `Changed: ${fields}`,
+      // The names of the fields, never their values.
+      fields: {
+        name: 'name',
+        license_number: 'licence',
+        phone: 'phone number',
+        address: 'address',
+        district_id: 'district',
+        lat: 'map pin',
+        lon: 'map pin',
+        password: 'password',
+        hours: 'opening hours',
+        pickup_days: 'pickup time',
+        auto_list_days: 'when its boxes are listed',
+        qty_on_hand: 'quantity',
+        price_override_lbp: 'price',
+        qty_locked: 'packs held',
+        paused_until: 'end of the pause',
+        offset_seconds: "the app's time",
+        alternatives_ok: 'other brands',
+      } as Record<string, string>,
+      moved: (from: string, to: string) => `From ${from} to ${to}`,
+      // The app's own states, in words.
+      states: {
+        PENDING: 'waiting',
+        APPROVED: 'approved',
+        REJECTED: 'rejected',
+        SUSPENDED: 'suspended',
+        UNVERIFIED: 'email not confirmed',
+        ACTIVE: 'active',
+        PAUSED: 'paused',
+        DELETED: 'deleted',
+        OFFERED: 'offered',
+        RESERVED: 'reserved',
+        PICKED_UP: 'picked up',
+        NOT_AVAILABLE: 'not available',
+        EXPIRED_NO_SHOW: 'missed pickup',
+        CANCELLED_BY_CLIENT: 'cancelled by the client',
+        CANCELLED_BY_SYSTEM: 'cancelled by DawaLink',
+        OFFER_DECLINED: 'offer declined',
+        OFFER_EXPIRED: 'offer ran out',
+        OFFER_WITHDRAWN: 'offer withdrawn',
+        OPEN: 'open',
+        IN_PROGRESS: 'answered',
+        RESOLVED: 'closed',
+        CLOSED: 'closed',
+        NEW: 'new',
+        DISMISSED: 'not a problem',
+        CONFIRMED: 'real problem',
+        ACTIONED: 'acted on',
+        LIVE: 'follows its rule',
+        LISTED: 'listed by hand',
+        OFFER_PENDING: 'offer waiting',
+        FULFILLED: 'found',
+        PARTIAL: 'partly found',
+        UNFULFILLED: 'not found',
+        EXPIRED: 'ran out',
+        CANCELLED: 'cancelled',
+        SEARCHING: 'searching',
+        PROPOSED: 'plan ready',
+        WAITING: 'waiting for stock',
+        SECURED: 'all reserved',
+        UNAVAILABLE: 'not found',
+        ACCEPTED: 'accepted',
+        DECLINED: 'declined',
+        WITHDRAWN: 'withdrawn',
+        VALIDATED: 'checked',
+        APPLIED: 'applied',
+      } as Record<string, string>,
+      // How many things the action ended or touched.
+      counts: {
+        offers_cancelled: (n: number) => (n === 1 ? '1 offer cancelled' : `${n} offers cancelled`),
+        asks_withdrawn: (n: number) => (n === 1 ? '1 ask withdrawn' : `${n} asks withdrawn`),
+        orders_cancelled: (n: number) => (n === 1 ? '1 reservation cancelled' : `${n} reservations cancelled`),
+        requests_closed: (n: number) => (n === 1 ? '1 request closed' : `${n} requests closed`),
+        watches_ended: (n: number) => (n === 1 ? '1 watch ended' : `${n} watches ended`),
+        flags_closed: (n: number) => (n === 1 ? '1 flag closed' : `${n} flags closed`),
+        escalations_closed: (n: number) => (n === 1 ? '1 case closed' : `${n} cases closed`),
+        boxes: (n: number) => (n === 1 ? '1 box' : `${n} boxes`),
+        cases: (n: number) => (n === 1 ? '1 case' : `${n} cases`),
+        items: (n: number) => (n === 1 ? '1 medicine' : `${n} medicines`),
+        asks: (n: number) => (n === 1 ? '1 pharmacy asked' : `${n} pharmacies asked`),
+      } as Record<string, (n: number) => string>,
+      // What a code chosen from the app's own list means: a watch or a request's medicine.
+      claimKinds: { WATCH: 'a watch', REQUEST_ITEM: 'a medicine of a request' } as Record<string, string>,
     },
     clock: {
       title: 'Demo clock',

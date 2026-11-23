@@ -33,7 +33,7 @@ const GREEN_NOTICE_MS = 6000
 
 /** How a send ended. `kept`: the API stored the message, whatever came after. */
 type Sent =
-  | { outcome: 'answered' }
+  | { outcome: 'answered'; withTeam: boolean }
   | { outcome: 'dropped' }
   | { outcome: 'refused'; failure: Failure; kept: boolean }
 
@@ -46,6 +46,8 @@ function locationLabel(location: Schemas['LocationSummary']): string | null {
   if (location.source === 'shared') return s.location.yours
   if (location.source === 'place') return s.location.savedPlace
   if (location.source === 'profile' && location.label) return s.location.home(location.label)
+  // Named in this chat as where the client is: it never changes the saved place.
+  if (location.source === 'area' && location.label) return s.location.named(location.label)
   return location.label ?? null
 }
 
@@ -293,6 +295,12 @@ export function Conversation({
     awaitingAfter === null ||
     messages.some((message) => message.author === 'agent' && message.seq > awaitingAfter)
   const working = pending !== null || Boolean(page.data?.busy) || !answered
+  // DawaLink's team has this chat (the owner, 2026-11-22): what the client writes goes to
+  // the team, and the assistant answers again when the team closes the case. Nothing here
+  // says the assistant is working, and its quick replies are not offered.
+  const withTeam = Boolean(page.data?.with_team) && !earlier
+  // The box to write in: never under an earlier chat or a closed request.
+  const writable = thread ? thread.canWrite : !earlier && !page.data?.archived
   // A poll during the turn already brought the client's own message back.
   const stored = messages.some((message) => message.author === 'client' && message.seq > pendingAfter)
 
@@ -333,19 +341,22 @@ export function Conversation({
     // Anything inside the stream comes after the API stored the message.
     let kept = false
     let failure: Failure | null = null
+    // The message went to DawaLink's team, which has this chat: no answer is coming.
+    let withTeam = false
     try {
-      await sendMessage(conversationId, text, messageId, (event: ChatEvent) => {
+      const accepted = await sendMessage(conversationId, text, messageId, (event: ChatEvent) => {
         kept = true
         if (event.name === 'progress') setProgress(event.data.label)
         if (event.name === 'error') failure = event.data.error
       })
+      withTeam = accepted.withTeam
     } catch (error) {
       if (error instanceof StreamDropped) return { outcome: 'dropped' }
       failure =
         error instanceof ApiFailure ? { code: error.code, details: error.details } : { code: 'INTERNAL_ERROR' }
     }
     const found = failure as Failure | null
-    return found === null ? { outcome: 'answered' } : { outcome: 'refused', failure: found, kept }
+    return found === null ? { outcome: 'answered', withTeam } : { outcome: 'refused', failure: found, kept }
   }
 
   async function send(raw: string) {
@@ -372,7 +383,8 @@ export function Conversation({
         const sent = await sendOnce(text, messageId)
         if (sent.outcome === 'answered') {
           setDegraded(false)
-          if (thread) setAwaitingAfter(newest)
+          // A message to DawaLink's team gets no answer of the assistant: nothing to wait for.
+          if (thread && !sent.withTeam) setAwaitingAfter(newest)
           break
         }
         if (sent.outcome === 'dropped') {
@@ -603,7 +615,7 @@ export function Conversation({
               {strings.banner.degraded}
             </Banner>
           )}
-          {working && <div className="progress-line">{progress ?? s.working}</div>}
+          {working && !withTeam && <div className="progress-line">{progress ?? s.working}</div>}
           {dropped && working && <Banner tone="grey">{s.replyComing}</Banner>}
           {notice && (
             <Banner
@@ -624,7 +636,7 @@ export function Conversation({
 
         {/* They only write an answer for the client: what reserves is a card's button,
             so they look like words to say, not like buttons that do something (B#8). */}
-        {!working && !earlier && last?.author === 'agent' && last.quick_replies.length > 0 && (
+        {!working && !earlier && !withTeam && last?.author === 'agent' && last.quick_replies.length > 0 && (
           <div className="chat__replies">
             <span id={`replies-${conversationId}`} className="hint">
               {s.quickRepliesIntro}
@@ -657,11 +669,8 @@ export function Conversation({
           </button>
         </div>
       )}
-      <form
-        className="chat__form"
-        onSubmit={submit}
-        hidden={thread ? !thread.canWrite : Boolean(earlier) || Boolean(page.data?.archived)}
-      >
+      {withTeam && writable && <Banner tone="grey">{s.withTeam}</Banner>}
+      <form className="chat__form" onSubmit={submit} hidden={!writable}>
         <label htmlFor="chat-message" className="sr-only">
           {s.messageLabel}
         </label>

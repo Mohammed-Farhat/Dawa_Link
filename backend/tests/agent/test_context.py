@@ -130,9 +130,13 @@ class TestTheFacts:
             "Pharmacy, units 1, price 700,000 LBP (about $7.82), pickup_by Tue 21:00"
         ) in text
         assert "Secret Lane" not in text
-        described = f"order {ref} (AUGMENTIN 1G x 1 at Hamra Pharmacy)"
-        assert f"not_available: the pharmacy marked {described} not available for 1 unit(s)" in text
-        assert f"system_cancelled: DawaLink cancelled {described}" in text
+        # An order is described with what a turn needs to search again without asking:
+        # the product and its ID, how many, the days of use, the day it was reserved for.
+        assert f"not_available: the pharmacy marked order {ref} (AUGMENTIN 1G" in text
+        assert f"system_cancelled: DawaLink cancelled order {ref} (AUGMENTIN 1G" in text
+        assert " x 1 at Hamra Pharmacy; product_id " in text
+        assert "day(s) of use" in text
+        assert "not available for 1 unit(s)" in text
         assert "early_release_unfulfilled: no pharmacy released stock for CONCOR 5MG" in text
         assert "group_item_failed: a plan card couldn't be reserved, nothing was. box-1: " in text
         assert "items_unticked: the client left these items unticked: box-2" in text

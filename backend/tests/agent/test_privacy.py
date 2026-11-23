@@ -21,7 +21,7 @@ from dawalink.agent.llm import ModelReply, Prompt, ToolResults
 from dawalink.agent.llm.scripted import call, calls, reply
 from dawalink.agent.pending import PendingTurns
 from dawalink.agent.tools import ALL
-from dawalink.services import proposals
+from dawalink.services import escalations, proposals
 from tests.agent.conftest import Scene
 from tests.agent.test_worker_turns import RecordingTracer
 from tests.db.factories import TODAY
@@ -169,6 +169,11 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         text="Hello Rami Haddad, we called 70 123 456 and wrote to rami.haddad@example.test. "
         "The pharmacy at 33.8961, 35.4832 answers on 01 555 444.",
     )
+    world.settle(tx)
+    # After a team reply the chat is with the team (the owner, 2026-11-22): the assistant
+    # reads it again, the team's line included, once the case is closed.
+    tx = world.tx()
+    escalations.resolve(tx, admin, escalation.id, note="")
     world.settle(tx)
 
     # --- Turn 2b, in the chat: the client names an area instead of sharing a location ---

@@ -289,6 +289,7 @@ export function page(messages: ReturnType<typeof message>[], more: object = {}) 
     last_seq: messages.length ? messages[messages.length - 1].seq : 0,
     busy: false,
     archived: false,
+    with_team: false,
     location: { source: 'profile', label: 'Beirut' },
     server_now: '2026-11-16T08:00:00Z',
     ...more,

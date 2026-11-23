@@ -5,7 +5,9 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { errorMessage, strings } from '../../strings/en'
 import { useDistricts } from '../client/data'
 import {
@@ -19,7 +21,6 @@ import {
   useAdminPharmacy,
   useBackToList,
   useFromList,
-  useListChoices,
   useOverview,
   when,
 } from './data'
@@ -54,12 +55,15 @@ const TONE: Record<PharmacyStatus, string> = {
 
 /** AS-3 and AS-4: the approval queue first, then every pharmacy by status. */
 export function PharmaciesPage() {
-  const [choices, choose] = useListChoices()
+  // The tab, the typed text and the page are in the address (`usePage`): "Back to the
+  // list" finds the same page.
+  const paging = usePage()
+  const { params: choices, choose } = paging
   const status = oneOf(choices.get('status'), STATUSES, 'PENDING') ?? 'PENDING'
   // The box keeps its own text, so typing never waits for the address to change.
   // Never longer than the API takes, an old address included: it would fail on every visit.
   const [typed, setTyped] = useState((choices.get('q') ?? '').slice(0, TYPED_MAX.search))
-  const found = useAdminPharmacies(status, typed.trim())
+  const found = useAdminPharmacies(status, typed.trim(), paging.offset)
   const toCheck = useOverview().data?.pins_to_check ?? 0
   const from = useFromList()
   // The box is what the list shows. If the address lost its text (a tab of the bar was
@@ -131,11 +135,7 @@ export function PharmaciesPage() {
           </Link>
         </article>
       ))}
-      {found.hasMore && (
-        <button type="button" className="text-button" onClick={found.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={found.total} settled={found.settled} />
     </main>
   )
 }

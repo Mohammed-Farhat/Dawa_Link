@@ -249,6 +249,53 @@ def archive_chats(tx: Tx, client_id: uuid.UUID) -> None:
     tx.session.flush()
 
 
+def new_chat(tx: Tx, client_id: uuid.UUID) -> Conversation:
+    """[New chat]: the chat is put away and a fresh one starts.
+
+    An event still waiting for the assistant in the old chat moves to the new one (a
+    reservation marked not available, say): an archived chat gets no turn, and while
+    DawaLink's team had the old chat that turn was put off for hours (found by review,
+    2026-11-23). The event's own facts say which order it is about.
+    """
+    waiting = (
+        tx.session.execute(
+            select(Conversation).where(
+                Conversation.client_id == client_id,
+                Conversation.kind == "chat",
+                Conversation.status == "ACTIVE",
+                Conversation.pending_turn_at.is_not(None),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    carried: list[str] = []
+    for old in waiting:
+        read_up_to = int((old.case_state or {}).get("read_up_to", 0))
+        carried += [
+            body
+            for body in tx.session.execute(
+                select(ChatMessage.text_redacted)
+                .where(
+                    ChatMessage.conversation_id == old.id,
+                    ChatMessage.kind == "event",
+                    ChatMessage.seq > read_up_to,
+                )
+                .order_by(ChatMessage.seq)
+            ).scalars()
+            if body
+        ]
+        old.pending_turn_at = None
+    archive_chats(tx, client_id)
+    chat = active_chat(tx, client_id)
+    for body in carried:
+        append(tx, chat, author="system", kind="event", text=body)
+    if carried:
+        chat.pending_turn_at = tx.now
+        chat.turn_attempts = 0
+    return chat
+
+
 def set_location(tx: Tx, conversation: Conversation, location: "Location") -> None:
     """Where this chat's travel times are counted from. It replaces any earlier location,
     and it is kept beside the agent's working memory, never inside it (INV-24)."""

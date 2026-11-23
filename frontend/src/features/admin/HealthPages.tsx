@@ -2,7 +2,9 @@ import { TextInput } from '@mantine/core'
 import { useState } from 'react'
 
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { lbp } from '../../format'
 import { strings } from '../../strings/en'
 import { loadProblem, TYPED_MAX, useAdminHealth, useCatalog, useCatalogImports } from './data'
@@ -30,7 +32,18 @@ function dollars(value: unknown): string {
   return typeof value === 'number' ? `$${value.toFixed(2)}` : h.none
 }
 
-function Facts({ title, id, rows }: { title: string; id: string; rows: [string, string][] }) {
+function Facts({
+  title,
+  id,
+  rows,
+  note,
+}: {
+  title: string
+  id: string
+  rows: [string, string][]
+  /** What the numbers mean, under them. */
+  note?: string
+}) {
   return (
     <section className="panel" aria-labelledby={id}>
       <h2 id={id} className="panel__title">
@@ -44,8 +57,14 @@ function Facts({ title, id, rows }: { title: string; id: string; rows: [string, 
           </div>
         ))}
       </dl>
+      {note && <p className="hint">{note}</p>}
     </section>
   )
+}
+
+/** A whole number the API sent, or 0 (an older server sends none). */
+function count(value: unknown): number {
+  return typeof value === 'number' ? value : 0
 }
 
 /** AS-2 and AS-10: how the agent and the system are doing, from our own tables, and the
@@ -118,10 +137,31 @@ export function HealthPage() {
               [h.tools, `${number(agent.tool_calls)} · ${number(agent.tool_errors)}`],
               [h.tokens, `${number(agent.tokens_in)} · ${number(agent.tokens_out)}`],
               [h.cost, dollars(agent.cost_usd)],
-              [h.month, `${dollars(agent.month_spend_usd)} / ${dollars(agent.month_budget_usd)}`],
               [h.model, typeof agent.model === 'string' ? agent.model : h.none],
               [h.prompt, typeof agent.prompt_version === 'string' ? agent.prompt_version : h.none],
             ]}
+          />
+          {/* Two different limits (the owner, 2026-11-23): each client's own, counted in
+              messages and tokens (never in dollars: a token's price depends on the
+              model), and one budget in dollars for everyone, a setting of this
+              deployment. The numbers are the server's. */}
+          <Facts
+            id="limits"
+            title={h.limits}
+            rows={[
+              [h.perClient, h.perClientValue(count(agent.messages_per_day_per_client), count(agent.tokens_per_day_per_client))],
+              [h.atLimit, h.atLimitValue(count(agent.clients_at_token_limit_today), count(agent.clients_at_message_limit_today))],
+            ]}
+            note={h.perClientHint}
+          />
+          <Facts
+            id="budget"
+            title={h.budget}
+            rows={[
+              [h.budgetMonth, h.spentOf(dollars(agent.month_spend_usd), dollars(agent.month_budget_usd))],
+              [h.budgetDay(count(agent.day_share_percent)), h.spentOf(dollars(agent.day_spend_usd), dollars(agent.day_budget_usd))],
+            ]}
+            note={h.budgetHint}
           />
           <Facts
             id="requests"
@@ -169,10 +209,34 @@ export function HealthPage() {
   )
 }
 
-/** AS-9: the catalog as imported, to read. It changes by the import script only. */
+/** A value the Ministry's list leaves empty: a dash to see, "not given" to hear. */
+function Empty() {
+  return (
+    <>
+      <span aria-hidden="true">{k.empty}</span>
+      <span className="sr-only">{k.emptyLabel}</span>
+    </>
+  )
+}
+
+/** A pack as the list writes it; a bare number ("30") is said to be a pack of that many. */
+function pack(value: string | null) {
+  const written = value?.trim()
+  if (!written) return <Empty />
+  return /^[0-9]+$/.test(written) ? k.packOf(written) : written
+}
+
+function shown(value: string | null) {
+  return value?.trim() ? value : <Empty />
+}
+
+/** AS-9: the catalog as imported, to read. It changes by the import script only. The
+ * columns are display only: the stored names, strengths, forms and packs are the
+ * Ministry's, as they are. */
 export function CatalogPage() {
+  const paging = usePage()
   const [typed, setTyped] = useState('')
-  const found = useCatalog(typed.trim())
+  const found = useCatalog(typed.trim(), paging.offset)
   const imports = useCatalogImports()
   const latest = imports.data?.items[0]
   return (
@@ -190,20 +254,28 @@ export function CatalogPage() {
         autoComplete="off"
         maxLength={TYPED_MAX.search}
         value={typed}
-        onChange={(event) => setTyped(event.currentTarget.value)}
+        onChange={(event) => {
+          setTyped(event.currentTarget.value)
+          // A new text is a new list: its first page.
+          paging.firstPage()
+        }}
       />
       {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
       {found.loading && <Placeholder height={56} />}
       {found.loaded && found.items.length === 0 && <div className="empty">{k.none}</div>}
       {found.items.length > 0 && (
         <section className="panel">
+          <p className="soft">{k.help}</p>
           <div className="table-scroll" role="region" aria-label={k.table} tabIndex={0}>
             <table className="stock-table">
               <thead>
                 <tr>
                   <th scope="col">{k.columns.name}</th>
-                  <th scope="col">{k.columns.code}</th>
+                  <th scope="col">{k.columns.strength}</th>
+                  <th scope="col">{k.columns.form}</th>
                   <th scope="col">{k.columns.pack}</th>
+                  <th scope="col">{k.columns.maker}</th>
+                  <th scope="col">{k.columns.code}</th>
                   <th scope="col">{k.columns.price}</th>
                   <th scope="col">{k.columns.flags}</th>
                   <th scope="col">{k.columns.same}</th>
@@ -212,12 +284,12 @@ export function CatalogPage() {
               <tbody>
                 {found.items.map((product) => (
                   <tr key={product.id}>
-                    <th scope="row">
-                      {product.name}
-                      {product.strength && <span className="hint"> · {product.strength}</span>}
-                    </th>
+                    <th scope="row">{product.name}</th>
+                    <td>{shown(product.strength)}</td>
+                    <td>{shown(product.form)}</td>
+                    <td>{pack(product.pack)}</td>
+                    <td>{shown(product.manufacturer)}</td>
                     <td>{product.code}</td>
-                    <td>{[product.form, product.pack].filter(Boolean).join(' ')}</td>
                     <td>{lbp(product.public_price_lbp)}</td>
                     <td>
                       {product.controlled ? (
@@ -236,11 +308,7 @@ export function CatalogPage() {
           </div>
         </section>
       )}
-      {found.hasMore && (
-        <button type="button" className="text-button" onClick={found.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={found.total} settled={found.settled} />
     </main>
   )
 }

@@ -16,6 +16,7 @@ from sqlalchemy import text
 
 import dawalink.agent.tools as tools_package
 from dawalink.agent.tools import ALL, REPLY_SPEC, for_mode
+from dawalink.agent.tools.act import NOBODY_ASKED
 from dawalink.domain.vocabulary import AgentMode
 from dawalink.services.requests import RequestLine
 from tests.agent.conftest import Scene
@@ -664,7 +665,8 @@ class TestInARequest:
 
         asked = scene.tool("request_early_release", thread, claim_id=claim["claim_id"])
 
-        assert asked == {"ok": True, "asked": 0, "reason": "no_candidates"}
+        # Nobody was asked, and the tool says so in words the reply can't twist into "I asked".
+        assert asked == {"ok": True, "asked": 0, "reason": "no_candidates", "note": NOBODY_ASKED}
 
     def test_the_agent_cant_ask_past_the_limits_and_is_told_so(self, scene: Scene) -> None:
         """FS-14, R-E3, R-E5: a pharmacy that had its ten asks today is left alone, and a
@@ -682,7 +684,12 @@ class TestInARequest:
             scene.world.make.early_release_request(client_id=scene.client)
         client_is_full = scene.tool("request_early_release", thread, claim_id=claim)
 
-        assert pharmacy_is_full == {"ok": True, "asked": 0, "reason": "no_candidates"}
+        assert pharmacy_is_full == {
+            "ok": True,
+            "asked": 0,
+            "reason": "no_candidates",
+            "note": NOBODY_ASKED,
+        }
         assert (client_is_full["ok"], client_is_full["error_code"]) == (
             False,
             "LIMIT_EARLY_RELEASE",

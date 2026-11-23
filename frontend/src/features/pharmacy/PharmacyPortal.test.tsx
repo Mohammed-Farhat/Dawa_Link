@@ -69,10 +69,119 @@ function pharmacyApi(more: Record<string, unknown> = {}) {
     'GET /api/v1/pharmacy/dashboard': NUMBERS,
     'GET /api/v1/pharmacy/reservations': (call: { path: string }) =>
       call.path.includes('q=') && !call.path.includes('q=R-7K3Q2F') ? list([]) : list([HELD]),
-    'GET /api/v1/pharmacy/early-release-asks': { items: [ASK], server_now: NOW },
+    'GET /api/v1/pharmacy/early-release-asks': (call: { path: string }) =>
+      call.path.includes('view=history') ? { items: [], server_now: NOW } : { items: [ASK], server_now: NOW },
     ...more,
   })
 }
+
+describe('Asks from DawaLink, on Today (PS-9)', () => {
+  it('is always there: it says what will appear, and when', async () => {
+    pharmacyApi({ 'GET /api/v1/pharmacy/early-release-asks': { items: [], server_now: NOW } })
+    const { container } = renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const asks = await screen.findByRole('region', { name: s.ask.section })
+    expect(await within(asks).findByText(s.ask.empty)).toBeInTheDocument()
+    // Nothing answered yet: no list, not even its heading.
+    expect(within(asks).queryByText(s.ask.answeredTitle)).not.toBeInTheDocument()
+    // The counter stays first (docs/11 §3.2).
+    const counter = screen.getByRole('heading', { name: s.counter })
+    expect(counter.compareDocumentPosition(asks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('holds the open asks, and under them the last five answered with what happened', async () => {
+    const answered = (state: string, at: number) => ({
+      ...ASK,
+      id: `88888888-8888-4888-8888-88888888880${at}`,
+      state,
+      answered_at: state === 'EXPIRED' ? null : NOW,
+    })
+    pharmacyApi({
+      'GET /api/v1/pharmacy/early-release-asks': (call: { path: string }) =>
+        call.path.includes('view=history')
+          ? {
+              items: [
+                answered('ACCEPTED', 1),
+                answered('DECLINED', 2),
+                answered('EXPIRED', 3),
+                answered('WITHDRAWN', 4),
+                answered('DECLINED', 5),
+                answered('DECLINED', 6),
+              ],
+              server_now: NOW,
+            }
+          : { items: [ASK], server_now: NOW },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const asks = await screen.findByRole('region', { name: s.ask.section })
+    expect(await within(asks).findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })).toBeInTheDocument()
+    expect(within(asks).queryByText(s.ask.empty)).not.toBeInTheDocument()
+    const lately = await within(asks).findByRole('list')
+    expect(within(lately).getAllByRole('listitem')).toHaveLength(5)
+    expect(within(lately).getByText(/you released it/)).toBeInTheDocument()
+    expect(within(lately).getByText(/not answered in time/)).toBeInTheDocument()
+    expect(within(lately).getByText(/withdrawn by DawaLink/)).toBeInTheDocument()
+  })
+
+  it('is not shown to a suspended pharmacy, which is asked nothing', async () => {
+    pharmacyApi({ 'GET /api/v1/pharmacy/me': { ...PROFILE, status: 'SUSPENDED' } })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    expect(await screen.findByRole('heading', { name: s.counter })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: s.ask.section })).not.toBeInTheDocument()
+  })
+})
+
+describe('Today is the counter, not a list to page', () => {
+  it('asks for 50 waiting reservations, and says how many more are on Reservations', async () => {
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': (call: { path: string }) =>
+        call.path.includes('q=') ? list([]) : { ...list([HELD]), next_cursor: '50', total: 53 },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const more = await screen.findByRole('link', { name: s.moreOnReservations(52) })
+    expect(more).toHaveAttribute('href', '/pharmacy/reservations')
+    const asked = api.sent('GET', '/api/v1/pharmacy/reservations?view=active').map((call) => call.path)
+    expect(asked[0]).toContain('limit=50')
+    expect(screen.queryByRole('navigation', { name: strings.pager.label })).not.toBeInTheDocument()
+  })
+
+  it('says nothing more when everything waiting is shown', async () => {
+    pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': () => ({ ...list([HELD]), total: 1 }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    expect(await screen.findByText(s.isNew)).toBeInTheDocument()
+    expect(screen.queryByText(/more on Reservations/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Reservations in numbered pages', () => {
+  it('pages each tab by 25, and a tab goes back to its first page', async () => {
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': (call: { path: string }) => ({
+        ...list([{ ...HELD, ref: call.path.includes('cursor=25') ? 'R-PAGE22' : 'R-PAGE11' }]),
+        total: 30,
+      }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations?view=history&page=2' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('R-PAGE22')).toBeInTheDocument()
+    const pages = screen.getByRole('navigation', { name: strings.pager.label })
+    expect(within(pages).getByText(strings.pager.summary(2, 2, 30))).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: s.active }))
+
+    expect(await screen.findByText('R-PAGE11')).toBeInTheDocument()
+    const asked = api.sent('GET', '/api/v1/pharmacy/reservations?').map((call) => call.path)
+    expect(asked).toContainEqual(expect.stringContaining('view=history&cursor=25&limit=25'))
+    expect(asked).toContainEqual(expect.stringContaining('view=active&cursor=0&limit=25'))
+  })
+})
 
 describe("The pharmacy's Today", () => {
   it('opens for a pharmacist, with what is due and what needs an answer', async () => {

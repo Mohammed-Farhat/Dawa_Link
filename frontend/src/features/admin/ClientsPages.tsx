@@ -5,8 +5,10 @@ import { Link, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { reservationTone } from '../../components/reservationTone'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { errorMessage, strings } from '../../strings/en'
 import {
   type ClientsHaving,
@@ -20,7 +22,6 @@ import {
   useAdminClients,
   useBackToList,
   useFromList,
-  useListChoices,
   when,
 } from './data'
 import { ListFailed } from './ListFailed'
@@ -78,13 +79,16 @@ function Pill({ row }: { row: Row }) {
 /** AS-5: clients as statuses and counts. A complaint quotes an order or request number:
  * that number finds its client. */
 export function ClientsPage() {
-  const [choices, choose] = useListChoices()
+  // The choices, the typed number and the page are in the address (`usePage`): "Back to
+  // the list" finds the same page.
+  const paging = usePage()
+  const { params: choices, choose } = paging
   const status = oneOf(choices.get('status'), STATUSES)
   const having = oneOf(choices.get('show'), HAVING)
   // The box keeps its own text, so typing never waits for the address to change.
   // Never longer than the API takes, an old address included: it would fail on every visit.
   const [ref, setRef] = useState((choices.get('ref') ?? '').slice(0, TYPED_MAX.ref))
-  const found = useAdminClients(status, having, ref.trim())
+  const found = useAdminClients(status, having, ref.trim(), paging.offset)
   const from = useFromList()
   // The box is what the list shows. If the address lost its text (a tab of the bar was
   // pressed on this page), it is written back, so that Back finds the same list.
@@ -166,11 +170,7 @@ export function ClientsPage() {
           </Link>
         </article>
       ))}
-      {found.hasMore && (
-        <button type="button" className="text-button" onClick={found.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={found.total} settled={found.settled} />
     </main>
   )
 }

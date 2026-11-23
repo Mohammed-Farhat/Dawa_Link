@@ -1,41 +1,76 @@
-import { NativeSelect, TextInput } from '@mantine/core'
+import { NativeSelect } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import { api, type Schemas, unwrap } from '../../api/client'
+import { api, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
 import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { errorMessage, strings } from '../../strings/en'
-import { codeOf, useAudit, useDemoClock, when } from './data'
+import { details, link, sentence, thing, who, type AuditEvent } from './auditWords'
+import {
+  type AuditActor,
+  type AuditFilters,
+  type AuditKind,
+  codeOf,
+  oneOf,
+  useAudit,
+  useDemoClock,
+  useOverview,
+  when,
+} from './data'
 import { ListFailed } from './ListFailed'
 
 const s = strings.admin
 const a = s.audit
 const c = s.clock
 
-type Event = Schemas['AuditRow']
+// Typed by the API's own list of families: one added there without words here fails the
+// typecheck.
+const KIND_WORDS: Record<AuditKind | '', string> = a.kinds
+const KINDS = Object.keys(KIND_WORDS).filter(Boolean) as AuditKind[]
+const ACTORS = Object.keys(a.actors).filter(Boolean) as AuditActor[]
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const ENTITY = /^[a-z_]{1,40}$/
 
-/** "PENDING → APPROVED", or the facts the event holds, as written in the log. */
-function change(event: Event): string {
-  const show = (side: Event['before']) =>
-    side
-      ? Object.entries(side)
-          .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-          .join(', ')
-      : ''
-  return [show(event.before), show(event.after)].filter(Boolean).join(' → ')
+/** "order:<its ID>" in the address, from a row's [Only this]: one value, so that a single
+ * write of the address sets both. Anything else in it is ignored. */
+function readAbout(value: string | null): AuditFilters['about'] {
+  if (!value) return null
+  const at = value.indexOf(':')
+  const type = value.slice(0, at)
+  const id = value.slice(at + 1)
+  return at > 0 && ENTITY.test(type) && UUID.test(id) ? { type, id } : null
 }
 
-/** AS-11: who changed what. Read-only: no button here changes anything. */
+function Who({ event }: { event: AuditEvent }) {
+  const said = who(event)
+  return (
+    <>
+      {said.text}
+      {said.short && (
+        <>
+          {' '}
+          <span className="order-ref">{said.short}</span>
+        </>
+      )}
+    </>
+  )
+}
+
+/** AS-11: who did what, in words. Read-only: no button here changes anything. */
 export function AuditPage() {
-  const [action, setAction] = useState('')
-  const [actor, setActor] = useState('')
-  const [entity, setEntity] = useState('')
-  // Only a whole ID is asked for: half of one matches nothing.
-  const wanted = UUID.test(entity.trim()) ? entity.trim() : ''
-  const found = useAudit({ action, actor, entity: wanted })
+  const paging = usePage()
+  const { params, choose } = paging
+  const kind = oneOf(params.get('kind'), KINDS)
+  const actor = oneOf(params.get('who'), ACTORS)
+  const about = readAbout(params.get('about'))
+  // The query's key is compared by value: a new object with the same choices is the same page.
+  const found = useAudit({ kind, actor, about }, paging.offset)
+  const demoMode = useOverview().data?.demo_mode ?? false
   return (
     <main className="portal__main">
       <div>
@@ -46,26 +81,26 @@ export function AuditPage() {
         <NativeSelect
           label={a.kind}
           size="md"
-          value={action}
-          onChange={(event) => setAction(event.currentTarget.value)}
-          data={Object.entries(a.kinds).map(([value, label]) => ({ value, label }))}
+          value={kind ?? ''}
+          onChange={(event) => choose('kind', event.currentTarget.value || null)}
+          data={Object.entries(KIND_WORDS).map(([value, label]) => ({ value, label }))}
         />
         <NativeSelect
           label={a.actor}
           size="md"
-          value={actor}
-          onChange={(event) => setActor(event.currentTarget.value)}
+          value={actor ?? ''}
+          onChange={(event) => choose('who', event.currentTarget.value || null)}
           data={Object.entries(a.actors).map(([value, label]) => ({ value, label }))}
         />
-        <TextInput
-          label={a.entity}
-          size="md"
-          autoComplete="off"
-          style={{ flex: '1 1 320px' }}
-          value={entity}
-          onChange={(event) => setEntity(event.currentTarget.value)}
-        />
       </div>
+      {about && (
+        <Banner tone="grey">
+          {a.about(thing(about.type))}{' '}
+          <button type="button" className="text-button" onClick={() => choose('about', null)}>
+            {a.showAll}
+          </button>
+        </Banner>
+      )}
       {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
       {found.loading && <Placeholder height={56} />}
       {found.loaded && found.items.length === 0 && <div className="empty">{a.none}</div>}
@@ -77,46 +112,56 @@ export function AuditPage() {
                 <tr>
                   <th scope="col">{a.columns.when}</th>
                   <th scope="col">{a.columns.who}</th>
-                  <th scope="col">{a.columns.action}</th>
                   <th scope="col">{a.columns.what}</th>
-                  <th scope="col">{a.columns.change}</th>
+                  <th scope="col">{a.columns.about}</th>
                   <th scope="col">{a.columns.reason}</th>
                 </tr>
               </thead>
               <tbody>
-                {found.items.map((event) => (
-                  <tr key={event.id}>
-                    <td>{when(event.occurred_at)}</td>
-                    <td>{a.actors[event.actor_type as keyof typeof a.actors] ?? event.actor_type}</td>
-                    <th scope="row">{event.action}</th>
-                    <td>
-                      {event.entity_type}{' '}
-                      {event.entity_id && (
-                        <button
-                          type="button"
-                          className="text-button audit-id"
-                          onClick={() => setEntity(event.entity_id ?? '')}
-                        >
-                          {event.entity_id.slice(0, 8)}
-                        </button>
-                      )}
-                    </td>
-                    <td className="audit-cell">
-                      <p className="audit-change">{change(event)}</p>
-                    </td>
-                    <td className="audit-cell">{event.reason}</td>
-                  </tr>
-                ))}
+                {found.items.map((event) => {
+                  const said = details(event)
+                  const page = link(event, demoMode)
+                  const only = event.entity_id && (about?.id !== event.entity_id)
+                  return (
+                    <tr key={event.id}>
+                      <td>{when(event.occurred_at)}</td>
+                      <td>
+                        <Who event={event} />
+                      </td>
+                      <th scope="row" className="audit-cell">
+                        {sentence(event)}
+                        {said.length > 0 && <p className="audit-change hint">{said.join(' · ')}</p>}
+                      </th>
+                      <td className="audit-cell">
+                        {page && (
+                          <Link to={page.to}>
+                            {page.text}
+                          </Link>
+                        )}
+                        {only && (
+                          <>
+                            {page && ' · '}
+                            <button
+                              type="button"
+                              className="text-button audit-id"
+                              aria-label={a.onlyLabel(thing(event.entity_type))}
+                              onClick={() => choose('about', `${event.entity_type}:${event.entity_id}`)}
+                            >
+                              {a.only}
+                            </button>
+                          </>
+                        )}
+                      </td>
+                      <td className="audit-cell">{event.reason}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </section>
       )}
-      {found.hasMore && (
-        <button type="button" className="text-button" onClick={found.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={found.total} settled={found.settled} />
     </main>
   )
 }
