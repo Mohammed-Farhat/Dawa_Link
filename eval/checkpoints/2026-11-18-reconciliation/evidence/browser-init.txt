@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/browser_fixture.py", "init"]
+{"now": "2026-11-16T08:00:00+00:00", "phase": "reserve", "listing_id": "000cd21a-65a7-4a30-b5b7-0dd9728f5897", "product": "LITAK", "empty_product_id": "2c7db0a9-0b13-4d89-8dd7-9678a07455cc", "empty_product": "HAVRIX '1440'"}

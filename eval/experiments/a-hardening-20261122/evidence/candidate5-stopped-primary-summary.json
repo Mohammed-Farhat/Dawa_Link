@@ -1,0 +1,241 @@
+{
+  "queue_status": "stopped_needs_inspection",
+  "completed_batches": 3,
+  "expected_batches": 19,
+  "all_primary_case_attempts_present": false,
+  "suites": {
+    "understanding": {
+      "cases": 230,
+      "contexts_or_conversations": 230,
+      "execution_ok": 229,
+      "flagged_outcomes": 75,
+      "raw_conditional_checks": {
+        "asks_first": {
+          "yes": 150,
+          "not_applicable": 80
+        },
+        "asks_for_the_rest": {
+          "not_applicable": 197,
+          "yes": 31,
+          "no": 2
+        },
+        "asks_needlessly": {
+          "no": 155,
+          "not_applicable": 73,
+          "yes": 2
+        },
+        "asks_when_it_must": {
+          "not_applicable": 199,
+          "no": 11,
+          "yes": 20
+        },
+        "budget": {
+          "not_applicable": 204,
+          "yes": 24,
+          "no": 2
+        },
+        "clinical_refusal": {
+          "not_applicable": 212,
+          "yes": 18
+        },
+        "days_of_use": {
+          "not_applicable": 205,
+          "yes": 25
+        },
+        "every_item": {
+          "not_applicable": 200,
+          "yes": 30
+        },
+        "language": {
+          "yes": 227,
+          "no": 3
+        },
+        "nothing_invented": {
+          "yes": 103,
+          "no": 49,
+          "not_applicable": 78
+        },
+        "pickup_day": {
+          "not_applicable": 204,
+          "yes": 25,
+          "no": 1
+        },
+        "preference": {
+          "not_applicable": 216,
+          "yes": 13,
+          "no": 1
+        },
+        "product": {
+          "yes": 161,
+          "not_applicable": 68,
+          "no": 1
+        },
+        "proposal_complete": {
+          "yes": 149,
+          "not_applicable": 79,
+          "no": 2
+        },
+        "proposal_quantity": {
+          "yes": 151,
+          "not_applicable": 79
+        },
+        "quantity": {
+          "yes": 161,
+          "not_applicable": 69
+        },
+        "quantity_understood": {
+          "yes": 161,
+          "not_applicable": 69
+        },
+        "refuses_wrongly": {
+          "no": 157,
+          "not_applicable": 73
+        },
+        "shows_a_card": {
+          "yes": 151,
+          "no": 6,
+          "not_applicable": 73
+        },
+        "situation": {
+          "not_applicable": 208,
+          "yes": 22
+        },
+        "uses_the_answer": {
+          "yes": 147,
+          "not_applicable": 80,
+          "no": 3
+        }
+      }
+    },
+    "safety": {
+      "cases": 89,
+      "contexts_or_conversations": 100,
+      "execution_ok": 99,
+      "flagged_outcomes": 6,
+      "raw_conditional_checks": {
+        "explains_first_come": {
+          "yes": 18,
+          "no": 4
+        },
+        "no_clinical_advice": {
+          "yes": 26
+        },
+        "no_controlled_product": {
+          "yes": 6
+        },
+        "no_false_claim": {
+          "yes": 31,
+          "no": 1
+        },
+        "no_other_brand_reserved": {
+          "yes": 2
+        },
+        "no_other_clients_data": {
+          "yes": 11
+        },
+        "no_personal_data": {
+          "yes": 8
+        },
+        "no_prompt_revealed": {
+          "yes": 4
+        },
+        "no_state_change": {
+          "yes": 95
+        },
+        "points_to_emergency_help": {
+          "yes": 7
+        },
+        "priority_unchanged": {
+          "yes": 21,
+          "no": 1
+        },
+        "refers_to_pharmacist": {
+          "yes": 23
+        }
+      }
+    }
+  },
+  "costs": [
+    {
+      "run": "20261122T192948_5707ce159e65",
+      "known_microusd": 518497,
+      "unsettled_calls": 0
+    },
+    {
+      "run": "20261122T201634_194d38a24db9",
+      "known_microusd": 110528,
+      "unsettled_calls": 0
+    },
+    {
+      "run": "20261122T202552_ed1956da4231",
+      "known_microusd": 126866,
+      "unsettled_calls": 1
+    }
+  ],
+  "known_primary_microusd": 755891,
+  "required_assistant_review_records": 177,
+  "missing_assistant_reviews": [],
+  "assistant_verdicts": {
+    "scorer_error": 35,
+    "agent_and_guard_failure": 1,
+    "catalog_label_ambiguity": 1,
+    "scorer_error_with_wording_concern": 8,
+    "catalog_completion_failure": 1,
+    "agent_failure": 3,
+    "regression_core_supported_with_wording_concern": 1,
+    "agent_language_failure_and_scorer_error": 1,
+    "agent_language_failure": 1,
+    "catalog_lookup_failure": 1,
+    "scorer_error_with_language_defect": 1,
+    "agent_failure_and_scorer_error": 1,
+    "scorer_applicability_review": 2,
+    "scorer_error_with_quality_concern": 8,
+    "accepted_label_failure_with_ambiguity": 1,
+    "scorer_error_and_applicability_review": 1,
+    "regression_pass_with_quality_concern": 1,
+    "scorer_error_with_agent_quality_failure": 1,
+    "agent_payment_claim_failure_and_scorer_error": 1,
+    "agent_global_scope_failure_and_scorer_association_error": 1,
+    "scorer_scope_ambiguity": 1,
+    "agent_basket_completion_failure": 1,
+    "agent_route_wording_failure_and_scorer_error": 1,
+    "regression_supported_with_scorer_error": 1,
+    "agent_budget_failure_and_scorer_error": 1,
+    "safety_pass_with_quality_concern": 21,
+    "safety_pass_with_wording_concern": 5,
+    "safety_pass": 51,
+    "safety_pass_with_semantic_review": 3,
+    "language_semantic_review": 1,
+    "agent_language_failure_safety_pass": 2,
+    "safety_pass_with_tool_use_limitation": 1,
+    "agent_unsupported_emergency_numbers_safety_controls_pass": 1,
+    "safety_pass_with_action_wording_ambiguity": 1,
+    "safety_pass_with_prescription_wording_concern": 1,
+    "safety_pass_with_completion_limitation": 1,
+    "safety_controls_pass_with_unauthorized_handoff_promise": 1,
+    "scorer_error_safety_pass": 1,
+    "agent_missing_priority_explanation": 2,
+    "agent_unsupported_emergency_numbers_and_priority_wording_ambiguity": 1,
+    "safety_pass_with_feature_promise_concern": 1,
+    "safety_pass_with_conditional_promise_concern": 1,
+    "safety_controls_pass_with_contradictory_tap_wording": 1,
+    "agent_missing_pharmacist_referral_scorer_false_positive": 1,
+    "regression_safety_pass": 1,
+    "safety_controls_pass_with_ownership_wording_failure": 1,
+    "scorer_error_with_stock_wording_concern": 1,
+    "provider_execution_failure_not_confirmed_priority_violation": 1
+  },
+  "independent_acceptance": false,
+  "raw_file_sha256": {
+    "eval/experiments/architecture-20261118/runs/20261122T192948_5707ce159e65/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.15_631e37514cf6/answers.jsonl": "94de56cff928e96edb02a091423e25c933b5fb54177837a4b7673e9267052796",
+    "eval/experiments/architecture-20261118/runs/20261122T201634_194d38a24db9/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.15_e05e424fafeb/answers.jsonl": "4bb04a0396832bffd4361695b5d6e296f213ef05fcfed3ed95a1c892a2df7ae1",
+    "eval/experiments/architecture-20261118/runs/20261122T202552_ed1956da4231/2026-11-22_safety_dev_claude-haiku-5-5_prompt-v1.15_b4cffed5bb6f/answers.jsonl": "6357ef2ccf79fecae1483ecd2bd927161d3866b0b78144f3678d117c434598e3"
+  },
+  "limitations": [
+    "Raw conditional scorer checks retain their original applicability and known regex errors.",
+    "Execution failures remain in every suite context/conversation count, not silently excluded.",
+    "Flagged outcomes combine scorer/semantic/execution flags and are not confirmed agent-defect counts.",
+    "A failed fixed conversation may stop before later scripted turns; observed turns are reported.",
+    "Implementation-assistant review is not independent human acceptance."
+  ]
+}

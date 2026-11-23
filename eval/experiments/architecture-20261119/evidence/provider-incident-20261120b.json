@@ -1,0 +1,17 @@
+{
+  "run": "20261120T100220_fc0fd422269f",
+  "session_id": 11822,
+  "process_exit_code": 0,
+  "successful_calls": 32,
+  "known_microusd": 32105,
+  "new_uncertain_call": "53fcb90399824e1a915f114ec2898160",
+  "held_microusd": 645000,
+  "provider_failure": {
+    "error_type": "APITimeoutError",
+    "seconds": 30.013,
+    "request_id": null,
+    "status": null
+  },
+  "free_connectivity_check": "Unauthenticated HEAD https://api.anthropic.com/v1/messages returned HTTP 405. This is reachability only, not billing reconciliation or proof of generation health.",
+  "decision": "No repeat of failed recovery; continue untouched suites under unchanged authorized caps with all 15 unknown charges held."
+}

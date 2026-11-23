@@ -1,0 +1,12 @@
+cwd: backend
+command: ["uvicorn", "dawalink.api.main:create_app", "--factory", "--host", "127.0.0.1", "--port", "58000", "--no-access-log"]
+{"effect": "no agent turn runs; search still works", "event": "assistant_not_configured", "level": "warning", "timestamp": "2026-11-18T11:39:53.060215Z"}
+{"event": "Started server process [36302]", "level": "info", "timestamp": "2026-11-18T11:39:53.060521Z"}
+{"event": "Waiting for application startup.", "level": "info", "timestamp": "2026-11-18T11:39:53.060562Z"}
+{"event": "Application startup complete.", "level": "info", "timestamp": "2026-11-18T11:39:53.061048Z"}
+{"event": "Uvicorn running on http://127.0.0.1:58000 (Press CTRL+C to quit)", "level": "info", "timestamp": "2026-11-18T11:39:53.061509Z"}
+{"method": "POST", "path": "/api/v1/auth/login", "status": 200, "duration_ms": 94.3, "event": "request", "request_id": "e635517c25884e25a46f6012808cb493", "level": "info", "timestamp": "2026-11-18T11:40:27.356824Z"}
+{"event": "Shutting down", "level": "info", "timestamp": "2026-11-18T11:42:39.588065Z"}
+{"event": "Waiting for application shutdown.", "level": "info", "timestamp": "2026-11-18T11:42:39.691071Z"}
+{"event": "Application shutdown complete.", "level": "info", "timestamp": "2026-11-18T11:42:39.694615Z"}
+{"event": "Finished server process [36302]", "level": "info", "timestamp": "2026-11-18T11:42:39.695010Z"}

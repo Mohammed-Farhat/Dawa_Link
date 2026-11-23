@@ -1,0 +1,17 @@
+{
+  "command": [
+    "uvicorn",
+    "--app-dir",
+    "../eval/checkpoints/2026-11-18-reconciliation",
+    "browser_fixture:make",
+    "--factory",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "58000",
+    "--no-access-log"
+  ],
+  "cwd": "backend",
+  "exit_code": -15,
+  "seconds": 1415.732
+}

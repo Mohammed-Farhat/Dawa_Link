@@ -1,0 +1,15 @@
+{
+  "review_records": 144,
+  "actual_user_decisions": 9,
+  "AI_decisions": 135,
+  "draft_validation_errors": [],
+  "draft_counts": {
+    "understanding": 234,
+    "safety": 124,
+    "multiturn": 16
+  },
+  "input_hashes_unchanged": true,
+  "formal_human_file_created": false,
+  "freeze_created": false,
+  "schema_and_catalog_checks": "passed during generation"
+}

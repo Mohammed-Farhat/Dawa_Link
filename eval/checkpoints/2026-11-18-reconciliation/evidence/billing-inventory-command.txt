@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-reconciliation/billing_inventory.py"]
+[{"status": "settled", "calls": 75, "committed_microusd": 45449, "actual_microusd": 45449}, {"status": "uncertain", "calls": 6, "committed_microusd": 3870000, "actual_microusd": null}]

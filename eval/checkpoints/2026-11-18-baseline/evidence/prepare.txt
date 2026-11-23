@@ -1,0 +1,7 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-baseline/prepare.py"]
+2026-11-18 13:39:09 [info     ] reference_data_written         areas=1853 districts=26
+2026-11-18 13:39:11 [info     ] catalog_imported               controlled=168 no_prescription_notice=0 overrides_capped=0 rows_imported=5628 rows_total=5739 with_equivalence_key=5467
+SeedResult(pharmacies=16, clients=6, inventory_items=960)
+Synthetic accounts with passwords: 22
+Products: 5628

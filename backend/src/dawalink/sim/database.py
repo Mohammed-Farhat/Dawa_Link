@@ -9,6 +9,7 @@ model. A simulation must never touch it. So:
 Every name starts with `dawalink_sim`, and this module refuses any other.
 """
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -77,15 +78,32 @@ def _exists(engine: Engine, name: str) -> bool:
 def ensure_template(settings: Settings, *, catalog_folder: Path = DEFAULT_FOLDER) -> Addresses:
     """Prepares the template once: tables, rights, reference data and the catalog."""
     base = addresses(settings)
-    template = base.on(TEMPLATE)
+    digest = hashlib.sha256()
+    paths = sorted(Path("migrations").rglob("*.py")) + sorted(catalog_folder.glob("catalog.*"))
+    paths += sorted(Path("data").glob("*.csv")) + sorted(Path("data").glob("*.toml"))
+    paths += sorted(Path("src/dawalink/db").glob("*.py"))
+    paths += sorted(Path("src/dawalink/ops").glob("*catalog*.py"))
+    paths += [Path(__file__)]
+    for path in paths:
+        digest.update(str(path).encode())
+        digest.update(path.read_bytes())
+    template_name = f"{TEMPLATE}_{digest.hexdigest()[:12]}"
+    template = base.on(template_name)
     admin = _outside_a_transaction(base.admin)
     try:
-        if _exists(admin, TEMPLATE):
-            # A template made before the newest migration would give every run tables
-            # the code no longer matches (found 2026-11-18, with the sixth migration).
-            # Bringing it up to date is nothing to do when it already is.
-            run_migrations(template.migrator)
-            grant_privileges(template.migrator)
+        if _exists(admin, template_name):
+            # Migrations are part of the fingerprint: schema changes build a new
+            # template instead of mutating a prior evaluation's starting point.
+            with admin.connect() as connection:
+                ready = connection.execute(
+                    text(
+                        "SELECT shobj_description(oid, 'pg_database') FROM pg_database "
+                        "WHERE datname=:name"
+                    ),
+                    {"name": template_name},
+                ).scalar()
+            if ready != "evaluation-template-ready":
+                raise RuntimeError("Incomplete template; inspect it before cleanup")
             return template
         if not catalog_is_available(catalog_folder):
             raise FileNotFoundError(
@@ -93,7 +111,7 @@ def ensure_template(settings: Settings, *, catalog_folder: Path = DEFAULT_FOLDER
                 "Run dawalink.ops.fetch_moph and dawalink.ops.build_catalog first."
             )
         with admin.connect() as connection:
-            connection.execute(text(f'CREATE DATABASE "{TEMPLATE}"'))
+            connection.execute(text(f'CREATE DATABASE "{template_name}"'))
     finally:
         admin.dispose()
 
@@ -113,20 +131,28 @@ def ensure_template(settings: Settings, *, catalog_folder: Path = DEFAULT_FOLDER
             import_from_folder(connection, catalog_folder)
     finally:
         engine.dispose()
+    admin = _outside_a_transaction(base.admin)
+    try:
+        with admin.connect() as connection:
+            connection.execute(
+                text(f"COMMENT ON DATABASE \"{template_name}\" IS 'evaluation-template-ready'")
+            )
+    finally:
+        admin.dispose()
     return template
 
 
 def fresh(settings: Settings, name: str) -> Addresses:
-    """A new copy of the template under `name`, replacing an earlier one of that name."""
+    """A new copy of the template under `name`, refusing an existing database of that name."""
     name = _checked(name)
     if name == TEMPLATE:
         raise ValueError("The template is not a database to run in.")
-    ensure_template(settings)
+    template = ensure_template(settings)
+    template_name = make_url(template.admin).database
     admin = _outside_a_transaction(addresses(settings).admin)
     try:
         with admin.connect() as connection:
-            connection.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
-            connection.execute(text(f'CREATE DATABASE "{name}" TEMPLATE "{TEMPLATE}"'))
+            connection.execute(text(f'CREATE DATABASE "{name}" TEMPLATE "{template_name}"'))
     finally:
         admin.dispose()
     return addresses(settings).on(name)

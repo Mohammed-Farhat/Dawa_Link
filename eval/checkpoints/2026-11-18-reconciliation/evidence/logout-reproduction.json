@@ -1,0 +1,14 @@
+{
+  "command": [
+    "npm",
+    "test",
+    "--",
+    "--run",
+    "src/features/client/ClientExtras.test.tsx",
+    "-t",
+    "Logging"
+  ],
+  "cwd": "frontend",
+  "exit_code": 1,
+  "seconds": 4.773
+}

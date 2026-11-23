@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "-m", "dawalink.evals.scan_results"]
+289 files of saved results read: no email address, phone number or coordinates in them

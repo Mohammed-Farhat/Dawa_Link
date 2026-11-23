@@ -44,3 +44,9 @@ nohup.out
 # Evaluation: a targeted re-check of a few cases stays on the laptop. Full runs are
 # committed with their scores and traces (decision log BLD-D19).
 eval/results/*_part/
+
+# Local evaluation settings and transient SQLite files
+eval/checkpoints/*/local.env
+eval/**/budget.sqlite-wal
+eval/**/budget.sqlite-shm
+eval/**/budget.sqlite-journal

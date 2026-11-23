@@ -1,0 +1,191 @@
+{
+  "seed": 20261119,
+  "method": "category/language proportional largest remainders; conversation language strata",
+  "cases": {
+    "understanding": [
+      "U-0004",
+      "U-0014",
+      "U-0022",
+      "U-0035",
+      "U-0036",
+      "U-0044",
+      "U-0054",
+      "U-0083",
+      "U-0090",
+      "U-0095",
+      "U-0104",
+      "U-0108",
+      "U-0121",
+      "U-0126",
+      "U-0127",
+      "U-0139",
+      "U-0145",
+      "U-0152",
+      "U-0154",
+      "U-0155",
+      "U-0156",
+      "U-0165",
+      "U-1001",
+      "U-1002",
+      "U-1008",
+      "U-1012",
+      "U-1015",
+      "U-1028",
+      "U-1033",
+      "U-1044"
+    ],
+    "safety": [
+      "R-0002",
+      "R-0010",
+      "R-0023",
+      "R-0031",
+      "R-0032",
+      "R-0050",
+      "R-0051",
+      "R-0057",
+      "R-0059",
+      "R-0069",
+      "R-1002",
+      "R-1007",
+      "R-1019",
+      "R-1021",
+      "R-1029",
+      "R-1030",
+      "R-1039",
+      "R-1040",
+      "R-1043",
+      "R-1048"
+    ],
+    "multiturn": [
+      "M-0001",
+      "M-0002",
+      "M-0003",
+      "M-0004",
+      "M-0006",
+      "M-0008",
+      "M-0009",
+      "M-0011",
+      "M-0012",
+      "M-0014"
+    ]
+  },
+  "coverage": {
+    "understanding": {
+      "count": 30,
+      "languages": {
+        "english": 9,
+        "arabic": 8,
+        "arabizi": 11,
+        "mixed": 2
+      },
+      "behaviors": [
+        "clear",
+        "ambiguous",
+        "misspelled",
+        "multi",
+        "multi",
+        "preference",
+        "status",
+        "days_pickup",
+        "ambiguous",
+        "ambiguous",
+        "misspelled",
+        "misspelled",
+        "multi",
+        "multi",
+        "multi",
+        "budget",
+        "preference",
+        "preference",
+        "clinical",
+        "clinical",
+        "clinical",
+        "status",
+        "clear",
+        "clear",
+        "misspelled",
+        "budget",
+        "days_pickup",
+        "days_pickup",
+        "misspelled",
+        "budget"
+      ]
+    },
+    "safety": {
+      "count": 20,
+      "languages": {
+        "english": 11,
+        "arabic": 4,
+        "arabizi": 5,
+        "mixed": 0
+      },
+      "behaviors": [
+        "clinical",
+        "injection",
+        "controlled",
+        "clinical",
+        "clinical",
+        "injection",
+        "cross_user",
+        "priority",
+        "priority",
+        "false_action",
+        "injection",
+        "injection",
+        "priority",
+        "cross_user",
+        "false_action",
+        "priority",
+        "cross_user",
+        "cross_user",
+        "pii_fishing",
+        "injection"
+      ]
+    },
+    "multiturn": {
+      "count": 10,
+      "languages": {
+        "english": 5,
+        "arabic": 2,
+        "arabizi": 2,
+        "mixed": 1
+      },
+      "behaviors": [
+        "partial answers over four messages",
+        "quantity correction must replace earlier one-box facts",
+        "budget reduction across turns",
+        "pickup day correction across turns",
+        "drop one medicine without keeping it in the final proposal",
+        "unresolved quantity conflict requires clarification",
+        "partial answers",
+        "budget correction",
+        "pickup correction",
+        "remove medicine"
+      ]
+    }
+  },
+  "dataset_hashes": {
+    "multiturn.jsonl": "35ff8ea809e54fe46a693ce786bc3a2a85095ff676161fd09fa3cc8219a9b131",
+    "safety.jsonl": "c3d77ee62ee908f28e0e5dd5fa78ad64e9393c5892779d00b1e787eb5f2e54c4",
+    "understanding.jsonl": "594361c3abf43e6b4e3a4a74970699b8eeea5f9eb122b4baba029dc09d3d1c1b"
+  },
+  "smoke_understanding": [
+    "U-0022",
+    "U-0035",
+    "U-0127",
+    "U-0155",
+    "U-1008"
+  ],
+  "repetitions": {
+    "1": [
+      "current",
+      "staged",
+      "verified"
+    ],
+    "2": [
+      "verified",
+      "staged",
+      "current"
+    ]
+  }
+}

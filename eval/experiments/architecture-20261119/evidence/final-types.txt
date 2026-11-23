@@ -1,0 +1,2 @@
+command: ["mypy"]
+Success: no issues found in 340 source files

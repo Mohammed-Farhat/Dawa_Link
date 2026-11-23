@@ -1,0 +1,263 @@
+{
+  "run": "20261119T162646_21096b0ddb62",
+  "status": "paid screening stopped",
+  "reason": "Provider timeout/connection failures retained8 uncertain reservations. Screening committed5924849microusd leaves75151, less than645000 reservation. No other stage is borrowed.",
+  "known_spend_microusd": 858027,
+  "committed_microusd": 9888027,
+  "uncertain_microusd": 9030000,
+  "stage_status": [
+    [
+      "baseline",
+      "settled",
+      148,
+      93178,
+      93178
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ],
+    [
+      "screening",
+      "settled",
+      1124,
+      764849,
+      764849
+    ],
+    [
+      "screening",
+      "uncertain",
+      8,
+      0,
+      5160000
+    ]
+  ],
+  "new_uncertain_calls": [
+    {
+      "id": "423795542bd240c4bd40bdf814083a21",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "e6482e208b29eca3fe3ced4b0d597ecf2c3e57517067afa44ac49817c0d42df7"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APITimeoutError",
+            "request_id": null,
+            "seconds": 30.024,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "0fb9a2c9f3ec4810946477c8457e8036",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "4dc7e10008547a604f6cbf5cdd2547d6f6cbc1db20c294eb1b36d0f31435e996"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.021,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "e515f0ffaffc42e889990d289e1ffdd6",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "44c114b215ffa77414cbdf9732dfbe195796078dc9728e27c38f4c7d0cccfcb2"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.017,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "bcc8f827332f709c3b4e78a725dadc39a4c89c3374da416cb4710117f7ce8c8e"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.003,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "0d32bd6e7e0249ed90567dcbdb988f48",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "bcc8f827332f709c3b4e78a725dadc39a4c89c3374da416cb4710117f7ce8c8e"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.005,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "aff138f531b24e47a0be330ac1e43bf0",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "bcc8f827332f709c3b4e78a725dadc39a4c89c3374da416cb4710117f7ce8c8e"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.008,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "c922644bdebb4a298753525e504bd41d",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "ce33fee7e9624b70a63bf660d1dcf2cf34ba02db9bf056e15ab3732425afbe85"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.002,
+            "status": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "679655cfaea34bb0bd377616507fb074",
+      "status": "uncertain",
+      "held_microusd": 645000,
+      "actual": null,
+      "events": [
+        {
+          "kind": "request",
+          "details": {
+            "architecture": "verified",
+            "effort": "medium",
+            "model": "claude-haiku-5-5",
+            "purpose": "workflow",
+            "request_sha256": "ce33fee7e9624b70a63bf660d1dcf2cf34ba02db9bf056e15ab3732425afbe85"
+          }
+        },
+        {
+          "kind": "provider_failure",
+          "details": {
+            "error_type": "APIConnectionError",
+            "request_id": null,
+            "seconds": 0.006,
+            "status": null
+          }
+        }
+      ]
+    }
+  ],
+  "read_only_followup": "One unauthenticated HTTP HEAD to provider endpoint returned404 throughCloudflare. Reachability does not establish billing attribution or permit releasing holds.",
+  "resume_requirements": [
+    "Attributable provider billing evidence to reconcile specific uncertain calls, or explicit owner revision of stage ceilings within25USD aggregate.",
+    "At least645000microusd headroom in screening before any next call.",
+    "Reassess measured remaining screening cost; never automatically borrow held-out/retry funds.",
+    "Keep all failed original outcomes and costs. No resampling labels, source tuning, or erased evidence."
+  ]
+}

@@ -1,0 +1,18 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/paid.py", "understanding", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "4"]
+{"run_id": "6c239f07-dabf-419f-8800-cdc56a7495e0", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:23:37.556604Z"}
+{"run_id": "859ec2fd-a5e5-4882-89db-f111ba13c292", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:23:37.684663Z"}
+{"run_id": "bb534cab-8459-47df-846a-f462a8417fd6", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:23:37.768540Z"}
+stopped at U-0007: unavailable
+7 cases, $0.010595, saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261118T122208_1c154071862e/2026-11-18_understanding_dev_claude-haiku-5-5_prompt-v1.13_fab1bca25c05
+  product                4 of   7  57%
+  quantity               4 of   4  100%
+  asks_first             4 of   7  57%
+  asks_needlessly        0 of   7  0%  (lower is better)
+  asks_for_the_rest      1 of   1  100%
+  uses_the_answer        3 of   4  75%
+  shows_a_card           3 of   7  43%
+  refuses_wrongly        0 of   7  0%  (lower is better)
+  nothing_invented       3 of   3  100%
+  language               4 of   4  100%
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261118T122208_1c154071862e status: incomplete

@@ -1,0 +1,18 @@
+{
+  "implementation_commit": "1e17db0ea522622caaf8da41d60df4ef152ccec3",
+  "branch": "test/agent-evaluation",
+  "platform": "macOS-27.2.1-arm64-arm-64bit",
+  "python": "Python 3.12.12",
+  "node": "v24.21.0",
+  "evaluation_clock": "2026-11-16 Asia/Beirut; simulations start 07:00; demo seed 10:00",
+  "demo_seed": 42,
+  "simulation_seed": 1,
+  "provider": "none",
+  "prompt_version": "v1.13",
+  "paid_calls": 0,
+  "developer_configured_model": {
+    "LLM_PROVIDER": "none",
+    "LLM_MODEL": "claude-haiku-5-5",
+    "LLM_EFFORT": "medium"
+  }
+}

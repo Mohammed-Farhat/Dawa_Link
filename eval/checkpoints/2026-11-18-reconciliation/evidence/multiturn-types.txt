@@ -1,0 +1,5 @@
+cwd: backend
+command: ["mypy"]
+src/dawalink/evals/run_multiturn.py:155: error: Value of type variable "Case" of "read" cannot be "MCase"  [type-var]
+src/dawalink/evals/experiment.py:136: error: Value of type variable "Case" of "read" cannot be "MCase"  [type-var]
+Found 2 errors in 2 files (checked 323 source files)

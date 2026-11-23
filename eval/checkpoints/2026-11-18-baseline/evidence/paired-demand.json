@@ -1,0 +1,15 @@
+{
+  "same_demand": true,
+  "fields": [
+    "n",
+    "client_n",
+    "medicines",
+    "units_wanted"
+  ],
+  "cases": 10,
+  "contenders": [
+    "search",
+    "rules",
+    "rules_asking"
+  ]
+}

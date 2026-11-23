@@ -7,6 +7,8 @@ that says "yes" to everything would be worse than none.
 from datetime import date
 from typing import Any
 
+import pytest
+
 from dawalink.evals.datasets import UCase
 from dawalink.evals.score_understanding import (
     CHECKS,
@@ -431,3 +433,209 @@ def test_what_a_reply_asks_about_is_read_from_its_questions() -> None:
     assert asks_about("3andak siyyara aw mashi?") == ["transport"]
     assert asks_about("Your order is ready today. Anything else?") == []
     assert asks_about("I can't put you first. Which medicine do you need?") == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "بس بدي أعرف لكم يوم بتاخد الدوا",
+        "بس بدي اعرف لأد كم يوم بتاخد الدوا",
+        "خبرني لكم يوم بدك الدوا",
+        "أخبرني أي يوم بدك تستلم",
+    ],
+)
+def test_indirect_arabic_questions_without_punctuation_keep_the_client_answering(text: str) -> None:
+    from dawalink.evals.score_understanding import asked_a_question
+
+    assert asked_a_question(Seen(text))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "أنا بعرف الدوا",
+        "بدي ساعدك تلاقي الدوا",
+        "عرفت إنك بالسيارة واليوم",
+        "الدواء بوصفة",
+        "الصيدلي أخبرني أن الدواء متوفر",
+        "الصيدلي خبرني عن الدواء",
+    ],
+)
+def test_arabic_statements_do_not_become_questions(text: str) -> None:
+    from dawalink.evals.score_understanding import asked_a_question
+
+    assert not asked_a_question(Seen(text))
+
+
+def test_strength_choices_before_a_short_question_are_valid_but_not_a_guess() -> None:
+    which = case("Concor please", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("2.5 mg or 5 mg. Which one?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Which one?"))["asks_when_it_must"]
+    assert not checked(which, Seen("I chose the 5 mg."))["asks_when_it_must"]
+
+
+def test_current_history_card_satisfies_facts_but_old_constraints_do_not() -> None:
+    wanted = case(days_of_use=7, pickup_in_days=1, budget={"amount": 10, "currency": "USD"})
+    item = {
+        "product_id": CONCOR,
+        "qty": 1,
+        "days_of_use": 7,
+        "pickup_day": "2026-11-17",
+        "price_lbp_shown": 500000,
+    }
+    good = checked(wanted, Seen("Here is the current card.", cards=["reserve"], card_items=[item]))
+    assert all(good[k] for k in ("product", "quantity", "days_of_use", "pickup_day", "budget"))
+    bad = checked(
+        wanted,
+        Seen(
+            "Here is the old card.",
+            cards=["reserve"],
+            card_items=[
+                item | {"days_of_use": 1, "pickup_day": "2026-11-16", "price_lbp_shown": 999999}
+            ],
+        ),
+    )
+    assert all(bad[k] is False for k in ("days_of_use", "pickup_day", "budget"))
+
+
+def test_arabizi_requires_substantive_language_and_false_card_claims_fail() -> None:
+    arabizi = case("baddi concor w ana 3ande siyyara")
+    assert checked(arabizi, Seen("Hayda li l2ayto, fik tekhtar yalli baddak."))["language"]
+    assert not checked(arabizi, Seen("I found several options for your medicine."))["language"]
+    assert not checked(case(), Seen("Here is the cancellation card."))["nothing_invented"]
+
+
+def test_arabizi_strength_choices_and_public_notice_with_current_cards() -> None:
+    which = case("baddi concor", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("2.5 mg aw 5 mg. Ay wa7ed bidak?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Ay wa7ed bidak?"))["asks_when_it_must"]
+    with_cards = Seen(
+        "This needs a prescription: bring it to the pharmacy.",
+        cards=["reserve"],
+        card_items=[{"product_id": CONCOR, "qty": 1, "days_of_use": 7}],
+    )
+    assert checked(case(), with_cards)["refuses_wrongly"] is False
+    assert checked(case(), Seen("Ask a pharmacist. I cannot help."))["refuses_wrongly"] is True
+
+
+def test_ayyon_after_strength_choices_is_a_question_not_a_free_pass() -> None:
+    which = case("arcoxia?", must_ask=["strength"], expected="ask")
+    assert checked(which, Seen("60 mg, 90 mg, w 120 mg. Ayyon bedak?"))["asks_when_it_must"]
+    assert not checked(which, Seen("Ayyon bedak?"))["asks_when_it_must"]
+
+
+def test_english_explanation_does_not_switch_to_arabizi() -> None:
+    english = case("I need one box of Concor please")
+    assert checked(english, Seen("I found the medicine you requested."))["language"]
+    assert checked(english, Seen("Hayda li l2ayto, fik tekhtar yalli baddak."))["language"] is False
+
+
+@pytest.mark.parametrize("question", ["Ay wahad bidak?", "Ayy wahde?", "أي وحدة؟"])
+def test_short_which_one_uses_strength_context_but_does_not_invent_it(question: str) -> None:
+    wanted = case("Concor please", must_ask=["strength"], expected="ask")
+    assert checked(wanted, Seen("2.5 mg or 5 mg. " + question))["asks_when_it_must"]
+    assert not checked(wanted, Seen(question))["asks_when_it_must"]
+
+
+@pytest.mark.parametrize("question", ["La addeh yom?", "Laaddeh yom?", "لأديش يوم؟"])
+def test_duration_questions_include_observed_variants(question: str) -> None:
+    assert asks_about(question) == ["days"]
+
+
+def test_search_intent_heading_and_future_promise_are_not_clarifications() -> None:
+    assert asks_about(
+        "Do you go by car or on foot? Once you tell me, I'll search for tomorrow for 5 days."
+    ) == ["transport"]
+    assert asks_about("حتى أبحث لك عن صيدلية قريبة تمشي إليها، بدي أعرف:\nأي يوم؟") == ["day"]
+    assert asks_about("Tell me which day you will come.") == ["day"]
+    assert asks_about("Can you tell me for how many days?") == ["days"]
+
+
+def test_normalized_client_budget_keeps_its_currency() -> None:
+    wanted = case("budget 400 alf lira", budget={"amount": 400000, "currency": "LBP"})
+    assert checked(wanted, Seen("Within your budget of 400,000 LBP."))["nothing_invented"]
+    assert checked(wanted, Seen("Within your budget of 500,000 LBP."))["nothing_invented"] is False
+    assert checked(wanted, Seen("Within your budget of $400,000."))["nothing_invented"] is False
+
+
+def test_empty_budget_search_exempts_cards_only_with_verified_constraints() -> None:
+    wanted = case(budget={"amount": 4, "currency": "USD"}, days_of_use=7, pickup_in_days=0)
+    args: dict[str, Any] = {
+        "days_of_use": 7,
+        "pickup_day": str(TODAY),
+        "max_price": {"amount": 4, "currency": "USD"},
+    }
+
+    def empty(**changes: Any) -> Seen:
+        tool = find(**(args | changes))
+        return Seen(
+            "No affordable options.",
+            [ToolUse(tool.name, tool.arguments, answer='{"options":[],"total_found":0}')],
+        )
+
+    assert checked(wanted, empty())["shows_a_card"] is None
+    assert checked(wanted, empty(days_of_use=1))["shows_a_card"] is False
+    assert checked(wanted, empty(qty=2))["shows_a_card"] is False
+    assert (
+        checked(wanted, empty(max_price={"amount": 1, "currency": "USD"}))["shows_a_card"] is False
+    )
+    assert checked(wanted, Seen("No options.", [find(**args)]))["shows_a_card"] is False
+    stocked = Seen(
+        "No options.",
+        [
+            ToolUse(
+                "find_options",
+                {"product_ids": [CONCOR], **args},
+                answer='{"options":[{"listing_id":"x"}],"total_found":1}',
+            )
+        ],
+    )
+    assert checked(wanted, stocked)["shows_a_card"] is False
+
+
+def test_walking_behavior_needs_a_supported_walk_nearest_recommendation() -> None:
+    import json
+
+    rows = [
+        {
+            "listing_id": "car",
+            "product_id": CONCOR,
+            "available": 1,
+            "pickup_days_allowed": [str(TODAY)],
+            "travel": {"car_min": 1, "walk_min": 20},
+        },
+        {
+            "listing_id": "walk",
+            "product_id": CONCOR,
+            "available": 1,
+            "pickup_days_allowed": [str(TODAY)],
+            "travel": {"car_min": 2, "walk_min": 5},
+        },
+    ]
+    wanted = case(preference="walkable")
+    tool = ToolUse(
+        "find_options",
+        {"product_ids": [CONCOR], "sort": "nearest"},
+        answer=json.dumps({"options": rows}),
+    )
+
+    def choice(listing: str, note: str = "on foot") -> Seen:
+        return Seen(
+            "Here.",
+            [tool],
+            ["reserve"],
+            notes={"situation_notes": [note]},
+            card_items=[
+                {
+                    "product_id": CONCOR,
+                    "listing_id": listing,
+                    "pickup_day": str(TODAY),
+                    "qty": 1,
+                    "card": {"recommended": True},
+                }
+            ],
+        )
+
+    assert checked(wanted, choice("walk"))["preference"]
+    assert checked(wanted, choice("car"))["preference"] is False
+    assert checked(wanted, choice("walk", "by car"))["preference"] is False

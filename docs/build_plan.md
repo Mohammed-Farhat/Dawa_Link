@@ -75,6 +75,57 @@ The owner agreed to move on to the website before the agent's final evaluation, 
 
 ## 3. Log
 
+### Evaluation branch integration (2026-11-19)
+
+The user authorized commits and a push of `test/agent-evaluation` only. Local work
+was saved in separate logout, evaluator and evidence commits before merging the
+six new main commits through `28cf4f1`. No push or merge into main is authorized.
+The merge retains main's shared session-transition helper and adds query cancellation
+on logout. Fingerprinted simulation templates retain the newer migrations without
+mutating historical templates. Upstream agent/domain changes are retained as main
+changes; the original evaluated agent remains at reference `1e17db0` in history
+and saved source archives. Historical results do not establish the updated main's
+behavior. Combined validation and publication status are recorded in
+[`2026-11-19-git-integration`](../eval/checkpoints/2026-11-19-git-integration/REPORT.md).
+Combined checks passed: backend 2,103 tests, frontend 190 tests, strict mypy
+335 files, lint/format/build and the free gate (133/241, zero no-shows/expiry failures).
+Merge saved as `a83f039`. Push was rejected with HTTP 403; GitHub confirms
+`ajkanaan` has read but no write access. Remote main is unchanged; no remote test
+branch was created. Publication waits for the owner to grant Write access.
+Real keys, local environment files and the untracked handoff are excluded. No paid
+evaluations, architecture changes or deployment are part of this integration.
+
+### Pre-architecture reconciliation (2026-11-18)
+
+Authorized separately on `test/agent-evaluation`; reference agent and prompts remain
+at `1e17db0ea522622caaf8da41d60df4ef152ccec3`. No architecture experiments,
+held-out access, commits, push, merge or deployment. The user's branch instruction
+applies to this work instead of the historical main-only workflow above.
+
+- Evaluation infrastructure: provider-boundary usage accounting, safe failure
+  metadata, shared durable budget and audited billing adjustments; final-card
+  quantities/choice grouping, product/pharmacy/currency price grounding, semantic
+  review candidates, execution/safety separation, nearest-rank p95, exclusive
+  artifacts, template provenance, actual world/event and completion auditing.
+- Development labels reviewed in separate copies (210 understanding, 100 safety);
+  added eight fixed conversations / 24 turns before freezing. Independent label
+  agreement remains outstanding. Original datasets/results stay preserved.
+- Separate frontend repair: logout retains its mounted session observer while
+  clearing the user/cache. Failed reproduction and passing 204/503 regressions
+  saved; native Safari pickup, cancellation, unavailable-stock and sourcing-timeout
+  journeys completed with synthetic accounts and ScriptedModel.
+- Verification: full backend 1,986 passed; frontend 153 passed; lint, types, build
+  and free evaluation gate passed. After the last simulation audit addition,
+  92 targeted simulation tests and strict mypy passed. All three free 100-request
+  contenders reran on identical final code/worlds: actual 180 arrivals and shared
+  random draws match. These checks do not establish live LLM quality.
+- Paid work remains gated: $0.045449 usage-derived cost plus six uncertain $3.87
+  reservations = $3.915449 committed of $4. No additional paid calls. Billing
+  evidence, a fresh reference baseline and 50-conversation review remain necessary.
+
+Report, exact commands, hashes, limitations and resume instructions:
+[`eval/checkpoints/2026-11-18-reconciliation/REPORT.md`](../eval/checkpoints/2026-11-18-reconciliation/REPORT.md).
+
 ### Step 1: code skeleton (2026-11-10) ✅
 
 **Built:**
@@ -1123,6 +1174,31 @@ The owner tried the pharmacy's, the admin's and the client's sides and sent 26 p
 **What this costs, said plainly:** the saved evaluation runs (prompts v1.4 to v1.13) are history. Suite E1's "asks first" checks, the simulated client's answers and the second no-AI policy (`rules_asking`) still encode the questions that are gone: they are rewritten with the owner in the agent's final evaluation, and were left untouched here. The planner is exact on the P-set and the no-AI policy still secures 133 units.
 
 **Left open:** a watch or a request started after "in Beirut" still counts from where the client is, not from Beirut (it would need new columns); an ask is not sent later when a closed pharmacy opens (the owner: leave it for now); a [Use my saved place] button on the chat's location sheet.
+
+### Evaluation branch integration — 2026-11-23
+
+Integrated origin/main through cad4150 into test/agent-evaluation, preserving the
+candidate6 hardening and historical evaluation artifacts. Conflicts combined the
+new search/hand-over behavior with budget, pickup-date, language, grounding,
+basket-completeness and fallback protections. The combined prompt is v1.17;
+neither the teammate's v1.14 results nor candidate6's v1.16 checks validate it.
+
+The owner changed clarification to one round followed by search, removed transport
+questions, and authorized automatic watches/pharmacy asks for unlisted medicines.
+Accepted understanding/safety cases, model-played clients and rules_asking still need
+review against those changes before another final evaluation. Historical accepted
+labels, source pins and outcome files were not rewritten. Paid evaluation remains
+stopped under the existing unresolved-charge protocol. No paid calls were made for
+this integration. The two incoming migrations were exercised only in the test database;
+the development database was not migrated by this integration.
+
+Integration checks: 2,841 backend tests passed on the full run; four failures were
+stale prompt/clarification assertions, an SMTP setting inherited by a test, and a
+synthetic freeze fixture detecting changed catalog overrides. All 115 tests in the
+four affected modules passed after the test repairs, including rejection of stale
+catalog provenance. The real accepted freeze was not updated. Frontend: 519 tests,
+lint and production build passed (local API URL supplied). Backend: Ruff check/format
+and mypy across 385 files passed. No live browser or paid-model verification.
 
 ## 4. Left for a later step
 

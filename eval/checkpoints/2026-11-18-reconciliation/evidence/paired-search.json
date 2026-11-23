@@ -1,0 +1,18 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "dawalink.evals.experiment",
+    "simulation",
+    "--contender",
+    "search",
+    "--seeds",
+    "1",
+    "--requests",
+    "100",
+    "--save"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 76.157
+}

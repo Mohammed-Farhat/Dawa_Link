@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "src/dawalink/evals/run_understanding.py",
+    "tests/unit/evals/test_multiturn.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.016
+}

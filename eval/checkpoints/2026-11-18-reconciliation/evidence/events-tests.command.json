@@ -1,0 +1,13 @@
+{
+  "command": [
+    "pytest",
+    "tests/services/test_sim_engine.py",
+    "tests/unit/test_sim_scenario.py",
+    "tests/db/test_sim_world.py",
+    "tests/unit/test_sim_rules.py",
+    "-q"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 21.764
+}

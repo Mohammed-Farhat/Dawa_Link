@@ -1,0 +1,73 @@
+........................................................................ [ 52%]
+.................F..................................F...........         [100%]
+=================================== FAILURES ===================================
+__________ TestAPlainTurn.test_a_reply_is_saved_with_the_runs_numbers __________
+
+self = <tests.agent.test_turn.TestAPlainTurn object at 0x1109c64e0>
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x111b9f7d0>, session=<sqlalchemy.orm.sessio...keRouting object at 0x111b9eea0>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x110df6b40>], turns={})
+
+    def test_a_reply_is_saved_with_the_runs_numbers(self, scene: Scene) -> None:
+        """docs/07 §3.1: the message, the run and the lease, in one save."""
+        result = scene.turn(reply("Which strength do you need?", quick_replies=["1 g", "625 mg"]))
+    
+        assert (result.status, result.outcome) == (Status.DONE, "ok")
+        client_message, agent_message = scene.messages()
+        assert (client_message.author, agent_message.author) == ("client", "agent")
+        assert agent_message.text_redacted == "Which strength do you need?"
+        assert agent_message.quick_replies == ["1 g", "625 mg"]
+        assert agent_message.agent_run_id == result.run_id
+        run = scene.run(result)
+        assert (run.mode, run.trigger, run.outcome) == ("assistant", "client_message", "ok")
+>       assert (run.model, run.prompt_version) == ("scripted", "v1.13")
+E       AssertionError: assert ('scripted', 'v1.14') == ('scripted', 'v1.13')
+E         
+E         At index 1 diff: 'v1.14' != 'v1.13'
+E         Use -v to get more diff
+
+tests/agent/test_turn.py:36: AssertionError
+__________ TestTracing.test_a_turn_is_one_trace_with_a_span_per_step ___________
+
+self = <tests.agent.test_worker_turns.TestTracing object at 0x110a6fe00>
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x11195ed50>, session=<sqlalchemy.orm.sessio...keRouting object at 0x11195dc40>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x111c7b6e0>], turns={})
+
+    def test_a_turn_is_one_trace_with_a_span_per_step(self, scene: Scene) -> None:
+        """docs/07 §9.1, AG-D14."""
+        tracer = RecordingTracer()
+    
+        result = scene.turn(
+            call("search_catalog", query="augmentin"), reply("Found it."), tracer=tracer
+        )
+    
+        (trace,) = tracer.traces
+        assert trace.trace_id == scene.run(result).langfuse_trace_id
+        assert [span.name for span in trace.spans] == [
+            "guard_input",
+            "llm",
+            "search_catalog",
+            "llm",
+            "guard_output",
+            "save",
+        ]
+>       assert trace.metadata | {"conversation_id": None, "client_ref": None} == {
+            "mode": "assistant",
+            "trigger": "client_message",
+            "conversation_id": None,
+            "request_id": None,
+            "model": "scripted",
+            "prompt_version": "v1.13",
+            "client_ref": None,
+            "runs_in": "chat",
+            "outcome": "ok",
+        }
+E       AssertionError: assert {'mode': 'ass...d': None, ...} == {'mode': 'ass...d': None, ...}
+E         
+E         Omitting 8 identical items, use -vv to show
+E         Differing items:
+E         {'prompt_version': 'v1.14'} != {'prompt_version': 'v1.13'}
+E         Use -v to get more diff
+
+tests/agent/test_worker_turns.py:340: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_turn.py::TestAPlainTurn::test_a_reply_is_saved_with_the_runs_numbers
+FAILED tests/agent/test_worker_turns.py::TestTracing::test_a_turn_is_one_trace_with_a_span_per_step
+2 failed, 134 passed in 9.79s

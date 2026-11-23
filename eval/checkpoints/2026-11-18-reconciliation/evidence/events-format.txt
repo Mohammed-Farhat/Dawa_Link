@@ -1,0 +1,3 @@
+cwd: backend
+command: ["ruff", "format", "src/dawalink/sim/engine.py", "src/dawalink/sim/run.py"]
+2 files reformatted

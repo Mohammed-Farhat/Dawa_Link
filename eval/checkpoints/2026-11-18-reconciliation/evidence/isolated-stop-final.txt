@@ -1,0 +1,6 @@
+cwd: backend
+command: ["docker", "compose", "-f", "../eval/checkpoints/2026-11-18-baseline/compose.yaml", "stop"]
+ Container dawalink-eval-20261118-postgres-1 Stopping 
+ Container dawalink-eval-20261118-mailpit-1 Stopping 
+ Container dawalink-eval-20261118-postgres-1 Stopped 
+ Container dawalink-eval-20261118-mailpit-1 Stopped 

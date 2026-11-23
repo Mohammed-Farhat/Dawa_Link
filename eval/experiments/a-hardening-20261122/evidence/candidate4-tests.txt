@@ -1,0 +1,31 @@
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+........................................................................ [ 44%]
+........................................................................ [ 59%]
+........................................................................ [ 74%]
+........................................................................ [ 89%]
+.F.................................................                      [100%]
+=================================== FAILURES ===================================
+___________ test_arabizi_failed_cancel_repairs_card_claim_in_arabizi ___________
+
+scene = Scene(world=World(connection=<sqlalchemy.engine.base.Connection object at 0x11a21f230>, session=<sqlalchemy.orm.sessio...keRouting object at 0x11a21fda0>, models=[<dawalink.agent.llm.scripted.ScriptedModel object at 0x11a0b6a50>], turns={})
+
+    def test_arabizi_failed_cancel_repairs_card_claim_in_arabizi(scene: Scene) -> None:
+        result = scene.turn(
+            call("propose_cancellation", order_ref="R-CX9785"),
+            reply("Hay bitaa el talab R-CX9785 ma3 zer el ilghe2."),
+            reply("Ma l2it 7ajz faal 3al hesab mta3ak. Fik tet2akkad mn el ra2m?"),
+            text="elghi l talab R-CX9785, hayda la khayye",
+        )
+        assert result.outcome == "ok"
+        assert result.text.startswith("Ma l2it")
+        assert not result.proposal_ids
+>       assert scene.run(result).guardrails == ["card"]
+E       AssertionError: assert ['card', 'language'] == ['card']
+E         
+E         Left contains one more item: 'language'
+E         Use -v to get more diff
+
+tests/agent/test_cards.py:601: AssertionError
+=========================== short test summary info ============================
+FAILED tests/agent/test_cards.py::test_arabizi_failed_cancel_repairs_card_claim_in_arabizi

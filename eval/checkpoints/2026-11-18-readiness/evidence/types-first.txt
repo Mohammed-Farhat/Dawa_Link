@@ -1,0 +1,3 @@
+src/dawalink/sim/run.py:78: error: Unused "type: ignore" comment  [unused-ignore]
+src/dawalink/evals/score_safety.py:84: error: Item "None" of "Match[str] | None" has no attribute "end"  [union-attr]
+Found 2 errors in 2 files (checked 320 source files)

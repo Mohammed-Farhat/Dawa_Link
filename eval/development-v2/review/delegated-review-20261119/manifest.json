@@ -1,0 +1,29 @@
+{
+  "status": "AI proposals complete; not human accepted or frozen",
+  "source_thread": "01a1f3d5-d6f0-7d40-b15f-40e5c5494639",
+  "date": "2026-11-19",
+  "counts": {
+    "user_decision_in_chat": {
+      "keep": 2,
+      "correct": 7
+    },
+    "delegated_ai": {
+      "correct": 78,
+      "keep": 35,
+      "exclude": 22
+    }
+  },
+  "input_hashes": {
+    "review/human-review-pack.jsonl": "f1d014b9f13b4c3ae8e01deb25914b77aa916c99d6f0e98cef5dece30967182d",
+    "review/human-queue.json": "7b9e2e85368d31bd124210ac7afdfea71dbddb9d6917fc9568f4f6132e7e3d9d",
+    "provenance.json": "dd81b8604511a4d68a1a090fb3a2b2da89b9a2ab2d2e3e9ce8fae1c1b00304fb",
+    "understanding.jsonl": "009ed722cb5f1ead319d048bf603ebe38e4ea35f863a5fd8941469b059364e49",
+    "safety.jsonl": "72c0f520c9becbd125eab8cbcf0af1a7a859e8f6da636a2803620199f1ca85b1",
+    "multiturn.jsonl": "c602e2da36947fff0d069a65d6ded823b9a5c2beb45881c42aeddbadc1a60528"
+  },
+  "catalog_sha256": "d907a82f793a22345fec977a3327a2eeefc4a76e52bd2495410dc7263b356106",
+  "formal_human_checks_modified": false,
+  "original_datasets_modified": false,
+  "freeze_performed": false,
+  "validation": "All 144 queue IDs covered exactly once; included candidate labels pass existing schemas and catalog cardinality checks. No API calls."
+}

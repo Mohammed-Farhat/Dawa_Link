@@ -1,0 +1,133 @@
+{
+  "errors": [],
+  "integrity_passed": true,
+  "screening_complete": false,
+  "eligible_runs": [
+    "20261119T155557_e5728d4d1c99",
+    "20261119T160209_564cc4cef04f",
+    "20261119T160936_6f61b62ff4fd",
+    "20261119T161621_7d3d87c12895",
+    "20261119T162646_21096b0ddb62"
+  ],
+  "suite_signatures": {
+    "current/1/understanding": 1,
+    "current/1/safety": 1,
+    "staged/1/understanding": 1,
+    "staged/1/safety": 1,
+    "verified/1/understanding": 1
+  },
+  "missing_invocations": 67,
+  "missing_case_observations": 230,
+  "raw_observations": 138,
+  "development_case_observations": 130,
+  "unchanged_reference_files": [
+    "backend/src/dawalink/agent/__init__.py",
+    "backend/src/dawalink/agent/chat.py",
+    "backend/src/dawalink/agent/context.py",
+    "backend/src/dawalink/agent/display.py",
+    "backend/src/dawalink/agent/guards/__init__.py",
+    "backend/src/dawalink/agent/guards/clinical.py",
+    "backend/src/dawalink/agent/guards/injection.py",
+    "backend/src/dawalink/agent/guards/output.py",
+    "backend/src/dawalink/agent/guards/redact.py",
+    "backend/src/dawalink/agent/limits.py",
+    "backend/src/dawalink/agent/llm/__init__.py",
+    "backend/src/dawalink/agent/llm/base.py",
+    "backend/src/dawalink/agent/llm/claude.py",
+    "backend/src/dawalink/agent/llm/ollama.py",
+    "backend/src/dawalink/agent/llm/scripted.py",
+    "backend/src/dawalink/agent/pending.py",
+    "backend/src/dawalink/agent/prompts/__init__.py",
+    "backend/src/dawalink/agent/prompts/v1/examples.md",
+    "backend/src/dawalink/agent/prompts/v1/mode_assistant.md",
+    "backend/src/dawalink/agent/prompts/v1/mode_sourcing.md",
+    "backend/src/dawalink/agent/prompts/v1/system_core.md",
+    "backend/src/dawalink/agent/setup.py",
+    "backend/src/dawalink/agent/state.py",
+    "backend/src/dawalink/agent/templates.py",
+    "backend/src/dawalink/agent/tools/__init__.py",
+    "backend/src/dawalink/agent/tools/act.py",
+    "backend/src/dawalink/agent/tools/base.py",
+    "backend/src/dawalink/agent/tools/propose.py",
+    "backend/src/dawalink/agent/tools/read.py",
+    "backend/src/dawalink/agent/tracing.py",
+    "backend/src/dawalink/agent/tracing_langfuse.py"
+  ],
+  "new_calls": 1205,
+  "purposes": {
+    "workflow": 989,
+    "extraction": 140,
+    "verification": 76
+  },
+  "spending": [
+    [
+      "baseline",
+      "settled",
+      148,
+      93178,
+      93178
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ],
+    [
+      "screening",
+      "settled",
+      1124,
+      764849,
+      764849
+    ],
+    [
+      "screening",
+      "uncertain",
+      8,
+      0,
+      5160000
+    ]
+  ],
+  "historical_uncertain_holds": [
+    [
+      "1e77799c15ec46d180396c329072caa3",
+      "20261118T122213_e474d1ac62d5",
+      "baseline",
+      645000
+    ],
+    [
+      "15574c9f6dc445c2a7027f77db57b75a",
+      "20261118T122259_955402f02a64",
+      "baseline",
+      645000
+    ],
+    [
+      "1dd6b76421c84e9d896357f9d4a597cc",
+      "20261118T122208_1c154071862e",
+      "baseline",
+      645000
+    ],
+    [
+      "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "20261118T122218_796e9bf2b7bb",
+      "baseline",
+      645000
+    ],
+    [
+      "68966be19b144896b7e6a2b1c5286928",
+      "20261118T122213_e474d1ac62d5",
+      "baseline",
+      645000
+    ],
+    [
+      "63c4a74e43a24681869c4d79e7733058",
+      "20261118T122259_955402f02a64",
+      "baseline",
+      645000
+    ]
+  ],
+  "original_calls_unchanged": 81,
+  "original_events_unchanged": 0,
+  "scope": "Only accepted development case bodies inspected. Existing source fingerprint hashes original dataset files without semantic held-out inspection. Incomplete coverage is explicit, never a passed comparison."
+}

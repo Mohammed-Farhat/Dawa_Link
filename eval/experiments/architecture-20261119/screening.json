@@ -1,0 +1,192 @@
+{
+  "seed": 20261119,
+  "method": "Near-equal language quotas, category strata within language; conversation seeded combination minimizing uncovered behaviors then language imbalance",
+  "cases": {
+    "understanding": [
+      "U-0007",
+      "U-0012",
+      "U-0014",
+      "U-0023",
+      "U-0025",
+      "U-0042",
+      "U-0050",
+      "U-0067",
+      "U-0070",
+      "U-0079",
+      "U-0090",
+      "U-0091",
+      "U-0092",
+      "U-0115",
+      "U-0123",
+      "U-0133",
+      "U-0140",
+      "U-0149",
+      "U-0150",
+      "U-0152",
+      "U-0155",
+      "U-0162",
+      "U-1002",
+      "U-1025",
+      "U-1034",
+      "U-1040",
+      "U-1042",
+      "U-1043",
+      "U-1047",
+      "U-1050"
+    ],
+    "safety": [
+      "R-0004",
+      "R-0005",
+      "R-0012",
+      "R-0016",
+      "R-0020",
+      "R-0034",
+      "R-0036",
+      "R-0046",
+      "R-0053",
+      "R-0060",
+      "R-1005",
+      "R-1009",
+      "R-1022",
+      "R-1026",
+      "R-1029",
+      "R-1030",
+      "R-1036",
+      "R-1042",
+      "R-1046",
+      "R-1050"
+    ],
+    "multiturn": [
+      "M-0002",
+      "M-0004",
+      "M-0005",
+      "M-0007",
+      "M-0009",
+      "M-0010",
+      "M-0011",
+      "M-0012",
+      "M-0014",
+      "M-0015"
+    ]
+  },
+  "coverage": {
+    "understanding": {
+      "count": 30,
+      "languages": {
+        "mixed": 7,
+        "arabizi": 7,
+        "english": 8,
+        "arabic": 8
+      },
+      "behaviors": [
+        "clear",
+        "days_pickup",
+        "ambiguous",
+        "misspelled",
+        "misspelled",
+        "budget",
+        "clinical",
+        "clear",
+        "clear",
+        "days_pickup",
+        "ambiguous",
+        "ambiguous",
+        "ambiguous",
+        "misspelled",
+        "multi",
+        "budget",
+        "budget",
+        "preference",
+        "preference",
+        "preference",
+        "clinical",
+        "clinical",
+        "clear",
+        "multi",
+        "misspelled",
+        "multi",
+        "multi",
+        "budget",
+        "days_pickup",
+        "days_pickup"
+      ]
+    },
+    "safety": {
+      "count": 20,
+      "languages": {
+        "arabizi": 5,
+        "english": 5,
+        "arabic": 5,
+        "mixed": 5
+      },
+      "behaviors": [
+        "clinical",
+        "clinical",
+        "injection",
+        "cross_user",
+        "priority",
+        "clinical",
+        "clinical",
+        "injection",
+        "cross_user",
+        "priority",
+        "injection",
+        "false_action",
+        "cross_user",
+        "false_action",
+        "false_action",
+        "priority",
+        "priority",
+        "cross_user",
+        "pii_fishing",
+        "injection"
+      ]
+    },
+    "multiturn": {
+      "count": 10,
+      "languages": {
+        "english": 3,
+        "arabic": 3,
+        "mixed": 2,
+        "arabizi": 2
+      },
+      "behaviors": [
+        "quantity correction must replace earlier one-box facts",
+        "pickup day correction across turns",
+        "transport changed after an initial proposal",
+        "long conversation retains facts and applies final correction",
+        "partial answers",
+        "quantity correction",
+        "budget correction",
+        "pickup correction",
+        "remove medicine",
+        "conflicting instructions"
+      ]
+    }
+  },
+  "dataset_hashes": {
+    "multiturn.jsonl": "35ff8ea809e54fe46a693ce786bc3a2a85095ff676161fd09fa3cc8219a9b131",
+    "safety.jsonl": "c3d77ee62ee908f28e0e5dd5fa78ad64e9393c5892779d00b1e787eb5f2e54c4",
+    "understanding.jsonl": "594361c3abf43e6b4e3a4a74970699b8eeea5f9eb122b4baba029dc09d3d1c1b"
+  },
+  "smoke_understanding": [
+    "U-0014",
+    "U-0123",
+    "U-0149",
+    "U-0150",
+    "U-1040"
+  ],
+  "repetitions": {
+    "1": [
+      "current",
+      "staged",
+      "verified"
+    ],
+    "2": [
+      "verified",
+      "staged",
+      "current"
+    ]
+  },
+  "supersedes_before_scoring": "screening-proportional-rejected.json; mixed safety absent"
+}

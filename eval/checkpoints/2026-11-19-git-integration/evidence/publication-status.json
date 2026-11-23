@@ -1,0 +1,58 @@
+{
+  "local_merge_commit": "a83f039",
+  "remote_main": "28cf4f1d3f8412eff3ee7a10ffb9eb40102f1313",
+  "remote_test_branch_exists": false,
+  "push": {
+    "argv": [
+      "git",
+      "push",
+      "--set-upstream",
+      "origin",
+      "test/agent-evaluation"
+    ],
+    "exit": 128,
+    "http_status": 403,
+    "reason": "Permission denied to ajkanaan"
+  },
+  "authenticated_account": "ajkanaan",
+  "repository_permissions": {
+    "admin": false,
+    "maintain": false,
+    "pull": true,
+    "push": false,
+    "triage": false
+  },
+  "verification_commands": [
+    [
+      "gh",
+      "api",
+      "user",
+      "--jq",
+      ".login"
+    ],
+    [
+      "gh",
+      "api",
+      "repos/Mohammed-Farhat/Dawa_Link",
+      "--jq",
+      "{repository: .full_name, permissions: .permissions}"
+    ],
+    [
+      "git",
+      "ls-remote",
+      "origin",
+      "refs/heads/test/agent-evaluation",
+      "refs/heads/main"
+    ]
+  ],
+  "remote_modified": false,
+  "next_step": "Owner grants ajkanaan Write access; then fetch and push only test/agent-evaluation.",
+  "pre_push_seal_only_documentation_changed": [
+    "PROGRESS.md",
+    "REPORT.md"
+  ],
+  "updated_document_sha256": {
+    "PROGRESS.md": "0f294483547b90f726caa82d750572fc8dfa8a5f25ab602dd65ce8d2ad8ecff7",
+    "REPORT.md": "8332358f18dd61ae10baaaf5752af4b5a3b92739a62dc202f0a0812d00164ebd"
+  }
+}

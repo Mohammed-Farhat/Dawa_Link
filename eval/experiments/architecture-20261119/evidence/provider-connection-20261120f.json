@@ -1,0 +1,34 @@
+{
+  "incident": {
+    "id": "2f0b789684804da1afa8a19c4b7009c3",
+    "run": "20261120T151010_e713a08bc189",
+    "held_microusd": 645000,
+    "actual": null,
+    "status": "uncertain",
+    "events": [
+      {
+        "kind": "request",
+        "details": {
+          "architecture": "verified",
+          "effort": "medium",
+          "model": "claude-haiku-5-5",
+          "purpose": "workflow",
+          "request_sha256": "61b989d5df4a6e7ff8fb2d78a53b7ae307921106753e0550305fc505487bb016"
+        }
+      },
+      {
+        "kind": "provider_failure",
+        "details": {
+          "error_type": "APIConnectionError",
+          "request_id": null,
+          "seconds": 0.492,
+          "status": null
+        }
+      }
+    ]
+  },
+  "reachability": "Free unauthenticated HEAD returned405 at15:11UTC, proves endpoint reachability only, not billing or successful generation.",
+  "new_hold_released": false,
+  "execution_terminal": true,
+  "next_untouched_step": 51
+}

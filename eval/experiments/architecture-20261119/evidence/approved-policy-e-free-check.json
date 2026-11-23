@@ -1,0 +1,16 @@
+{
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_microusd": 25000000,
+  "unknown_ids_preserved": 16,
+  "reserve_and_settle_on_temporary_ledger": true,
+  "new_unknown_stops_reservations": true,
+  "canonical_ledger_unchanged": true,
+  "source_fingerprint_unchanged": true,
+  "start_step": 3
+}

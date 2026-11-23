@@ -1,0 +1,9 @@
+{
+  "command": [
+    "pytest",
+    "--junitxml=../eval/checkpoints/2026-11-19-git-integration/evidence/backend.xml"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 145.264
+}

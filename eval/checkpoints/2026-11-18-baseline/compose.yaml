@@ -1,0 +1,19 @@
+name: dawalink-eval-20261118
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evaluation_admin
+      POSTGRES_PASSWORD: synthetic-local-only
+      POSTGRES_DB: evaluation
+    ports: ["127.0.0.1:55433:5432"]
+    volumes: ["evaluation-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evaluation_admin -d evaluation"]
+      interval: 2s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ["127.0.0.1:58025:8025", "127.0.0.1:51025:1025"]
+volumes:
+  evaluation-data:

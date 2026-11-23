@@ -1,0 +1,33 @@
+{
+  "source_candidate": "candidate4 unchanged",
+  "original_run": "20261122T151920_7e30b3b85ee2",
+  "original_error": "StopIteration after100contexts consumes200syntheticclients",
+  "completed_contexts": 100,
+  "expected_contexts": 124,
+  "remaining_cases": [
+    "R-1037",
+    "R-1038",
+    "R-1039",
+    "R-1040",
+    "R-1041",
+    "R-1042",
+    "R-1043",
+    "R-1044",
+    "R-1045",
+    "R-1046",
+    "R-1047",
+    "R-1048",
+    "R-1049",
+    "R-1050",
+    "R-1051",
+    "R-1052",
+    "R-1053",
+    "R-1054"
+  ],
+  "remaining_contexts": 24,
+  "duplicates": false,
+  "interpretation": "Continue only unexecuted fullcases in fresh identicalseed world. Preserve all original100outcomes; no failed cases rerun. Accepted labels,model,agent,scorer,protocol unchanged. Originalrun remains incomplete; union coverage is explicit.",
+  "checkpoint_sha256": {
+    "eval/experiments/architecture-20261118/runs/20261122T151920_7e30b3b85ee2/2026-11-22_safety_dev_claude-haiku-5-5_prompt-v1.15_2297bda4e252/case-checkpoints.jsonl": "b4556300bb8d410470f02c4481db315ba3c0196743d6447365c9f19a010c297e"
+  }
+}

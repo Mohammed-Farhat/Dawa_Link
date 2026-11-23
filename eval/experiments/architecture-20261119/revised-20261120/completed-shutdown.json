@@ -1,0 +1,23 @@
+{
+  "services_stopped": true,
+  "stop_exit_code": 0,
+  "stop_output": " Container dawalink-eval-20261118-mailpit-1 Stopping \n Container dawalink-eval-20261118-postgres-1 Stopping \n Container dawalink-eval-20261118-postgres-1 Stopped \n Container dawalink-eval-20261118-mailpit-1 Stopped \n",
+  "containers": [
+    {
+      "name": "dawalink-eval-20261118-mailpit-1",
+      "service": "mailpit",
+      "state": "exited",
+      "exit_code": 0
+    },
+    {
+      "name": "dawalink-eval-20261118-postgres-1",
+      "service": "postgres",
+      "state": "exited",
+      "exit_code": 0
+    }
+  ],
+  "volume_preserved": "dawalink-eval-20261118_evaluation-data",
+  "paid_orchestrator_session": 60235,
+  "paid_orchestrator_terminal": true,
+  "active_model_reservations": 0
+}

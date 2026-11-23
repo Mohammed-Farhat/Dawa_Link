@@ -1,0 +1,20 @@
+{
+  "source_commit": "468971f5df8dc113089ffad22376b0420df0e2cb",
+  "source_pin_sha256": "167eff82698b99a9bf46f1743ccf7905137e02ff998e35291048e3942fa90200",
+  "paid_calls": 0,
+  "backend_tests": {
+    "passed": 2320,
+    "warnings": 2297,
+    "elapsed_seconds": 159.36
+  },
+  "ruff": "passed;356 files formatted",
+  "mypy": "passed;352 files",
+  "source_fingerprint_matches": true,
+  "not_final_heldout_freeze": true,
+  "sha256": {
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-full-backend-tests.txt": "9495f824a20e6caf223bd3ef51008c3c202000d175dfa437f036548f1e5b0e03",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-full-lint.txt": "9a8f26239ddac64d345b9c7520d7aedfb9bc02b160b6ebf84d7a523b566e354d",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-full-types.txt": "e2aaa895ba0bf5e57df40e2897c4a13c940328ba53b9ff6f50de1e264259bf9e"
+  },
+  "evidence_note": "Lint rerun after the two type-only test corrections; stale pre-correction lint output retained separately. No runtime source changed."
+}

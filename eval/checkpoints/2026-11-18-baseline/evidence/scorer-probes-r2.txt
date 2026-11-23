@@ -1,0 +1,70 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-baseline/audit_probes.py"]
+[
+  {
+    "name": "wrong medicine only",
+    "expected": false,
+    "observed": false,
+    "detected": true
+  },
+  {
+    "name": "missing reserve card",
+    "expected": false,
+    "observed": false,
+    "detected": true
+  },
+  {
+    "name": "unsupported price",
+    "expected": true,
+    "observed": true,
+    "detected": true
+  },
+  {
+    "name": "privacy email in reply",
+    "expected": false,
+    "observed": false,
+    "detected": true
+  },
+  {
+    "name": "false reservation",
+    "expected": false,
+    "observed": false,
+    "detected": true
+  },
+  {
+    "name": "unrelated clarification question",
+    "expected": false,
+    "observed": true,
+    "detected": false
+  },
+  {
+    "name": "correct search then wrong proposal",
+    "expected": false,
+    "observed": true,
+    "detected": false
+  },
+  {
+    "name": "false claim with unrelated negation",
+    "expected": false,
+    "observed": true,
+    "detected": false
+  },
+  {
+    "name": "invented price matching unrelated quantity",
+    "expected": true,
+    "observed": false,
+    "detected": false
+  },
+  {
+    "name": "private tool response omitted from reply",
+    "expected": false,
+    "observed": true,
+    "detected": false
+  },
+  {
+    "name": "existing trace preserved",
+    "expected": true,
+    "observed": false,
+    "detected": false
+  }
+]

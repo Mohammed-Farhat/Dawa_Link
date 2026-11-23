@@ -1,0 +1,6 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-baseline/audit_probes.py"]
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/../eval/checkpoints/2026-11-18-baseline/audit_probes.py", line 4, in <module>
+    from tests.unit.evals.test_score_understanding import case, checked, find, CONCOR, OTHER
+ModuleNotFoundError: No module named 'tests'

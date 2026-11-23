@@ -35,10 +35,11 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.orm import Session, sessionmaker
 
-from dawalink.agent import context, language, limits, state
+from dawalink.agent import architectures, context, language, limits, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
+from dawalink.agent.guards.language import language_of
 from dawalink.agent.guards.redact import EMAIL_MARK, LOCATION, NAME, PHONE_MARK, redact
 from dawalink.agent.llm import (
     AssistantTurn,
@@ -130,6 +131,7 @@ class Agent:
     # business deadline use the app clock instead (R-T11).
     monotonic: Callable[[], float] = time.monotonic
     sleep: Callable[[float], None] = time.sleep
+    architecture: architectures.Architecture = field(default_factory=architectures.selected)
 
 
 class Status(StrEnum):
@@ -191,6 +193,9 @@ class _Work:
     candidate_call_id: str | None = None
     pending_results: list[ToolResult] = field(default_factory=list)
     repaired: bool = False
+    staged: bool = False
+    verified: bool = False
+    facts: architectures.Facts | None = None
     final: Reply | None = None
     outcome: RunOutcome = RunOutcome.OK
     failure: LLMError | None = None
@@ -414,10 +419,72 @@ def _ask(work: _Work, prompt: Prompt) -> ModelReply:
     raise AssertionError("unreachable")
 
 
+def _auxiliary(work: _Work, prompt: Prompt, name: str, kind: type[Any]) -> Any:
+    """Use the same model, retry policy, deadline, caps, tracing and accounting."""
+    assert work.trace is not None
+    if work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
+        raise LLMUnavailable("architecture call limit reached")
+    with work.trace.span(name, "generation", model=work.agent.model.name) as span:
+        answer = _ask(work, prompt)
+        work.llm_calls += 1
+        usage = answer.usage
+        work.tokens_in += usage.input_tokens
+        work.tokens_out += usage.output_tokens
+        work.tokens_cached += usage.cached_tokens
+        amount = cost_usd(work.agent.model.name, usage)
+        work.cost += amount
+        span.input = _last_input(list(prompt.messages))
+        span.output = {
+            "text": answer.text,
+            "tool_calls": [{"name": c.name, "arguments": c.arguments} for c in answer.tool_calls],
+        }
+        span.metadata.update(
+            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cost_usd=str(amount)
+        )
+        return architectures.decode(answer, kind, name)
+
+
+def _stage_facts(work: _Work) -> None:
+    assert work.loaded is not None
+    work.staged = True
+    prompt = architectures.structured_prompt(
+        architectures.EXTRACT, work.loaded.block, architectures.Facts, "record_facts"
+    )
+    work.facts = cast(
+        architectures.Facts, _auxiliary(work, prompt, "record_facts", architectures.Facts)
+    )
+    facts = work.facts
+    # A full replacement snapshot makes corrections and removals visible; no business
+    # state is updated by the extractor. Existing tools still resolve catalog ambiguity.
+    facts.items = facts.current_items()
+    if facts.missing() and work.loaded.trigger is TurnTrigger.CLIENT_MESSAGE:
+        work.candidate = Reply(text=architectures.clarification(facts))
+        work.candidate_call_id = None
+        work.route = "guard_output"
+    else:
+        work.messages.append(
+            UserText(
+                "Structured client facts (unknown=null; latest corrections replace old values): "
+                + facts.model_dump_json()
+                + " Use these current facts, never removed items or earlier values. "
+                "Resolve ambiguous products with search_catalog. Active request changes "
+                "still require the existing client approval cards."
+            )
+        )
+
+
 def _agent(graph_state: _State) -> _State:
     work = graph_state["work"]
     assert work.loaded is not None
     assert work.trace is not None
+    if work.agent.architecture == "staged" and not work.staged:
+        try:
+            _stage_facts(work)
+        except LLMError as error:
+            work.failure, work.route = error, "fallback"
+            return graph_state
+        if work.candidate is not None:
+            return graph_state
     if work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
         # The model never ended the turn: our own words, with this turn's cards (FA-4).
         _use_template(work, Fixed.NEUTRAL, NO_REPLY)
@@ -575,6 +642,21 @@ def _tools(graph_state: _State) -> _State:
                 )
             )
             continue
+        if (
+            work.facts is not None
+            and work.facts.missing()
+            and work.loaded.trigger is TurnTrigger.CLIENT_MESSAGE
+            and call.name != "search_catalog"
+        ):
+            work.pending_results.append(
+                _error(
+                    call.id,
+                    call.name,
+                    ToolError.INVALID_ARGUMENTS,
+                    "Clarify missing client facts before the business workflow.",
+                )
+            )
+            continue
         tool = tools.get(call.name)
         if tool is not None and tool.progress and work.on_progress is not None:
             work.on_progress(tool.progress)
@@ -652,6 +734,62 @@ def _found_something(work: _Work) -> bool:
     return False
 
 
+def _verify_draft(work: _Work) -> bool:
+    """One read-only review; one correction shared with the existing guard repair."""
+    assert work.loaded is not None
+    assert work.candidate is not None
+    work.verified = True
+    evidence = {
+        "application_rules": system_parts(work.loaded.mode),
+        "context": work.loaded.block,
+        "draft": work.candidate.model_dump(mode="json"),
+        "tool_history": [
+            {"calls": [{"name": c.name, "arguments": c.arguments} for c in m.reply.tool_calls]}
+            if isinstance(m, AssistantTurn)
+            else {"results": [{"name": r.name, "content": r.content} for r in m.results]}
+            for m in work.messages
+            if isinstance(m, (AssistantTurn, ToolResults))
+        ],
+        "latest_results": [
+            {"name": o.name, "content": o.content, "ok": o.ok} for o in work.outcomes
+        ],
+    }
+    verdict = cast(
+        architectures.Verdict,
+        _auxiliary(
+            work,
+            architectures.structured_prompt(
+                architectures.VERIFY,
+                json.dumps(evidence, default=str),
+                architectures.Verdict,
+                "review_draft",
+            ),
+            "review_draft",
+            architectures.Verdict,
+        ),
+    )
+    if not verdict.issues:
+        return True
+    work.guardrails.append("verifier_issues")
+    if work.repaired or work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
+        work.outcome = RunOutcome.GUARDRAIL_BLOCKED
+        _use_template(work, Fixed.NEUTRAL, None)
+        return False
+    work.repaired = True
+    feedback = "Read-only review found: " + "; ".join(verdict.issues)
+    feedback += ". Correct once through the existing tools/guards. Do not assume actions occurred."
+    if work.candidate_call_id is None:
+        work.messages.append(UserText(feedback))
+    else:
+        work.pending_results.append(
+            _error(work.candidate_call_id, REPLY, ToolError.INVALID_ARGUMENTS, feedback)
+        )
+        work.messages.append(ToolResults(tuple(work.pending_results)))
+    work.candidate = None
+    work.route = "agent"
+    return False
+
+
 def _product_names(tx: Tx, work: _Work) -> set[str]:
     """The names of the products this turn is about: what its tools returned, and the
     medicines the conversation holds. The reply guard doesn't read them as dosing words."""
@@ -696,6 +834,13 @@ def _guard_output(graph_state: _State) -> _State:
     assert work.loaded is not None
     assert work.candidate is not None
     assert work.trace is not None
+    if work.agent.architecture == "verified" and not work.verified:
+        try:
+            if not _verify_draft(work):
+                return graph_state
+        except LLMError as error:
+            work.failure, work.route = error, "fallback"
+            return graph_state
     with work.trace.span("guard_output") as span:
         with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
             checked = output_guard.check(
@@ -705,7 +850,14 @@ def _guard_output(graph_state: _State) -> _State:
                 client_id=work.loaded.client_id,
                 run_id=work.run_id,
                 client_text=work.loaded.client_text,
+                client_history=work.loaded.client_history,
                 found_something=_found_something(work),
+                tool_answers=[o.as_json() for o in work.outcomes if o.ok],
+                language=work.loaded.case_state.language,
+                preference=work.turn.state.preference if work.turn else None,
+                budget=work.turn.state.budget if work.turn else None,
+                client_pickup_day=work.turn.state.client_pickup_day if work.turn else None,
+                on_foot=work.turn is not None and work.turn.state.preference == "walkable",
                 client_language=language.language_of(work.loaded.client_text),
                 product_names=_product_names(tx, work),
                 a_person_has_it=_a_person_has_it(tx, work),
@@ -715,9 +867,9 @@ def _guard_output(graph_state: _State) -> _State:
     for kind in kinds:
         if kind not in work.guardrails:
             work.guardrails.append(kind)
-    # A reply in the wrong language, or one without the cards of what it found, is sent
-    # after one try to fix it: low risk, and our fixed text would say less (FA-8, FA-40).
-    mild = (output_guard.LANGUAGE, output_guard.NO_CARD)
+    # Missing-card omissions retain the existing one-repair policy (FA-40).
+    # Persisting language violations use a fixed reply in the client's language.
+    mild = (output_guard.NO_CARD,)
     blocking = [
         violation
         for violation in checked.violations
@@ -730,7 +882,18 @@ def _guard_output(graph_state: _State) -> _State:
     if work.repaired or work.llm_calls >= MAX_LLM_CALLS_PER_TURN:
         clinical = any(v.type == output_guard.CLINICAL for v in blocking)
         work.outcome = RunOutcome.GUARDRAIL_BLOCKED
-        _use_template(work, Fixed.CLINICAL_REFUSAL if clinical else Fixed.NEUTRAL, None)
+        # A rejected recommendation must not reappear on the fallback card.
+        preference_failed = bool(
+            {"preference", "budget", "pickup_day", "basket"} & set(work.guardrails)
+        )
+        template = (
+            Fixed.CLINICAL_REFUSAL
+            if clinical
+            else Fixed.TRY_AGAIN
+            if preference_failed
+            else Fixed.NEUTRAL
+        )
+        _use_template(work, template, None)
         return graph_state
     work.repaired = True
     feedback = "Your reply can't be sent. " + " ".join(v.feedback for v in blocking)
@@ -750,10 +913,12 @@ def _language(work: _Work) -> str | None:
     """The client's language, for a text of ours: what the agent noted, else the script."""
     assert work.loaded is not None
     assert work.turn is not None
-    noted = work.turn.state.language
-    written = language.language_of(work.loaded.client_text)
-    if written is not None:
-        return written
+    noted = (
+        language_of(work.loaded.client_text or "", work.loaded.case_state.language)
+        or work.turn.state.language
+    )
+    if output_guard.script_of(work.loaded.client_text or "") == "arabic":
+        return "arabic"
     return noted if noted in ("arabizi", "arabic", "english") else None
 
 
@@ -763,6 +928,11 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
     if note and note not in work.guardrails:
         work.guardrails.append(note)
     cards: list[uuid.UUID] = []
+    # A refusal/error during repair must not undo a rejected card constraint.
+    if which is Fixed.NEUTRAL and {"preference", "budget", "pickup_day", "basket"} & set(
+        work.guardrails
+    ):
+        which = Fixed.TRY_AGAIN
     if which is Fixed.NEUTRAL:
         with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
             known = proposals.of_conversation(tx, work.conversation_id, work.turn.created_proposals)
@@ -771,6 +941,43 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
                 for proposal_id in work.turn.created_proposals
                 if proposal_id in known and proposals.state_of(tx, known[proposal_id]) == "open"
             ][:5]
+            # A model can refuse immediately after creating a card, before its first
+            # reply is checked. Validate fallback cards too; fixed wording alone
+            # cannot establish that their price/day/recommendation fits the client.
+            if cards and work.loaded is not None:
+                checked = output_guard.check(
+                    tx,
+                    Reply(text=fixed(which, _language(work)), proposal_ids=cards),
+                    conversation_id=work.loaded.conversation_id,
+                    client_id=work.loaded.client_id,
+                    run_id=work.run_id,
+                    client_text=work.loaded.client_text,
+                    client_history=work.loaded.client_history,
+                    tool_answers=[o.as_json() for o in work.outcomes if o.ok],
+                    language=work.loaded.case_state.language,
+                    preference=work.turn.state.preference,
+                    budget=work.turn.state.budget,
+                    client_pickup_day=work.turn.state.client_pickup_day,
+                    on_foot=work.turn.state.preference == "walkable",
+                )
+                failed = {
+                    v.type
+                    for v in checked.violations
+                    if v.type
+                    in (
+                        output_guard.CARD,
+                        output_guard.RECOMMENDED,
+                        "preference",
+                        "budget",
+                        "pickup_day",
+                        "basket",
+                    )
+                }
+                for kind in sorted(failed):
+                    if kind not in work.guardrails:
+                        work.guardrails.append(kind)
+                if failed:
+                    cards = []
         if not cards:
             which = Fixed.TRY_AGAIN
     work.final = Reply(text=fixed(which, _language(work)), proposal_ids=cards)

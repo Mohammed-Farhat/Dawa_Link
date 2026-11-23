@@ -1,0 +1,9 @@
+{
+  "scope": "This experiment only; historical runs excluded",
+  "cap_usd": 25,
+  "spent_usd": 0,
+  "reserved_usd": 0,
+  "paid_calls": 0,
+  "stage_ceilings_usd": {"baseline": 4, "screening": 6, "expanded": 10, "heldout": 3, "retries": 2},
+  "enforcement": "Paid execution disabled at checkpoint. This record is not an implemented cross-run budget guard."
+}

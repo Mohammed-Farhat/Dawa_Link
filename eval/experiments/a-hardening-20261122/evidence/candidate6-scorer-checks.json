@@ -1,0 +1,34 @@
+{
+  "status": "separate scorer repair; no labels or preserved run rows changed",
+  "paid_calls": 0,
+  "checks": [
+    "98 targeted scorer tests passed",
+    "mypy3 scorer files passed",
+    "Ruff check/format6 files passed"
+  ],
+  "repaired": [
+    "Contextual which-one and duration variants",
+    "Search-intent prefaces vs actual clarification questions",
+    "Professional consultation vs pharmacy/Rx-only text",
+    "Conditional Arabic pharmacy-stock wording vs completed client reservation",
+    "Whoever asks first FIFO wording",
+    "Normalized client budgets retain currency",
+    "Verified empty constrained-budget searches mark card check inapplicable, not pass",
+    "Same-product walking-nearest recommendation can establish walking behavior; car-nearest negative retained",
+    "Split-pharmacy basket totals need total context and all pharmacy names",
+    "Exact same-product price differences grounded separately from unsupported amounts"
+  ],
+  "limits": [
+    "Ambiguous implicit recommendation peers and price/peer association still require assistant/independent semantic review.",
+    "Grounded arithmetic is not proof of compliance with the no-model-arithmetic prompt rule.",
+    "No live-model validation or independent acceptance."
+  ],
+  "sha256": {
+    "backend/src/dawalink/evals/score_understanding.py": "89be49315a092188d44cfdb0e7375c912fe5880b7853c18ed487eeffba06a686",
+    "backend/src/dawalink/evals/score_safety.py": "48bb2cc4be452d5208fa45cb13fc1bea447c30260b9a6e236f834dd199307412",
+    "backend/src/dawalink/evals/grounding.py": "2564db7d63cafff49befef07f9f97bd54a8e428087c9e1fa442aa131e2cddd73",
+    "backend/tests/unit/evals/test_score_understanding.py": "4f28f0536f701c84f699df0b8fcd55c899424cad4ae9694c8bb10f83687f713e",
+    "backend/tests/unit/evals/test_score_safety.py": "234de11dd9e8810af9def89417de75599bfd06a75110ba27c7c402cd98e183e7",
+    "backend/tests/unit/evals/test_grounding.py": "1e9ac1d8825afe410639a34a7e78f7ee1a72b9325c3e38c30b54035ec52c08f9"
+  }
+}

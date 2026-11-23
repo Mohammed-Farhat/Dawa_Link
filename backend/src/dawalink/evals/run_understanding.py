@@ -15,11 +15,12 @@ It reads `eval/datasets/understanding.jsonl`. The held-out file is read only whe
 
 import argparse
 import json
+import math
 import statistics
 import sys
 import uuid
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date, time, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -31,7 +32,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from dawalink.agent.chat import post_client_message
 from dawalink.agent.llm import ChatModel
 from dawalink.agent.llm.base import has_price
-from dawalink.agent.llm.claude import ClaudeModel
 from dawalink.agent.prompts import PROMPT_VERSION
 from dawalink.agent.tools.base import rate
 from dawalink.agent.tracing import Tracer
@@ -41,8 +41,12 @@ from dawalink.db.models import InventoryItem, Proposal
 from dawalink.db.session import make_engine
 from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
+from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, UCase, read
+from dawalink.evals.review import review_flags
 from dawalink.evals.score_understanding import (
     CHECKS,
     Answer,
@@ -65,7 +69,7 @@ from dawalink.sim import database, save, travel_table, world
 TODAY = date(2026, 11, 16)  # the Monday every case is written for (LABELING_GUIDE.md)
 AT = time(10, 0)
 SEED = 1
-DATABASE = f"{database.PREFIX}_understanding"
+DATABASE = f"{database.PREFIX}_understanding_{uuid.uuid4().hex[:12]}"
 
 
 # Days until expiry of the boxes put on shelves for a case's medicine: most last a
@@ -84,6 +88,9 @@ def shelves_for(
     """
     items: dict[tuple[int, uuid.UUID], dict[str, Any]] = {}
     for position, case in enumerate(cases):
+        if stop_requested():
+            print("Stopped before the next case by evaluation stop control", flush=True)
+            break
         client = lands.clients[position % len(lands.clients)]
         near = [p for p in lands.pharmacies if p.district == client.district]
         far = [p for p in lands.pharmacies if p.district != client.district]
@@ -169,6 +176,37 @@ def write(
     return result, [kinds[card] for card in result.proposal_ids if card in kinds]
 
 
+def observed(agent: Agent, traced: dict[str, Any], kinds: list[str], result: TurnResult) -> Seen:
+    """Attach the actual displayed proposal contents, not merely their card kinds."""
+    with agent.sessions() as session:
+        cards = session.execute(
+            select(Proposal).where(Proposal.id.in_(result.proposal_ids))
+        ).scalars()
+        items = []
+        by_id = {}
+        for card in cards:
+            if card.kind == "reserve":
+                items.append(card.payload)
+                by_id[str(card.id)] = [card.payload]
+            elif card.kind == "reserve_group":
+                items.extend(card.payload.get("items", []))
+                by_id[str(card.id)] = card.payload.get("items", [])
+    seen = seen_in(traced, kinds)
+    groups = []
+    assigned = set()
+    for tool in seen.tools:
+        if tool.name != "propose_plan" or not tool.ok:
+            continue
+        data = json.loads(tool.answer)
+        ids = [str(p["proposal_id"]) for p in data.get("proposals", [])]
+        group = [item for key in ids if key in by_id for item in by_id[key]]
+        if group:
+            groups.append(group)
+            assigned.update(ids)
+    groups.extend(value for key, value in by_id.items() if key not in assigned)
+    return replace(seen, card_items=items, card_groups=groups)
+
+
 def ask(
     agent: Agent, client_id: uuid.UUID, location: Location, text: str
 ) -> tuple[uuid.UUID, TurnResult, list[str]]:
@@ -226,10 +264,16 @@ def _row(
         "client_answer": said,
         "left_out": left_out,
         "turns": [
-            {"reply": turn.reply, "cards": list(turn.cards), "seconds": turn.seconds}
+            {
+                "reply": turn.reply,
+                "cards": list(turn.cards),
+                "seconds": turn.seconds,
+                "outcome": turn.outcome,
+            }
             for turn in turns
         ],
         "checks": checks,
+        "review": review_flags(whole.reply, case.lang),
         **asdict(whole),
     }
 
@@ -261,12 +305,15 @@ def run(
         lbp_per_usd = int(rate(tx) or 0)
     rows: list[dict[str, Any]] = []
     for position, case in enumerate(cases):
+        if stop_requested():
+            print("Stopped before the next case by evaluation stop control", flush=True)
+            break
         client = clients[position % len(clients)]
         chat_id, result, kinds = ask(
             agent, client.id, shared_location(client.lat, client.lon), case.text
         )
         traced = _turns_by_chat(folder).get(str(chat_id), [])
-        turns = [seen_in(traced[-1], kinds)] if traced else []
+        turns = [observed(agent, traced[-1], kinds, result)] if traced else []
         said = left_out = None
         expected = 1
         if turns and wants_an_answer(case, turns[0]):
@@ -279,7 +326,7 @@ def run(
                 traced = _turns_by_chat(folder).get(str(chat_id), [])
                 if len(traced) < expected:
                     break
-                turns.append(seen_in(traced[-1], kinds))
+                turns.append(observed(agent, traced[-1], kinds, result))
                 if left_out and expected == 2 and asked_a_question(turns[-1]):
                     # Asked for what the first answer left out: now the client says it.
                     messages.append(words_of(answer, case.lang, only=left_out))
@@ -296,6 +343,7 @@ def run(
                 left_out=left_out,
             )
         )
+        save_case(folder, rows[-1])
         if not ran:
             # A turn didn't run: the spend cap, or the model is down. What is done is kept.
             print(f"stopped at {case.id}: {result.status.value}", flush=True)
@@ -325,6 +373,9 @@ def rescore(folder: Path, cases: Sequence[UCase], catalog: CatalogNames, lbp_per
             turns = []
         if not turns:
             continue
+        turns[-1] = replace(
+            turns[-1], card_items=row.get("card_items", []), card_groups=row.get("card_groups", [])
+        )
         rows[position] = _row(
             by_id[row["id"]],
             turns,
@@ -335,7 +386,9 @@ def rescore(folder: Path, cases: Sequence[UCase], catalog: CatalogNames, lbp_per
             lbp_per_usd=lbp_per_usd,
             left_out=row.get("left_out"),
         )
-    _write(folder, rows, json.loads((folder / "summary.json").read_text(encoding="utf-8")))
+    destination = folder.with_name(folder.name + "_rescore_" + uuid.uuid4().hex[:12])
+    destination.mkdir(exist_ok=False)
+    _write(destination, rows, json.loads((folder / "summary.json").read_text(encoding="utf-8")))
 
 
 def _write(folder: Path, rows: Sequence[dict[str, Any]], about: dict[str, Any]) -> dict[str, Any]:
@@ -344,11 +397,15 @@ def _write(folder: Path, rows: Sequence[dict[str, Any]], about: dict[str, Any]) 
     if "prompt_version" in about:
         # Scoring a saved run again: it keeps the prompt it ran on, not today's.
         result["prompt_version"] = about["prompt_version"]
-    (folder / "answers.jsonl").write_text(
-        "".join(json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows),
-        encoding="utf-8",
+    save.write_artifacts(
+        folder,
+        {
+            "answers.jsonl": "".join(
+                json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows
+            ),
+            "summary.json": json.dumps(result, indent=2) + "\n",
+        },
     )
-    (folder / "summary.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     print(f"{result['cases']} cases, ${result['cost_usd']}, saved in {folder}")
     for check, good in CHECKS.items():
@@ -366,7 +423,7 @@ def _spread(seconds: Sequence[float]) -> dict[str, float | int]:
     return {
         "turns": len(seconds),
         "seconds_p50": statistics.median(ordered),
-        "seconds_p95": ordered[max(0, int(len(ordered) * 0.95) - 1)],
+        "seconds_p95": ordered[max(0, math.ceil(len(ordered) * 0.95) - 1)],
     }
 
 
@@ -404,6 +461,7 @@ def main() -> None:
     parser.add_argument("--rescore", type=Path, help="score a saved run again (free)")
     parser.add_argument("--effort", default="medium", choices=("low", "medium", "high"))
     parser.add_argument("--max-usd", type=Decimal, help="the most the run may cost")
+    parser.add_argument("--cases", default="", help="comma-separated fixed case IDs")
     parser.add_argument("--limit", type=int, help="only the first N cases")
     parser.add_argument(
         "--heldout", action="store_true", help="the held-out file (final runs only)"
@@ -434,12 +492,13 @@ def main() -> None:
     if not has_price(arguments.model):
         raise ConfigError(f"{arguments.model} has no price in dawalink/agent/llm/base.py.")
     source = (HELDOUT if arguments.heldout else DATASETS) / "understanding.jsonl"
-    cases = read(source, UCase)[: arguments.limit]
+    cases = fixed_cases(read(source, UCase), arguments.cases)[: arguments.limit]
     part = "heldout" if arguments.heldout else "dev"
     name = f"{date.today().isoformat()}_understanding_{part}_{arguments.model}"
     effort = "" if arguments.effort == "medium" else f"_effort-{arguments.effort}"
     folder = save.RESULTS / f"{name}_prompt-{PROMPT_VERSION}{effort}"
 
+    folder = folder.with_name(folder.name + "_" + uuid.uuid4().hex[:12])
     now = at_beirut(TODAY, AT)
     where = database.fresh(settings, DATABASE)
     lands = world.load()
@@ -464,7 +523,7 @@ def main() -> None:
             cases,
             sessions=sessionmaker(app, expire_on_commit=False),
             clock=ManualClock(now),
-            model=ClaudeModel(
+            model=EvaluationModel(
                 api_key=settings.anthropic_api_key.get_secret_value(),
                 model=arguments.model,
                 effort=arguments.effort,

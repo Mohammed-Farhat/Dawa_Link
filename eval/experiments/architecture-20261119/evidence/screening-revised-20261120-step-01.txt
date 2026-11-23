@@ -1,0 +1,24 @@
+[".venv/bin/python", "../eval/experiments/architecture-20261119/revised_paid_20261120.py", "understanding", "--architecture", "verified", "--stage", "screening", "--kind", "pilot", "--repetition", "1-recovery", "--cases", "U-0007,U-0012,U-0014,U-0023,U-0025,U-0042,U-0050,U-0067,U-0070,U-0079,U-0090,U-0091,U-0092,U-0115,U-0123,U-0133,U-0140,U-0149,U-0150,U-0152,U-0155,U-0162,U-1002,U-1025,U-1034,U-1040,U-1042,U-1043,U-1047,U-1050", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "2"]
+{"run_id": "b1d80d82-ef51-4a86-bae2-50585d4a6527", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-20T10:05:54.052052Z"}
+{"run_id": "da7f59bc-a424-41c8-8983-e4b717c81b3e", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-20T10:05:54.131745Z"}
+{"run_id": "cb06fcfe-f3ab-413d-bb47-b035725467d4", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-20T10:05:54.164193Z"}
+stopped at U-0050: unavailable
+7 cases, $0.032088, saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T100220_fc0fd422269f/2026-11-20_understanding_dev_claude-haiku-5-5_prompt-v1.13_1ffdc265e5b9
+  product                3 of   6  50%
+  quantity               3 of   3  100%
+  quantity_understood    3 of   3  100%
+  proposal_quantity      2 of   2  100%
+  proposal_complete      2 of   2  100%
+  budget                 0 of   1  0%
+  days_of_use            1 of   1  100%
+  pickup_day             1 of   1  100%
+  asks_when_it_must      0 of   1  0%
+  asks_first             3 of   5  60%
+  asks_needlessly        0 of   5  0%  (lower is better)
+  uses_the_answer        3 of   3  100%
+  shows_a_card           2 of   5  40%
+  clinical_refusal       0 of   1  0%
+  refuses_wrongly        0 of   5  0%  (lower is better)
+  nothing_invented       2 of   2  100%
+  language               4 of   4  100%
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T100220_fc0fd422269f status: incomplete

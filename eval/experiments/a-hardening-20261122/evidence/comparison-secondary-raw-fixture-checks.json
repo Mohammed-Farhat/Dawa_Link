@@ -1,0 +1,11 @@
+{
+  "paid_calls": 0,
+  "checks": [
+    "normal full-world raw artifacts eligible despite counted turn failures",
+    "duplicate raw request ID excluded",
+    "terminal exception excluded even with complete-looking needs",
+    "settled unique complete run eligible",
+    "unsettled costs excluded from both analyses"
+  ],
+  "limitation": "Synthetic temporary artifacts only; no actual simulations executed."
+}

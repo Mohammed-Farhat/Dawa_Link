@@ -1,0 +1,14 @@
+{
+  "authorization": "Owner pasted six-stage task, 22 November 2026",
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "total_microusd": 25000000,
+  "development_pin_sha256": "20b3e4454f2aab7b0fdc62e9a708ca63a22ae454076c17be32c0d2a689003fb4",
+  "bootstrap_sha256": "d77ad9143ab3524987d6acb07b4b9a952dcc577a15b9fac28f44af08e7825f75",
+  "stop_on_new_uncertain_call": true
+}

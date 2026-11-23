@@ -1,0 +1,5 @@
+{
+  "eval/experiments/architecture-20261118/reviewed-development/understanding.jsonl": "6341ba7f81f0b08abafdec70c3107d6960b9fb3ee8bca05f2d2dba623d50db63",
+  "eval/experiments/architecture-20261118/reviewed-development/safety.jsonl": "f15e638e1922da1fe823fb6831a8ccda52d43652a9f9946fdb8d1be2a5f094d3",
+  "eval/datasets/multiturn.jsonl": "1025b216aaa2541c0087a1b57966030ce2124afc9a2272829426918bb1788852"
+}

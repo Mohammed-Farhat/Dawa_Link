@@ -28,6 +28,7 @@ from dawalink.db.session import make_engine
 from dawalink.evals import catalog_match, plan_set, scan_results
 from dawalink.evals.catalog_match import CatalogNames
 from dawalink.evals.datasets import DATASETS, RCase, UCase, read
+from dawalink.evals.run_multiturn import CASES, MCase, ucase
 from dawalink.observability.logging import configure_logging
 from dawalink.sim import run
 from dawalink.sim.params import Params
@@ -43,6 +44,8 @@ def planner() -> list[str]:
 def datasets() -> list[str]:
     understanding = read(DATASETS / "understanding.jsonl", UCase)
     read(DATASETS / "safety.jsonl", RCase)
+    multi = read(CASES, MCase)
+    understanding += [ucase(c, s, n) for c in multi for n, s in enumerate(c.turns, 1)]
     engine = make_engine(load_settings().database_url)
     try:
         with Session(engine) as session:

@@ -1,0 +1,27 @@
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261122T134541_9303082e3701 status: incomplete
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/../eval/experiments/a-hardening-20261122/paid.py", line 67, in <module>
+    main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/../eval/experiments/a-hardening-20261122/paid.py", line 54, in main
+    experiment.main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/experiment.py", line 228, in main
+    importlib.import_module(MODULES[suite]).main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_understanding.py", line 514, in main
+    rows = run(
+           ^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_understanding.py", line 319, in run
+    traced = _turns_by_chat(folder).get(str(chat_id), [])
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_understanding.py", line 224, in _turns_by_chat
+    turn = json.loads(line)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/lib/python3.12/json/decoder.py", line 354, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

@@ -72,7 +72,12 @@ def simulation(results: Path) -> dict[str, Day]:
             name += SLOW_ANSWERS
         for line in (folder / "needs.jsonl").read_text(encoding="utf-8").splitlines():
             need = json.loads(line)
-            days[name][(config["seed"], need["n"])] = need
+            key = (config["seed"], need["n"])
+            if key in days[name]:
+                raise ValueError(
+                    "Repeated contender/seed/need; select one immutable run explicitly"
+                )
+            days[name][key] = need
     return days
 
 
@@ -109,10 +114,11 @@ def simulation_table(days: dict[str, Day]) -> list[str]:
             if name == other or not both:
                 cells.append("-")
                 continue
-            gap = stats.difference(
+            gap = stats.clustered_difference(
                 _numbers(day, both, "units_secured"),
                 _numbers(days[other], both, "units_secured"),
                 _numbers(day, both, "units_wanted"),
+                [seed for seed, _ in both],
             )
             verdict = "" if gap.excludes_zero else " *(not a clear difference)*"
             cells.append(f"{gap.value:+.1%} ({gap.low:+.1%} to {gap.high:+.1%}){verdict}")

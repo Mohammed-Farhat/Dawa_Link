@@ -1,0 +1,7 @@
+{
+  "directory_exists": false,
+  "files": [],
+  "semantic_content_opened": false,
+  "suitable_heldout_available": false,
+  "reason": "No held-out directory exists at the configured eval/heldout path."
+}

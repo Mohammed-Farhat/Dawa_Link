@@ -1,0 +1,23 @@
+{
+  "status": "running at last authoritative session poll",
+  "session_id": 42451,
+  "execution_id": "revised-20261120c",
+  "current_run": "20261120T102512_44834d17ea98",
+  "step": 3,
+  "known_microusd_at_snapshot": 1018711,
+  "committed_microusd_at_snapshot": 11983711,
+  "aggregate_limit_microusd": 25000000,
+  "caps_usd": {
+    "baseline": 4,
+    "screening": 9,
+    "expanded": 7,
+    "heldout": 3,
+    "retries": 2
+  },
+  "must_poll_before_inference": true,
+  "do_not_restart_or_duplicate": true,
+  "terminal_prior_processes": [
+    11822,
+    72792
+  ]
+}

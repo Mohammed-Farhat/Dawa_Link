@@ -1,0 +1,24 @@
+{
+  "status": "running",
+  "session_id": 11822,
+  "execution_id": "revised-20261120",
+  "stage_caps_usd": {
+    "baseline": 4,
+    "screening": 9,
+    "expanded": 7,
+    "heldout": 3,
+    "retries": 2
+  },
+  "aggregate_usd": 25,
+  "plan": "revised-screening-commands-20261120.json",
+  "next_action": "Poll live session 11822; do not duplicate/restart. Orchestrator stops on any new uncertainty, missing raw coverage, or budget refusal.",
+  "recovery_evidence": "Full C1 U/S recovery is separately labelled pilot/repetition 1-recovery; prior partial runs are retained. Frozen plan documents prospective recovered analysis and sensitivity.",
+  "active_recovery_runs": [
+    [
+      "20261120T100220_fc0fd422269f",
+      "understanding",
+      "verified",
+      false
+    ]
+  ]
+}

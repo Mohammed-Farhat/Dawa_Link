@@ -1,0 +1,9 @@
+{
+  "command": [
+    "pytest",
+    "--junitxml=../eval/checkpoints/2026-11-18-reconciliation/evidence/backend.xml"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 116.838
+}

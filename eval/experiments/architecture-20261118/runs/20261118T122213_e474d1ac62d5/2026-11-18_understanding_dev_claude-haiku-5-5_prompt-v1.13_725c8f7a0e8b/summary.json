@@ -1,0 +1,115 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "understanding.jsonl",
+  "part": "dev",
+  "prompt_version": "v1.13",
+  "cases": 7,
+  "turns": 7,
+  "cost_usd": 0.0112,
+  "seconds_p50": 11.959,
+  "seconds_p95": 12.767,
+  "turns_that_only_answer": {
+    "turns": 4,
+    "seconds_p50": 0.0005,
+    "seconds_p95": 0.001
+  },
+  "turns_with_cards": {
+    "turns": 3,
+    "seconds_p50": 12.298,
+    "seconds_p95": 12.298
+  },
+  "model_calls_per_turn": 2.71,
+  "not_ok": 4,
+  "checks": {
+    "product": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "every_item": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "quantity": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "budget": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "days_of_use": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "pickup_day": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "situation": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "preference": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_when_it_must": {
+      "cases": 3,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_first": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_needlessly": {
+      "cases": 4,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_for_the_rest": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "uses_the_answer": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "shows_a_card": {
+      "cases": 4,
+      "yes": 3,
+      "share": 0.75
+    },
+    "clinical_refusal": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "refuses_wrongly": {
+      "cases": 4,
+      "yes": 0,
+      "share": 0.0
+    },
+    "nothing_invented": {
+      "cases": 3,
+      "yes": 3,
+      "share": 1.0
+    },
+    "language": {
+      "cases": 3,
+      "yes": 3,
+      "share": 1.0
+    }
+  }
+}

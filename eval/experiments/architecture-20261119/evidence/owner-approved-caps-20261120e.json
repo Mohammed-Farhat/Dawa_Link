@@ -1,0 +1,14 @@
+{
+  "owner_reply": "Authorize screening $10, expanded $6; total $25",
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_microusd": 25000000,
+  "past_calls_moved_or_reset": false,
+  "uncertain_holds_released": false,
+  "apply_at_next_child_boundary": true
+}

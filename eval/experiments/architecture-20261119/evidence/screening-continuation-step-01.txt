@@ -1,0 +1,28 @@
+[".venv/bin/python", "../eval/experiments/architecture-20261119/paid.py", "understanding", "--architecture", "verified", "--stage", "screening", "--kind", "comparison", "--repetition", "1", "--cases", "U-0007,U-0012,U-0014,U-0023,U-0025,U-0042,U-0050,U-0067,U-0070,U-0079,U-0090,U-0091,U-0092,U-0115,U-0123,U-0133,U-0140,U-0149,U-0150,U-0152,U-0155,U-0162,U-1002,U-1025,U-1034,U-1040,U-1042,U-1043,U-1047,U-1050", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "2"]
+{"run_id": "4468bfd4-f9dc-4567-aa3b-d3f5b53f5c38", "error": "LLMUnavailable", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-19T16:45:28.108692Z"}
+{"run_id": "079ce71f-76c5-462d-9988-ef5609349416", "error": "LLMUnavailable", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-19T16:45:32.246906Z"}
+{"run_id": "23cba7bf-70bd-46ba-9cd2-553f2f47214e", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-19T16:46:29.107857Z"}
+stopped at U-1050: unavailable
+30 cases, $0.193384, saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261119T162646_21096b0ddb62/2026-11-19_understanding_dev_claude-haiku-5-5_prompt-v1.13_4ec6177981ef
+  product               21 of  25  84%
+  every_item             3 of   4  75%
+  quantity              21 of  21  100%
+  quantity_understood   21 of  21  100%
+  proposal_quantity     19 of  19  100%
+  proposal_complete     18 of  19  95%
+  budget                 3 of   4  75%
+  days_of_use            3 of   5  60%
+  pickup_day             4 of   6  67%
+  situation              4 of   4  100%
+  preference             1 of   1  100%
+  asks_when_it_must      1 of   4  25%
+  asks_first            18 of  22  82%
+  asks_needlessly        0 of  23  0%  (lower is better)
+  asks_for_the_rest      3 of   3  100%
+  uses_the_answer       18 of  18  100%
+  shows_a_card          19 of  23  83%
+  clinical_refusal       3 of   3  100%
+  refuses_wrongly        0 of  23  0%  (lower is better)
+  nothing_invented      18 of  19  95%
+  language              26 of  26  100%
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261119T162646_21096b0ddb62 status: incomplete

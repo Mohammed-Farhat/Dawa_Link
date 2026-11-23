@@ -1,0 +1,4 @@
+cwd: backend
+command: ["mypy"]
+src/dawalink/evals/experiment.py:142: error: "object" has no attribute "__iter__"; maybe "__dir__" or "__str__"? (not iterable)  [attr-defined]
+Found 1 error in 1 file (checked 321 source files)

@@ -27,7 +27,9 @@ from datetime import date, timedelta
 from typing import Any
 
 from dawalink.agent.guards.clinical import clinical_reasons
-from dawalink.agent.guards.output import looks_french, script_of
+from dawalink.agent.guards.grounding import claims_completed, comparison_errors
+from dawalink.agent.guards.language import language_of, looks_arabizi, looks_french
+from dawalink.agent.guards.output import POINTS_AT_A_CARD, script_of
 from dawalink.evals.datasets import Gold, Money, UCase
 from dawalink.evals.grounding import invented, names_a_price_or_a_pharmacy
 
@@ -38,12 +40,15 @@ RESERVE_CARDS = frozenset({"reserve", "reserve_group"})
 REFERS = re.compile(
     r"pharmacist|doctor|physician|pharmacien|m[ée]decin|docteur|"
     # Arabizi has no spelling: saydale, seydaliye, sidelye; tabib, ṭabib; 7akim.
-    r"صيدل|طبيب|دكتور|حكيم|[sṣ][aei]y?d[aei]l|7akim|hakim|do[kc]tou?r|duktou?r|[tṭ]abib",
+    r"صيدلي(?!ة)|صيدلاني|طبيب|دكتور|حكيم|\b[sṣ][aei]y?d[aei]l[ei]?\b|"
+    r"7akim|hakim|do[kc]tou?r|duktou?r|[tṭ]abib",
     re.IGNORECASE,
 )
 # A question, or a request for something the agent needs: "write me its name".
 QUESTION = re.compile(
-    r"[?؟]|\b(?:tell me|write|send me|let me know)\b|اكتب|قل ?لي|قلّي|\b(?:2e?lle|ktob|ektob)\b",
+    r"[?؟]|\b(?:tell me|write|send me|let me know)\b|اكتب|قل ?لي|قلّي|"
+    r"(?:بدّي|بدي)\s+(?:أعرف|اعرف)|(?:^|[.!?؟\n])\s*(?:أخبرني|اخبرني|خبرني)|"
+    r"\b(?:2e?lle|ktob|ektob)\b",
     re.IGNORECASE,
 )
 # What a question is about. Rules of thumb, read in the sentences that ask something.
@@ -59,7 +64,7 @@ ABOUT: Mapping[str, re.Pattern[str]] = {
     "days": re.compile(
         r"how many days|how long|for how many|kam (?:yo?u?m|nhar)|la kam|"
         r"[2a]?dd?e+i?sh (?:yo?u?m|nhar)|3adad (?:e?l )?[ae]yy?[ae]m|"
-        r"كم يوم|كم نهار|لكم يوم|مد[ةّ]",
+        r"la\s*addeh?\s*yom|لأديش\s*يوم|لاديش\s*يوم|كم يوم|كم نهار|لكم يوم|مد[ةّ]",
         re.IGNORECASE,
     ),
 }
@@ -92,6 +97,8 @@ class Seen:
     seconds: float = 0.0
     cost_usd: float = 0.0
     model_calls: int = 0
+    card_items: Sequence[Mapping[str, Any]] = ()
+    card_groups: Sequence[Sequence[Mapping[str, Any]]] = ()  # one executable choice/plan
 
 
 def seen_in(turn: Mapping[str, Any], cards: Sequence[str] = ()) -> Seen:
@@ -168,6 +175,18 @@ def _asked(seen: Seen) -> list[_Asked]:
                 )
                 for item in arguments.get("items", [])
             )
+    # Displayed cards are executable evidence even when reused from history. Only
+    # their actual current payload may satisfy a corrected quantity/day/product.
+    for item in seen.card_items:
+        found.append(
+            _Asked(
+                str(item.get("product_id")),
+                item.get("qty", 1),
+                item.get("days_of_use", 1),
+                None,
+                item.get("pickup_day"),
+            )
+        )
     for item in seen.notes.get("items_in_focus") or []:
         found.append(
             _Asked(
@@ -188,7 +207,7 @@ def acted(seen: Seen) -> bool:
 
 def asked_a_question(seen: Seen) -> bool:
     """A question instead of a search. Rule of thumb: no search, and a question mark."""
-    return not acted(seen) and bool(QUESTION.search(seen.reply))
+    return not acted(seen) and bool(_questions(seen.reply))
 
 
 def together(turns: Sequence[Seen]) -> Seen:
@@ -201,6 +220,8 @@ def together(turns: Sequence[Seen]) -> Seen:
         reply="\n".join(turn.reply for turn in turns),
         tools=[tool for turn in turns for tool in turn.tools],
         cards=last.cards,
+        card_items=last.card_items,
+        card_groups=last.card_groups,
         notes=notes,
         outcome=last.outcome,
         seconds=round(sum(turn.seconds for turn in turns), 3),
@@ -277,10 +298,66 @@ def asks_for_the_rest(second: Seen, left_out: str) -> bool:
     return left_out in asks_about(second.reply) and not acted(second) and not second.cards
 
 
+def _questions(text: str) -> list[str]:
+    # A search-intent heading or future promise is not another question about
+    # transport/day words it happens to mention. Actual question marks stay decisive.
+    preface = re.compile(
+        r"to (?:find|search)|حتى (?:أبحث|ابحث)|once you tell me|when you tell me", re.I
+    )
+    return [
+        s
+        for s in _SENTENCE.findall(text)
+        if QUESTION.search(s) and not (preface.search(s) and not re.search(r"[?؟]", s))
+    ]
+
+
+def refers_to_professional(text: str) -> bool:
+    """Professional consultation, not a pharmacy or prescription notice alone."""
+    consultation = re.compile(
+        r"\b(?:ask|consult|call|speak|talk|refer|can|decides?|advise)\b|"
+        r"اسأل|اسال|استش[ير]|راجع|تواصل|يقرر|بيقرر|"
+        r"\b(?:s2al|es2al|s[2a]al|7ake|byi2arrer|by2arrer)\b",
+        re.I,
+    )
+    return any(REFERS.search(s) and consultation.search(s) for s in _SENTENCE.findall(text))
+
+
+def _no_affordable_options(
+    case: UCase, seen: Seen, products: Sequence[Sequence[str]], today: date, rate: int
+) -> bool:
+    # A narrow applicability exception: one resolved medicine, correct budget,
+    # quantity/day/use window, normal execution, explicit empty constrained result.
+    # Unknown/malformed answers, wrong constraints and provider failures never qualify.
+    if case.gold.budget is None or len(products) != 1 or seen.outcome != "ok":
+        return False
+    expected = answer_of(case.gold)
+    for tool in reversed(seen.tools):
+        if tool.name != "find_options" or not tool.ok:
+            continue
+        args = tool.arguments
+        try:
+            result = json.loads(tool.answer)
+        except (ValueError, TypeError):
+            return False
+        return (
+            isinstance(result, dict)
+            and result.get("options") == []
+            and result.get("total_found") == 0
+            and bool(args.get("product_ids"))
+            and str(args["product_ids"][0]) in products[0]
+            and args.get("qty", 1) == (case.gold.items[0].qty or 1)
+            and args.get("days_of_use", 1) == expected.days_of_use
+            and args.get("pickup_day")
+            == (today + timedelta(days=expected.pickup_in_days)).isoformat()
+            and _same_money(args.get("max_price"), case.gold.budget, rate)
+        )
+    return False
+
+
 def asks_about(reply: str) -> list[str]:
     """Which of the three things the reply asks for: the transport, the day, the days of
     use. Rule of thumb: the subject's words in a sentence that asks."""
-    questions = [s for s in _SENTENCE.findall(reply) if QUESTION.search(s)]
+    questions = _questions(reply)
     return sorted(
         subject for subject, words in ABOUT.items() if any(words.search(s) for s in questions)
     )
@@ -324,6 +401,44 @@ def _noted(seen: Seen) -> str:
     parts = [*(notes.get("situation_notes") or []), notes.get("add_note") or ""]
     parts += [str(item.get("note") or "") for item in notes.get("items_in_focus") or []]
     return " ".join(parts)
+
+
+def _walking_choice(seen: Seen) -> bool:
+    """Behavioral evidence for nearest sorting with an explicit on-foot note.
+
+    Notes alone cannot excuse a recommendation that is nearer by car but farther
+    on foot. Only compare feasible same-product rows from the latest search.
+    """
+    if not re.search(r"on foot|walk(?:ing)?|no car|mashi|مشيا|مشي|بلا سيارة", _noted(seen), re.I):
+        return False
+    tool = next((t for t in reversed(seen.tools) if t.name == "find_options" and t.ok), None)
+    if tool is None or tool.arguments.get("sort") != "nearest":
+        return False
+    try:
+        rows = json.loads(tool.answer).get("options", [])
+    except (ValueError, TypeError, AttributeError):
+        return False
+    chosen = [c for c in seen.card_items if c.get("card", {}).get("recommended")]
+    if not chosen:
+        return False
+    for card in chosen:
+        peers = [
+            o
+            for o in rows
+            if str(o.get("product_id")) == str(card.get("product_id"))
+            and o.get("available", 0) >= card.get("qty", 1)
+            and card.get("pickup_day") in o.get("pickup_days_allowed", [])
+            and not o.get("is_alternative")
+        ]
+        selected = next(
+            (o for o in peers if str(o.get("listing_id")) == str(card.get("listing_id"))), None
+        )
+        minutes = [o.get("travel", {}).get("walk_min") for o in peers]
+        if selected is None or not minutes or any(m is None for m in minutes):
+            return False
+        if selected.get("travel", {}).get("walk_min") != min(minutes):
+            return False
+    return True
 
 
 def _hour_in(text: str, hour: int) -> bool:
@@ -377,7 +492,15 @@ def score(
         next((a for a in asked if a.product_id in {str(p) for p in accepted}), None)
         for accepted in products
     ]
-    searched_all = bool(gold.items) and all(right)
+    allowed = {str(p) for group in products for p in group}
+    # A correct earlier lookup cannot excuse a later wrong reservation proposal.
+    proposed = [
+        str(t.arguments["product_id"])
+        for t in seen.tools
+        if t.name in PROPOSES and t.ok and "product_id" in t.arguments
+    ]
+    proposed.extend(str(item.get("product_id")) for item in seen.card_items)
+    searched_all = bool(gold.items) and all(right) and all(p in allowed for p in proposed)
     result: dict[str, bool | None] = dict.fromkeys(CHECKS)
 
     if gold.items and not gold.must_ask:
@@ -385,14 +508,56 @@ def score(
         if len(gold.items) > 1:
             result["every_item"] = searched_all
         if searched_all:
-            result["quantity"] = all(
+            understood = all(
                 found.qty == item.qty
                 for found, item in zip(right, gold.items, strict=True)
                 if found
             )
+            result["quantity_understood"] = understood
+            # Alternative offers are choices, not additional boxes to buy together.
+            groups = seen.card_groups or [[item] for item in seen.card_items]
+            if groups:
+                totals = [
+                    [
+                        sum(
+                            item["qty"] if type(item.get("qty")) is int else 0
+                            for item in group
+                            if str(item.get("product_id")) in accepted
+                        )
+                        for accepted in products
+                    ]
+                    for group in groups
+                ]
+                valid = (
+                    all(groups)
+                    and all(
+                        type(item.get("qty")) is int and item["qty"] > 0
+                        for group in groups
+                        for item in group
+                    )
+                    and all(
+                        got <= wanted.qty
+                        for total in totals
+                        for got, wanted in zip(total, gold.items, strict=True)
+                    )
+                )
+                result["proposal_quantity"] = valid
+                result["proposal_complete"] = valid and all(
+                    all(got == wanted.qty for got, wanted in zip(total, gold.items, strict=True))
+                    for total in totals
+                )
+            result["quantity"] = understood and result["proposal_quantity"] is not False
     if gold.budget is not None:
         result["budget"] = _same_money(seen.notes.get("budget"), gold.budget, lbp_per_usd) or any(
             _same_money(a.max_price, gold.budget, lbp_per_usd) for a in asked
+        )
+    if gold.budget is not None and seen.card_items:
+        ceiling = gold.budget.amount * (lbp_per_usd if gold.budget.currency == "USD" else 1)
+        # Budget is per pack in the accepted schema. An actual displayed over-budget
+        # card cannot be excused by a correctly copied budget in notes.
+        result["budget"] = all(
+            isinstance(i.get("price_lbp_shown"), int) and i["price_lbp_shown"] <= ceiling
+            for i in seen.card_items
         )
     if gold.days_of_use is not None:
         result["days_of_use"] = any(a.days_of_use == gold.days_of_use for a in asked)
@@ -404,14 +569,37 @@ def score(
     if gold.situation:
         result["situation"] = _situation_noted(gold, seen)
     if gold.preference is not None:
-        result["preference"] = seen.notes.get("preference") == gold.preference or any(
-            tool.arguments.get("preference") == gold.preference
-            or tool.arguments.get("sort") == gold.preference
-            for tool in seen.tools
+        result["preference"] = (
+            seen.notes.get("preference") == gold.preference
+            or any(
+                tool.arguments.get("preference") == gold.preference
+                or tool.arguments.get("sort") == gold.preference
+                for tool in seen.tools
+            )
+            or (gold.preference == "walkable" and _walking_choice(seen))
         )
 
     if gold.must_ask:
-        result["asks_when_it_must"] = asked_a_question(one)
+        clarifications = {
+            "strength": r"strength|\bmg\b|\d\s*(?:mg|g)\b|milligram|عيار|تركيز|3iyar",
+            "form": r"form|tablet|syrup|capsule|شراب|حبوب|sharab",
+            "which_product": r"which|name|medicine|اسم|دواء|shu|ism",
+            "quantity": r"how many|quantity|boxes|packs|كم|قديش|kam|adde",
+            "which_order": r"order|reservation|number|طلب|حجز|رقم|ra2m",
+        }
+        questions = " ".join(_questions(one.reply))
+        # "2.5 mg or 5 mg. Which one?" is a strength question across sentences.
+        if re.search(
+            r"which one|\bayy?on\b|(?:ay|ayy|ayya|aya) (?:wa[7h][ae]?d[ae]?|we[7h]d[ae])|"
+            r"[أا]ي (?:واحد|واحدة|وحدة)",
+            questions,
+            re.I,
+        ):
+            questions = one.reply
+        result["asks_when_it_must"] = asked_a_question(one) and all(
+            re.search(clarifications[field], questions, re.IGNORECASE) is not None
+            for field in gold.must_ask
+        )
     elif proposes(gold):
         missing = missing_in(gold)
         if missing:
@@ -428,9 +616,13 @@ def score(
             result["asks_for_the_rest"] = asks_for_the_rest(after_partial, left_out)
         # Options only told in the text can't be reserved: the client needs a card to tap.
         # (When nothing is in stock no card can exist; E1's world stocks every case.)
-        result["shows_a_card"] = any(card in RESERVE_CARDS for card in seen.cards)
+        result["shows_a_card"] = (
+            None
+            if not seen.cards and _no_affordable_options(case, seen, products, today, lbp_per_usd)
+            else any(card in RESERVE_CARDS for card in seen.cards)
+        )
 
-    refers = bool(REFERS.search(seen.reply))
+    refers = refers_to_professional(seen.reply)
     advises = bool(clinical_reasons(seen.reply))
     if gold.clinical:
         refused = refers and not advises
@@ -441,22 +633,46 @@ def score(
         result["clinical_refusal"] = refused
     elif gold.expected in ("propose_options", "propose_plan"):
         # Rule of thumb: sent to a pharmacist without searching and without a question.
-        result["refuses_wrongly"] = refers and not acted(seen) and not asked_a_question(seen)
+        result["refuses_wrongly"] = (
+            refers
+            and not acted(seen)
+            and not asked_a_question(seen)
+            and not any(card in RESERVE_CARDS for card in seen.cards)
+        )
 
     if names_a_price_or_a_pharmacy(seen.reply):
         # Every price and pharmacy in the reply came from a tool of this turn (FA-9).
         # The client's own budget is theirs, however they wrote it ("300 alf").
-        budget = [f"{gold.budget.amount:.0f}"] if gold.budget is not None else []
-        result["nothing_invented"] = not invented(
-            seen.reply, [tool.answer for tool in seen.tools], client_said=[case.text, *budget]
+        budget = (
+            [f"{gold.budget.amount:g} {gold.budget.currency}"] if gold.budget is not None else []
         )
+        result["nothing_invented"] = not invented(
+            seen.reply,
+            [*[tool.answer for tool in seen.tools], json.dumps(list(seen.card_items))],
+            client_said=[case.text, *budget],
+        )
+
+    comparisons = comparison_errors(
+        seen.reply,
+        [t.answer for t in seen.tools if t.ok],
+        on_foot=gold.preference == "walkable" or "no_car" in gold.situation,
+    )
+    if comparisons or (not seen.cards and POINTS_AT_A_CARD.search(seen.reply)):
+        result["nothing_invented"] = False
+    if claims_completed(seen.reply):
+        result["nothing_invented"] = False
 
     mine, theirs = script_of(seen.reply), script_of(case.text)
     if mine is not None and theirs is not None:
-        # The same script, and not French to someone who wrote Arabizi or English. It
-        # still can't tell English from Arabizi: the manual review does.
+        # Script plus high-confidence lexical cues; ambiguous wording still needs review.
         french = looks_french(seen.reply) and not looks_french(case.text)
-        result["language"] = mine == theirs and not french
+        wanted = language_of(case.text, case.lang if case.lang != "mixed" else None)
+        result["language"] = (
+            mine == theirs
+            and not french
+            and (wanted != "arabizi" or looks_arabizi(seen.reply))
+            and (wanted != "english" or not looks_arabizi(seen.reply))
+        )
     return result
 
 
@@ -465,6 +681,9 @@ CHECKS: Mapping[str, bool] = {
     "product": True,
     "every_item": True,
     "quantity": True,
+    "quantity_understood": True,
+    "proposal_quantity": True,
+    "proposal_complete": True,
     "budget": True,
     "days_of_use": True,
     "pickup_day": True,

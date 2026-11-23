@@ -1,0 +1,35 @@
+{
+  "status": "PROPOSED ONLY; do not apply before owner approval",
+  "current_caps_usd": {
+    "baseline": 4,
+    "screening": 9,
+    "expanded": 7,
+    "heldout": 3,
+    "retries": 2
+  },
+  "proposed_caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "aggregate_microusd": 25000000,
+  "current_screening_committed_excluding_inflight_reservation_usd": 7.65134,
+  "remaining_known_usage_forecast_usd": {
+    "remaining_inflight_C2_safety": 0.011479000000000003,
+    "B2_and_A2_understanding": 0.160521,
+    "B2_and_A2_safety_prefixes": 0.05729675,
+    "common_tail_12_case_invocations": 0.043513357142857145,
+    "all_60_M_invocations": 0.6498066372352457
+  },
+  "forecast_screening_commitment_including_next_reservation_usd": 9.218956744378103,
+  "estimated_shortfall_vs_current_9usd_cap": 0.21895674437810264,
+  "reason": "Two additional provider timeouts retained USD1.29 in new unknown holds after the previous proposal. Successful C2 understanding cost USD0.226523, higher than the partial C1 pilot. Preserve all holds; reallocate USD1 from conditional expansion rather than increase total or move past calls.",
+  "assumptions": [
+    "Projections are not guaranteed provider charges.",
+    "C conversation costs use measured C2/A1 understanding ratio because no C M pilot exists.",
+    "Safety tail partition applies identically across all architectures/repetitions.",
+    "Current approved USD9 screening cap remains enforced while approval is pending."
+  ]
+}

@@ -1,0 +1,5 @@
+cwd: backend
+command: ["python", "-m", "dawalink.evals.before_commit", "--skip-day"]
+planner on the P-set: exact
+datasets: valid
+the saved results (289 files): nothing personal

@@ -1,0 +1,38 @@
+{
+  "status": "candidate6 partial runtime hardening; not final evaluation freeze",
+  "paid_calls": 0,
+  "fixes": [
+    "Rejected preference/budget/pickup cards cannot reappear through refusal fallback; direct refusal before first reply also checked.",
+    "Per-pack monetary caps use client explicit currency instructions before model notes; latest explicit revision wins; USD uses configured catalog exchange rate.",
+    "Explicit relative pickup days anchored to turn Beirut date and stored as code-owned state, preserved through clarification, cleared after date passes.",
+    "Clear French switch no longer inherits stale Arabizi; existing French cue detector shared."
+  ],
+  "verification": {
+    "tests": "167 passed; tests/agent/test_cards.py tests/agent/test_context.py tests/unit/agent/test_pickup.py tests/unit/agent/test_budget.py tests/unit/agent/test_grounding.py -q from backend after sourcing isolated local.env",
+    "ruff": "check and format --check passed on all 12 changed source/test files",
+    "mypy": "7 changed source files passed"
+  },
+  "limitations": [
+    "Narrow date/currency parsers; ambiguous instructions require model/semantic review.",
+    "Budget contract remains per-pack; basket-total interpretation is not inferred.",
+    "No new live-model calls; STOP_PAID remains armed.",
+    "Further comparison/basket/prompt and scorer repairs pending; no independent acceptance."
+  ],
+  "sha256": {
+    "backend/src/dawalink/agent/guards/budget.py": "a8b7d8b387d71861b8b4d7c0b0acae5b0dd9efaf4ba6aa491782c1c1bc1520a4",
+    "backend/src/dawalink/agent/guards/pickup.py": "59caba41153f4206f6278c91ef0e204ab3ba9da101df43f40577b4f9cc8b6c39",
+    "backend/src/dawalink/agent/guards/output.py": "f59ad423eeab84076ee6f43086bec02bf30d710c023973244f20122c2075b275",
+    "backend/src/dawalink/agent/guards/language.py": "52d007572a318f85bc9ce1872e1044a0a036bde8601fefbc4ecd8512131b37b3",
+    "backend/src/dawalink/agent/turn.py": "3ba56fb1e389d825534a2dd723471f22151bed0545f035841e9ca125a432268a",
+    "backend/src/dawalink/agent/context.py": "9acff2f83f66dc8b9a099f6a1c2197519ba41f9306f3d70e28e4c8b472308def",
+    "backend/src/dawalink/agent/state.py": "073ff430858c88cb727cf3675e040cf4380f8e90e5aea19ce01143227e01c0c1",
+    "backend/tests/agent/test_cards.py": "b79048eeb2898fd14d123e89dcd2a2b41f872c9c64a98d0be9d9fff2d1e4055d",
+    "backend/tests/agent/test_context.py": "f57e7472cbffe313454c8f523b347da4bf2b30783bcda1a1b98c03d5506c7b1e",
+    "backend/tests/unit/agent/test_budget.py": "da239c47c83cae074f75b13045365bb1af9c01622981c73371e24b796a5988f8",
+    "backend/tests/unit/agent/test_pickup.py": "fd4aa032d25d59d03913eac47efa543b4e3245bf813cfd99d7e521dfa1645e2d",
+    "backend/tests/unit/agent/test_grounding.py": "9c1eaee6f4873e9c80da90901a9e28d83fda8beeed32e043cb6bcd1207b3caec",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-card-constraints-tests.txt": "83173f4487aacbd663406ac85f0347176b63f26ee2b05bbcda2f82ca2fd687b9",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-card-constraints-lint.txt": "f89b5905d1ee7ee5fa75e6f76b46c3aebd944a531bb138a53c505a8f711e2fcd",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-card-constraints-types.txt": "050c52a2b0c61e8b681ef5c485e0bc03340b8d55148e0acef27d744c8be42033"
+  }
+}

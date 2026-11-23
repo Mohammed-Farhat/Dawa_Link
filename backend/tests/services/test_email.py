@@ -658,7 +658,7 @@ class TestTheWorkersSender:
         return make_settings("postgresql+psycopg://unused@127.0.0.1/none", tmp_path, **overrides)
 
     def test_locally_without_a_server_emails_are_only_logged(self, tmp_path: Path) -> None:
-        assert isinstance(mailer(self.settings(tmp_path)), email.LogSender)
+        assert isinstance(mailer(self.settings(tmp_path, smtp_host=None)), email.LogSender)
 
     def test_the_local_mail_catcher_gets_no_tls_and_no_login(self, tmp_path: Path) -> None:
         with FakeSmtpServer() as server:

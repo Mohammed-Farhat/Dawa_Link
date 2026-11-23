@@ -124,6 +124,7 @@ class Sim:
     unusable_after_told: Counter[int] = field(default_factory=Counter)
     # Trips the oracle saw with a straight-line estimate: the road table missed them.
     straight_trips: int = 0
+    event_audit: list[dict[str, object]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.pharmacy_of = {pharmacy.id: pharmacy for pharmacy in self.world.pharmacies}
@@ -150,7 +151,9 @@ class Sim:
     # --- chance: always from the seed and the thing it belongs to -------------------------
 
     def chance(self, *what: object) -> float:
-        return numbers_for(self.seed, *what).random()
+        value = numbers_for(self.seed, *what).random()
+        self.event_audit.append({"kind": "draw", "key": list(map(str, what)), "value": value})
+        return value
 
     def box(self, order: Order) -> tuple[object, ...]:
         """What a reservation is of, in words that are the same in every run: a row's id is
@@ -164,7 +167,11 @@ class Sim:
         )
 
     def minutes_between(self, low: int, high: int, *what: object) -> int:
-        return numbers_for(self.seed, "wait", *what).randrange(low, high + 1)
+        value = numbers_for(self.seed, "wait", *what).randrange(low, high + 1)
+        self.event_audit.append(
+            {"kind": "delay", "key": list(map(str, what)), "low": low, "high": high, "value": value}
+        )
+        return value
 
     def client_waits(self, *what: object) -> int:
         """How long this client takes to react to this thing."""
@@ -216,7 +223,7 @@ class Sim:
 
 def _stock_arrives(sim: Sim, arrival: Arrival) -> None:
     pharmacy = next(p for p in sim.world.pharmacies if p.n == arrival.pharmacy_n)
-    sim.attempt(
+    applied = sim.attempt(
         lambda tx: inventory.add_item(
             tx,
             pharmacy.id,
@@ -225,6 +232,17 @@ def _stock_arrives(sim: Sim, arrival: Arrival) -> None:
             expiry_date=sim.today + timedelta(days=arrival.days_left),
             quantity=arrival.units,
         )
+    )
+    sim.event_audit.append(
+        {
+            "kind": "stock_arrival",
+            "at": sim.now.isoformat(),
+            "pharmacy": arrival.pharmacy_n,
+            "product": sim.code_of.get(arrival.product_id, str(arrival.product_id)),
+            "units": arrival.units,
+            "days_left": arrival.days_left,
+            "applied": applied,
+        }
     )
 
 

@@ -1,0 +1,51 @@
+{
+  "integrity_passed": true,
+  "screening_complete": false,
+  "source_pin_unchanged": true,
+  "prior_ledger_calls_events_unchanged": true,
+  "new_calls_accounted": 51,
+  "new_settled_calls": 49,
+  "new_uncertain_calls": [
+    {
+      "id": "53fcb90399824e1a915f114ec2898160",
+      "run": "20261120T100220_fc0fd422269f",
+      "held_microusd": 645000,
+      "error_type": "APITimeoutError",
+      "request_id": null,
+      "seconds": 30.013,
+      "status": null
+    },
+    {
+      "id": "ba1ff9400a1042c1a95c6832c351dafe",
+      "run": "20261120T100958_6995d4b9b0d9",
+      "held_microusd": 645000,
+      "error_type": "APITimeoutError",
+      "request_id": null,
+      "seconds": 30.014,
+      "status": null
+    }
+  ],
+  "known_total_microusd": 980998,
+  "uncertain_holds_microusd": 10320000,
+  "committed_microusd": 11300998,
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 9000000,
+    "expanded": 7000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "committed_by_stage_microusd": {
+    "baseline": 3963178,
+    "screening": 7337820
+  },
+  "reserved_calls": 0,
+  "terminal_sessions": [
+    11822,
+    72792
+  ],
+  "processes_restarted": false,
+  "manual_review": "All 14 saved observations from the two new failed recoveries reviewed; implementation assistant, not human or blind. No primary successful-only pooling.",
+  "blocked_audit_turn": 1,
+  "blocked_condition": "Repeated independent API timeouts prevent reliable paired screening; stop before accumulating additional unknown charges. Budget not exhausted."
+}

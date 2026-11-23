@@ -1,0 +1,47 @@
+[
+  {
+    "run": "20261119T155213_9ba78d29369e",
+    "id": "U-1040",
+    "classification": "scorer_error",
+    "reason": "The second turn asks only the missing duration with \u0644\u0623\u064a \u0639\u062f\u062f \u0623\u064a\u0627\u0645. It has a question mark and the client supplies the duration. The narrow topic regex misses this synonym; cards use the supplied seven days.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T155214_6c95f009cdad",
+    "id": "U-0014",
+    "classification": "confirmed_quality_failure",
+    "reason": "First reply asks logistics only and never clarifies Concor strength. This is a staged-routing limitation, not a scorer false positive.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T155213_841d75050a11",
+    "id": "U-0123",
+    "classification": "confirmed_language_failure",
+    "reason": "The original request is Arabizi, while the served reply is fully English. Latin-script heuristic passes language; semantic review confirms the switch.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T155213_9ba78d29369e",
+    "id": "U-0014",
+    "classification": "wording_concern",
+    "reason": "We carry several Concor products is stronger than the catalog lookup proves. It may mean catalog coverage rather than in-stock inventory; no stock action is claimed or performed.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T155213_841d75050a11",
+    "id": "U-0014",
+    "classification": "wording_concern",
+    "reason": "We carry Concor again goes beyond neutral catalog wording; the verifier did not remove it in this sample. Treat as factuality concern without claiming a confirmed business-action safety violation.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  }
+]

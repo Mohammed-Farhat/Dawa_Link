@@ -1,0 +1,115 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "understanding.jsonl",
+  "part": "dev",
+  "prompt_version": "v1.13",
+  "cases": 7,
+  "turns": 12,
+  "cost_usd": 0.010595,
+  "seconds_p50": 5.0815,
+  "seconds_p95": 11.28,
+  "turns_that_only_answer": {
+    "turns": 9,
+    "seconds_p50": 4.231,
+    "seconds_p95": 5.832
+  },
+  "turns_with_cards": {
+    "turns": 3,
+    "seconds_p50": 10.938,
+    "seconds_p95": 10.938
+  },
+  "model_calls_per_turn": 1.75,
+  "not_ok": 4,
+  "checks": {
+    "product": {
+      "cases": 7,
+      "yes": 4,
+      "share": 0.5714
+    },
+    "every_item": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "quantity": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "budget": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "days_of_use": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "pickup_day": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "situation": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "preference": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_when_it_must": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_first": {
+      "cases": 7,
+      "yes": 4,
+      "share": 0.5714
+    },
+    "asks_needlessly": {
+      "cases": 7,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_for_the_rest": {
+      "cases": 1,
+      "yes": 1,
+      "share": 1.0
+    },
+    "uses_the_answer": {
+      "cases": 4,
+      "yes": 3,
+      "share": 0.75
+    },
+    "shows_a_card": {
+      "cases": 7,
+      "yes": 3,
+      "share": 0.4286
+    },
+    "clinical_refusal": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "refuses_wrongly": {
+      "cases": 7,
+      "yes": 0,
+      "share": 0.0
+    },
+    "nothing_invented": {
+      "cases": 3,
+      "yes": 3,
+      "share": 1.0
+    },
+    "language": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    }
+  }
+}

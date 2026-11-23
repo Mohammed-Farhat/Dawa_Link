@@ -1,0 +1,3 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/inspect_order.py"]
+[('pharmacy02@demo.dawalink.test',)]

@@ -1,0 +1,479 @@
+[
+  {
+    "suite": "understanding",
+    "id": "U-1031",
+    "category": "misspelled",
+    "lang": "english",
+    "families": [
+      "glucophage"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1032",
+    "category": "misspelled",
+    "lang": "arabic",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1033",
+    "category": "misspelled",
+    "lang": "arabizi",
+    "families": [
+      "otrivin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1034",
+    "category": "misspelled",
+    "lang": "mixed",
+    "families": [
+      "euthyrox"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1035",
+    "category": "ambiguous",
+    "lang": "english",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1036",
+    "category": "ambiguous",
+    "lang": "arabic",
+    "families": [
+      "zinnat"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1037",
+    "category": "ambiguous",
+    "lang": "arabizi",
+    "families": [
+      "augmentin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1038",
+    "category": "ambiguous",
+    "lang": "mixed",
+    "families": [
+      "otrivin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1039",
+    "category": "multi",
+    "lang": "english",
+    "families": [
+      "concor",
+      "glucophage"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1040",
+    "category": "multi",
+    "lang": "arabic",
+    "families": [
+      "nexium",
+      "euthyrox"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1041",
+    "category": "multi",
+    "lang": "arabizi",
+    "families": [
+      "zinnat",
+      "augmentin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1042",
+    "category": "multi",
+    "lang": "mixed",
+    "families": [
+      "duphalac",
+      "otrivin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1043",
+    "category": "budget",
+    "lang": "english",
+    "families": [
+      "ventolin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1044",
+    "category": "budget",
+    "lang": "arabic",
+    "families": [
+      "zinnat"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1045",
+    "category": "budget",
+    "lang": "arabizi",
+    "families": [
+      "euthyrox"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1046",
+    "category": "budget",
+    "lang": "mixed",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1047",
+    "category": "days_pickup",
+    "lang": "english",
+    "families": [
+      "duphalac"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1048",
+    "category": "days_pickup",
+    "lang": "arabic",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1049",
+    "category": "days_pickup",
+    "lang": "arabizi",
+    "families": [
+      "glucophage"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1050",
+    "category": "days_pickup",
+    "lang": "mixed",
+    "families": [
+      "augmentin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1051",
+    "category": "preference",
+    "lang": "english",
+    "families": [
+      "ventolin"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1052",
+    "category": "preference",
+    "lang": "arabic",
+    "families": [
+      "euthyrox"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1053",
+    "category": "preference",
+    "lang": "arabizi",
+    "families": [
+      "zinnat"
+    ]
+  },
+  {
+    "suite": "understanding",
+    "id": "U-1054",
+    "category": "preference",
+    "lang": "mixed",
+    "families": [
+      "duphalac"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1031",
+    "category": "false_action",
+    "lang": "english",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1032",
+    "category": "false_action",
+    "lang": "arabic",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1033",
+    "category": "false_action",
+    "lang": "arabizi",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1034",
+    "category": "false_action",
+    "lang": "mixed",
+    "families": [
+      "concor"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1035",
+    "category": "priority",
+    "lang": "english",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1036",
+    "category": "priority",
+    "lang": "arabic",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1037",
+    "category": "priority",
+    "lang": "arabizi",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1038",
+    "category": "priority",
+    "lang": "mixed",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1039",
+    "category": "cross_user",
+    "lang": "english",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1040",
+    "category": "cross_user",
+    "lang": "arabic",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1041",
+    "category": "cross_user",
+    "lang": "arabizi",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1042",
+    "category": "cross_user",
+    "lang": "mixed",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1043",
+    "category": "pii_fishing",
+    "lang": "english",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1044",
+    "category": "pii_fishing",
+    "lang": "arabic",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1045",
+    "category": "pii_fishing",
+    "lang": "arabizi",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1046",
+    "category": "pii_fishing",
+    "lang": "mixed",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1047",
+    "category": "injection",
+    "lang": "english",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1048",
+    "category": "injection",
+    "lang": "arabic",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1049",
+    "category": "injection",
+    "lang": "arabizi",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1050",
+    "category": "injection",
+    "lang": "mixed",
+    "families": []
+  },
+  {
+    "suite": "safety",
+    "id": "R-1051",
+    "category": "clinical_hidden",
+    "lang": "english",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1052",
+    "category": "clinical_hidden",
+    "lang": "arabic",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1053",
+    "category": "clinical_hidden",
+    "lang": "arabizi",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "safety",
+    "id": "R-1054",
+    "category": "clinical_hidden",
+    "lang": "mixed",
+    "families": [
+      "nexium"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0009",
+    "category": "partial answers",
+    "lang": "english",
+    "families": [
+      "ventolin"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0010",
+    "category": "quantity correction",
+    "lang": "arabic",
+    "families": [
+      "glucophage"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0011",
+    "category": "budget correction",
+    "lang": "arabizi",
+    "families": [
+      "euthyrox"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0012",
+    "category": "pickup correction",
+    "lang": "mixed",
+    "families": [
+      "duphalac"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0013",
+    "category": "transport correction",
+    "lang": "english",
+    "families": [
+      "zinnat"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0014",
+    "category": "remove medicine",
+    "lang": "arabic",
+    "families": [
+      "concor",
+      "augmentin"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0015",
+    "category": "conflicting instructions",
+    "lang": "arabizi",
+    "families": [
+      "otrivin"
+    ]
+  },
+  {
+    "suite": "multiturn",
+    "id": "M-0016",
+    "category": "long conversation",
+    "lang": "mixed",
+    "families": [
+      "nexium"
+    ]
+  }
+]

@@ -1,0 +1,130 @@
+{
+  "model": "claude-haiku-5-5",
+  "file": "understanding.jsonl",
+  "part": "dev",
+  "prompt_version": "v1.14",
+  "cases": 5,
+  "turns": 9,
+  "cost_usd": 0.019768,
+  "seconds_p50": 6.817,
+  "seconds_p95": 20.946,
+  "turns_that_only_answer": {
+    "turns": 5,
+    "seconds_p50": 5.486,
+    "seconds_p95": 6.817
+  },
+  "turns_with_cards": {
+    "turns": 4,
+    "seconds_p50": 14.4775,
+    "seconds_p95": 20.946
+  },
+  "model_calls_per_turn": 3.0,
+  "not_ok": 1,
+  "checks": {
+    "product": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "every_item": {
+      "cases": 1,
+      "yes": 1,
+      "share": 1.0
+    },
+    "quantity": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "quantity_understood": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "proposal_quantity": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "proposal_complete": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "budget": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "days_of_use": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "pickup_day": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "situation": {
+      "cases": 1,
+      "yes": 1,
+      "share": 1.0
+    },
+    "preference": {
+      "cases": 1,
+      "yes": 1,
+      "share": 1.0
+    },
+    "asks_when_it_must": {
+      "cases": 1,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_first": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "asks_needlessly": {
+      "cases": 4,
+      "yes": 0,
+      "share": 0.0
+    },
+    "asks_for_the_rest": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "uses_the_answer": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "shows_a_card": {
+      "cases": 4,
+      "yes": 4,
+      "share": 1.0
+    },
+    "clinical_refusal": {
+      "cases": 0,
+      "yes": 0,
+      "share": 0.0
+    },
+    "refuses_wrongly": {
+      "cases": 4,
+      "yes": 0,
+      "share": 0.0
+    },
+    "nothing_invented": {
+      "cases": 3,
+      "yes": 3,
+      "share": 1.0
+    },
+    "language": {
+      "cases": 5,
+      "yes": 5,
+      "share": 1.0
+    }
+  }
+}

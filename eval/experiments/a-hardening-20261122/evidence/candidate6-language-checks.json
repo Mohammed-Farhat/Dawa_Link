@@ -1,0 +1,33 @@
+{
+  "status": "candidate6 partial language repair; not final evaluation freeze",
+  "paid_calls": 0,
+  "checks": [
+    {
+      "command": "backend/.venv/bin/pytest tests/unit/agent/test_grounding.py -q (from backend)",
+      "result": "passed"
+    },
+    {
+      "command": "source ../eval/checkpoints/2026-11-19-git-integration/local.env; .venv/bin/pytest tests/agent/test_context.py -q (from backend)",
+      "result": "passed; isolated PostgreSQL"
+    },
+    {
+      "command": ".venv/bin/ruff check and format --check on the four changed files (from backend)",
+      "result": "passed"
+    },
+    {
+      "command": ".venv/bin/mypy src/dawalink/agent/guards/language.py src/dawalink/agent/context.py (from backend)",
+      "result": "passed"
+    }
+  ],
+  "source_sha256": {
+    "backend/src/dawalink/agent/guards/language.py": "5c0accdf8834d8a55ef956dd53bc0c0c718329d29e23e817388ea29d28e56990",
+    "backend/src/dawalink/agent/context.py": "b01230165fad2c53e536f79f003dcd31c562d51b3dd834223782cf59ad3526a5",
+    "backend/tests/unit/agent/test_grounding.py": "a16c90bc888858c48e064a0c9a3dd72e8f5c72cea443aa40404ce7a2a807f3b7",
+    "backend/tests/agent/test_context.py": "fd052dca9c0332be9abc67ffce398577ae518c94bfb8a9020e5ec9340bac88ba"
+  },
+  "limitations": [
+    "No live-model validation; STOP_PAID remains armed.",
+    "Other confirmed repairs remain unimplemented.",
+    "Not independent acceptance."
+  ]
+}

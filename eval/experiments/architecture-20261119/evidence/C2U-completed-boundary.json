@@ -1,0 +1,19 @@
+{
+  "completed_run": "20261120T102512_44834d17ea98",
+  "completed_case_observations": 30,
+  "successful_execution": 30,
+  "settled_calls": 249,
+  "known_run_microusd": 226523,
+  "new_uncertain_calls": 0,
+  "known_total_microusd": 1207521,
+  "committed_total_microusd": 11527521,
+  "old_process_session": 42451,
+  "old_process_terminal": true,
+  "boundary_step4_exit1_was_before_setup_and_payment": true,
+  "boundary_paid_calls": 0,
+  "next_execution": "revised-20261120d",
+  "next_step": "C2 safety original prefix18",
+  "remaining_commands": 77,
+  "caps_unchanged": true,
+  "plan_sha256": "306b5dba50baa4063482c76eeef6b2164e7ec3293134a9dba210dd362ba66d36"
+}

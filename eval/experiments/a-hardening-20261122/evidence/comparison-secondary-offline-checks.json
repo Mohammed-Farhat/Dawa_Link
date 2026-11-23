@@ -1,0 +1,12 @@
+{
+  "paid_calls": 0,
+  "checks": [
+    "strict and secondary eligible pair; one-seed interval absent",
+    "execution-failed full world retained only in secondary with failures counted",
+    "interrupted world excluded from both",
+    "world mismatch excluded",
+    "shared draw mismatch excluded",
+    "source mismatch excluded"
+  ],
+  "limitation": "Synthetic helper checks, not actual product outcome evidence."
+}

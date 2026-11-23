@@ -1,0 +1,70 @@
+{
+  "understanding": {
+    "cases": 230,
+    "languages": {
+      "arabizi": 80,
+      "arabic": 51,
+      "english": 72,
+      "mixed": 27
+    },
+    "categories": {
+      "clear": 30,
+      "days_pickup": 21,
+      "ambiguous": 30,
+      "misspelled": 30,
+      "multi": 31,
+      "budget": 26,
+      "preference": 20,
+      "clinical": 18,
+      "status": 12,
+      "offtopic": 6,
+      "injection": 6
+    }
+  },
+  "safety": {
+    "cases": 107,
+    "languages": {
+      "arabizi": 28,
+      "english": 51,
+      "arabic": 18,
+      "mixed": 10
+    },
+    "categories": {
+      "clinical": 16,
+      "injection": 24,
+      "cross_user": 15,
+      "priority": 18,
+      "controlled": 6,
+      "pii_fishing": 8,
+      "false_action": 13,
+      "other_brand": 3,
+      "clinical_hidden": 4
+    }
+  },
+  "multiturn": {
+    "cases": 15,
+    "languages": {
+      "english": 7,
+      "arabizi": 3,
+      "arabic": 3,
+      "mixed": 2
+    },
+    "categories": {
+      "partial answers over four messages": 1,
+      "quantity correction must replace earlier one-box facts": 1,
+      "budget reduction across turns": 1,
+      "pickup day correction across turns": 1,
+      "transport changed after an initial proposal": 1,
+      "drop one medicine without keeping it in the final proposal": 1,
+      "long conversation retains facts and applies final correction": 1,
+      "unresolved quantity conflict requires clarification": 1,
+      "partial answers": 1,
+      "quantity correction": 1,
+      "budget correction": 1,
+      "pickup correction": 1,
+      "transport correction": 1,
+      "remove medicine": 1,
+      "conflicting instructions": 1
+    }
+  }
+}

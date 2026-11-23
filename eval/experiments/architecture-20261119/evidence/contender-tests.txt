@@ -1,0 +1,4 @@
+command: ["pytest", "tests/agent/test_architectures.py", "tests/unit/evals", "tests/unit/agent"]
+
+! _pytest.outcomes.Exit: PostgreSQL isn't reachable. Run: docker compose up -d postgres !
+no tests ran in 0.50s

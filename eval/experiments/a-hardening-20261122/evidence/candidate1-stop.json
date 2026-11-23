@@ -1,0 +1,11 @@
+{
+  "reason": "confirmed decimal-boundary output-guard regression",
+  "pid": 60143,
+  "run": "20261122T134541_9303082e3701",
+  "active_calls": 0,
+  "settled_calls": 187,
+  "saved_generations": 187,
+  "saved_turns": 74,
+  "at": "2026-11-22T13:55:58.804731+00:00",
+  "control": "SIGINT between fully traced turns while holding SQLite reservation lock; no ledger rows or stages changed"
+}

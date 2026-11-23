@@ -1,0 +1,35 @@
+{
+  "run": "20261122T142016_246851e7079a",
+  "review_origin": "implementation assistant",
+  "human_reviewed": false,
+  "independent": false,
+  "scope": "All five replies, current displayed cards and relevant numeric tool facts",
+  "cases": [
+    {
+      "id": "U-0025",
+      "verdict": "improved_in_reviewed_scope",
+      "note": "Both turns Arabizi; no observed dosage/quantity3 wording. Actual1packcards,482000/603000/321000 prices,5/7/18carminutes and hours/expiry match. Arabic phrasing uneven and requires independent review."
+    },
+    {
+      "id": "U-0026",
+      "verdict": "agent_false_comparison",
+      "note": "Claims313000P1 cheapest of three nearby but explicitly lists208000Matn10 among the three. Qualified-nearby runtime parser leaves unresolved; manual review confirms false claim. Scorer grounding false retained. No tuning/rerun to erase failure."
+    },
+    {
+      "id": "U-0091",
+      "verdict": "clarification_present",
+      "note": "60/90/120mg question explicit and scorer recognizes. Language awkward but actual question/card absence appropriate."
+    },
+    {
+      "id": "U-0150",
+      "verdict": "preference_repaired_scorer_flags",
+      "note": "643000Matn12recommended vs965000/1206000closer options; explicit far-cheapest preference honored. Scorer flags needless ask and grounding; manual inspection finds car acknowledged, only missing day/duration asked. Price/time/hours match. Preserve automatic scores and review distinction."
+    },
+    {
+      "id": "U-1042",
+      "verdict": "acceptable_in_numeric_scope_mixed_language",
+      "note": "Original input One bottle of Duphalac solution \u0648\u0639\u0644\u0628\u0629 Otrivin0.1%drops is mixed English/Arabic, not unambiguously Arabizi. English firstreply and Arabizi continuation are not alone proof of a language violation.451000totalforboth/563000alternatives and3/4carminutes/hours match plans. Actualgroupedcards retained."
+    }
+  ],
+  "disposition": "Proceed full fixed-source measurement, not final acceptance. False comparison remains failure. Required independent Arabic/semantic review pending."
+}

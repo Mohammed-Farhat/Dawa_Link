@@ -236,6 +236,20 @@ body {
   background: var(--page);
   color: var(--ink);
 }
+.profile-logout {
+  align-self: flex-start;
+  background: var(--red-tint);
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+.profile-logout:hover {
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+@media (max-width: 600px) {
+  .profile-logout {
+    width: 100%;
+  }
+}
 .pill-button--white {
   background: var(--white);
   color: var(--ink);

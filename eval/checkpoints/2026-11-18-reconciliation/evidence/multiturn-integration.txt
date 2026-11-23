@@ -1,0 +1,3 @@
+cwd: backend
+command: ["pytest", "tests/agent/test_eval_multiturn.py", "tests/unit/evals/test_multiturn.py", "-q"]
+....                                                                     [100%]

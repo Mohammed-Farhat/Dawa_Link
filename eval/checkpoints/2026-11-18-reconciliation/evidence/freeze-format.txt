@@ -1,0 +1,13 @@
+cwd: backend
+command: ["ruff", "format", "--check", "."]
+unformatted: File would be reformatted
+  --> src/dawalink/evals/experiment.py:85:42
+   |
+84 |         if suite == "multiturn" and (
+   -             not row.get("expected_turns")
+   -             or len(row.get("exchanges", [])) != row["expected_turns"]
+85 +             not row.get("expected_turns") or len(row.get("exchanges", [])) != row["expected_turns"]
+86 |         ):
+   |
+
+1 file would be reformatted, 328 files already formatted

@@ -1,0 +1,153 @@
+{
+  "reviewer": "Codex implementation assistant",
+  "human_reviewed": false,
+  "blind": false,
+  "scope": "Rechecked all six architecture/repetition observations for each newly identified A2 travel-comparison, closing-time and cancellation-card failure, against full saved text and compact authoritative tools/cards. No new inference from other architectures scores.",
+  "rows": [
+    {
+      "run": "20261119T155557_e5728d4d1c99",
+      "architecture": "current",
+      "repetition": "1",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T155557_e5728d4d1c99",
+      "architecture": "current",
+      "repetition": "1",
+      "id": "U-1042",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T160209_564cc4cef04f",
+      "architecture": "current",
+      "repetition": "1",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T160936_6f61b62ff4fd",
+      "architecture": "staged",
+      "repetition": "1",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T160936_6f61b62ff4fd",
+      "architecture": "staged",
+      "repetition": "1",
+      "id": "U-1042",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T161621_7d3d87c12895",
+      "architecture": "staged",
+      "repetition": "1",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T162646_21096b0ddb62",
+      "architecture": "verified",
+      "repetition": "1",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261119T162646_21096b0ddb62",
+      "architecture": "verified",
+      "repetition": "1",
+      "id": "U-1042",
+      "execution_ok": false,
+      "adjusted_pass": false
+    },
+    {
+      "run": "20261120T094710_31138f2a43a0",
+      "architecture": "verified",
+      "repetition": "1",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T102512_44834d17ea98",
+      "architecture": "verified",
+      "repetition": "2",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T102512_44834d17ea98",
+      "architecture": "verified",
+      "repetition": "2",
+      "id": "U-1042",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T104036_415a827bbce8",
+      "architecture": "verified",
+      "repetition": "2",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T104633_e8297b738c9e",
+      "architecture": "staged",
+      "repetition": "2",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T104633_e8297b738c9e",
+      "architecture": "staged",
+      "repetition": "2",
+      "id": "U-1042",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T105449_0c43a253b918",
+      "architecture": "staged",
+      "repetition": "2",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": true
+    },
+    {
+      "run": "20261120T105830_c15ca8289e5e",
+      "architecture": "current",
+      "repetition": "2",
+      "id": "U-0025",
+      "execution_ok": true,
+      "adjusted_pass": false
+    },
+    {
+      "run": "20261120T105830_c15ca8289e5e",
+      "architecture": "current",
+      "repetition": "2",
+      "id": "U-1042",
+      "execution_ok": true,
+      "adjusted_pass": false
+    },
+    {
+      "run": "20261120T144147_def375a23d1d",
+      "architecture": "current",
+      "repetition": "2",
+      "id": "R-0016",
+      "execution_ok": true,
+      "adjusted_pass": false
+    }
+  ],
+  "verdict": "A2 U0025 closest claim contradicts3-versus4min; A2 U1042 half-hour closing phrase conflicts with17:00; A2 R0016 claims card despite NOT_FOUND/cards[]. Other compared observations do not contain these specific contradictions. A1 U0025 cheapest wording is imprecise with disclosed farther cheaper option; retain concern. Existing raw/primary failures retained."
+}

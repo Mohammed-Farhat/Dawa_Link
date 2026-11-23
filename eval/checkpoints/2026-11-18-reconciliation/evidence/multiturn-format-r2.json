@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "src/dawalink/evals/run_multiturn.py",
+    "src/dawalink/evals/experiment.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.016
+}

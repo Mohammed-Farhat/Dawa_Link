@@ -1,0 +1,7 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/analyze_cards.py"]
+search {'units_secured': 177, 'units_wanted': 241, 'unusable_cards': 0, 'unusable_after_told': 0}
+rules {'units_secured': 133, 'units_wanted': 241, 'unusable_cards': 140, 'unusable_after_told': 70}
+client constraint examples: [{'request': 'ab971e25-9534-4dec-98fa-d8c501b88e90', 'seq': 3, 'author': 'client', 'kind': 'text', 'text': 'Not today, tomorrow', 'cards': None}, {'request': 'ab971e25-9534-4dec-98fa-d8c501b88e90', 'seq': 5, 'author': 'client', 'kind': 'text', 'text': "I don't have a car", 'cards': None}, {'request': '495a07d2-b4f0-4737-86ed-745773c8cc37', 'seq': 3, 'author': 'client', 'kind': 'text', 'text': 'ma 3ande siyyara', 'cards': None}]
+rules_asking {'units_secured': 133, 'units_wanted': 241, 'unusable_cards': 86, 'unusable_after_told': 70}
+client constraint examples: [{'request': 'e100e99a-83ad-4789-ab6c-265ac0f6f0fa', 'seq': 3, 'author': 'client', 'kind': 'text', 'text': "I can't make it today. I don't have a car", 'cards': None}, {'request': '40759998-75b6-4cfe-a0a4-8c8cce96f655', 'seq': 3, 'author': 'client', 'kind': 'text', 'text': 'b2dar rou7 lyom. bel siyyara', 'cards': None}, {'request': 'cbf1320e-205d-4063-8e82-4c5646387ff5', 'seq': 3, 'author': 'client', 'kind': 'text', 'text': 'b2dar rou7 lyom. ana jeye bel siyyara', 'cards': None}]

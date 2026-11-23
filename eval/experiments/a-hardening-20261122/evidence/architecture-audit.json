@@ -1,0 +1,160 @@
+{
+  "integrity_passed": true,
+  "errors": [],
+  "screening_coverage": {
+    "observed": 360,
+    "expected": 360,
+    "missing": [],
+    "complete": true
+  },
+  "source_pin_unchanged": true,
+  "handoff_unchanged": true,
+  "original_calls_unchanged": 81,
+  "original_events_unchanged": 0,
+  "new_calls": 2795,
+  "historical_snapshots_preserved": [
+    {
+      "file": "eval/experiments/architecture-20261119/evidence/budget-final.sqlite",
+      "calls": 1286,
+      "events": 2410
+    },
+    {
+      "file": "eval/experiments/architecture-20261119/resume-20261120/budget.sqlite",
+      "calls": 1371,
+      "events": 2580
+    },
+    {
+      "file": "eval/experiments/architecture-20261119/revised-20261120/budget-final.sqlite",
+      "calls": 1422,
+      "events": 2682
+    }
+  ],
+  "purposes": {
+    "workflow": 2217,
+    "extraction": 299,
+    "verification": 279
+  },
+  "caps_microusd": {
+    "baseline": 4000000,
+    "screening": 10000000,
+    "expanded": 6000000,
+    "heldout": 3000000,
+    "retries": 2000000
+  },
+  "known_microusd": 2100049,
+  "unknown_holds_microusd": 10965000,
+  "committed_microusd": 13065049,
+  "committed_by_stage_microusd": {
+    "baseline": 3963178,
+    "screening": 9101871
+  },
+  "unknown_calls": [
+    {
+      "id": "1e77799c15ec46d180396c329072caa3",
+      "run": "20261118T122213_e474d1ac62d5",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "15574c9f6dc445c2a7027f77db57b75a",
+      "run": "20261118T122259_955402f02a64",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "1dd6b76421c84e9d896357f9d4a597cc",
+      "run": "20261118T122208_1c154071862e",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "run": "20261118T122218_796e9bf2b7bb",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "68966be19b144896b7e6a2b1c5286928",
+      "run": "20261118T122213_e474d1ac62d5",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "63c4a74e43a24681869c4d79e7733058",
+      "run": "20261118T122259_955402f02a64",
+      "stage": "baseline",
+      "held_microusd": 645000
+    },
+    {
+      "id": "423795542bd240c4bd40bdf814083a21",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "0fb9a2c9f3ec4810946477c8457e8036",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "e515f0ffaffc42e889990d289e1ffdd6",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "0d32bd6e7e0249ed90567dcbdb988f48",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "aff138f531b24e47a0be330ac1e43bf0",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "c922644bdebb4a298753525e504bd41d",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "679655cfaea34bb0bd377616507fb074",
+      "run": "20261119T162646_21096b0ddb62",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "53fcb90399824e1a915f114ec2898160",
+      "run": "20261120T100220_fc0fd422269f",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "ba1ff9400a1042c1a95c6832c351dafe",
+      "run": "20261120T100958_6995d4b9b0d9",
+      "stage": "screening",
+      "held_microusd": 645000
+    },
+    {
+      "id": "2f0b789684804da1afa8a19c4b7009c3",
+      "run": "20261120T151010_e713a08bc189",
+      "stage": "screening",
+      "held_microusd": 645000
+    }
+  ],
+  "active_reservations": [],
+  "unreviewed_required_rows": [],
+  "unreviewed_disagreements": [],
+  "review_limitation": "Implementation-assistant review assertions, not human or independent blind validation.",
+  "scope": "Accepted development only. Held-out semantic contents not read. Original raw files, call stages and charges remain unchanged."
+}

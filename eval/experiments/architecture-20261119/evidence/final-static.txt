@@ -1,0 +1,2 @@
+command: ["ruff", "check", "."]
+All checks passed!

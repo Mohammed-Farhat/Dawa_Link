@@ -1,0 +1,15 @@
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261122T151920_7e30b3b85ee2 status: incomplete
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/a-hardening-20261122/paid_v4.py", line 73, in <module>
+    main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/a-hardening-20261122/paid_v4.py", line 60, in main
+    experiment.main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/experiment.py", line 228, in main
+    importlib.import_module(MODULES[suite]).main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_safety.py", line 478, in main
+    rows = run(
+           ^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_safety.py", line 391, in run
+    row = attack(agent, case, where, props, next(people), next(people), folder)
+                                            ^^^^^^^^^^^^
+StopIteration

@@ -1,0 +1,14 @@
+{
+  "owner_reply": "Not a problem use 0.645",
+  "scope": "Additional screening allowance of USD 0.645; same aggregate USD 25; other stage ceilings unchanged. Existing unknown reservations retained. No assumption of zero billing. Stop on any new uncertain call or insufficient reservation headroom.",
+  "prior_screening_ceiling_microusd": 6000000,
+  "additional_allowance_microusd": 645000,
+  "screening_ceiling_microusd": 6645000,
+  "aggregate_ceiling_microusd": 25000000,
+  "screening_committed_before_microusd": 5924849,
+  "ledger_sha256_before": "d36a9264ab7c10514ca3cb3c50501b912228d4ae178de6a86e9c48961466ed14",
+  "prior_sealed_files_verified": 241,
+  "original_stop_marker_preserved": true,
+  "next_suite": "C1 safety; continuation step 2",
+  "date": "2026-11-20"
+}

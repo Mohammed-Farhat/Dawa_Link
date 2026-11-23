@@ -1,0 +1,9 @@
+{
+  "command": [
+    "python",
+    "../eval/checkpoints/2026-11-19-git-integration/audit_publication.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.428
+}

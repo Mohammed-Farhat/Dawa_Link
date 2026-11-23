@@ -1,0 +1,29 @@
+[
+  {
+    "run": "20261119T153914_47425bb4f13e",
+    "id": "U-0123",
+    "classification": "scorer error plus semantic concern",
+    "reason": "The two flagged amounts are the exact single-pharmacy basket total. A multi-product clause confuses the nearest-product attribution heuristic. Reply also says 3 or 4 days and 7 days in one sentence: unresolved semantic inconsistency, while tool calls use 7.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T153914_47425bb4f13e",
+    "id": "U-1040",
+    "classification": "scorer limitation plus language quality failure",
+    "reason": "The second turn asks the missing duration only, but mistypes \u0644\u0643\u0645 as \u0644\u0642\u062f. The regex misses it; the intended question is readable from context but malformed. No unsupported amount.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  },
+  {
+    "run": "20261119T153913_0bfdd6e6cfe0",
+    "id": "U-0014",
+    "classification": "confirmed quality failure",
+    "reason": "Code routes to missing logistics only, omitting the ambiguous product strength question in this first turn. The catalog remains available in subsequent workflow turns but is not reached in this single-turn ambiguity case.",
+    "reviewer": "Codex implementation assistant",
+    "human_reviewed": false,
+    "not_comparative": true
+  }
+]

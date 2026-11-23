@@ -1,0 +1,5 @@
+command: ["python", "-m", "dawalink.evals.before_commit"]
+planner on the P-set: exact
+datasets: valid
+the saved results (289 files): nothing personal
+the no-AI policy, seed 1: {'units_secured': 133, 'units_wanted': 241, 'no_shows': 0, 'boxes_that_dont_last': 0} (recorded: {'units_secured': 133, 'units_wanted': 241, 'no_shows': 0, 'boxes_that_dont_last': 0})

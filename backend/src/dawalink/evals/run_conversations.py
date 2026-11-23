@@ -15,6 +15,7 @@ a hard stop for both together. The conversations, the traces and the scores are 
 import argparse
 import json
 import sys
+import uuid
 from collections import Counter
 from collections.abc import Sequence
 from datetime import date
@@ -27,7 +28,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from dawalink.agent.llm import ChatModel
 from dawalink.agent.llm.base import LLMError, cost_usd, has_price
-from dawalink.agent.llm.claude import ClaudeModel
 from dawalink.agent.prompts import PROMPT_VERSION
 from dawalink.agent.tracing import Tracer
 from dawalink.agent.turn import Agent
@@ -36,9 +36,12 @@ from dawalink.db.models import InventoryItem
 from dawalink.db.session import make_engine
 from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
 from dawalink.evals.datasets import DATASETS, UCase, read
 from dawalink.evals.played_client import STYLES, Line, Persona, next_message, personas
+from dawalink.evals.review import review_flags
 from dawalink.evals.run_understanding import (
     AT,
     SEED,
@@ -46,17 +49,18 @@ from dawalink.evals.run_understanding import (
     _spread,
     _turns_by_chat,
     ask,
+    observed,
     shelves_for,
     write,
 )
 from dawalink.evals.score_conversations import CHECKS, Exchange, has_cards, score
-from dawalink.evals.score_understanding import rates, seen_in
+from dawalink.evals.score_understanding import rates
 from dawalink.observability.logging import configure_logging
 from dawalink.services.context import unit_of_work
 from dawalink.services.travel import shared_location
 from dawalink.sim import database, save, travel_table, world
 
-DATABASE = f"{database.PREFIX}_conversations"
+DATABASE = f"{database.PREFIX}_conversations_{uuid.uuid4().hex[:12]}"
 MAX_CLIENT_MESSAGES = 6
 # The share of `--max-usd` the playing model may spend; the rest is the agent's.
 CLIENT_SHARE = Decimal("0.25")
@@ -77,7 +81,12 @@ def converse(
     spent = Decimal(0)
     chat_id = None
     for _ in range(MAX_CLIENT_MESSAGES):
-        said = next_message(client_model, persona, lines)
+        try:
+            said = next_message(client_model, persona, lines)
+        except LLMError:
+            # Preserve preceding exchanges and the failed conversation. Provider
+            # request/failure details and any unknown charge remain in the ledger.
+            return exchanges, "client_provider_failure", spent
         spent += cost_usd(client_model.name, said.usage)
         if said.left:
             return exchanges, "client_left", spent
@@ -90,7 +99,7 @@ def converse(
         traced = _turns_by_chat(folder).get(str(chat_id), [])
         if len(traced) <= len(exchanges):
             return exchanges, result.status.value, spent
-        seen = seen_in(traced[-1], kinds)
+        seen = observed(agent, traced[-1], kinds, result)
         exchanges.append(Exchange(said.text, said.says, seen))
         lines += [
             Line("you", said.text),
@@ -128,6 +137,10 @@ def _row(
                 "says": list(exchange.says),
                 "agent": exchange.seen.reply,
                 "cards": list(exchange.seen.cards),
+                "card_items": list(exchange.seen.card_items),
+                "card_groups": list(exchange.seen.card_groups),
+                "outcome": exchange.seen.outcome,
+                "review": review_flags(exchange.seen.reply, persona.case.lang),
                 "tools": [tool.name for tool in exchange.seen.tools],
                 "seconds": exchange.seen.seconds,
             }
@@ -172,6 +185,9 @@ def run(
     rows: list[dict[str, Any]] = []
     client_spent = Decimal(0)
     for position, persona in enumerate(people):
+        if stop_requested():
+            print("Stopped before the next played conversation", flush=True)
+            break
         try:
             exchanges, ended, cost = converse(
                 agent, client_model, persona, clients[position % len(clients)], folder
@@ -181,6 +197,7 @@ def run(
             break
         client_spent += cost
         rows.append(_row(persona, exchanges, ended, cost, catalog))
+        save_case(folder, rows[-1])
         if ended not in ("cards", "client_left", "too_long"):
             print(f"stopped at {persona.id}: {ended}", flush=True)
             break
@@ -217,11 +234,15 @@ def summary(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
 def _write(folder: Path, rows: Sequence[dict[str, Any]], about: dict[str, Any]) -> dict[str, Any]:
     result = about | summary(rows)
     result["cost_usd"] = round(result["agent_cost_usd"] + result["client_cost_usd"], 6)
-    (folder / "conversations.jsonl").write_text(
-        "".join(json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows),
-        encoding="utf-8",
+    save.write_artifacts(
+        folder,
+        {
+            "conversations.jsonl": "".join(
+                json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows
+            ),
+            "summary.json": json.dumps(result, indent=2) + "\n",
+        },
     )
-    (folder / "summary.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     print(
         f"{result['conversations']} conversations, ${result['cost_usd']} "
@@ -279,6 +300,7 @@ def main() -> None:
     part = "_part" if only or arguments.lang or arguments.limit else ""
     folder = save.RESULTS / f"{name}_prompt-{PROMPT_VERSION}{part}"
 
+    folder = folder.with_name(folder.name + "_" + uuid.uuid4().hex[:12])
     now = at_beirut(TODAY, AT)
     where = database.fresh(settings, DATABASE)
     lands = world.load()
@@ -304,8 +326,8 @@ def main() -> None:
             people,
             sessions=sessionmaker(app, expire_on_commit=False),
             clock=ManualClock(now),
-            model=ClaudeModel(api_key=key, model=arguments.model, effort=arguments.effort),
-            client_model=ClaudeModel(api_key=key, model=playing, effort="low"),
+            model=EvaluationModel(api_key=key, model=arguments.model, effort=arguments.effort),
+            client_model=EvaluationModel(api_key=key, model=playing, effort="low"),
             tracer=save.FileTracer(folder),
             folder=folder,
             clients=lands.clients,

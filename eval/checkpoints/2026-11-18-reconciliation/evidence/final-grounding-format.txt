@@ -1,0 +1,3 @@
+cwd: backend
+command: ["ruff", "format", "src/dawalink/evals/grounding.py", "tests/unit/evals/test_grounding.py"]
+1 file reformatted, 1 file left unchanged

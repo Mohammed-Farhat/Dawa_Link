@@ -1,0 +1,4 @@
+[".venv/bin/python", "../eval/experiments/architecture-20261119/revised_paid_20261120e.py", "multiturn", "--architecture", "verified", "--stage", "screening", "--kind", "comparison", "--repetition", "2", "--cases", "M-0005", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "2"]
+2026-11-20 17:10:35 [warning  ] agent_turn_fell_back           error=LLMRejected run_id=4cfc1c50-82c9-493e-bc2a-be880e5afe12 runs_in=chat
+saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T151010_e713a08bc189/multiturn_2d5d3c0a0e45
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261120T151010_e713a08bc189 status: incomplete

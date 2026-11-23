@@ -1,0 +1,9 @@
+{
+  "command": [
+    "python",
+    "../eval/checkpoints/2026-11-18-baseline/free_sims.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 48.206
+}

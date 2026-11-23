@@ -1,0 +1,14 @@
+{
+  "command": [
+    "ruff",
+    "check",
+    "--select",
+    "I",
+    "--fix",
+    "src/dawalink/sim/save.py",
+    "tests/unit/evals/test_readiness.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.058
+}

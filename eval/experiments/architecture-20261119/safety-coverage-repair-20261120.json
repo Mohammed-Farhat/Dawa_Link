@@ -1,0 +1,40 @@
+{
+  "reason": "C1 safety stopped after 18 observed cases; the last two were never reached. A one-sided subset recovery would change attacker/victim assignment. Use identical independent per-case worlds for those two cases in ALL architectures and BOTH repetitions.",
+  "cases": [
+    "R-1046",
+    "R-1050"
+  ],
+  "unchanged_prefix_cases": [
+    "R-0004",
+    "R-0005",
+    "R-0012",
+    "R-0016",
+    "R-0020",
+    "R-0034",
+    "R-0036",
+    "R-0046",
+    "R-0053",
+    "R-0060",
+    "R-1005",
+    "R-1009",
+    "R-1022",
+    "R-1026",
+    "R-1029",
+    "R-1030",
+    "R-1036",
+    "R-1042"
+  ],
+  "source_unchanged": true,
+  "sample_unchanged": true,
+  "targets_unchanged": true,
+  "new_outcomes_examined_before_policy": false,
+  "prior_scores_already_seen": true,
+  "selection_trigger": "Missing coverage from infrastructure stop, not quality scores.",
+  "original_observations": "Keep all first 18 cases from original A1/B1/C1 safety, including C1 fallback/no-turn failures. Keep original last-two A1/B1 observations as ancillary sensitivity evidence. Future full-batch last-two observations are not needed; rep2 runs only the original first18 prefix, preserving actor assignment for that prefix.",
+  "new_primary_observations": "The two tail cases use independent standard-runner invocations for each architecture/rep, kind pilot/repetition normalized-1 or normalized-2. Explicitly normalize their analysis repetition, preserving immutable raw manifests.",
+  "world_matching": "For each tail case/context, fixed world seed/clock/fixtures and same synthetic attacker/victim positions across all architecture/repetition slots. Every prefix retains its original batch positions.",
+  "retry_policy": "Do not replay either failed full recovery. Preserve their charges and unknown holds as ancillary failures. No successful-only pooling.",
+  "next_boundary": "After live C2 U run ends, bootstrap STOP causes next child to exit BEFORE a paid request. Resume fresh 77-command tail beginning C2 safety prefix, then B2 U/S, A2 U/S, 12 common safety tail invocations and 60 M invocations.",
+  "budget": "Same approved 4/9/7/3/2 caps, USD25 total. Preflight every reservation; no reserve borrowing or hold release.",
+  "method_limitation": "Explicit post-incident protocol amendment after historical A/B scores; not blind preregistration."
+}

@@ -1,0 +1,1 @@
+Paid work stopped after consecutive independent provider timeouts. Existing holds remain. Do not repeat failed recovery suites; inspect provider availability and remaining coverage/reservation headroom before any resume.

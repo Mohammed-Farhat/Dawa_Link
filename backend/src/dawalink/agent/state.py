@@ -83,6 +83,7 @@ class CaseState(BaseModel):
     # many days, when). It is never asked twice: once true, it stays true.
     questions_asked: bool = False
     # Written by code.
+    client_pickup_day: date | None = None
     shown_listing_ids: list[uuid.UUID] = Field(default_factory=list)
     open_proposal_ids: list[uuid.UUID] = Field(default_factory=list)
     # The client's medicines in this chat: for each medicine, the first product that was
@@ -156,6 +157,8 @@ def tidy(state: CaseState, today: date) -> CaseState:
     tidied = state.model_copy(deep=True)
     if tidied.pickup_day is not None and tidied.pickup_day < today:
         tidied.pickup_day = None
+    if tidied.client_pickup_day is not None and tidied.client_pickup_day < today:
+        tidied.client_pickup_day = None
     tidied.shown_listing_ids = tidied.shown_listing_ids[-MAX_SHOWN_LISTINGS:]
     tidied.asked_product_ids = tidied.asked_product_ids[-MAX_ASKED_MEDICINES:]
     while len(tidied.plans) > MAX_PLANS_KEPT:

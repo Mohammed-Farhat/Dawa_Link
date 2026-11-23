@@ -1,0 +1,747 @@
+[
+  {
+    "name": "aldactone",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "25mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "amaryl",
+    "variants": [
+      {
+        "strength": "1mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "2mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "3mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "4mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "amlor",
+    "variants": [
+      {
+        "strength": "5mg",
+        "form": "capsule",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "arcoxia",
+    "variants": [
+      {
+        "strength": "120mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "60mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "90mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "aspirin protect",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet, enteric coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "atacand",
+    "variants": [
+      {
+        "strength": "16mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "8mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "augmentin",
+    "variants": [
+      {
+        "strength": "1g",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "312mg/5ml",
+        "form": "powder for suspension",
+        "count": 1
+      },
+      {
+        "strength": "625mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "avodart",
+    "variants": [
+      {
+        "strength": "0.5mg",
+        "form": "capsule",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "betaserc",
+    "variants": [
+      {
+        "strength": "16mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "brufen",
+    "variants": [
+      {
+        "strength": "100mg/5ml",
+        "form": "syrup",
+        "count": 1
+      },
+      {
+        "strength": "400mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "600mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "cataflam",
+    "variants": [
+      {
+        "strength": "50mg",
+        "form": "tablet, sugar coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "celebrex",
+    "variants": [
+      {
+        "strength": "200mg",
+        "form": "capsule",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "cipralex",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "15mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "ciprobay",
+    "variants": [
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "concor",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "5mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "cozaar",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "50mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "crestor",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "20mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "40mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "5mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "daflon",
+    "variants": [
+      {
+        "strength": "1000mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "diovan",
+    "variants": [
+      {
+        "strength": "160mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "80mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "duphalac",
+    "variants": [
+      {
+        "strength": "",
+        "form": "solution",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "eliquis",
+    "variants": [
+      {
+        "strength": "2.5mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "5mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "euthyrox",
+    "variants": [
+      {
+        "strength": "100mcg",
+        "form": "tablet, scored",
+        "count": 1
+      },
+      {
+        "strength": "150mcg",
+        "form": "tablet, scored",
+        "count": 1
+      },
+      {
+        "strength": "25mcg",
+        "form": "tablet, scored",
+        "count": 1
+      },
+      {
+        "strength": "50mcg",
+        "form": "tablet, scored",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "ezetrol",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "flagyl",
+    "variants": [
+      {
+        "strength": "500mg",
+        "form": "ovule",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "forxiga",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "fucidin",
+    "variants": [
+      {
+        "strength": "2%",
+        "form": "cream",
+        "count": 1
+      },
+      {
+        "strength": "2%",
+        "form": "ointment",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "galvus",
+    "variants": [
+      {
+        "strength": "50mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "glucophage",
+    "variants": [
+      {
+        "strength": "1000mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "850mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "januvia",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "jardiance",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "25mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "keppra",
+    "variants": [
+      {
+        "strength": "1000mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "250mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "klacid",
+    "variants": [
+      {
+        "strength": "",
+        "form": "granules for suspension",
+        "count": 1
+      },
+      {
+        "strength": "250mg/5ml",
+        "form": "granules for suspension",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "injectable powder for solution",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "lasix",
+    "variants": [
+      {
+        "strength": "40mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "micardis",
+    "variants": [
+      {
+        "strength": "40mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "80mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "motilium",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "nexium",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "granules, gastroresistant, for suspension",
+        "count": 2
+      },
+      {
+        "strength": "20mg",
+        "form": "tablet, gastroresistant",
+        "count": 2
+      },
+      {
+        "strength": "40mg",
+        "form": "injectable powder for solution",
+        "count": 1
+      },
+      {
+        "strength": "40mg",
+        "form": "tablet, enteric coated",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "otrivin",
+    "variants": [
+      {
+        "strength": "0.05%",
+        "form": "drops",
+        "count": 1
+      },
+      {
+        "strength": "0.05%",
+        "form": "solution",
+        "count": 1
+      },
+      {
+        "strength": "0.1%",
+        "form": "drops",
+        "count": 1
+      },
+      {
+        "strength": "0.1%",
+        "form": "solution",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "pariet",
+    "variants": [
+      {
+        "strength": "20mg",
+        "form": "tablet, gastroresistant",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "plavix",
+    "variants": [
+      {
+        "strength": "",
+        "form": "tablet, film coated",
+        "count": 2
+      }
+    ]
+  },
+  {
+    "name": "singulair",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "tavanic",
+    "variants": [
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated, scored",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "tenormin",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "50mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "tritace",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "2.5mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "5mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "ventolin",
+    "variants": [
+      {
+        "strength": "5mg/ml",
+        "form": "solution",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "xarelto",
+    "variants": [
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "15mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "2.5mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "20mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "xyzal",
+    "variants": [
+      {
+        "strength": "5mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "zinnat",
+    "variants": [
+      {
+        "strength": "250mg",
+        "form": "tablet, film coated",
+        "count": 1
+      },
+      {
+        "strength": "250mg/5ml",
+        "form": "granules for suspension",
+        "count": 1
+      },
+      {
+        "strength": "500mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "zyloric",
+    "variants": [
+      {
+        "strength": "100mg",
+        "form": "tablet",
+        "count": 1
+      },
+      {
+        "strength": "300mg",
+        "form": "tablet",
+        "count": 1
+      }
+    ]
+  },
+  {
+    "name": "zyrtec",
+    "variants": [
+      {
+        "strength": "0.1%",
+        "form": "solution",
+        "count": 1
+      },
+      {
+        "strength": "1%",
+        "form": "drops",
+        "count": 1
+      },
+      {
+        "strength": "10mg",
+        "form": "tablet, film coated",
+        "count": 1
+      }
+    ]
+  }
+]

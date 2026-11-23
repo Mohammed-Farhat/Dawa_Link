@@ -29,7 +29,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from dawalink.agent.chat import post_client_message
 from dawalink.agent.llm import ChatModel
 from dawalink.agent.llm.base import has_price
-from dawalink.agent.llm.claude import ClaudeModel
 from dawalink.agent.pending import PendingTurns
 from dawalink.agent.prompts import PROMPT_VERSION, system_parts
 from dawalink.agent.tracing import Tracer
@@ -51,8 +50,12 @@ from dawalink.domain.clock import Clock, ManualClock, at_beirut
 from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import AgentMode, ClaimSource
+from dawalink.evals.budget import EvaluationModel
 from dawalink.evals.catalog_match import CatalogNames
+from dawalink.evals.checkpoint import save_case, stop_requested
+from dawalink.evals.dataset_selection import fixed_cases
 from dawalink.evals.datasets import DATASETS, HELDOUT, Match, RCase, Where, read
+from dawalink.evals.review import review_flags
 from dawalink.evals.run_understanding import AT, SEED, TODAY, ask, words_of
 from dawalink.evals.run_understanding import write as client_writes
 from dawalink.evals.score_safety import Around, score, violations
@@ -73,7 +76,7 @@ from dawalink.services.search import visible_boxes
 from dawalink.services.travel import shared_location
 from dawalink.sim import database, save, travel_table, world
 
-DATABASE = f"{database.PREFIX}_safety"
+DATABASE = f"{database.PREFIX}_safety_{uuid.uuid4().hex[:12]}"
 # The medicine of the "only another brand is listed" setup: the cases name it.
 ASKED_BRAND = Match(name="cipromax", strength="500mg")
 
@@ -353,6 +356,7 @@ def attack(
         "text": wording,
         "client_answer": said,
         "checks": score(case, seen, around),
+        "review": review_flags(seen.reply, case.lang),
         "changed": around.before != around.after,
         **asdict(seen),
     }
@@ -381,8 +385,12 @@ def run(
     people = iter(lands.clients)  # a new attacker and a new victim for every attack
     for case in cases:
         for where in case.where:
+            if stop_requested():
+                print("Stopped before the next safety context", flush=True)
+                return rows
             row = attack(agent, case, where, props, next(people), next(people), folder)
             rows.append(row)
+            save_case(folder, row)
             if row["outcome"] == "no turn":
                 print(f"stopped at {case.id}: no turn ran (the spend cap?)", flush=True)
                 return rows
@@ -398,17 +406,25 @@ def write(folder: Path, rows: Sequence[dict[str, Any]], about: dict[str, Any]) -
             "prompt_version": PROMPT_VERSION,
         }
     )
-    (folder / "answers.jsonl").write_text(
-        "".join(json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows),
-        encoding="utf-8",
+    save.write_artifacts(
+        folder,
+        {
+            "answers.jsonl": "".join(
+                json.dumps(row, ensure_ascii=False, default=str) + "\n" for row in rows
+            ),
+            "summary.json": json.dumps(result, indent=2) + "\n",
+        },
     )
-    (folder / "summary.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     print(
         f"{result['answers']} answers, {result['answers_with_a_violation']} with a violation, "
+        f"{result['execution_failures']} execution failures, "
         f"${result['cost_usd']}, saved in {folder}"
     )
     for row in rows:
+        if row.get("outcome", "ok") != "ok" or not row.get("reply", "").strip():
+            print(f"  {row['id']} ({row['where']}): execution failure ({row.get('outcome')})")
+            continue
         failed = [check for check, holds in row["checks"].items() if not holds]
         if failed:
             print(f"  {row['id']} ({row['where']}, {row['category']}): {', '.join(failed)}")
@@ -420,6 +436,7 @@ def main() -> None:
     parser.add_argument("--model", required=True, help="the Claude model (paid)")
     parser.add_argument("--effort", default="medium", choices=("low", "medium", "high"))
     parser.add_argument("--max-usd", type=Decimal, required=True, help="the most the run may cost")
+    parser.add_argument("--cases", default="", help="comma-separated fixed case IDs")
     parser.add_argument("--limit", type=int, help="only the first N cases")
     parser.add_argument(
         "--heldout", action="store_true", help="the held-out file (final runs only)"
@@ -433,11 +450,12 @@ def main() -> None:
     if not has_price(arguments.model):
         raise ConfigError(f"{arguments.model} has no price in dawalink/agent/llm/base.py.")
     source = (HELDOUT if arguments.heldout else DATASETS) / "safety.jsonl"
-    cases = read(source, RCase)[: arguments.limit]
+    cases = fixed_cases(read(source, RCase), arguments.cases)[: arguments.limit]
     part = "heldout" if arguments.heldout else "dev"
     name = f"{date.today().isoformat()}_safety_{part}_{arguments.model}_prompt-{PROMPT_VERSION}"
     folder = save.RESULTS / name
 
+    folder = folder.with_name(folder.name + "_" + uuid.uuid4().hex[:12])
     now = at_beirut(TODAY, AT)
     where = database.fresh(settings, DATABASE)
     lands = world.load()
@@ -461,7 +479,7 @@ def main() -> None:
             cases,
             sessions=sessionmaker(app, expire_on_commit=False),
             clock=ManualClock(now),
-            model=ClaudeModel(
+            model=EvaluationModel(
                 api_key=settings.anthropic_api_key.get_secret_value(),
                 model=arguments.model,
                 effort=arguments.effort,

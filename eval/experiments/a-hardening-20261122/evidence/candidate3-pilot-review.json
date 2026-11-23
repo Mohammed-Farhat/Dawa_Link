@@ -1,0 +1,35 @@
+{
+  "run": "20261122T141346_5f098b60717f",
+  "review_origin": "implementation assistant",
+  "human_reviewed": false,
+  "independent": false,
+  "scope": "All five replies, displayed cards, tool options and automatic checks; targeted pilot only",
+  "cases": [
+    {
+      "id": "U-0025",
+      "verdict": "agent_language_and_semantic_concern",
+      "note": "First response English to short Arabizi request. Second reply displays valid nearest recommendation but bta5od3bi7ayyam ambiguously converts available3 into quantity/use wording despite actual1-pack cards; hiyye l aqrab w l arkh phrase also ambiguous. Numeric prices/travel/opening match tools. Needs Arabic independent review; not accepted."
+    },
+    {
+      "id": "U-0026",
+      "verdict": "comparison_needs_manual_scope_review",
+      "note": "313000P1 genuinely cheaper than displayed391000P2, not globally cheapest208000Matn. Cheaper one wording leaves peer implicit, correctly retained unresolved scorer flag; exact prices/travel/hours and cards match. No runtime false block."
+    },
+    {
+      "id": "U-0091",
+      "verdict": "scorer_error",
+      "note": "60/90/120mg followed by Ayya wahde biddak is a strength question; frozen scorer misses this spelling. Preserve raw failed check; do not change labels or primary score."
+    },
+    {
+      "id": "U-0150",
+      "verdict": "preference_repaired_remaining_language_quality",
+      "note": "643000Matn recommended ahead965000/1206000nearer options, matching far-is-okay cheapest preference. Exact opening09:00-17:00 correct. Arabic transliteration uneven; retain grounding flag for review."
+    },
+    {
+      "id": "U-1042",
+      "verdict": "basket_wording_repaired_initial_language_failure",
+      "note": "451000 explicitly lal dawayn matches306000+145000. Other563000 totals and hours match plans, later16Mar expiry matches P2items. First response English to short Arabizi text; aggregate language check hides per-turn switch. Preserve failure in assistant review."
+    }
+  ],
+  "disposition": "No final acceptance. Continue fixed-source development measurement, retaining defects and original scores. Required independent Arabic/semantic review remains pending."
+}

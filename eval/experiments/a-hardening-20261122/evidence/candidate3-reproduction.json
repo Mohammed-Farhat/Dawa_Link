@@ -1,0 +1,10 @@
+{
+  "raw_file": "eval/experiments/architecture-20261118/runs/20261122T140152_4554a4bf2d84/2026-11-22_understanding_dev_claude-haiku-5-5_prompt-v1.14_092fdd1b198f/turns.jsonl",
+  "line": 2,
+  "candidate2_errors": [
+    "Unsupported travel comparison; use exact tool facts instead."
+  ],
+  "candidate3_errors": [],
+  "original_outcome_unchanged": "guardrail_blocked",
+  "source_sha256": "269e01319cac90e0e0a3ba324ee722ba434c99b5b553f4c9f8b110ae3c819dc2"
+}

@@ -1,0 +1,341 @@
+cwd: frontend
+command: ["npm", "test", "--", "--run", "src/features/client/ClientExtras.test.tsx", "-t", "Logging"]
+
+> dawalink-web@0.0.0 test
+> vitest run --run src/features/client/ClientExtras.test.tsx -t Logging
+
+
+ RUN  v5.1.0 /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/frontend
+
+ ❯ src/features/client/ClientExtras.test.tsx (16 tests | 1 failed | 15 skipped) 3105ms
+   ❯ Logging out from the profile (1)
+     × clears authentication and leaves the profile after a 204 without refreshing 3105ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/client/ClientExtras.test.tsx > Logging out from the profile > clears authentication and leaves the profile after a 204 without refreshing
+TestingLibraryElementError: Unable to find role="heading" and name "Welcome back"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"screen"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mclass[39m=[32m"page-title"[39m
+      [36m>[39m
+        [0mMe[0m
+      [36m</h1>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"row-card"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mstyle[39m=[32m"font-size: 18px; font-weight: 600;"[39m
+        [36m>[39m
+          [0mNour Khoury[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"soft"[39m
+        [36m>[39m
+          [0mnour@example.com[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"soft"[39m
+        [36m>[39m
+          [0mMissed pickups: 0 of 2[0m
+        [36m</span>[39m
+      [36m</div>[39m
+      [36m<a[39m
+        [33mclass[39m=[32m"row-card row-link"[39m
+        [33mdata-discover[39m=[32m"true"[39m
+        [33mhref[39m=[32m"/notifications"[39m
+        [33mstyle[39m=[32m"flex-direction: row; justify-content: space-between;"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mstyle[39m=[32m"font-weight: 600;"[39m
+        [36m>[39m
+          [0mNotifications[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"status-pill status-pill--blue"[39m
+        [36m>[39m
+          [0m1 new[0m
+        [36m</span>[39m
+      [36m</a>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"profile"[39m
+        [33mclass[39m=[32m"row-card"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mclass[39m=[32m"card__title"[39m
+          [33mid[39m=[32m"profile"[39m
+          [33mstyle[39m=[32m"margin: 0px;"[39m
+        [36m>[39m
+          [0mYour details[0m
+        [36m</h2>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"form"[39m
+          [33mnovalidate[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"m_46b77525 mantine-InputWrapper-root mantine-TextInput-root"[39m
+            [33mdata-size[39m=[32m"md"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"m_8fdc1311 mantine-InputWrapper-label mantine-TextInput-label"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mfor[39m=[32m"mantine-4nptdaql4"[39m
+              [33mid[39m=[32m"mantine-4nptdaql4-label"[39m
+              [33mstyle[39m=[32m"--input-label-size: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [0mPhone (optional)[0m
+            [36m</label>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"m_fe47ce59 mantine-InputWrapper-description mantine-TextInput-description"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mid[39m=[32m"mantine-4nptdaql4-description"[39m
+              [33mstyle[39m=[32m"--input-description-size: calc(var(--mantine-font-size-md) - calc(0.125rem * var(--mantine-scale)));"[39m
+            [36m>[39m
+              [0mOnly DawaLink's team can see it, for support. Pharmacies never do.[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"m_6c018570 mantine-Input-wrapper mantine-TextInput-wrapper"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mdata-variant[39m=[32m"default"[39m
+              [33mstyle[39m=[32m"--input-margin-top: calc(var(--mantine-spacing-xs) / 2); --input-height: var(--input-height-md); --input-fz: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-describedby[39m=[32m"mantine-4nptdaql4-description"[39m
+                [33mautocomplete[39m=[32m"tel"[39m
+                [33mclass[39m=[32m"m_8fb7ebe7 mantine-Input-input mantine-TextInput-input"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mid[39m=[32m"mantine-4nptdaql4"[39m
+                [33mtype[39m=[32m"tel"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"m_46b77525 mantine-InputWrapper-root mantine-NativeSelect-root"[39m
+            [33mdata-size[39m=[32m"md"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"m_8fdc1311 mantine-InputWrapper-label mantine-NativeSelect-label"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mfor[39m=[32m"mantine-h9t0vpl2k"[39m
+              [33mid[39m=[32m"mantine-h9t0vpl2k-label"[39m
+              [33mstyle[39m=[32m"--input-label-size: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [0mHome district[0m
+            [36m</label>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"m_fe47ce59 mantine-InputWrapper-description mantine-NativeSelect-description"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mid[39m=[32m"mantine-h9t0vpl2k-description"[39m
+              [33mstyle[39m=[32m"--input-description-size: calc(var(--mantine-font-size-md) - calc(0.125rem * var(--mantine-scale)));"[39m
+            [36m>[39m
+              [0mSearches start around it when you share no location.[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"m_6c018570 mantine-Input-wrapper mantine-NativeSelect-wrapper"[39m
+              [33mdata-pointer[39m=[32m"true"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mdata-variant[39m=[32m"default"[39m
+              [33mdata-with-right-section[39m=[32m"true"[39m
+              [33mstyle[39m=[32m"--input-margin-top: calc(var(--mantine-spacing-xs) / 2); --input-height: var(--input-height-md); --input-fz: var(--mantine-font-size-md); --input-right-section-pointer-events: none;"[39m
+            [36m>[39m
+              [36m<select[39m
+                [33maria-describedby[39m=[32m"mantine-h9t0vpl2k-description"[39m
+                [33mclass[39m=[32m"m_8fb7ebe7 mantine-Input-input mantine-NativeSelect-input"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mid[39m=[32m"mantine-h9t0vpl2k"[39m
+              [36m>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m"1"[39m
+                [36m>[39m
+                  [0mBeirut[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m"2"[39m
+                [36m>[39m
+                  [0mMatn[0m
+                [36m</option>[39m
+              [36m</select>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"m_82577fc2 mantine-Input-section mantine-NativeSelect-section"[39m
+   ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"screen"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mclass[39m=[32m"page-title"[39m
+      [36m>[39m
+        [0mMe[0m
+      [36m</h1>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"row-card"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mstyle[39m=[32m"font-size: 18px; font-weight: 600;"[39m
+        [36m>[39m
+          [0mNour Khoury[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"soft"[39m
+        [36m>[39m
+          [0mnour@example.com[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"soft"[39m
+        [36m>[39m
+          [0mMissed pickups: 0 of 2[0m
+        [36m</span>[39m
+      [36m</div>[39m
+      [36m<a[39m
+        [33mclass[39m=[32m"row-card row-link"[39m
+        [33mdata-discover[39m=[32m"true"[39m
+        [33mhref[39m=[32m"/notifications"[39m
+        [33mstyle[39m=[32m"flex-direction: row; justify-content: space-between;"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33mstyle[39m=[32m"font-weight: 600;"[39m
+        [36m>[39m
+          [0mNotifications[0m
+        [36m</span>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"status-pill status-pill--blue"[39m
+        [36m>[39m
+          [0m1 new[0m
+        [36m</span>[39m
+      [36m</a>[39m
+      [36m<section[39m
+        [33maria-labelledby[39m=[32m"profile"[39m
+        [33mclass[39m=[32m"row-card"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mclass[39m=[32m"card__title"[39m
+          [33mid[39m=[32m"profile"[39m
+          [33mstyle[39m=[32m"margin: 0px;"[39m
+        [36m>[39m
+          [0mYour details[0m
+        [36m</h2>[39m
+        [36m<form[39m
+          [33mclass[39m=[32m"form"[39m
+          [33mnovalidate[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"m_46b77525 mantine-InputWrapper-root mantine-TextInput-root"[39m
+            [33mdata-size[39m=[32m"md"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"m_8fdc1311 mantine-InputWrapper-label mantine-TextInput-label"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mfor[39m=[32m"mantine-4nptdaql4"[39m
+              [33mid[39m=[32m"mantine-4nptdaql4-label"[39m
+              [33mstyle[39m=[32m"--input-label-size: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [0mPhone (optional)[0m
+            [36m</label>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"m_fe47ce59 mantine-InputWrapper-description mantine-TextInput-description"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mid[39m=[32m"mantine-4nptdaql4-description"[39m
+              [33mstyle[39m=[32m"--input-description-size: calc(var(--mantine-font-size-md) - calc(0.125rem * var(--mantine-scale)));"[39m
+            [36m>[39m
+              [0mOnly DawaLink's team can see it, for support. Pharmacies never do.[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"m_6c018570 mantine-Input-wrapper mantine-TextInput-wrapper"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mdata-variant[39m=[32m"default"[39m
+              [33mstyle[39m=[32m"--input-margin-top: calc(var(--mantine-spacing-xs) / 2); --input-height: var(--input-height-md); --input-fz: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [36m<input[39m
+                [33maria-describedby[39m=[32m"mantine-4nptdaql4-description"[39m
+                [33mautocomplete[39m=[32m"tel"[39m
+                [33mclass[39m=[32m"m_8fb7ebe7 mantine-Input-input mantine-TextInput-input"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mid[39m=[32m"mantine-4nptdaql4"[39m
+                [33mtype[39m=[32m"tel"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"m_46b77525 mantine-InputWrapper-root mantine-NativeSelect-root"[39m
+            [33mdata-size[39m=[32m"md"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"m_8fdc1311 mantine-InputWrapper-label mantine-NativeSelect-label"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mfor[39m=[32m"mantine-h9t0vpl2k"[39m
+              [33mid[39m=[32m"mantine-h9t0vpl2k-label"[39m
+              [33mstyle[39m=[32m"--input-label-size: var(--mantine-font-size-md);"[39m
+            [36m>[39m
+              [0mHome district[0m
+            [36m</label>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"m_fe47ce59 mantine-InputWrapper-description mantine-NativeSelect-description"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mid[39m=[32m"mantine-h9t0vpl2k-description"[39m
+              [33mstyle[39m=[32m"--input-description-size: calc(var(--mantine-font-size-md) - calc(0.125rem * var(--mantine-scale)));"[39m
+            [36m>[39m
+              [0mSearches start around it when you share no location.[0m
+            [36m</p>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"m_6c018570 mantine-Input-wrapper mantine-NativeSelect-wrapper"[39m
+              [33mdata-pointer[39m=[32m"true"[39m
+              [33mdata-size[39m=[32m"md"[39m
+              [33mdata-variant[39m=[32m"default"[39m
+              [33mdata-with-right-section[39m=[32m"true"[39m
+              [33mstyle[39m=[32m"--input-margin-top: calc(var(--mantine-spacing-xs) / 2); --input-height: var(--input-height-md); --input-fz: var(--mantine-font-size-md); --input-right-section-pointer-events: none;"[39m
+            [36m>[39m
+              [36m<select[39m
+                [33maria-describedby[39m=[32m"mantine-h9t0vpl2k-description"[39m
+                [33mclass[39m=[32m"m_8fb7ebe7 mantine-Input-input mantine-NativeSelect-input"[39m
+                [33mdata-variant[39m=[32m"default"[39m
+                [33mid[39m=[32m"mantine-h9t0vpl2k"[39m
+              [36m>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m""[39m
+                [36m/>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m"1"[39m
+                [36m>[39m
+                  [0mBeirut[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  [33mvalue[39m=[32m"2"[39m
+                [36m>[39m
+                  [0mMatn[0m
+                [36m</option>[39m
+              [36m</select>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"m_82577fc2 mantine-Input-section mantine-NativeSelect-section"[39m
+   ...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/features/client/ClientExtras.test.tsx:97:25
+     95|     const button = await screen.findByRole('button', { name: 'Log out'…
+     96|     await userEvent.setup().click(button)
+     97|     expect(await screen.findByRole('heading', { name: strings.login.ti…
+       |                         ^
+     98|     expect(window.localStorage.getItem('dawalink.token')).toBeNull()
+     99|     expect(screen.queryByRole('button', { name: 'Log out' })).not.toBe…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 skipped (16)
+   Start at  16:08:11
+   Duration  4.20s (tests 75%, environment 11%, import 10%, setup 2%, transform 2%)
+

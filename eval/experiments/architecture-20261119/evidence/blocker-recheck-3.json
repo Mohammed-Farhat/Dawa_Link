@@ -1,0 +1,45 @@
+{
+  "goal_turn": 3,
+  "previous_goal_turn_classification": "no progress: budget and evidence revalidation did not change the next action",
+  "known_microusd": 858027,
+  "committed_microusd": 9888027,
+  "screening_committed_microusd": 5924849,
+  "screening_headroom_microusd": 75151,
+  "next_reservation_microusd": 645000,
+  "stage_status": [
+    [
+      "baseline",
+      "settled",
+      148,
+      93178,
+      93178
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ],
+    [
+      "screening",
+      "settled",
+      1124,
+      764849,
+      764849
+    ],
+    [
+      "screening",
+      "uncertain",
+      8,
+      0,
+      5160000
+    ]
+  ],
+  "ledger_unchanged_from_previous_blocked_turn": true,
+  "sealed_file_count": 241,
+  "sealed_file_drift": [],
+  "stop_marker_present": true,
+  "paid_restart_permitted": false,
+  "conclusion": "Third consecutive goal turn with the same screening-ceiling blocker. No attributable billing evidence or explicit stage ceiling revision supplied. Implementation, feasible verification and report are saved; paired screening remains incomplete. Mark goal blocked."
+}

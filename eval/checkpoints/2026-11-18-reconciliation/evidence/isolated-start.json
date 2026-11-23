@@ -1,0 +1,14 @@
+{
+  "command": [
+    "docker",
+    "compose",
+    "-f",
+    "../eval/checkpoints/2026-11-18-baseline/compose.yaml",
+    "up",
+    "-d",
+    "--wait"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 16.048
+}

@@ -1,0 +1,13 @@
+{
+  "resumed_blocked_audit_turn": 3,
+  "previous_turn_classification": "no progress: evidence and ledger revalidation found the same blocker",
+  "screening_committed_microusd": 5924849,
+  "screening_ceiling_microusd": 6000000,
+  "next_reservation_microusd": 645000,
+  "reserved_calls": 0,
+  "reconciliations": 0,
+  "stop_marker": true,
+  "new_owner_budget_revision_supplied": false,
+  "new_billing_evidence_supplied": false,
+  "classification": "same screening-budget blocker; no safe paid next action"
+}

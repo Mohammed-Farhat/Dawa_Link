@@ -1,0 +1,222 @@
+{
+  "by_field": {
+    "understanding.budget": {
+      "agreed": 47
+    },
+    "understanding.clinical": {
+      "agreed": 47
+    },
+    "understanding.days_of_use": {
+      "agreed": 47
+    },
+    "understanding.expected": {
+      "agreed": 47
+    },
+    "understanding.free_after_hour": {
+      "agreed": 47
+    },
+    "understanding.free_before_hour": {
+      "agreed": 47
+    },
+    "understanding.intent": {
+      "agreed": 47
+    },
+    "understanding.items": {
+      "disagreed": 36,
+      "agreed": 11
+    },
+    "understanding.must_ask": {
+      "agreed": 46,
+      "disagreed": 1
+    },
+    "understanding.pickup_in_days": {
+      "agreed": 47
+    },
+    "understanding.preference": {
+      "agreed": 47
+    },
+    "understanding.situation": {
+      "agreed": 47
+    },
+    "safety.checks": {
+      "disagreed": 21,
+      "agreed": 4
+    },
+    "multiturn.turn1.behavior": {
+      "agreed": 4
+    },
+    "multiturn.turn1.budget": {
+      "agreed": 4
+    },
+    "multiturn.turn1.clinical": {
+      "agreed": 4
+    },
+    "multiturn.turn1.days_of_use": {
+      "agreed": 4
+    },
+    "multiturn.turn1.expected": {
+      "agreed": 4
+    },
+    "multiturn.turn1.free_after_hour": {
+      "agreed": 4
+    },
+    "multiturn.turn1.free_before_hour": {
+      "agreed": 4
+    },
+    "multiturn.turn1.intent": {
+      "agreed": 4
+    },
+    "multiturn.turn1.items": {
+      "disagreed": 2,
+      "agreed": 2
+    },
+    "multiturn.turn1.must_ask": {
+      "agreed": 4
+    },
+    "multiturn.turn1.pickup_in_days": {
+      "agreed": 4
+    },
+    "multiturn.turn1.preference": {
+      "agreed": 4
+    },
+    "multiturn.turn1.situation": {
+      "agreed": 4
+    },
+    "multiturn.turn2.behavior": {
+      "agreed": 4
+    },
+    "multiturn.turn2.budget": {
+      "agreed": 4
+    },
+    "multiturn.turn2.clinical": {
+      "agreed": 4
+    },
+    "multiturn.turn2.days_of_use": {
+      "agreed": 4
+    },
+    "multiturn.turn2.expected": {
+      "agreed": 4
+    },
+    "multiturn.turn2.free_after_hour": {
+      "agreed": 4
+    },
+    "multiturn.turn2.free_before_hour": {
+      "agreed": 4
+    },
+    "multiturn.turn2.intent": {
+      "agreed": 4
+    },
+    "multiturn.turn2.items": {
+      "disagreed": 2,
+      "agreed": 2
+    },
+    "multiturn.turn2.must_ask": {
+      "agreed": 4
+    },
+    "multiturn.turn2.pickup_in_days": {
+      "agreed": 4
+    },
+    "multiturn.turn2.preference": {
+      "agreed": 4
+    },
+    "multiturn.turn2.situation": {
+      "agreed": 4
+    },
+    "multiturn.turn3.behavior": {
+      "agreed": 1
+    },
+    "multiturn.turn3.budget": {
+      "agreed": 1
+    },
+    "multiturn.turn3.clinical": {
+      "agreed": 1
+    },
+    "multiturn.turn3.days_of_use": {
+      "agreed": 1
+    },
+    "multiturn.turn3.expected": {
+      "agreed": 1
+    },
+    "multiturn.turn3.free_after_hour": {
+      "agreed": 1
+    },
+    "multiturn.turn3.free_before_hour": {
+      "agreed": 1
+    },
+    "multiturn.turn3.intent": {
+      "agreed": 1
+    },
+    "multiturn.turn3.items": {
+      "agreed": 1
+    },
+    "multiturn.turn3.must_ask": {
+      "agreed": 1
+    },
+    "multiturn.turn3.pickup_in_days": {
+      "agreed": 1
+    },
+    "multiturn.turn3.preference": {
+      "agreed": 1
+    },
+    "multiturn.turn3.situation": {
+      "agreed": 1
+    },
+    "multiturn.turn4.behavior": {
+      "agreed": 1
+    },
+    "multiturn.turn4.budget": {
+      "agreed": 1
+    },
+    "multiturn.turn4.clinical": {
+      "agreed": 1
+    },
+    "multiturn.turn4.days_of_use": {
+      "agreed": 1
+    },
+    "multiturn.turn4.expected": {
+      "agreed": 1
+    },
+    "multiturn.turn4.free_after_hour": {
+      "agreed": 1
+    },
+    "multiturn.turn4.free_before_hour": {
+      "agreed": 1
+    },
+    "multiturn.turn4.intent": {
+      "agreed": 1
+    },
+    "multiturn.turn4.items": {
+      "agreed": 1
+    },
+    "multiturn.turn4.must_ask": {
+      "agreed": 1
+    },
+    "multiturn.turn4.pickup_in_days": {
+      "agreed": 1
+    },
+    "multiturn.turn4.preference": {
+      "agreed": 1
+    },
+    "multiturn.turn4.situation": {
+      "agreed": 1
+    }
+  },
+  "by_suite": {
+    "understanding": {
+      "cases": 47,
+      "exact_label_agreed": 10,
+      "exact_label_disagreed": 37
+    },
+    "safety": {
+      "cases": 25,
+      "exact_label_agreed": 4,
+      "exact_label_disagreed": 21
+    },
+    "multiturn": {
+      "cases": 4,
+      "exact_label_agreed": 2,
+      "exact_label_disagreed": 2
+    }
+  },
+  "note": "Exact normalized field agreement before adjudication; semantic equivalence unmeasured."
+}

@@ -1,0 +1,18 @@
+cwd: backend
+command: ["env", "EVAL_DATASET=reviewed", "python", "-m", "dawalink.evals.experiment", "multiturn", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "0.01", "--limit", "1"]
+<frozen runpy>:128: RuntimeWarning: 'dawalink.evals.run_multiturn' found in sys.modules after import of package 'dawalink.evals', but prior to execution of 'dawalink.evals.run_multiturn'; this may result in unpredictable behaviour
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261118T144924_9a0b8ab6881e status: incomplete
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/experiment.py", line 229, in <module>
+    main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/experiment.py", line 204, in main
+    runpy.run_module(MODULES[suite], run_name="__main__")
+  File "<frozen runpy>", line 229, in run_module
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_multiturn.py", line 232, in <module>
+    main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/run_multiturn.py", line 164, in main
+    raise ConfigError("Paid evaluation requires an explicit key outside tests")
+dawalink.config.ConfigError: Paid evaluation requires an explicit key outside tests

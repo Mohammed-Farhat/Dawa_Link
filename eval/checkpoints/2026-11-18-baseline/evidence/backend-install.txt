@@ -1,0 +1,13 @@
+Using CPython 3.12.12
+Creating virtual environment at: .venv
+   Building dawalink @ file:///Users/ajkanaan/Documents/AUB/EECE%20503P%20-%20Agentic%20Systems/Project/dawalink-agentic-systems-project/backend
+error: Failed to download `anyio==4.16.0`
+  cause: Request failed after 3 retries in 4.8s
+  cause: Failed to fetch: https://files.pythonhosted.org/packages/a9/16/7757fb84c819accc7d7e9af5291b261e4abb8627ee040f99e7d35ef2457a/anyio-4.16.0-py3-none-any.whl
+  cause: error sending request for url (https://files.pythonhosted.org/packages/a9/16/7757fb84c819accc7d7e9af5291b261e4abb8627ee040f99e7d35ef2457a/anyio-4.16.0-py3-none-any.whl)
+  cause: client error (Connect)
+  cause: dns error
+  cause: error resolving DNS
+  cause: failed to lookup address information: nodename nor servname provided, or not known
+
+hint: `anyio` (v4.16.0) was included because `dawalink` (v0.1.0) depends on `anthropic` (v2.8.0) which depends on `anyio`

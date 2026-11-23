@@ -1,0 +1,1843 @@
+{
+  "coverage": {
+    "observed": 360,
+    "expected": 360,
+    "missing": [],
+    "complete": true
+  },
+  "architectures": {
+    "current": {
+      "n": 120,
+      "by_suite": {
+        "understanding": {
+          "n": 60,
+          "raw_pass": 52,
+          "adjusted_pass": 54,
+          "execution_ok": 60,
+          "known_ledger_microusd": 156154,
+          "ledger_model_calls": 275
+        },
+        "safety": {
+          "n": 40,
+          "raw_pass": 38,
+          "adjusted_pass": 39,
+          "execution_ok": 40,
+          "known_ledger_microusd": 64381,
+          "ledger_model_calls": 112
+        },
+        "multiturn": {
+          "n": 20,
+          "raw_pass": 16,
+          "adjusted_pass": 18,
+          "execution_ok": 20,
+          "known_ledger_microusd": 124150,
+          "ledger_model_calls": 166
+        }
+      },
+      "raw_pass": 106,
+      "adjusted_pass": 111,
+      "execution_ok": 120,
+      "traced_primary_row_microusd": 331108,
+      "traced_primary_row_model_calls": 533,
+      "known_ledger_microusd_for_primary_runs": 344685,
+      "ledger_model_calls_for_primary_runs": 553,
+      "unresolved_calls_in_primary_runs": [],
+      "known_run_cost_per_execution_success_case_usd": 0.0028723750000000004,
+      "known_run_cost_per_quality_passing_case_usd": 0.0031052702702702704,
+      "cost_scope": "All calls in primary-containing runs, including fixture preparation. A1/B1 original safety runs additionally include their now-ancillary old tail contexts; no exact equal-scope total-cost claim from this aggregate. Understanding and normalized conversation/safety-tail run costs have matched scope.",
+      "checks": {
+        "raw": {
+          "product": {
+            "pass": 90,
+            "n": 94,
+            "pass_rate": 0.9574468085106383
+          },
+          "quantity": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "quantity_understood": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "proposal_quantity": {
+            "pass": 86,
+            "n": 86,
+            "pass_rate": 1
+          },
+          "proposal_complete": {
+            "pass": 86,
+            "n": 86,
+            "pass_rate": 1
+          },
+          "asks_first": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "asks_needlessly": {
+            "pass": 89,
+            "n": 90,
+            "pass_rate": 0.9888888888888889
+          },
+          "uses_the_answer": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "refuses_wrongly": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "nothing_invented": {
+            "pass": 82,
+            "n": 90,
+            "pass_rate": 0.9111111111111111
+          },
+          "language": {
+            "pass": 104,
+            "n": 104,
+            "pass_rate": 1
+          },
+          "days_of_use": {
+            "pass": 50,
+            "n": 54,
+            "pass_rate": 0.9259259259259259
+          },
+          "pickup_day": {
+            "pass": 55,
+            "n": 56,
+            "pass_rate": 0.9821428571428571
+          },
+          "asks_when_it_must": {
+            "pass": 2,
+            "n": 8,
+            "pass_rate": 0.25
+          },
+          "budget": {
+            "pass": 17,
+            "n": 20,
+            "pass_rate": 0.85
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 52,
+            "n": 52,
+            "pass_rate": 1
+          },
+          "preference": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "no_clinical_advice": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "no_other_clients_data": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "priority_unchanged": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "explains_first_come": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "points_to_emergency_help": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_prompt_revealed": {
+            "pass": 4,
+            "n": 6,
+            "pass_rate": 0.6666666666666666
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 60,
+            "n": 60,
+            "pass_rate": 1
+          },
+          "gives_proposal": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "clarifies_before_action": {
+            "pass": 7,
+            "n": 8,
+            "pass_rate": 0.875
+          }
+        },
+        "adjusted": {
+          "product": {
+            "pass": 94,
+            "n": 94,
+            "pass_rate": 1
+          },
+          "quantity": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "quantity_understood": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "proposal_quantity": {
+            "pass": 86,
+            "n": 86,
+            "pass_rate": 1
+          },
+          "proposal_complete": {
+            "pass": 86,
+            "n": 86,
+            "pass_rate": 1
+          },
+          "asks_first": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "asks_needlessly": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "uses_the_answer": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "refuses_wrongly": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "nothing_invented": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "language": {
+            "pass": 99,
+            "n": 104,
+            "pass_rate": 0.9519230769230769
+          },
+          "days_of_use": {
+            "pass": 54,
+            "n": 54,
+            "pass_rate": 1
+          },
+          "pickup_day": {
+            "pass": 56,
+            "n": 56,
+            "pass_rate": 1
+          },
+          "asks_when_it_must": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "budget": {
+            "pass": 20,
+            "n": 20,
+            "pass_rate": 1
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 52,
+            "n": 52,
+            "pass_rate": 1
+          },
+          "preference": {
+            "pass": 2,
+            "n": 4,
+            "pass_rate": 0.5
+          },
+          "no_clinical_advice": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "no_other_clients_data": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "priority_unchanged": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "explains_first_come": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "points_to_emergency_help": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_prompt_revealed": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 60,
+            "n": 60,
+            "pass_rate": 1
+          },
+          "gives_proposal": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "clarifies_before_action": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          }
+        }
+      },
+      "check_rate_scope": "Original non-null applicability only, with reviewed values substituted. Additional manual semantic failures still fail the primary case, but do not selectively enlarge per-check denominators.",
+      "observed_target_checks": {
+        "product": {
+          "pass": 94,
+          "n": 94,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "every_item": {
+          "pass": 10,
+          "n": 10,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "quantity": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "quantity_understood": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_quantity": {
+          "pass": 86,
+          "n": 86,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_complete": {
+          "pass": 86,
+          "n": 86,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "budget": {
+          "pass": 20,
+          "n": 20,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "days_of_use": {
+          "pass": 54,
+          "n": 54,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "pickup_day": {
+          "pass": 56,
+          "n": 56,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "situation": {
+          "pass": 52,
+          "n": 52,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_first": {
+          "pass": 44,
+          "n": 44,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "uses_the_answer": {
+          "pass": 44,
+          "n": 44,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_for_the_rest": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "shows_a_card": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_when_it_must": {
+          "pass": 8,
+          "n": 8,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.85,
+          "meets_observed_target": true
+        },
+        "asks_needlessly": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "clinical_refusal": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": true
+        },
+        "refuses_wrongly": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "language": {
+          "pass": 99,
+          "n": 104,
+          "correct_rate": 0.9519230769230769,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "nothing_invented": {
+          "pass": 85,
+          "n": 90,
+          "correct_rate": 0.9444444444444444,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": false
+        }
+      },
+      "by_repetition": {
+        "1": {
+          "n": 60,
+          "raw_pass": 55,
+          "adjusted_pass": 55,
+          "execution_ok": 60
+        },
+        "2": {
+          "n": 60,
+          "raw_pass": 51,
+          "adjusted_pass": 56,
+          "execution_ok": 60
+        }
+      },
+      "turn_latency_seconds": {
+        "all": {
+          "n": 170,
+          "p50": 7.276,
+          "p95": 13.6632
+        },
+        "with_cards": {
+          "n": 97,
+          "p50": 9.617,
+          "p95": 14.0784
+        },
+        "without_cards": {
+          "n": 73,
+          "p50": 4.472,
+          "p95": 7.06
+        }
+      },
+      "turn_latency_scope": "Understanding and fixed-conversation individual saved turns only; safety spans excluded because they combine attack and optional follow-up.",
+      "safety_interaction_latency_seconds": {
+        "n": 48,
+        "p50": 5.297,
+        "p95": 15.95745
+      }
+    },
+    "staged": {
+      "n": 120,
+      "by_suite": {
+        "understanding": {
+          "n": 60,
+          "raw_pass": 39,
+          "adjusted_pass": 39,
+          "execution_ok": 60,
+          "known_ledger_microusd": 165290,
+          "ledger_model_calls": 312
+        },
+        "safety": {
+          "n": 40,
+          "raw_pass": 35,
+          "adjusted_pass": 36,
+          "execution_ok": 38,
+          "known_ledger_microusd": 77172,
+          "ledger_model_calls": 172
+        },
+        "multiturn": {
+          "n": 20,
+          "raw_pass": 14,
+          "adjusted_pass": 16,
+          "execution_ok": 20,
+          "known_ledger_microusd": 143599,
+          "ledger_model_calls": 217
+        }
+      },
+      "raw_pass": 88,
+      "adjusted_pass": 91,
+      "execution_ok": 118,
+      "traced_primary_row_microusd": 367142,
+      "traced_primary_row_model_calls": 667,
+      "known_ledger_microusd_for_primary_runs": 386061,
+      "ledger_model_calls_for_primary_runs": 701,
+      "unresolved_calls_in_primary_runs": [],
+      "known_run_cost_per_execution_success_case_usd": 0.0032717033898305085,
+      "known_run_cost_per_quality_passing_case_usd": 0.0042424285714285715,
+      "cost_scope": "All calls in primary-containing runs, including fixture preparation. A1/B1 original safety runs additionally include their now-ancillary old tail contexts; no exact equal-scope total-cost claim from this aggregate. Understanding and normalized conversation/safety-tail run costs have matched scope.",
+      "checks": {
+        "raw": {
+          "product": {
+            "pass": 82,
+            "n": 94,
+            "pass_rate": 0.8723404255319149
+          },
+          "quantity": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "quantity_understood": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "proposal_quantity": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "proposal_complete": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "asks_first": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "asks_needlessly": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "uses_the_answer": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "refuses_wrongly": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "nothing_invented": {
+            "pass": 77,
+            "n": 85,
+            "pass_rate": 0.9058823529411765
+          },
+          "language": {
+            "pass": 104,
+            "n": 104,
+            "pass_rate": 1
+          },
+          "days_of_use": {
+            "pass": 50,
+            "n": 54,
+            "pass_rate": 0.9259259259259259
+          },
+          "pickup_day": {
+            "pass": 55,
+            "n": 56,
+            "pass_rate": 0.9821428571428571
+          },
+          "asks_when_it_must": {
+            "pass": 0,
+            "n": 8,
+            "pass_rate": 0
+          },
+          "budget": {
+            "pass": 17,
+            "n": 20,
+            "pass_rate": 0.85
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 49,
+            "n": 52,
+            "pass_rate": 0.9423076923076923
+          },
+          "preference": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "no_clinical_advice": {
+            "pass": 11,
+            "n": 12,
+            "pass_rate": 0.9166666666666666
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 42,
+            "n": 44,
+            "pass_rate": 0.9545454545454546
+          },
+          "no_other_clients_data": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "priority_unchanged": {
+            "pass": 11,
+            "n": 12,
+            "pass_rate": 0.9166666666666666
+          },
+          "explains_first_come": {
+            "pass": 10,
+            "n": 12,
+            "pass_rate": 0.8333333333333334
+          },
+          "points_to_emergency_help": {
+            "pass": 5,
+            "n": 6,
+            "pass_rate": 0.8333333333333334
+          },
+          "no_prompt_revealed": {
+            "pass": 4,
+            "n": 6,
+            "pass_rate": 0.6666666666666666
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 60,
+            "n": 60,
+            "pass_rate": 1
+          },
+          "gives_proposal": {
+            "pass": 39,
+            "n": 44,
+            "pass_rate": 0.8863636363636364
+          },
+          "clarifies_before_action": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          }
+        },
+        "adjusted": {
+          "product": {
+            "pass": 85,
+            "n": 94,
+            "pass_rate": 0.9042553191489362
+          },
+          "quantity": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "quantity_understood": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "proposal_quantity": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "proposal_complete": {
+            "pass": 80,
+            "n": 82,
+            "pass_rate": 0.975609756097561
+          },
+          "asks_first": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "asks_needlessly": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "uses_the_answer": {
+            "pass": 44,
+            "n": 44,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "refuses_wrongly": {
+            "pass": 90,
+            "n": 90,
+            "pass_rate": 1
+          },
+          "nothing_invented": {
+            "pass": 84,
+            "n": 85,
+            "pass_rate": 0.9882352941176471
+          },
+          "language": {
+            "pass": 103,
+            "n": 104,
+            "pass_rate": 0.9903846153846154
+          },
+          "days_of_use": {
+            "pass": 53,
+            "n": 54,
+            "pass_rate": 0.9814814814814815
+          },
+          "pickup_day": {
+            "pass": 55,
+            "n": 56,
+            "pass_rate": 0.9821428571428571
+          },
+          "asks_when_it_must": {
+            "pass": 0,
+            "n": 8,
+            "pass_rate": 0
+          },
+          "budget": {
+            "pass": 20,
+            "n": 20,
+            "pass_rate": 1
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 49,
+            "n": 52,
+            "pass_rate": 0.9423076923076923
+          },
+          "preference": {
+            "pass": 2,
+            "n": 4,
+            "pass_rate": 0.5
+          },
+          "no_clinical_advice": {
+            "pass": 11,
+            "n": 12,
+            "pass_rate": 0.9166666666666666
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 42,
+            "n": 44,
+            "pass_rate": 0.9545454545454546
+          },
+          "no_other_clients_data": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "priority_unchanged": {
+            "pass": 11,
+            "n": 12,
+            "pass_rate": 0.9166666666666666
+          },
+          "explains_first_come": {
+            "pass": 10,
+            "n": 12,
+            "pass_rate": 0.8333333333333334
+          },
+          "points_to_emergency_help": {
+            "pass": 5,
+            "n": 6,
+            "pass_rate": 0.8333333333333334
+          },
+          "no_prompt_revealed": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 60,
+            "n": 60,
+            "pass_rate": 1
+          },
+          "gives_proposal": {
+            "pass": 39,
+            "n": 44,
+            "pass_rate": 0.8863636363636364
+          },
+          "clarifies_before_action": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          }
+        }
+      },
+      "check_rate_scope": "Original non-null applicability only, with reviewed values substituted. Additional manual semantic failures still fail the primary case, but do not selectively enlarge per-check denominators.",
+      "observed_target_checks": {
+        "product": {
+          "pass": 85,
+          "n": 94,
+          "correct_rate": 0.9042553191489362,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "every_item": {
+          "pass": 10,
+          "n": 10,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "quantity": {
+          "pass": 80,
+          "n": 82,
+          "correct_rate": 0.975609756097561,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "quantity_understood": {
+          "pass": 80,
+          "n": 82,
+          "correct_rate": 0.975609756097561,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_quantity": {
+          "pass": 80,
+          "n": 82,
+          "correct_rate": 0.975609756097561,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_complete": {
+          "pass": 80,
+          "n": 82,
+          "correct_rate": 0.975609756097561,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "budget": {
+          "pass": 20,
+          "n": 20,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "days_of_use": {
+          "pass": 53,
+          "n": 54,
+          "correct_rate": 0.9814814814814815,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "pickup_day": {
+          "pass": 55,
+          "n": 56,
+          "correct_rate": 0.9821428571428571,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "situation": {
+          "pass": 49,
+          "n": 52,
+          "correct_rate": 0.9423076923076923,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_first": {
+          "pass": 44,
+          "n": 44,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "uses_the_answer": {
+          "pass": 44,
+          "n": 44,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_for_the_rest": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "shows_a_card": {
+          "pass": 85,
+          "n": 90,
+          "correct_rate": 0.9444444444444444,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_when_it_must": {
+          "pass": 0,
+          "n": 8,
+          "correct_rate": 0,
+          "minimum_correct_rate": 0.85,
+          "meets_observed_target": false
+        },
+        "asks_needlessly": {
+          "pass": 85,
+          "n": 90,
+          "correct_rate": 0.9444444444444444,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "clinical_refusal": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": true
+        },
+        "refuses_wrongly": {
+          "pass": 90,
+          "n": 90,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "language": {
+          "pass": 103,
+          "n": 104,
+          "correct_rate": 0.9903846153846154,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "nothing_invented": {
+          "pass": 84,
+          "n": 85,
+          "correct_rate": 0.9882352941176471,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": false
+        }
+      },
+      "by_repetition": {
+        "1": {
+          "n": 60,
+          "raw_pass": 44,
+          "adjusted_pass": 47,
+          "execution_ok": 59
+        },
+        "2": {
+          "n": 60,
+          "raw_pass": 44,
+          "adjusted_pass": 44,
+          "execution_ok": 59
+        }
+      },
+      "turn_latency_seconds": {
+        "all": {
+          "n": 170,
+          "p50": 10.1335,
+          "p95": 17.7033
+        },
+        "with_cards": {
+          "n": 91,
+          "p50": 13.629,
+          "p95": 19.3815
+        },
+        "without_cards": {
+          "n": 79,
+          "p50": 2.479,
+          "p95": 8.2564
+        }
+      },
+      "turn_latency_scope": "Understanding and fixed-conversation individual saved turns only; safety spans excluded because they combine attack and optional follow-up.",
+      "safety_interaction_latency_seconds": {
+        "n": 48,
+        "p50": 7.0185,
+        "p95": 17.5063
+      }
+    },
+    "verified": {
+      "n": 120,
+      "by_suite": {
+        "understanding": {
+          "n": 60,
+          "raw_pass": 44,
+          "adjusted_pass": 51,
+          "execution_ok": 56,
+          "known_ledger_microusd": 420018,
+          "ledger_model_calls": 460
+        },
+        "safety": {
+          "n": 40,
+          "raw_pass": 37,
+          "adjusted_pass": 37,
+          "execution_ok": 37,
+          "known_ledger_microusd": 185589,
+          "ledger_model_calls": 210
+        },
+        "multiturn": {
+          "n": 20,
+          "raw_pass": 14,
+          "adjusted_pass": 18,
+          "execution_ok": 18,
+          "known_ledger_microusd": 277693,
+          "ledger_model_calls": 252
+        }
+      },
+      "raw_pass": 95,
+      "adjusted_pass": 106,
+      "execution_ok": 111,
+      "traced_primary_row_microusd": 862374,
+      "traced_primary_row_model_calls": 898,
+      "known_ledger_microusd_for_primary_runs": 883300,
+      "ledger_model_calls_for_primary_runs": 922,
+      "unresolved_calls_in_primary_runs": [
+        {
+          "id": "423795542bd240c4bd40bdf814083a21",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "0fb9a2c9f3ec4810946477c8457e8036",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "e515f0ffaffc42e889990d289e1ffdd6",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "0d32bd6e7e0249ed90567dcbdb988f48",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "aff138f531b24e47a0be330ac1e43bf0",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "c922644bdebb4a298753525e504bd41d",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "679655cfaea34bb0bd377616507fb074",
+          "run": "20261119T162646_21096b0ddb62",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        },
+        {
+          "id": "2f0b789684804da1afa8a19c4b7009c3",
+          "run": "20261120T151010_e713a08bc189",
+          "held_microusd": 645000,
+          "status": "uncertain"
+        }
+      ],
+      "known_run_cost_per_execution_success_case_usd": 0.007957657657657657,
+      "known_run_cost_per_quality_passing_case_usd": 0.008333018867924528,
+      "cost_scope": "All calls in primary-containing runs, including fixture preparation. A1/B1 original safety runs additionally include their now-ancillary old tail contexts; no exact equal-scope total-cost claim from this aggregate. Understanding and normalized conversation/safety-tail run costs have matched scope.",
+      "checks": {
+        "raw": {
+          "product": {
+            "pass": 85,
+            "n": 90,
+            "pass_rate": 0.9444444444444444
+          },
+          "quantity": {
+            "pass": 85,
+            "n": 85,
+            "pass_rate": 1
+          },
+          "quantity_understood": {
+            "pass": 85,
+            "n": 85,
+            "pass_rate": 1
+          },
+          "proposal_quantity": {
+            "pass": 80,
+            "n": 80,
+            "pass_rate": 1
+          },
+          "proposal_complete": {
+            "pass": 79,
+            "n": 80,
+            "pass_rate": 0.9875
+          },
+          "asks_first": {
+            "pass": 40,
+            "n": 44,
+            "pass_rate": 0.9090909090909091
+          },
+          "asks_needlessly": {
+            "pass": 85,
+            "n": 86,
+            "pass_rate": 0.9883720930232558
+          },
+          "uses_the_answer": {
+            "pass": 40,
+            "n": 40,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 81,
+            "n": 86,
+            "pass_rate": 0.9418604651162791
+          },
+          "refuses_wrongly": {
+            "pass": 85,
+            "n": 86,
+            "pass_rate": 0.9883720930232558
+          },
+          "nothing_invented": {
+            "pass": 73,
+            "n": 81,
+            "pass_rate": 0.9012345679012346
+          },
+          "language": {
+            "pass": 96,
+            "n": 96,
+            "pass_rate": 1
+          },
+          "days_of_use": {
+            "pass": 47,
+            "n": 50,
+            "pass_rate": 0.94
+          },
+          "pickup_day": {
+            "pass": 50,
+            "n": 52,
+            "pass_rate": 0.9615384615384616
+          },
+          "asks_when_it_must": {
+            "pass": 1,
+            "n": 8,
+            "pass_rate": 0.125
+          },
+          "budget": {
+            "pass": 19,
+            "n": 20,
+            "pass_rate": 0.95
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 8,
+            "n": 9,
+            "pass_rate": 0.8888888888888888
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 48,
+            "n": 48,
+            "pass_rate": 1
+          },
+          "preference": {
+            "pass": 3,
+            "n": 3,
+            "pass_rate": 1
+          },
+          "no_clinical_advice": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 42,
+            "n": 44,
+            "pass_rate": 0.9545454545454546
+          },
+          "no_other_clients_data": {
+            "pass": 9,
+            "n": 10,
+            "pass_rate": 0.9
+          },
+          "priority_unchanged": {
+            "pass": 9,
+            "n": 12,
+            "pass_rate": 0.75
+          },
+          "explains_first_come": {
+            "pass": 9,
+            "n": 12,
+            "pass_rate": 0.75
+          },
+          "points_to_emergency_help": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_prompt_revealed": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 56,
+            "n": 58,
+            "pass_rate": 0.9655172413793104
+          },
+          "gives_proposal": {
+            "pass": 40,
+            "n": 40,
+            "pass_rate": 1
+          },
+          "clarifies_before_action": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          }
+        },
+        "adjusted": {
+          "product": {
+            "pass": 86,
+            "n": 90,
+            "pass_rate": 0.9555555555555556
+          },
+          "quantity": {
+            "pass": 85,
+            "n": 85,
+            "pass_rate": 1
+          },
+          "quantity_understood": {
+            "pass": 85,
+            "n": 85,
+            "pass_rate": 1
+          },
+          "proposal_quantity": {
+            "pass": 80,
+            "n": 80,
+            "pass_rate": 1
+          },
+          "proposal_complete": {
+            "pass": 79,
+            "n": 80,
+            "pass_rate": 0.9875
+          },
+          "asks_first": {
+            "pass": 40,
+            "n": 44,
+            "pass_rate": 0.9090909090909091
+          },
+          "asks_needlessly": {
+            "pass": 85,
+            "n": 86,
+            "pass_rate": 0.9883720930232558
+          },
+          "uses_the_answer": {
+            "pass": 40,
+            "n": 40,
+            "pass_rate": 1
+          },
+          "shows_a_card": {
+            "pass": 81,
+            "n": 86,
+            "pass_rate": 0.9418604651162791
+          },
+          "refuses_wrongly": {
+            "pass": 86,
+            "n": 86,
+            "pass_rate": 1
+          },
+          "nothing_invented": {
+            "pass": 81,
+            "n": 81,
+            "pass_rate": 1
+          },
+          "language": {
+            "pass": 96,
+            "n": 96,
+            "pass_rate": 1
+          },
+          "days_of_use": {
+            "pass": 48,
+            "n": 50,
+            "pass_rate": 0.96
+          },
+          "pickup_day": {
+            "pass": 50,
+            "n": 52,
+            "pass_rate": 0.9615384615384616
+          },
+          "asks_when_it_must": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "budget": {
+            "pass": 19,
+            "n": 20,
+            "pass_rate": 0.95
+          },
+          "clinical_refusal": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "every_item": {
+            "pass": 8,
+            "n": 9,
+            "pass_rate": 0.8888888888888888
+          },
+          "asks_for_the_rest": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "situation": {
+            "pass": 48,
+            "n": 48,
+            "pass_rate": 1
+          },
+          "preference": {
+            "pass": 1,
+            "n": 3,
+            "pass_rate": 0.3333333333333333
+          },
+          "no_clinical_advice": {
+            "pass": 12,
+            "n": 12,
+            "pass_rate": 1
+          },
+          "refers_to_pharmacist": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          },
+          "no_state_change": {
+            "pass": 42,
+            "n": 44,
+            "pass_rate": 0.9545454545454546
+          },
+          "no_other_clients_data": {
+            "pass": 9,
+            "n": 10,
+            "pass_rate": 0.9
+          },
+          "priority_unchanged": {
+            "pass": 9,
+            "n": 12,
+            "pass_rate": 0.75
+          },
+          "explains_first_come": {
+            "pass": 9,
+            "n": 12,
+            "pass_rate": 0.75
+          },
+          "points_to_emergency_help": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_prompt_revealed": {
+            "pass": 6,
+            "n": 6,
+            "pass_rate": 1
+          },
+          "no_false_claim": {
+            "pass": 10,
+            "n": 10,
+            "pass_rate": 1
+          },
+          "no_personal_data": {
+            "pass": 4,
+            "n": 4,
+            "pass_rate": 1
+          },
+          "execution_ok": {
+            "pass": 56,
+            "n": 58,
+            "pass_rate": 0.9655172413793104
+          },
+          "gives_proposal": {
+            "pass": 40,
+            "n": 40,
+            "pass_rate": 1
+          },
+          "clarifies_before_action": {
+            "pass": 8,
+            "n": 8,
+            "pass_rate": 1
+          }
+        }
+      },
+      "check_rate_scope": "Original non-null applicability only, with reviewed values substituted. Additional manual semantic failures still fail the primary case, but do not selectively enlarge per-check denominators.",
+      "observed_target_checks": {
+        "product": {
+          "pass": 86,
+          "n": 90,
+          "correct_rate": 0.9555555555555556,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "every_item": {
+          "pass": 8,
+          "n": 9,
+          "correct_rate": 0.8888888888888888,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": false
+        },
+        "quantity": {
+          "pass": 85,
+          "n": 85,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "quantity_understood": {
+          "pass": 85,
+          "n": 85,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_quantity": {
+          "pass": 80,
+          "n": 80,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "proposal_complete": {
+          "pass": 79,
+          "n": 80,
+          "correct_rate": 0.9875,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "budget": {
+          "pass": 19,
+          "n": 20,
+          "correct_rate": 0.95,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "days_of_use": {
+          "pass": 48,
+          "n": 50,
+          "correct_rate": 0.96,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "pickup_day": {
+          "pass": 50,
+          "n": 52,
+          "correct_rate": 0.9615384615384616,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "situation": {
+          "pass": 48,
+          "n": 48,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_first": {
+          "pass": 40,
+          "n": 44,
+          "correct_rate": 0.9090909090909091,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "uses_the_answer": {
+          "pass": 40,
+          "n": 40,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_for_the_rest": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "shows_a_card": {
+          "pass": 81,
+          "n": 86,
+          "correct_rate": 0.9418604651162791,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "asks_when_it_must": {
+          "pass": 8,
+          "n": 8,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.85,
+          "meets_observed_target": true
+        },
+        "asks_needlessly": {
+          "pass": 85,
+          "n": 86,
+          "correct_rate": 0.9883720930232558,
+          "minimum_correct_rate": 0.9,
+          "meets_observed_target": true
+        },
+        "clinical_refusal": {
+          "pass": 6,
+          "n": 6,
+          "correct_rate": 1,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": true
+        },
+        "refuses_wrongly": {
+          "pass": 86,
+          "n": 86,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "language": {
+          "pass": 96,
+          "n": 96,
+          "correct_rate": 1,
+          "minimum_correct_rate": 0.95,
+          "meets_observed_target": true
+        },
+        "nothing_invented": {
+          "pass": 81,
+          "n": 81,
+          "correct_rate": 1,
+          "minimum_correct_rate": 1.0,
+          "meets_observed_target": true
+        }
+      },
+      "by_repetition": {
+        "1": {
+          "n": 60,
+          "raw_pass": 45,
+          "adjusted_pass": 50,
+          "execution_ok": 52
+        },
+        "2": {
+          "n": 60,
+          "raw_pass": 50,
+          "adjusted_pass": 56,
+          "execution_ok": 59
+        }
+      },
+      "turn_latency_seconds": {
+        "all": {
+          "n": 164,
+          "p50": 15.4155,
+          "p95": 27.4502
+        },
+        "with_cards": {
+          "n": 90,
+          "p50": 20.6205,
+          "p95": 27.8331
+        },
+        "without_cards": {
+          "n": 74,
+          "p50": 12.4405,
+          "p95": 17.41735
+        }
+      },
+      "turn_latency_scope": "Understanding and fixed-conversation individual saved turns only; safety spans excluded because they combine attack and optional follow-up.",
+      "safety_interaction_latency_seconds": {
+        "n": 48,
+        "p50": 12.057,
+        "p95": 32.6953
+      }
+    }
+  },
+  "paired": {
+    "staged": {
+      "paired_observations": 120,
+      "case_clusters": 60,
+      "adjusted_quality_difference": -0.16666666666666666,
+      "paired_case_cluster_bootstrap_95": [
+        -0.275,
+        -0.066667
+      ],
+      "method": "10000 resamples of suite/case clusters, retaining both repetitions together; seed20261119. Development screening, not simulation-seed inference.",
+      "execution_success_sensitivity": {
+        "n": 118,
+        "difference": -0.15254237288135594,
+        "paired_case_cluster_bootstrap_95": [
+          -0.254237,
+          -0.058333
+        ],
+        "warning": "Post-execution sensitivity only; excluded failures remain in primary scores."
+      }
+    },
+    "verified": {
+      "paired_observations": 120,
+      "case_clusters": 60,
+      "adjusted_quality_difference": -0.041666666666666664,
+      "paired_case_cluster_bootstrap_95": [
+        -0.108333,
+        0.025
+      ],
+      "method": "10000 resamples of suite/case clusters, retaining both repetitions together; seed20261119. Development screening, not simulation-seed inference.",
+      "execution_success_sensitivity": {
+        "n": 111,
+        "difference": 0.036036036036036036,
+        "paired_case_cluster_bootstrap_95": [
+          -0.018018,
+          0.093458
+        ],
+        "warning": "Post-execution sensitivity only; excluded failures remain in primary scores."
+      }
+    }
+  },
+  "spending": [
+    [
+      "baseline",
+      "settled",
+      148,
+      93178,
+      93178
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ],
+    [
+      "screening",
+      "settled",
+      2711,
+      2006871,
+      2006871
+    ],
+    [
+      "screening",
+      "uncertain",
+      11,
+      0,
+      7095000
+    ]
+  ],
+  "limitations": [
+    "Manual review by implementation assistant, not human or independent blind review.",
+    "Traced row costs/call counts omit some fixture preparation and differ in rounding/cache accounting; ledger run totals are authoritative.",
+    "Known ledger costs exclude unknown charges. All unresolved holds remain committed. A1/B1 primary-containing safety runs include old ancillary tails; whole-run total cost is not an exact equal-scope comparison.",
+    "Failed recovery, ancillary conversation and smoke costs remain charged in full aggregate ledger spending, separately from primary-containing run totals.",
+    "Unnecessary-question check measures repeated supplied logistics; other avoidable questions may be missed.",
+    "Latency is recorded generation/tool time, excluding suite setup and queues.",
+    "No real fulfilled requests, six-hour fulfillment, or simulation-seed intervals measured in screening.",
+    "No final advancement before all paired observations and required manual reviews complete."
+  ]
+}

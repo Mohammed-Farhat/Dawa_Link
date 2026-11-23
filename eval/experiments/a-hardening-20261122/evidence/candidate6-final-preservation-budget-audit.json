@@ -1,0 +1,129 @@
+{
+  "passed": true,
+  "errors": [],
+  "historical_evidence_files": 1131,
+  "historical_ledger_rows_unchanged": true,
+  "stages_microusd": {
+    "baseline": {
+      "known": 93178,
+      "committed": 3963178,
+      "remaining": 36822
+    },
+    "expanded": {
+      "known": 1857798,
+      "committed": 2502798,
+      "remaining": 3497202
+    },
+    "screening": {
+      "known": 2006871,
+      "committed": 9101871,
+      "remaining": 898129
+    },
+    "heldout": {
+      "known": 0,
+      "committed": 0,
+      "remaining": 3000000
+    },
+    "retries": {
+      "known": 0,
+      "committed": 0,
+      "remaining": 2000000
+    }
+  },
+  "known_microusd": 3957847,
+  "committed_microusd": 15567847,
+  "uncertain": [
+    {
+      "id": "0d32bd6e7e0249ed90567dcbdb988f48",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "0fb9a2c9f3ec4810946477c8457e8036",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "15574c9f6dc445c2a7027f77db57b75a",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "1dd6b76421c84e9d896357f9d4a597cc",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "1e77799c15ec46d180396c329072caa3",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "21cc867d64e947db9e32ffcfd2920f55",
+      "stage": "expanded",
+      "held": 645000
+    },
+    {
+      "id": "2f0b789684804da1afa8a19c4b7009c3",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "423795542bd240c4bd40bdf814083a21",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "53fcb90399824e1a915f114ec2898160",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "63c4a74e43a24681869c4d79e7733058",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "679655cfaea34bb0bd377616507fb074",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "68966be19b144896b7e6a2b1c5286928",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "aff138f531b24e47a0be330ac1e43bf0",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "ba1ff9400a1042c1a95c6832c351dafe",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "c922644bdebb4a298753525e504bd41d",
+      "stage": "screening",
+      "held": 645000
+    },
+    {
+      "id": "d14eb0c20dc8434a9942751e5d5e9fe6",
+      "stage": "baseline",
+      "held": 645000
+    },
+    {
+      "id": "e515f0ffaffc42e889990d289e1ffdd6",
+      "stage": "screening",
+      "held": 645000
+    }
+  ],
+  "active_reservations": [],
+  "handoff_sha256": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13"
+}

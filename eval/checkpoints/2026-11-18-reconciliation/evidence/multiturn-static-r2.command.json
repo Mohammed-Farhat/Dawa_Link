@@ -1,0 +1,13 @@
+{
+  "command": [
+    "ruff",
+    "check",
+    "--fix",
+    "src/dawalink/evals/run_multiturn.py",
+    "tests/unit/evals/test_multiturn.py",
+    "tests/agent/test_eval_multiturn.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 1,
+  "seconds": 0.072
+}

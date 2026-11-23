@@ -1,0 +1,8 @@
+{
+  "command": [
+    "mypy"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 14.027
+}

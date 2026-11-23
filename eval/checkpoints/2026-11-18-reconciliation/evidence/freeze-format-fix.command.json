@@ -1,0 +1,10 @@
+{
+  "command": [
+    "ruff",
+    "format",
+    "src/dawalink/evals/experiment.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 0.048
+}

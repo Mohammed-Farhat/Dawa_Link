@@ -29,7 +29,11 @@ class AgentThatAsksOnce:
 
     def complete(self, prompt: Prompt, *, timeout_s: float) -> ModelReply:
         said = getattr(prompt.messages[0], "text", "")
-        text = "Pharmacy A has it." if "bukra" in said else "Car or on foot? Which day?"
+        text = (
+            "Pharmacy A mawjoud bi kaza saydaliyye."
+            if "bukra" in said
+            else "3ande siyyara wala mashi? Ayya yom?"
+        )
         return ModelReply(text="", tool_calls=(ToolCall("t1", "reply", {"text": text}),))
 
 
@@ -42,7 +46,7 @@ class ClientThatAnswers:
         chat = getattr(prompt.messages[0], "text", "")
         if "Pharmacy A" in chat:
             call = ToolCall("c", "leave", {"why": "nothing to tap"})
-        elif "Which day" in chat:
+        elif "Ayya yom" in chat:
             arguments = {"text": "3ande siyyara, bukra", "says": ["transport", "day"]}
             call = ToolCall("c", "write_message", arguments)
         else:
@@ -93,8 +97,8 @@ def test_a_conversation_is_played_scored_and_saved(scene: Scene, tmp_path: Path)
 
     assert (row["id"], row["style"], row["ended"]) == ("U-0003:bare", "bare", "client_left")
     assert [(e["client"], e["says"], e["agent"]) for e in row["exchanges"]] == [
-        ("baddi concor 5", [], "Car or on foot? Which day?"),
-        ("3ande siyyara, bukra", ["transport", "day"], "Pharmacy A has it."),
+        ("baddi concor 5", [], "3ande siyyara wala mashi? Ayya yom?"),
+        ("3ande siyyara, bukra", ["transport", "day"], "Pharmacy A mawjoud bi kaza saydaliyye."),
     ]
     # Told where to go without a card, and nothing was searched.
     assert row["checks"]["gets_cards"] is False
@@ -115,3 +119,24 @@ def test_a_conversation_that_goes_in_circles_is_cut(scene: Scene, tmp_path: Path
     (row,) = played(scene, tmp_path, ClientThatNeverStops())
 
     assert (row["ended"], row["client_messages"]) == ("too_long", MAX_CLIENT_MESSAGES)
+
+
+def test_playing_provider_failure_keeps_prior_exchanges_and_failure_row(
+    scene: Scene, tmp_path: Path
+) -> None:
+    from dawalink.agent.llm import LLMUnavailable
+
+    class FailsAfterOneMessage(ClientThatAnswers):
+        def complete(self, prompt: Prompt, *, timeout_s: float) -> ModelReply:
+            if "Ayya yom" in getattr(prompt.messages[0], "text", ""):
+                raise LLMUnavailable("synthetic provider failure")
+            return super().complete(prompt, timeout_s=timeout_s)
+
+    (row,) = played(scene, tmp_path, FailsAfterOneMessage())
+    assert row["ended"] == "client_provider_failure"
+    assert len(row["exchanges"]) == 1
+    import json
+
+    checkpoint = json.loads((tmp_path / "case-checkpoints.jsonl").read_text().splitlines()[0])
+    assert checkpoint["ended"] == "client_provider_failure"
+    assert checkpoint["exchanges"] == row["exchanges"]

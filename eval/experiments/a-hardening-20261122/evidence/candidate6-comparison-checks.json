@@ -1,0 +1,23 @@
+{
+  "status": "candidate6 partial runtime comparison repair; no final freeze",
+  "paid_calls": 0,
+  "checks": [
+    "70 grounding unit tests passed",
+    "Ruff check/format passed; mypy grounding.py passed",
+    "Offline replay: U0008 original false cheapest rejected, corrected nearest accepted; U0037 false cheapest rejected; U1019 universal price/stock-count scope rejected. Original evaluation rows unchanged."
+  ],
+  "limits": [
+    "Conservative parser, not general factuality verification.",
+    "Unresolved association remains manual review, not automatic runtime blocking.",
+    "Basket comparisons and implicit recommendation peers still need independent handling.",
+    "No live-model or independent acceptance."
+  ],
+  "sha256": {
+    "backend/src/dawalink/agent/guards/grounding.py": "74097726e6c66cea64097e7df9acbd780266cc97eea3bf5dc7a49a5ae85d5613",
+    "backend/tests/unit/agent/test_grounding.py": "9bfd38d5fc2f0d0a50b8dfa6c43e07dce0d56acc8a60dcf54a74475db2730560",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-comparison-replay.json": "fb699bb78531f6f16d63bcd18c505fa70852e2c2453cfcca9309aee6c5cb8746",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-comparison-tests.txt": "075ca72bd3c733566e8b37c84bfcdb26ebaad93cb7e0a15d42d96d3ed9f0e0b4",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-comparison-lint.txt": "afa20b27dacc9bf0aba3c1d265964c21e04ab42f6e39e2dd4769718ceded003a",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-comparison-types.txt": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+  }
+}

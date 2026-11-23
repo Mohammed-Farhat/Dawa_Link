@@ -1,0 +1,3 @@
+cwd: backend
+command: ["ruff", "format", "tests/agent/test_eval_multiturn.py"]
+1 file reformatted

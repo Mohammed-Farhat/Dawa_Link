@@ -1,0 +1,6 @@
+cwd: frontend
+command: ["npm", "run", "typecheck"]
+
+> dawalink-web@0.0.0 typecheck
+> tsc -b
+

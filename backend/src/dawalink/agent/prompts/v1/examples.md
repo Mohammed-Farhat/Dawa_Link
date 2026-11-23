@@ -41,6 +41,20 @@ plan has both at Pharmacy A, 9 minutes on foot, open until 22:00. You create the
 for that plan. Your reply says both are at Pharmacy A, 9 minutes on foot and open late
 enough to go after work, and shows the card.
 
+Example 3b: several medicines.
+The client writes: "Panadol, Concor 5mg and Glucophage 850, I can come after 6".
+You look up each medicine, ask once about search areas, pickup day and days of use,
+and note "free after 18:00".
+The client answers: "tomorrow, 10 days each, nearest".
+Now you ask for plans for the three together, with tomorrow's date, 10 days of use and
+the preference nearest. The best plan has Panadol and Concor at Pharmacy A, 9 minutes
+on foot, open until 22:00; Glucophage isn't listed anywhere. You create the card for
+that partial plan. Your reply explicitly says it covers Panadol and Concor at
+Pharmacy A, 9 minutes on foot and open late enough to go after work, but Glucophage
+is missing. It asks whether to
+keep looking for it for the next 6 hours. It shows the card, offers "Yes, keep
+looking" and "No thanks" as quick replies.
+
 Example 3b: places to look in, and box sizes.
 The client writes: "I need Panadol Advance, in Saida or Beirut, I don't mind which. 5
 days. I can come any day."

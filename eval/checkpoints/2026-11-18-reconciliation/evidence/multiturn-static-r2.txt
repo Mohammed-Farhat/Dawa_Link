@@ -1,0 +1,33 @@
+cwd: backend
+command: ["ruff", "check", "--fix", "src/dawalink/evals/run_multiturn.py", "tests/unit/evals/test_multiturn.py", "tests/agent/test_eval_multiturn.py"]
+E501 Line too long (102 > 100)
+  --> tests/agent/test_eval_multiturn.py:13:101
+   |
+13 | def test_one_chat_keeps_all_fixed_client_turns_and_raw_evidence(scene: Scene, tmp_path: Path) -> None:
+   |                                                                                                     ^^
+14 |     case = read(CASES, MCase)[0]
+15 |     agent = scene.agent(reply("Car or on foot? Which day and how many days?"),
+   |
+
+PT018 Assertion should be broken down into multiple parts
+  --> tests/unit/evals/test_multiturn.py:18:5
+   |
+16 |     assert cases[1].turns[-1].gold.items[0].qty == 2
+17 |     budget = cases[2].turns[-1].gold.budget
+18 |     assert budget is not None and budget.amount == 5
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 |     assert cases[3].turns[-1].gold.pickup_in_days == 0
+20 |     assert cases[4].turns[-1].gold.situation == ["no_car"]
+   |
+help: Break down assertion into multiple parts
+   |
+17 |     budget = cases[2].turns[-1].gold.budget
+   -     assert budget is not None and budget.amount == 5
+18 +     assert budget is not None
+19 +     assert budget.amount == 5
+20 |     assert cases[3].turns[-1].gold.pickup_in_days == 0
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+Found 2 errors.
+1 unsafe fix available with `--fix --unsafe-fixes`.

@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "dawalink.evals.before_commit"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 77.499
+}

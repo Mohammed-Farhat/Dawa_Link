@@ -1,0 +1,19 @@
+cwd: backend
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/paid.py", "understanding", "--model", "claude-haiku-5-5", "--effort", "medium", "--max-usd", "4"]
+{"run_id": "7875b99f-8eaa-4878-915d-9240ecc150c9", "error": "LLMUnavailable", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:24:05.619853Z"}
+{"run_id": "3ff9e4d8-cd8a-49cc-9679-ac94f99d6f2e", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:24:05.666610Z"}
+{"run_id": "cb8c653f-15d4-4ca2-8958-776729e6f435", "error": "LLMRejected", "runs_in": "chat", "event": "agent_turn_fell_back", "level": "warning", "timestamp": "2026-11-18T12:24:05.693611Z"}
+stopped at U-1007: unavailable
+7 cases, $0.0112, saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261118T122213_e474d1ac62d5/2026-11-18_understanding_dev_claude-haiku-5-5_prompt-v1.13_725c8f7a0e8b
+  product                4 of   4  100%
+  quantity               4 of   4  100%
+  days_of_use            4 of   4  100%
+  pickup_day             4 of   4  100%
+  situation              4 of   4  100%
+  asks_when_it_must      0 of   3  0%
+  asks_needlessly        0 of   4  0%  (lower is better)
+  shows_a_card           3 of   4  75%
+  refuses_wrongly        0 of   4  0%  (lower is better)
+  nothing_invented       3 of   3  100%
+  language               3 of   3  100%
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261118T122213_e474d1ac62d5 status: incomplete

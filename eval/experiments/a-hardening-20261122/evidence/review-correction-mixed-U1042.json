@@ -1,0 +1,10 @@
+{
+  "review_origin": "implementation assistant",
+  "human_reviewed": false,
+  "independent": false,
+  "corrects": [
+    "candidate3-pilot-review.json U1042 initial_language_failure",
+    "candidate2-pilot-review.json language assumptions if any"
+  ],
+  "reason": "U1042 original client text is mixed English/Arabic: One bottle of Duphalac solution \u0648\u0639\u0644\u0628\u0629 Otrivin0.1%drops. Initial English alone is not demonstrated language failure. Earlier review assertion is withdrawn; original outcomes and automatic scores retained."
+}

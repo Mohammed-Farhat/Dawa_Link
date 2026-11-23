@@ -1,0 +1,94 @@
+{
+  "goal_turn": 2,
+  "previous_turn_classification": "progress: implementation report, manual review, integrity audit, preserved-volume shutdown and evidence seal completed",
+  "known_microusd": 858027,
+  "committed_microusd": 9888027,
+  "screening_committed_microusd": 5924849,
+  "screening_headroom_microusd": 75151,
+  "next_reservation_microusd": 645000,
+  "reserved_calls": 0,
+  "billing_reconciliations": 0,
+  "new_uncertain_calls": [
+    [
+      "423795542bd240c4bd40bdf814083a21",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "0fb9a2c9f3ec4810946477c8457e8036",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "e515f0ffaffc42e889990d289e1ffdd6",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "bfbaf0cd6cdf4701b2fbff12cdff2e27",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "0d32bd6e7e0249ed90567dcbdb988f48",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "aff138f531b24e47a0be330ac1e43bf0",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "c922644bdebb4a298753525e504bd41d",
+      "uncertain",
+      645000,
+      null
+    ],
+    [
+      "679655cfaea34bb0bd377616507fb074",
+      "uncertain",
+      645000,
+      null
+    ]
+  ],
+  "stage_status": [
+    [
+      "baseline",
+      "settled",
+      148,
+      93178,
+      93178
+    ],
+    [
+      "baseline",
+      "uncertain",
+      6,
+      0,
+      3870000
+    ],
+    [
+      "screening",
+      "settled",
+      1124,
+      764849,
+      764849
+    ],
+    [
+      "screening",
+      "uncertain",
+      8,
+      0,
+      5160000
+    ]
+  ],
+  "sealed_file_drift": [],
+  "paid_restart_permitted": false,
+  "reason": "Same screening-ceiling blocker. No owner budget revision or attributable billing evidence supplied. Eight new uncertain calls unchanged; all required reports exist, remaining authorized comparison cannot be funded within current stage cap."
+}

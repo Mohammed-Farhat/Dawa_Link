@@ -115,8 +115,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.POST('/api/v1/auth/logout').catch(() => undefined)
     clearToken()
+    await queryClient.cancelQueries()
     becomes(null)
-  }, [becomes])
+  }, [becomes, queryClient])
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ME })
   }, [queryClient])

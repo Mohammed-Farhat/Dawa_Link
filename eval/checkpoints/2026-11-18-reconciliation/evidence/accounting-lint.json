@@ -1,0 +1,11 @@
+{
+  "command": [
+    "ruff",
+    "check",
+    "src/dawalink/evals/budget.py",
+    "tests/unit/evals/test_readiness.py"
+  ],
+  "cwd": "backend",
+  "exit_code": 1,
+  "seconds": 0.092
+}

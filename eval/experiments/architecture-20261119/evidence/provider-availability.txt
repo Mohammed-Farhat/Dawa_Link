@@ -1,0 +1,2 @@
+command: ["python", "../eval/checkpoints/2026-11-18-readiness/provider_check.py"]
+Configured model available: claude-haiku-5-5

@@ -1,0 +1,22 @@
+[
+  {
+    "path": "eval/experiments/a-hardening-20261122/review-pack-20261123",
+    "files_scanned": 3,
+    "flags": []
+  },
+  {
+    "path": "eval/experiments/architecture-20261118/runs/20261122T192948_5707ce159e65",
+    "files_scanned": 7,
+    "flags": []
+  },
+  {
+    "path": "eval/experiments/architecture-20261118/runs/20261122T201634_194d38a24db9",
+    "files_scanned": 7,
+    "flags": []
+  },
+  {
+    "path": "eval/experiments/architecture-20261118/runs/20261122T202552_ed1956da4231",
+    "files_scanned": 7,
+    "flags": []
+  }
+]

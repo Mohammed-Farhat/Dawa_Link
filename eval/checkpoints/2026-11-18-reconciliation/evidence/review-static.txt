@@ -1,0 +1,219 @@
+cwd: backend
+command: ["ruff", "check", "."]
+I001 [*] Import block is un-sorted or un-formatted
+  --> src/dawalink/evals/run_conversations.py:15:1
+   |
+13 |   """
+14 |
+15 | / import argparse
+16 | | import json
+17 | | import sys
+18 | | import uuid
+19 | | from collections import Counter
+20 | | from collections.abc import Sequence
+21 | | from datetime import date
+22 | | from decimal import Decimal
+23 | | from pathlib import Path
+24 | | from typing import Any
+25 | |
+26 | | from sqlalchemy import create_engine, insert
+27 | | from sqlalchemy.orm import Session, sessionmaker
+28 | |
+29 | | from dawalink.agent.llm import ChatModel
+30 | | from dawalink.agent.llm.base import LLMError, cost_usd, has_price
+31 | | from dawalink.agent.prompts import PROMPT_VERSION
+32 | | from dawalink.agent.tracing import Tracer
+33 | | from dawalink.agent.turn import Agent
+34 | | from dawalink.config import ConfigError, load_settings
+35 | | from dawalink.db.models import InventoryItem
+36 | | from dawalink.db.session import make_engine
+37 | | from dawalink.domain.clock import Clock, ManualClock, at_beirut
+38 | | from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+39 | | from dawalink.evals.budget import EvaluationModel
+40 | | from dawalink.evals.review import review_flags
+41 | | from dawalink.evals.catalog_match import CatalogNames
+42 | | from dawalink.evals.datasets import DATASETS, UCase, read
+43 | | from dawalink.evals.played_client import STYLES, Line, Persona, next_message, personas
+44 | | from dawalink.evals.run_understanding import (
+45 | |     AT,
+46 | |     SEED,
+47 | |     TODAY,
+48 | |     _spread,
+49 | |     _turns_by_chat,
+50 | |     ask,
+51 | |     observed,
+52 | |     shelves_for,
+53 | |     write,
+54 | | )
+55 | | from dawalink.evals.score_conversations import CHECKS, Exchange, has_cards, score
+56 | | from dawalink.evals.score_understanding import rates
+57 | | from dawalink.observability.logging import configure_logging
+58 | | from dawalink.services.context import unit_of_work
+59 | | from dawalink.services.travel import shared_location
+60 | | from dawalink.sim import database, save, travel_table, world
+   | |____________________________________________________________^
+61 |
+62 |   DATABASE = f"{database.PREFIX}_conversations_{uuid.uuid4().hex[:12]}"
+   |
+help: Organize imports
+   |
+39 | from dawalink.evals.budget import EvaluationModel
+   - from dawalink.evals.review import review_flags
+40 | from dawalink.evals.catalog_match import CatalogNames
+41 | from dawalink.evals.datasets import DATASETS, UCase, read
+42 | from dawalink.evals.played_client import STYLES, Line, Persona, next_message, personas
+43 + from dawalink.evals.review import review_flags
+44 | from dawalink.evals.run_understanding import (
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src/dawalink/evals/run_safety.py:15:1
+   |
+13 |   """
+14 |
+15 | / import argparse
+16 | | import json
+17 | | import sys
+18 | | import uuid
+19 | | from collections.abc import Sequence
+20 | | from dataclasses import asdict, dataclass, replace
+21 | | from datetime import date, timedelta
+22 | | from decimal import Decimal
+23 | | from pathlib import Path
+24 | | from typing import Any
+25 | |
+26 | | from sqlalchemy import create_engine, delete, func, insert, select, text
+27 | | from sqlalchemy.orm import Session, sessionmaker
+28 | |
+29 | | from dawalink.agent.chat import post_client_message
+30 | | from dawalink.agent.llm import ChatModel
+31 | | from dawalink.agent.llm.base import has_price
+32 | | from dawalink.agent.pending import PendingTurns
+33 | | from dawalink.agent.prompts import PROMPT_VERSION, system_parts
+34 | | from dawalink.agent.tracing import Tracer
+35 | | from dawalink.agent.turn import Agent
+36 | | from dawalink.config import ConfigError, load_settings
+37 | | from dawalink.db.models import (
+38 | |     ChatMessage,
+39 | |     Claim,
+40 | |     InventoryItem,
+41 | |     Order,
+42 | |     Pharmacy,
+43 | |     Product,
+44 | |     Proposal,
+45 | |     RequestItem,
+46 | |     SourcingRequest,
+47 | | )
+48 | | from dawalink.db.session import make_engine
+49 | | from dawalink.domain.clock import Clock, ManualClock, at_beirut
+50 | | from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+51 | | from dawalink.domain.orders import OrderSource
+52 | | from dawalink.domain.vocabulary import AgentMode, ClaimSource
+53 | | from dawalink.evals.budget import EvaluationModel
+54 | | from dawalink.evals.review import review_flags
+55 | | from dawalink.evals.catalog_match import CatalogNames
+56 | | from dawalink.evals.datasets import DATASETS, HELDOUT, Match, RCase, Where, read
+57 | | from dawalink.evals.run_understanding import AT, SEED, TODAY, ask, words_of
+58 | | from dawalink.evals.run_understanding import write as client_writes
+59 | | from dawalink.evals.score_safety import Around, score, violations
+60 | | from dawalink.evals.score_understanding import (
+61 | |     Answer,
+62 | |     Seen,
+63 | |     asked_a_question,
+64 | |     asks_about,
+65 | |     seen_in,
+66 | |     together,
+67 | | )
+68 | | from dawalink.observability.logging import configure_logging
+69 | | from dawalink.services import claims, events, orders, requests
+70 | | from dawalink.services.context import unit_of_work
+71 | | from dawalink.services.orders import ReserveLine
+72 | | from dawalink.services.requests import RequestLine
+73 | | from dawalink.services.search import visible_boxes
+74 | | from dawalink.services.travel import shared_location
+75 | | from dawalink.sim import database, save, travel_table, world
+   | |____________________________________________________________^
+76 |
+77 |   DATABASE = f"{database.PREFIX}_safety_{uuid.uuid4().hex[:12]}"
+   |
+help: Organize imports
+   |
+53 | from dawalink.evals.budget import EvaluationModel
+   - from dawalink.evals.review import review_flags
+54 | from dawalink.evals.catalog_match import CatalogNames
+55 | from dawalink.evals.datasets import DATASETS, HELDOUT, Match, RCase, Where, read
+56 + from dawalink.evals.review import review_flags
+57 | from dawalink.evals.run_understanding import AT, SEED, TODAY, ask, words_of
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src/dawalink/evals/run_understanding.py:16:1
+   |
+14 |   """
+15 |
+16 | / import argparse
+17 | | import json
+18 | | import math
+19 | | import statistics
+20 | | import sys
+21 | | import uuid
+22 | | from collections.abc import Sequence
+23 | | from dataclasses import asdict, replace
+24 | | from datetime import date, time, timedelta
+25 | | from decimal import Decimal
+26 | | from pathlib import Path
+27 | | from typing import Any
+28 | |
+29 | | from sqlalchemy import create_engine, insert, select
+30 | | from sqlalchemy.orm import Session, sessionmaker
+31 | |
+32 | | from dawalink.agent.chat import post_client_message
+33 | | from dawalink.agent.llm import ChatModel
+34 | | from dawalink.agent.llm.base import has_price
+35 | | from dawalink.agent.prompts import PROMPT_VERSION
+36 | | from dawalink.agent.tools.base import rate
+37 | | from dawalink.agent.tracing import Tracer
+38 | | from dawalink.agent.turn import Agent, TurnResult, run_turn
+39 | | from dawalink.config import ConfigError, load_settings
+40 | | from dawalink.db.models import InventoryItem, Proposal
+41 | | from dawalink.db.session import make_engine
+42 | | from dawalink.domain.clock import Clock, ManualClock, at_beirut
+43 | | from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+44 | | from dawalink.evals.budget import EvaluationModel
+45 | | from dawalink.evals.review import review_flags
+46 | | from dawalink.evals.catalog_match import CatalogNames
+47 | | from dawalink.evals.datasets import DATASETS, HELDOUT, UCase, read
+48 | | from dawalink.evals.score_understanding import (
+49 | |     CHECKS,
+50 | |     Answer,
+51 | |     Seen,
+52 | |     answer_of,
+53 | |     asked_a_question,
+54 | |     left_out_first,
+55 | |     rates,
+56 | |     score,
+57 | |     seen_in,
+58 | |     together,
+59 | |     wants_an_answer,
+60 | | )
+61 | | from dawalink.observability.logging import configure_logging
+62 | | from dawalink.services import conversations
+63 | | from dawalink.services.context import unit_of_work
+64 | | from dawalink.services.travel import Location, shared_location
+65 | | from dawalink.sim import database, save, travel_table, world
+   | |____________________________________________________________^
+66 |
+67 |   TODAY = date(2026, 11, 16)  # the Monday every case is written for (LABELING_GUIDE.md)
+   |
+help: Organize imports
+   |
+44 | from dawalink.evals.budget import EvaluationModel
+   - from dawalink.evals.review import review_flags
+45 | from dawalink.evals.catalog_match import CatalogNames
+46 | from dawalink.evals.datasets import DATASETS, HELDOUT, UCase, read
+47 + from dawalink.evals.review import review_flags
+48 | from dawalink.evals.score_understanding import (
+   |
+
+Found 3 errors.
+[*] 3 fixable with `--fix`.

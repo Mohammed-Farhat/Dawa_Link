@@ -1,0 +1,28 @@
+{
+  "status": "candidate6 runtime basket/prompt checkpoint; not final freeze",
+  "prompt": "v1.16",
+  "paid_calls": 0,
+  "checks": [
+    "172 scripted database/unit tests passed before pause; candidate6-basket-tests.txt",
+    "Ruff check and format passed",
+    "mypy4 changed runtime files passed before pause"
+  ],
+  "limitations": [
+    "Partial-plan detection uses explicit wording; not a proof of original requested-medicine completeness.",
+    "Separate single-medicine cards remain a prompt-level repair requiring live/independent verification.",
+    "No new model validation; STOP_PAID remains."
+  ],
+  "sha256": {
+    "backend/src/dawalink/agent/guards/baskets.py": "a410abd7ca50afa0fa580ac1215fe7e9ca1bd846b10bb28ac8a21a71bb157782",
+    "backend/src/dawalink/agent/guards/output.py": "4bdfb8cfbb15f7ee4dcf14e73700627f0c32d6c47003ef75c069aee891cabdbb",
+    "backend/src/dawalink/agent/turn.py": "b4f09171c630b556803189800b7154869f298ec0cc04e7d6b1d0cf508e51d055",
+    "backend/src/dawalink/agent/tools/propose.py": "128152284fe2306f24ae0e251038ddfbf71e83a1ec99f310b8704ed4bb06b541",
+    "backend/src/dawalink/agent/prompts/__init__.py": "3a76d8d1dfe3633bc461bb3142a38fed80ade3912e7d7c6b996f0bafde0a9521",
+    "backend/src/dawalink/agent/prompts/v1/system_core.md": "8c28a1298b463f1dde9990325d066204118c0266998a28417f67e63550f582de",
+    "backend/src/dawalink/agent/prompts/v1/examples.md": "8011a831de531c3ffb32b61f5cbe15a6cf84698e6f1b5cead23e713fa908f121",
+    "backend/tests/unit/agent/test_baskets.py": "3b52e8158d8ce7e9541bc91b941879c0871de2c61d5920da28b3c474810b5f45",
+    "backend/tests/agent/test_cards.py": "8c515c1ca0a5d479a569465dabe8fc9b6416ce1717845487a5638ba50d16db6c",
+    "backend/tests/agent/test_turn.py": "edf0d1d6719766d95fe92d7c06271054ff95bdfd1adf20a423147a57c8d3f977",
+    "backend/tests/agent/test_worker_turns.py": "743e72aba66bdd4f70503a9d91bda7b07cf3b996092bbaf33b33d5f362040d04"
+  }
+}

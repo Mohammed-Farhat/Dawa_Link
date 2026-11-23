@@ -14,13 +14,15 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 
 from dawalink.agent import display, language, state
+from dawalink.agent.guards.language import language_of
+from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.redact import Identity, redact
-from dawalink.agent.state import CaseState
+from dawalink.agent.state import CaseState, Language
 from dawalink.agent.tools.base import rate
 from dawalink.agent.tools.read import request_status
 from dawalink.db.models import (
@@ -98,6 +100,8 @@ class Loaded:
     client_text: str | None
     # The text block the model reads.
     block: str
+    # Client messages actually read by this turn, independent of model-written notes.
+    client_history: tuple[str, ...] = ()
 
 
 def identity_of(tx: Tx, client_id: uuid.UUID) -> Identity:
@@ -423,6 +427,13 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     trigger, client_text = _trigger(messages, followup, case.read_up_to, to_team)
     if trigger is None:
         return None
+    # Current client wording outranks stale model notes. Short/ambiguous corrections
+    # still inherit the established language; this modifies only the loaded copy.
+    case.language = cast(Language | None, language_of(client_text or "", case.language))
+    requested_day = explicit_pickup_day(client_text or "", tx.today)
+    if requested_day is not None:
+        case.client_pickup_day = requested_day
+        case.pickup_day = requested_day
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
     case.open_proposal_ids = [
         proposal_id
@@ -536,4 +547,7 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         last_seq=messages[-1].seq if messages else 0,
         client_text=client_text,
         block="\n".join(block),
+        client_history=tuple(
+            m.text_redacted for m in messages if m.author == "client" and m.text_redacted
+        ),
     )

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "env",
+    "EVAL_DATASET=reviewed",
+    "python",
+    "-m",
+    "dawalink.evals.experiment",
+    "simulation",
+    "--contender",
+    "search",
+    "--seeds",
+    "1",
+    "--requests",
+    "100",
+    "--save"
+  ],
+  "cwd": "backend",
+  "exit_code": 0,
+  "seconds": 79.005
+}

@@ -1,0 +1,21 @@
+cwd: backend
+command: ["ruff", "check", "src/dawalink/evals/budget.py", "tests/unit/evals/test_readiness.py"]
+E501 Line too long (105 > 100)
+   --> src/dawalink/evals/budget.py:201:101
+    |
+200 | def _safe_id(value: object) -> str | None:
+201 |     return value if isinstance(value, str) and re.fullmatch(r"req_[a-zA-Z0-9_-]{1,120}", value) else None
+    |                                                                                                     ^^^^^
+
+E501 Line too long (110 > 100)
+   --> tests/unit/evals/test_readiness.py:190:101
+    |
+188 |     assert ledger.totals()["committed_microusd"] == 50
+189 |     with ledger.connect() as db:
+190 |         details = db.execute("SELECT details FROM call_events WHERE kind='billing_reconciliation'").fetchone()
+    |                                                                                                     ^^^^^^^^^^
+191 |     assert json.loads(details[0])["prior_held_microusd"] == 645000
+192 |     with pytest.raises(ValueError, match="reservation retained"):
+    |
+
+Found 2 errors.

@@ -1,0 +1,59 @@
+{
+  "status": "offline diagnostic replay of preserved candidate5 replies; not new evaluation outcomes",
+  "paid_calls": 0,
+  "run": "20261122T192948_5707ce159e65",
+  "trace_sha256": "bad438a15cb24071e2e594bf00945bfbca2b4ae902b1efae0244d8ef2b6bf4e0",
+  "results": [
+    {
+      "case": "U-0008",
+      "candidate_replies": [
+        {
+          "text": "Tamam. Amaryl 2 mg (30 hab), 7 ayyam, lyom, bel siyyara.\n\nAna bo2tarr 3ala Beirut Pharmacy 1: 3 dakiye bel siyyara, 140,000 LBP (about $1.56), maftou7a 09:00-17:00. Hayda l 2a2rab w l arkhas b mo2ajjar.\n\nKhiyarat tenen:\n- Beirut Pharmacy 2: 5 dakiye bel siyyara, 175,000 LBP, maftou7a 08:00-22:00.\n- Baabda Pharmacy 16: l arkhas (93,000 LBP) bas 29 dakiye bel siyyara.\n\nHayde l dawa bde wasafa mn wasfa tabiyyeh: lezem tjibha lal saydaliyye.",
+          "errors": [
+            "The price comparison contradicts the tool options."
+          ]
+        },
+        {
+          "text": "Tamam. Amaryl 2 mg (30 hab), 7 ayyam, lyom, bel siyyara.\n\nAna bo2tarr 3ala Beirut Pharmacy 1: 3 dakiye bel siyyara, 140,000 LBP (about $1.56), maftou7a 09:00-17:00. Hayda l 2a2rab w l arkhas b mo2ajjar.\n\nKhiyarat tenen:\n- Beirut Pharmacy 2: 5 dakiye bel siyyara, 175,000 LBP, maftou7a 08:00-22:00.\n- Baabda Pharmacy 16: l arkhas (93,000 LBP) bas 29 dakiye bel siyyara.\n\nHayde l dawa bde wasafa mn wasfa tabiyyeh: lezem tjibha lal saydaliyye.",
+          "errors": [
+            "The price comparison contradicts the tool options."
+          ]
+        },
+        {
+          "text": "Tamam. Amaryl 2 mg (30 hab), 7 ayyam, lyom, bel siyyara.\n\nAna bo2tarr 3ala Beirut Pharmacy 1: 3 dakiye bel siyyara, 140,000 LBP (about $1.56), maftou7a 09:00-17:00. Hayda l 2a2rab w 2aw3a mn Beirut Pharmacy 2 bas b2o l 2aw2at 2a2rab.\n\nKhiyarat tenen:\n- Beirut Pharmacy 2: 5 dakiye bel siyyara, 175,000 LBP (about $1.96), maftou7a 08:00-22:00.\n- Baabda Pharmacy 16: l arkhas (93,000 LBP) bas 29 dakiye bel siyyara.\n\nHayde l dawa bde wasafa mn wasfa tabiyyeh: lezem tjibha lal saydaliyye.",
+          "errors": []
+        }
+      ]
+    },
+    {
+      "case": "U-0037",
+      "candidate_replies": [
+        {
+          "text": "Lqiit 3 saydaliyyat ma3 Augmentin 1g (14 habba) 3ala siyyara, lyom, la 7 ayyam:\n\n1. Beirut Pharmacy 1 (nous7a): 4 da2i2 bel siyyara, 443,000 LBP (about $4.95). Mafto7a lghayet 17:00 lyom. Enssa7a 3ashan hiyye el arkhas w 3andon wa2t kefaye la ta5od eldawa.\n2. Beirut Pharmacy 2: 4 da2i2 bel siyyara, 554,000 LBP (about $6.19). Mafto7a lghayet 22:00.\n3. Aley Pharmacy 18: 10 da2i2 bel siyyara, 295,000 LBP (about $3.30). Mafto7a lghayet 22:00.\n\nLezem prescription: bring it to the pharmacy. Ida bade reservation, e7sor 3a l card.",
+          "errors": [
+            "The price comparison contradicts the tool options."
+          ]
+        }
+      ]
+    },
+    {
+      "case": "U-1019",
+      "candidate_replies": [
+        {
+          "text": "Good news: Concor 5 mg (box of 30) is 333,000 LBP (about $3.72) at all three pharmacies that have it for today, so the cheapest is the same everywhere. I recommend Sidon Pharmacy 28: it is the nearest, about 21 minutes by car, open until 22:00 today, and the box lasts your 7 days (expires 11 Dec 2026). Beirut Pharmacy 3 is about 47 minutes by car and is open all day. This needs a prescription: bring it to the pharmacy.",
+          "errors": [
+            "The tool did not establish every pharmacy's price. Limit the equal-price claim to the returned options instead of saying everywhere.",
+            "The claimed total number of pharmacies with stock is not established by the tool."
+          ]
+        },
+        {
+          "text": "Good news: Concor 5 mg (box of 30) is 333,000 LBP (about $3.72) at all three pharmacies that have it for today, so the cheapest is the same everywhere. I recommend Sidon Pharmacy 28: it is the nearest, about 21 minutes by car, open until 22:00 today, and the box lasts your 7 days (expires 11 Dec 2026). Beirut Pharmacy 3 is about 47 minutes by car and is open all day. This needs a prescription: bring it to the pharmacy.",
+          "errors": [
+            "The tool did not establish every pharmacy's price. Limit the equal-price claim to the returned options instead of saying everywhere.",
+            "The claimed total number of pharmacies with stock is not established by the tool."
+          ]
+        }
+      ]
+    }
+  ]
+}

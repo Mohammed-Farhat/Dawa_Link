@@ -1,0 +1,6 @@
+cwd: frontend
+command: ["npm", "run", "lint"]
+
+> dawalink-web@0.0.0 lint
+> oxlint
+

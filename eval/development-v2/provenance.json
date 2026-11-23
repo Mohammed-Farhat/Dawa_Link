@@ -1,0 +1,81 @@
+{
+  "status": "draft",
+  "authoring_date": "2026-11-19",
+  "fixed_clock": "2026-11-16T10:00:00+02:00",
+  "timezone": "Asia/Beirut",
+  "product_rule_commit": "8e689a583b69a399598f557ac8a2310571c1dbb1",
+  "source_files": {
+    "eval/experiments/architecture-20261118/reviewed-development/understanding.jsonl": "6341ba7f81f0b08abafdec70c3107d6960b9fb3ee8bca05f2d2dba623d50db63",
+    "eval/experiments/architecture-20261118/reviewed-development/safety.jsonl": "f15e638e1922da1fe823fb6831a8ccda52d43652a9f9946fdb8d1be2a5f094d3",
+    "eval/datasets/multiturn.jsonl": "1025b216aaa2541c0087a1b57966030ce2124afc9a2272829426918bb1788852"
+  },
+  "catalog": {
+    "path": "backend/data/moph/catalog.csv",
+    "sha256": "d907a82f793a22345fec977a3327a2eeefc4a76e52bd2495410dc7263b356106",
+    "reference_date": "2026-11-11 (source filename WebMarketed20261111-.xls)",
+    "method": "Offline CSV snapshot via evaluation CatalogNames normalization; no database or stock accessed",
+    "overrides_sha256": "f426f36f9ff17252af839553064545b7c46bf616145fedb004de281b5815a3fd"
+  },
+  "rule_sources": {
+    "backend/src/dawalink/agent/__init__.py": "88ff73b52e2add0ff76c3e0170df1b5a0204fba9fdb9315d9905e8a60e3b058e",
+    "backend/src/dawalink/agent/chat.py": "738226ed9fd684bad905491caa6257bb072d5e79830bf78a1b1f25cf36dd435e",
+    "backend/src/dawalink/agent/context.py": "4945e62c6514e58ff7ae91bd318f4675795519596ea95673365e2aa10b8cf3e7",
+    "backend/src/dawalink/agent/display.py": "307cc06db3fa63c3f2547fa2ef2ca9d70fa05137b50b07b747f988166dc45500",
+    "backend/src/dawalink/agent/guards/__init__.py": "721f886db3df0f7345302e15ceb5599e77a0aa191e46ff0cf864440cda76d8b7",
+    "backend/src/dawalink/agent/guards/clinical.py": "44a1ffbe5700155c34fb5df72e477b18640e9778c2b0480b261496f4b83c8989",
+    "backend/src/dawalink/agent/guards/injection.py": "61004e4c3d171a0922724925cb9408bb67eb3f498fefa3eabf52ba93b55c9477",
+    "backend/src/dawalink/agent/guards/output.py": "7a7bd53502ddf0017547c7a8b79dbce175587008dc06b1a7db5d20c5262f7b96",
+    "backend/src/dawalink/agent/guards/redact.py": "05076cfd92e3aae81172065a0984ee4d7f5b251c159ac4f19ada89b3483e593e",
+    "backend/src/dawalink/agent/limits.py": "91b7367f9dd5c643f01d982caea2fedc8abbc3ca39c074912c64b142c20a6250",
+    "backend/src/dawalink/agent/llm/__init__.py": "223c52c0aa3ccb4dfbacbf4ba787fffda5e3b3debf18ffbb9b3a63432cbbb418",
+    "backend/src/dawalink/agent/llm/base.py": "48a10066f9adecc8369409002376a0c41e54aad5625d4d2277878b69d9fec1fb",
+    "backend/src/dawalink/agent/llm/claude.py": "d238f98c19da8c0425c3c578997f8dbac25bb1bb0c63e627bd14e69ff1cf6532",
+    "backend/src/dawalink/agent/llm/ollama.py": "7eb6c71b44a15782eb97e02427ac35d5a7405e78d3f6599156a80fffbcc093e8",
+    "backend/src/dawalink/agent/llm/scripted.py": "6b233b2c13b4e9d461fa732065f9b6d34c05d37736f812d0359608cfd01ef896",
+    "backend/src/dawalink/agent/pending.py": "c4d05a00fe906f70288ebb8879d161f6b5a9306d5c7701aa2d062ccb136be016",
+    "backend/src/dawalink/agent/prompts/__init__.py": "7f4450ca150ca89512c07ce97e63fbbe891b616d16e5f172659116f8ea2c6d5b",
+    "backend/src/dawalink/agent/setup.py": "e490d78e1ea59ee2e2bf2734c033892c8a809e476f42238484e10f24f460bfe7",
+    "backend/src/dawalink/agent/state.py": "e7d548ea734d7afd7fdc04f6864111ed42a1af4776f647819a7498178c162180",
+    "backend/src/dawalink/agent/templates.py": "4acfb155952b8de330e79f8c8432c80c3cc5cfc22feef399e14120650b6bfb62",
+    "backend/src/dawalink/agent/tools/__init__.py": "24826063f7870cad7099db2b2e1a0344699cd14c5752250d01f971d5692e30df",
+    "backend/src/dawalink/agent/tools/act.py": "361220af1e95c982d174bb1edf26b5dea3f82813512c5100fa0f878fe3dd567a",
+    "backend/src/dawalink/agent/tools/base.py": "d551dac264d6aca94cdd8a7b44925bd201b41464d3c90cff9023bb60aa4a2b71",
+    "backend/src/dawalink/agent/tools/propose.py": "5b50bb2db2798371acff584c406e37dcd886d71a1f88766a60821242af83099f",
+    "backend/src/dawalink/agent/tools/read.py": "22ea67f08a5e6735f751408e05990a6d4a0b1ca2ab62690f1fd340dfdb0faca0",
+    "backend/src/dawalink/agent/tracing.py": "a50b4b4107e6c1c437b6163b0b60d51ca97ae86a0aef9613364c7724ce24f607",
+    "backend/src/dawalink/agent/tracing_langfuse.py": "5be665355d0285a95b771d33ce79956084011481f64c032238d93e2778fd18e4",
+    "backend/src/dawalink/agent/turn.py": "f972514a85bd377cc39c3541bffa65904eccd5653d15e6909b07790e88d65869",
+    "docs/04_domain_rules.md": "209325b5a39e8470de94993600fd65c41350b00b477b0bd60ae43161a4542d02",
+    "eval/datasets/LABELING_GUIDE.md": "b8507b490c1872490c1dc9530f81bcb4c342438ab4df7ef194857c242b5cb10a"
+  },
+  "draft_hashes": {
+    "understanding.jsonl": "009ed722cb5f1ead319d048bf603ebe38e4ea35f863a5fd8941469b059364e49",
+    "safety.jsonl": "72c0f520c9becbd125eab8cbcf0af1a7a859e8f6da636a2803620199f1ca85b1",
+    "multiturn.jsonl": "c602e2da36947fff0d069a65d6ded823b9a5c2beb45881c42aeddbadc1a60528",
+    "coverage.json": "a055febf08c9b88e305730e861c17c00652322ff51696745fe845e64ecb6874e",
+    "review/REVIEW_GUIDE.md": "9d554e76f43b15aea80648ae25aad2d00f018ffc6e5a119181f7b00bee1a52f4",
+    "review/LEGACY_LABELING_GUIDE.md": "b8507b490c1872490c1dc9530f81bcb4c342438ab4df7ef194857c242b5cb10a",
+    "review/RULES.md": "decdbf792091c3f9aaaed3316c5debccc7f1bac02e496b9848ca7203d0e2621f",
+    "review/catalog-context.json": "e4ab702877bf2b045b2f4562d034bb7f47b2674f990f92b8b2997ca729362d84",
+    "review/blind-questions.jsonl": "90ba941ec6bd37f325322980bba52eae042df1972c8fc0facba2de499b3a20ae",
+    "review/proposed-labels.jsonl": "6503fe299c9bf5b6c46a231fda389b3a02373687e9f81530fb427de61729467f",
+    "review/sampling.json": "d6c9fe0eccf08755cd8fb5376113751f6f404136dc166e71106cfa9082ba088c"
+  },
+  "review": {
+    "description": "separate-session AI review with human checking",
+    "session": "/root/separate_label_review",
+    "blind_saved_before_proposed_labels": true,
+    "blind_decisions_sha256": "6122a8dd0d94d4cb10f1939fc2336b6a7f2a6f9d373728207ae9efb7f73aede0",
+    "remaining_decisions_sha256": "59e3086406711fd619155150e3858690d6e9af668d35861d581424e7715ec4f7",
+    "human_checks_completed": 0
+  },
+  "evaluation_api_spend_usd": 0,
+  "review_hashes": {
+    "review/blind-decisions.jsonl": "6122a8dd0d94d4cb10f1939fc2336b6a7f2a6f9d373728207ae9efb7f73aede0",
+    "review/remaining-decisions.jsonl": "59e3086406711fd619155150e3858690d6e9af668d35861d581424e7715ec4f7",
+    "review/agreement.json": "45129ff15c1540a9acff4c89fb4b8d8bfc3246d49b7c910056b81bed1b358156",
+    "review/blind-disagreements.json": "6c7634cd9f3ec8f33d31b14cb9f38ed8cb243b7725e7b1646f01b69ea72d3cd3",
+    "review/human-queue.json": "7b9e2e85368d31bd124210ac7afdfea71dbddb9d6917fc9568f4f6132e7e3d9d",
+    "review/adjudication.jsonl": "281d798a163cb9eb5cbbbb356965daa1217f642a00e94048ef3d19adc709b22c"
+  }
+}

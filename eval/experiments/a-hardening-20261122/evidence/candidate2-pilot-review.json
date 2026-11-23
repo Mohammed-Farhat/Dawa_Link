@@ -1,0 +1,15 @@
+{
+  "run": "20261122T140152_4554a4bf2d84",
+  "review_origin": "implementation assistant",
+  "human_reviewed": false,
+  "independent": false,
+  "scope": "All five saved replies, shown cards, checks, and failing guard drafts read; targeted development pilot only.",
+  "cases": [
+    {"id":"U-0025","verdict":"runtime_guard_regression","note":"Correct nearest Beirut Pharmacy1 reply rejected because a following Hayda sentence lost its single prior pharmacy subject. Original fallback retained. Offline candidate3 reproduction accepts the corrected draft."},
+    {"id":"U-0026","verdict":"acceptable_in_reviewed_scope","note":"Valid later-closing P2 tradeoff, exact displayed prices/travel; no false closest or decimal guard failure."},
+    {"id":"U-0091","verdict":"scorer_error","note":"60/90/120mg choices followed by Ayyon bedak? is valid strength clarification. New cross-sentence variant regression covers valid and missing-strength examples."},
+    {"id":"U-0150","verdict":"preference_repaired_language_concern","note":"Lowest643000 Matn option is recommended above965000/1206000 nearer options, matching explicit far-is-okay cheapest preference. Mesakker lel17:00 is awkward/possibly reversed closing wording; independent Arabic review remains needed."},
+    {"id":"U-1042","verdict":"semantic_price_unit_concern","note":"Both medicines are present in executable grouped cards.451000 equals306000+145000 total, but lalwa7ad can misdescribe it as each-item price. Exact numeric opening09:00-17:00 replaces old5w-noss conflict. Candidate3 prompt will require explicit basket-total wording and open intervals."}
+  ],
+  "disposition":"Do not treat candidate2 pilot as complete validation or independent acceptance. Original outcomes/checks preserved; candidate3 remains a new source."
+}
