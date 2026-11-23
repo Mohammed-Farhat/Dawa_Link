@@ -132,8 +132,7 @@ export function MePage() {
           </Section>
           <button
             type="button"
-            className="pill-button pill-button--grey"
-            style={{ alignSelf: 'flex-start' }}
+            className="pill-button profile-logout"
             onClick={() => void logout()}
           >
             {m.logOut}
