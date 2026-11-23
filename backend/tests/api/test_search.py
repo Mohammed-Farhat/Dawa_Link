@@ -5,12 +5,15 @@ assistant)."""
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
 from dawalink.api.limits import Limiter
+from dawalink.domain.geo import Point
+from dawalink.services import travel
 from tests.api.conftest import Api, code_of
 from tests.db.factories import TODAY
 
@@ -124,6 +127,35 @@ class TestSearching:
         (listing,) = shop.search().json()["items"]
 
         assert listing["travel"]["source"] == "straight"
+
+    def test_a_routing_service_that_failed_is_paused_for_the_search_and_the_agent(
+        self, shop: Shop
+    ) -> None:
+        """A#25, FX-18: the search page uses the agent's own routing service, so one
+        failure pauses it for both; meanwhile the search shows "about" times."""
+        http = shop.api.http()  # with the assistant, as in production
+        routing = http.app.state.agent.routing  # type: ignore[attr-defined]
+        routing.fail = True
+        body = {"product_id": str(shop.augmentin)}
+
+        def search() -> Any:
+            return http.post("/api/v1/listings/search", json=body, headers=shop.headers)
+
+        first, second = search(), search()
+        asked = travel.Wanted(
+            {"cell": Point(Decimal("33.9"), Decimal("35.5"))},
+            {shop.near: Point(Decimal("33.897"), Decimal("35.484"))},
+        )
+
+        assert http.app.state.routing is routing  # type: ignore[attr-defined]
+        assert [answer.json()["items"][0]["travel"]["source"] for answer in (first, second)] == [
+            "straight",
+            "straight",
+        ]
+        # Asked once, then paused: the second search and the agent's tools don't ask.
+        assert routing.calls == 1
+        assert travel.fetch(routing, asked) == []
+        assert routing.calls == 1
 
     def test_nobody_said_for_how_long_so_one_day_is_assumed(self, shop: Shop) -> None:
         """FI-19, R-F2, N-44: a box that expires today is still shown to a client who gave

@@ -2,9 +2,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { api, type Schemas, unwrap } from '../../api/client'
-import { Banner } from '../../components/layout'
-import { errorMessage, strings } from '../../strings/en'
-import { codeOf, type ReportState, useAnswerReports, when } from './data'
+import { Pager } from '../../components/Pager'
+import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
+import { langOf } from '../../format'
+import { strings } from '../../strings/en'
+import { type Note, oneOf, refusal, type ReportState, useAnswerReports, when } from './data'
+import { ListFailed } from './ListFailed'
+import { Said } from './said'
 
 const s = strings.admin
 const r = s.reports
@@ -26,11 +31,15 @@ function reasonText(reason: string): string {
  */
 export function ReportsPage() {
   const queryClient = useQueryClient()
-  const [state, setState] = useState<ReportState>('NEW')
+  // The tab and the page live in the address: "Back" finds the list as it was left.
+  const paging = usePage()
+  const state = oneOf(paging.params.get('state'), STATES, 'NEW') as ReportState
   const [busy, setBusy] = useState(false)
-  const [said, setSaid] = useState<{ tone: 'green' | 'red' | 'amber'; text: string } | null>(null)
-  const found = useAnswerReports(state)
+  const [said, setSaid] = useState<Note | null>(null)
+  const found = useAnswerReports(state, paging.offset)
   const items = found.data?.items ?? []
+  // A refusal is said under the answer it is about, while that answer is listed.
+  const present = items.map((row) => row.id)
 
   async function review(row: Row, real: boolean) {
     setSaid(null)
@@ -47,8 +56,7 @@ export function ReportsPage() {
       )
       setSaid({ tone: 'green', text: r.reviewed })
     } catch (error) {
-      const code = codeOf(error)
-      setSaid({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
+      setSaid(refusal(error, row.id))
     } finally {
       setBusy(false)
       void queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] })
@@ -62,7 +70,7 @@ export function ReportsPage() {
         <h1 className="page-title">{r.title}</h1>
         <span className="soft">{r.intro}</span>
       </div>
-      <div className="tabs" role="tablist" aria-label={r.title}>
+      <div className="tabs tabs--wrap" role="tablist" aria-label={r.title}>
         {STATES.map((choice) => (
           <button
             key={choice}
@@ -72,16 +80,16 @@ export function ReportsPage() {
             className="tabs__tab"
             onClick={() => {
               setSaid(null)
-              setState(choice)
+              paging.choose('state', choice === 'NEW' ? null : choice)
             }}
           >
             {r.states[choice]}
           </button>
         ))}
       </div>
-      <div role="status" aria-live="polite">
-        {said && <Banner tone={said.tone}>{said.text}</Banner>}
-      </div>
+      <Said note={said} present={present} />
+      {found.isError && <ListFailed failure={found.error} onRetry={() => void found.refetch()} />}
+      {found.isPending && <Placeholder />}
       {found.isSuccess && items.length === 0 && (
         <div className="empty">{state === 'NEW' ? r.none : r.noneOther}</div>
       )}
@@ -92,22 +100,31 @@ export function ReportsPage() {
             <span className="hint">{when(row.created_at)}</span>
           </div>
           {row.comment && (
-            <span className="soft" style={{ fontSize: 15 }} dir="auto">
-              {r.comment(row.comment)}
+            <span className="soft" style={{ fontSize: 15 }}>
+              {r.commentLabel}{' '}
+              <span dir="auto" lang={langOf(row.comment)}>
+                {row.comment}
+              </span>
             </span>
           )}
+          {/* The direction is the message's own, not that of the English label above it. */}
           <div>
             {row.asked && (
-              <div className="thread-line" dir="auto">
+              <div className="thread-line">
                 <span className="thread-line__who">{r.asked}</span>
-                <span>{row.asked}</span>
+                <span dir="auto" lang={langOf(row.asked)}>
+                  {row.asked}
+                </span>
               </div>
             )}
-            <div className="thread-line thread-line--reported" dir="auto">
+            <div className="thread-line thread-line--reported">
               <span className="thread-line__who">{r.answered}</span>
-              <span style={{ whiteSpace: 'pre-wrap' }}>{row.reply}</span>
+              <span dir="auto" lang={langOf(row.reply)} style={{ whiteSpace: 'pre-wrap' }}>
+                {row.reply}
+              </span>
             </div>
           </div>
+          <Said note={said} at={row.id} />
           {row.state === 'NEW' && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button type="button" className="pill-button" disabled={busy} onClick={() => void review(row, true)}>
@@ -125,6 +142,7 @@ export function ReportsPage() {
           )}
         </article>
       ))}
+      <Pager paging={paging} total={found.data?.total} settled={!found.isPlaceholderData} />
     </main>
   )
 }

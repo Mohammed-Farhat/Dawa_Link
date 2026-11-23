@@ -177,9 +177,13 @@ def test_verifier_receives_reference_policy_in_its_read_only_context(scene: Scen
         message = prompt.messages[0]
         assert isinstance(message, UserText)
         payload = json.loads(message.text)
-        assert any("Ask first, then search" in part for part in payload["application_rules"])
+        assert any("Ask once, then always search" in part for part in payload["application_rules"])
         assert {t.name for t in prompt.tools} == {"review_draft"}
         return call("review_draft", issues=[])
 
-    result = scene.turn(reply("Do you go by car or on foot?"), review, architecture="verified")
+    result = scene.turn(
+        reply("Where should I look, for how many days, and when can you pick up?"),
+        review,
+        architecture="verified",
+    )
     assert result.status == Status.DONE

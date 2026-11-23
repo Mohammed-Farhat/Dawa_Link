@@ -5,6 +5,7 @@ import { ApiFailure } from '../../../api/client'
 import { PinIcon } from '../../../components/icons'
 import { Banner } from '../../../components/layout'
 import { errorMessage, strings } from '../../../strings/en'
+import { failureMessage } from '../../../strings/failure'
 import { useDistricts } from '../data'
 
 // The map is downloaded only when the client asks for it (docs/11 §10): a phone that
@@ -56,7 +57,13 @@ export function LocationSheet({
       await onChoose(place)
       onClose()
     } catch (error) {
-      setFailed(errorMessage(error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR'))
+      // A shared place counts toward a limit per hour (N-47): the wait is said in minutes,
+      // never "a minute" for most of an hour, nor "tomorrow" (B#36).
+      setFailed(
+        error instanceof ApiFailure
+          ? failureMessage({ code: error.code, details: error.details }, { hourly: true })
+          : errorMessage('INTERNAL_ERROR'),
+      )
     } finally {
       setSending(false)
     }
@@ -89,7 +96,8 @@ export function LocationSheet({
           value={district}
           onChange={(event) => setDistrict(event.currentTarget.value)}
           data={[
-            { value: '', label: '' },
+            // Nothing chosen yet, said in words: an empty first line read as nothing.
+            { value: '', label: s.chooseDistrict },
             ...(districts.data ?? []).map((row) => ({ value: String(row.id), label: row.name })),
           ]}
         />

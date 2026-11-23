@@ -19,8 +19,14 @@ def test_the_spec_is_always_served(client: TestClient) -> None:
 
 
 def test_interactive_docs_exist_only_in_development(tmp_path: Path) -> None:
-    for app_env, expected_status in [("local", 200), ("aws", 404)]:
-        app = create_app(make_settings(UNREACHABLE_DATABASE, tmp_path, app_env=app_env))
+    # What AWS accepts (docs/12 §8): a long secret key and an https website.
+    in_aws = {
+        "website_url": "https://website.example.org",
+        "app_secret_key": "test-only-kU3n8Qz1rT6vW0yB4dF7hJ2mP5sX9cL0",
+    }
+    for app_env, extra, expected_status in [("local", {}, 200), ("aws", in_aws, 404)]:
+        settings = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env=app_env, **extra)
+        app = create_app(settings)
         with TestClient(app) as client:
             assert client.get("/api/v1/docs").status_code == expected_status
 

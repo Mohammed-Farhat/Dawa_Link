@@ -6,13 +6,21 @@ import { Link } from 'react-router-dom'
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { useSession } from '../../api/session'
 import { ChangePassword } from '../../components/ChangePassword'
+import { FormProblems } from '../../components/FormProblems'
 import { Banner, Screen } from '../../components/layout'
-import { errorMessage, strings } from '../../strings/en'
+import { strings } from '../../strings/en'
+import { failureMessage } from '../../strings/failure'
+import { DeleteAccount } from './DeleteAccount'
+import { MAX, phoneProblem, WHERE_FIELDS } from './fields'
 import { type Pin, whereIsSaid, type WhereValue } from './where'
 import { WhereYouLive } from './WhereYouLive'
 
 const m = strings.me
 const f = strings.signUp
+
+// The API's fields the details form shows on a box of its own; any other refusal is
+// said by [Save] (A#35).
+const DETAILS_FIELDS = ['first_name', 'middle_name', 'last_name', 'birth_date', 'phone']
 
 type Me = Schemas['Me']
 type Client = NonNullable<Me['client']>
@@ -31,7 +39,11 @@ function Section({ id, title, children }: { id: string; title: string; children:
 /** What a form of this page shows after [Save]. */
 function useSaving() {
   const [state, setState] = useState<'idle' | 'sending' | 'saved'>('idle')
-  const [failed, setFailed] = useState<{ code: string; field: string | null } | null>(null)
+  const [failed, setFailed] = useState<{ code: string; field: string | null; details: Record<string, unknown> } | null>(
+    null,
+  )
+  // Each refusal, so the focus goes to the box it is about (components/FormProblems.tsx).
+  const [attempt, setAttempt] = useState(0)
   async function run(work: () => Promise<unknown>) {
     setFailed(null)
     setState('sending')
@@ -43,19 +55,28 @@ function useSaving() {
       setFailed({
         code: failure?.code ?? 'INTERNAL_ERROR',
         field: typeof failure?.details.field === 'string' ? failure.details.field : null,
+        details: failure?.details ?? {},
       })
       setState('idle')
+      setAttempt((count) => count + 1)
     }
   }
-  return { state, failed, run, touched: () => setState('idle') }
+  return { state, failed, attempt, run, touched: () => setState('idle') }
 }
 
-function Result({ saving }: { saving: ReturnType<typeof useSaving> }) {
+/**
+ * [Save]'s answer. A refusal is said here unless the form shows it on one of its boxes
+ * (`onFields`): a refusal of a box the form doesn't have is never lost (A#35). A limit
+ * says how long to wait: a place counts toward a limit per hour (N-47).
+ */
+function Result({ saving, onFields = [] }: { saving: ReturnType<typeof useSaving>; onFields?: string[] }) {
+  const failed = saving.failed
+  const said = failed && !(failed.field && onFields.includes(failed.field))
   return (
     <div role="status" aria-live="polite">
       {saving.state === 'saved' && <Banner tone="green">{m.saved}</Banner>}
-      {saving.failed && !saving.failed.field && (
-        <Banner tone="red">{errorMessage(saving.failed.code)}</Banner>
+      {said && (
+        <Banner tone="red">{failureMessage({ code: failed.code, details: failed.details }, { hourly: true })}</Banner>
       )}
     </div>
   )
@@ -65,7 +86,7 @@ function Result({ saving }: { saving: ReturnType<typeof useSaving> }) {
  * CS-13: who is logged in and what they can set (decision log BLD-D40): their name and
  * date of birth, their phone, where they live (searches start there when no location is
  * shared), a place on the map, and whether the assistant may tell them about other
- * brands. Then notifications, the password and logging out.
+ * brands. Then notifications, the password, logging out and deleting the account.
  *
  * One column on a phone, two on a computer.
  */
@@ -117,6 +138,8 @@ export function MePage() {
           >
             {m.logOut}
           </button>
+          {/* The last thing on the page, and quiet until it is opened (R-AU10). */}
+          {client && <DeleteAccount />}
         </div>
       </div>
     </Screen>
@@ -154,10 +177,22 @@ function Details({ me, client }: { me: Me; client: Client }) {
   const [born, setBorn] = useState(client.birth_date ?? '')
   const [phone, setPhone] = useState(me.phone ?? '')
   const [today] = useState(() => new Date().toISOString().slice(0, 10))
+  // A phone the API would refuse is said before anything is sent (B#4).
+  const [phoneChecked, setPhoneChecked] = useState(false)
+  const [phoneAttempt, setPhoneAttempt] = useState(0)
   const wrong = saving.failed?.field
+  const phoneError = (phoneChecked && phoneProblem(phone)) || (wrong === 'phone' && f.phoneProblem) || null
+  const marked =
+    [phoneError].filter(Boolean).length +
+    (['first_name', 'middle_name', 'last_name', 'birth_date'].includes(wrong ?? '') ? 1 : 0)
 
   function save(event: FormEvent) {
     event.preventDefault()
+    if (phoneProblem(phone)) {
+      setPhoneChecked(true)
+      setPhoneAttempt((count) => count + 1)
+      return
+    }
     void saving.run(async () => {
       await unwrap(
         api.PATCH('/api/v1/me/profile', {
@@ -181,34 +216,37 @@ function Details({ me, client }: { me: Me; client: Client }) {
   return (
     <Section id="profile" title={m.profile}>
       <form className="form" onSubmit={save} noValidate>
-        <div className="auth__form-row">
+        {/* First, middle, last: the order of the sign-up form (B#30). */}
+        <div className="auth__form-row auth__form-row--three">
           <TextInput
             label={f.firstName}
             size="md"
             autoComplete="given-name"
+            maxLength={MAX.name}
             value={first}
             onChange={box(setFirst)}
             error={wrong === 'first_name' && f.partProblem}
           />
           <TextInput
+            label={f.middleName}
+            size="md"
+            autoComplete="additional-name"
+            maxLength={MAX.name}
+            value={middle}
+            onChange={box(setMiddle)}
+            error={wrong === 'middle_name' && f.partProblem}
+          />
+          <TextInput
             label={f.lastName}
             size="md"
             autoComplete="family-name"
+            maxLength={MAX.name}
             value={last}
             onChange={box(setLast)}
             error={wrong === 'last_name' && f.partProblem}
           />
         </div>
         <div className="auth__form-row">
-          <TextInput
-            label={f.middleName}
-            placeholder={f.optional}
-            size="md"
-            autoComplete="additional-name"
-            value={middle}
-            onChange={box(setMiddle)}
-            error={wrong === 'middle_name' && f.partProblem}
-          />
           <TextInput
             label={f.birthDate}
             size="md"
@@ -219,18 +257,20 @@ function Details({ me, client }: { me: Me; client: Client }) {
             onChange={box(setBorn)}
             error={wrong === 'birth_date' && f.birthProblem}
           />
+          <TextInput
+            label={m.phone}
+            description={m.phoneHint}
+            size="md"
+            type="tel"
+            autoComplete="tel"
+            maxLength={MAX.phone}
+            value={phone}
+            onChange={box(setPhone)}
+            error={phoneError}
+          />
         </div>
-        <TextInput
-          label={m.phone}
-          description={m.phoneHint}
-          size="md"
-          type="tel"
-          autoComplete="tel"
-          value={phone}
-          onChange={box(setPhone)}
-          error={wrong === 'phone' && errorMessage('VALIDATION_ERROR')}
-        />
-        <Result saving={saving} />
+        <Result saving={saving} onFields={DETAILS_FIELDS} />
+        <FormProblems count={marked} attempt={saving.attempt + phoneAttempt} />
         <button
           type="submit"
           className="pill-button"
@@ -315,9 +355,9 @@ function Home({ client }: { client: Client }) {
           }}
           onLocated={savePlace}
           untitled
-          problem={saving.failed?.field ? strings.where.problem : null}
+          problem={saving.failed?.field && WHERE_FIELDS.includes(saving.failed.field) ? strings.where.problem : null}
         />
-        <Result saving={saving} />
+        <Result saving={saving} onFields={WHERE_FIELDS} />
         <button
           type="submit"
           className="pill-button"

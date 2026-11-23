@@ -13,6 +13,7 @@ turns into tests (docs/08 §5, A-D6).
 
 import uuid
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import func, select
@@ -26,7 +27,7 @@ from dawalink.domain.vocabulary import (
     ReportReason,
     ReportState,
 )
-from dawalink.services import audit, conversations
+from dawalink.services import audit, conversations, paging
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -192,21 +193,22 @@ def report(
 # --- The admin's side (AS-8) --------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class Listed:
+    rows: Sequence[AnswerReport]
+    # The reports the same choice matches, whatever the page.
+    total: int
+
+
 def listed(
     tx: Tx, *, state: ReportState | None = ReportState.NEW, offset: int = 0, limit: int = 50
-) -> Sequence[AnswerReport]:
-    statement = select(AnswerReport)
+) -> Listed:
+    """The reports, the newest first, with how many the choice matches in all."""
+    statement = select(AnswerReport).order_by(AnswerReport.created_at.desc(), AnswerReport.id)
     if state is not None:
         statement = statement.where(AnswerReport.state == state.value)
-    return (
-        tx.session.execute(
-            statement.order_by(AnswerReport.created_at.desc(), AnswerReport.id)
-            .offset(offset)
-            .limit(limit)
-        )
-        .scalars()
-        .all()
-    )
+    rows = tx.session.execute(statement.offset(offset).limit(limit)).scalars().all()
+    return Listed(rows, paging.count_rows(tx, statement))
 
 
 def new_count(tx: Tx) -> int:

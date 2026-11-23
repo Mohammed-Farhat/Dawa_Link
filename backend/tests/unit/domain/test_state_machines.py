@@ -248,6 +248,20 @@ def test_client_account_transitions_of_sm_2() -> None:
     assert not CLIENT_MACHINE.allows(C.UNVERIFIED, C.PAUSED, Actor.SYSTEM)
 
 
+def test_only_the_client_deletes_their_account_and_never_while_suspended() -> None:
+    """R-AU10: deleted is final, and nobody else deletes a client's account."""
+    C = ClientStatus
+    for before in (C.UNVERIFIED, C.ACTIVE, C.PAUSED):
+        CLIENT_MACHINE.check(before, C.DELETED, Actor.CLIENT)
+        for other in Actor:
+            if other is not Actor.CLIENT:
+                assert not CLIENT_MACHINE.allows(before, C.DELETED, other)
+    assert not CLIENT_MACHINE.allows(C.SUSPENDED, C.DELETED, Actor.CLIENT)
+    for after in C:
+        for actor in Actor:
+            assert not CLIENT_MACHINE.allows(C.DELETED, after, actor)
+
+
 @pytest.mark.parametrize(
     ("status", "search", "assistant", "reserve", "cancel"),
     [
@@ -255,6 +269,7 @@ def test_client_account_transitions_of_sm_2() -> None:
         (ClientStatus.ACTIVE, True, True, True, True),
         (ClientStatus.PAUSED, True, True, False, True),
         (ClientStatus.SUSPENDED, False, False, False, False),
+        (ClientStatus.DELETED, False, False, False, False),
     ],
 )
 def test_what_each_client_status_may_do(

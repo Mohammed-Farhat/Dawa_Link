@@ -8,13 +8,13 @@ import { vi } from 'vitest'
 
 import { type Schemas, setToken } from '../api/client'
 import { SessionProvider } from '../api/SessionProvider'
-import { theme } from '../theme/theme'
+import { cssVariablesResolver, theme } from '../theme/theme'
 
 /** Renders a screen inside the same providers the real app uses. */
 export function renderApp(ui: ReactNode, { path = '/' }: { path?: string } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MantineProvider theme={theme} forceColorScheme="light">
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} forceColorScheme="light">
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>
@@ -27,7 +27,9 @@ export function renderApp(ui: ReactNode, { path = '/' }: { path?: string } = {})
 /** The accessibility problems axe finds in a rendered screen (docs/11 §9). */
 export async function accessibilityProblems(container: HTMLElement): Promise<string[]> {
   const results = await axe.run(container, {
-    // jsdom doesn't lay out or paint, so color contrast can't be computed here.
+    // jsdom doesn't lay out or paint, so color contrast can't be computed here: tried on
+    // 2026-11-19, even grey #ccc on white came back "incomplete", never a violation, so the
+    // rule on would pass every page without looking. Contrast is checked in a browser.
     rules: { 'color-contrast': { enabled: false } },
   })
   return results.violations.map((violation) => `${violation.id}: ${violation.help}`)
@@ -69,6 +71,11 @@ export function stream(...events: [name: string, data: unknown][]) {
   }
 }
 
+/** A chat stream that breaks after these events, as a dropped connection does. */
+export function brokenStream(...events: [name: string, data: unknown][]) {
+  return { __broken: stream(...events).__stream }
+}
+
 /**
  * A pretend API for one test: `{ 'GET /api/v1/auth/me': {...} }`.
  *
@@ -101,8 +108,24 @@ export function pretendApi(routes: Record<string, Answer>) {
     }
     const route = routes[key]
     const found = (await (typeof route === 'function' ? route(call) : route)) as
-      | { __status?: number; body?: unknown; __stream?: string }
+      | { __status?: number; body?: unknown; __stream?: string; __broken?: string }
       | undefined
+    if (found && typeof found === 'object' && '__broken' in found) {
+      const events = new TextEncoder().encode(found.__broken ?? '')
+      let delivered = false
+      // The events are read first; the next read fails (an error at once would drop them).
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (delivered) {
+            controller.error(new TypeError('network error'))
+            return
+          }
+          delivered = true
+          controller.enqueue(events)
+        },
+      })
+      return new Response(body, { headers: { 'Content-Type': 'text/event-stream' } })
+    }
     if (found && typeof found === 'object' && '__stream' in found) {
       return new Response(found.__stream, { headers: { 'Content-Type': 'text/event-stream' } })
     }
@@ -266,6 +289,7 @@ export function page(messages: ReturnType<typeof message>[], more: object = {}) 
     last_seq: messages.length ? messages[messages.length - 1].seq : 0,
     busy: false,
     archived: false,
+    with_team: false,
     location: { source: 'profile', label: 'Beirut' },
     server_now: '2026-11-16T08:00:00Z',
     ...more,

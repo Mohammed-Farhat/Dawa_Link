@@ -102,7 +102,9 @@ describe('Logging out from the profile', () => {
 
 describe('[Notify me] on a search that found nothing (CS-6)', () => {
   it('starts a 6-hour watch with a price limit, from where the search looked', async () => {
-    const api = clientApi({ 'POST /api/v1/watches': answer(201, WATCH) })
+    const api = clientApi({
+      'POST /api/v1/watches': answer(201, { ...WATCH, server_now: CONFIG.server_now }),
+    })
     const { container } = renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
     const user = userEvent.setup()
 
@@ -113,7 +115,9 @@ describe('[Notify me] on a search that found nothing (CS-6)', () => {
     await user.type(screen.getByLabelText(s.notify.maxPrice), '900000')
     await user.click(screen.getByRole('button', { name: s.notify.start }))
 
-    expect(await screen.findByText(/We watch for it until/)).toBeInTheDocument()
+    // The watch ends at 16:00 today by the server's clock, and says so: its six hours
+    // often cross midnight, so the day is always named (B#39).
+    expect(await screen.findByText(s.notify.watching('today 16:00'))).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/watches')[0].body).toEqual({
       product_id: PRODUCT.id,
       qty: 1,
@@ -140,6 +144,21 @@ describe('[Notify me] on a search that found nothing (CS-6)', () => {
     expect(await screen.findByText(s.notify.already)).toBeInTheDocument()
   })
 
+  it("says when requests open again, by the server's clock (B#37)", async () => {
+    // 10:00 in Beirut is past the morning's opening: the next one is tomorrow's.
+    clientApi({
+      'POST /api/v1/watches': refusal(409, 'OUTSIDE_REQUEST_HOURS', { opens_at: '2026-11-17T06:00:00Z' }),
+    })
+    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: s.notify.button }))
+    await user.click(screen.getByRole('button', { name: s.notify.start }))
+
+    const l = strings.limits
+    expect(await screen.findByText(l.comeBack(l.comeBackTomorrow('08:00')))).toBeInTheDocument()
+  })
+
   it('sends the price limit with a search', async () => {
     const api = clientApi()
     renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
@@ -157,7 +176,7 @@ describe('[Notify me] on a search that found nothing (CS-6)', () => {
 
 describe('Watches in My medicines (CS-11)', () => {
   it('opens the ticket of a past reservation from History', async () => {
-    const past = { ...RESERVATION, state: 'EXPIRED_NO_SHOW', status_text: 'Not picked up in time' }
+    const past = { ...RESERVATION, state: 'EXPIRED_NO_SHOW', status_text: "Missed pickup: it wasn't picked up in time" }
     clientApi({
       'GET /api/v1/reservations': { items: [past], next_cursor: null, server_now: CONFIG.server_now },
     })
@@ -180,7 +199,7 @@ describe('Watches in My medicines (CS-11)', () => {
     expect(within(watching).getByText(/AUGMENTIN 1G × 1/)).toBeInTheDocument()
     expect(within(watching).getByText(/around Beirut · up to 900,000 LBP/)).toBeInTheDocument()
     expect(await accessibilityProblems(container)).toEqual([])
-    await user.click(within(watching).getByRole('button', { name: m.stopWatching }))
+    await user.click(within(watching).getByRole('button', { name: m.stopWatchingFor(PRODUCT.name) }))
 
     await waitFor(() => expect(api.sent('POST', `/api/v1/watches/${WATCH.id}/cancel`)).toHaveLength(1))
   })
@@ -589,7 +608,10 @@ describe('On a wide screen (docs/11 §3.1)', () => {
     expect(container.querySelector('.nav')).toBeNull()
     expect(await accessibilityProblems(container)).toEqual([])
 
-    const ask = screen.getByRole('link', { name: strings.nav.askAssistant })
+    // The top bar's link (an empty list on the page offers one of its own).
+    const ask = within(container.querySelector<HTMLElement>('.topbar')!).getByRole('link', {
+      name: strings.nav.askAssistant,
+    })
     expect(ask).toHaveAttribute('href', '/assistant')
     await user.click(ask)
     expect(await screen.findByText('Hello.')).toBeInTheDocument()

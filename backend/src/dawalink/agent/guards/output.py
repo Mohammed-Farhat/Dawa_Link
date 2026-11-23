@@ -8,19 +8,20 @@ and after that a text written by us is sent instead (AG-D9).
 import json
 import re
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date
 
 from dawalink.agent import display
 from dawalink.agent.guards.baskets import incomplete_plan_cards
 from dawalink.agent.guards.budget import explicit_budget
-from dawalink.agent.guards.clinical import clinical_reasons
+from dawalink.agent.guards.clinical import clinical_reasons, without_names
 from dawalink.agent.guards.grounding import claims_completed, comparison_errors
 from dawalink.agent.guards.language import language_of, looks_arabizi, looks_french
 from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.preferences import explicit_preference
 from dawalink.agent.guards.redact import has_personal_details
+from dawalink.agent.language import looks_arabizi as message_looks_arabizi
 from dawalink.agent.state import Money
 from dawalink.agent.tools import ALL, Reply
 from dawalink.agent.tools.base import rate
@@ -29,7 +30,7 @@ from dawalink.services import proposals
 from dawalink.services.context import Tx
 from dawalink.services.errors import ServiceError
 
-CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS, NO_CARD = (
+CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS, NO_CARD, HANDOVER = (
     "card",
     "pii",
     "clinical",
@@ -38,6 +39,7 @@ CARD, PII, CLINICAL, LANGUAGE, RECOMMENDED, SCHEMA, INTERNALS, NO_CARD = (
     "schema",
     "internals",
     "no_card",
+    "handover",
 )
 
 _MARKDOWN_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
@@ -68,6 +70,35 @@ _CLAIMS_THE_CALL = re.compile(
     # The pharmacist, not the pharmacy ("saydaliyye", "صيدلية"): [Call the pharmacy] is fine.
     r"\bpharmacist\b|\bpharmacien(?:ne)?\b|\bsa[yi]dal[ei]\b|صيدلي(?!ة)|صيدلاني|"
     r"\breserve\b|\bbook\b|\b[ei]?7jez\w*|احجز|حجز",
+    re.IGNORECASE,
+)
+
+
+# A quick reply that would reserve or accept in one tap. Next to a card it only sends
+# those words, and the assistant then has to answer "tap the card" (the owner's finding,
+# 2026-11-22): the card's own button is the way, so such a chip is left out.
+_DOES_WHAT_THE_CARD_DOES = re.compile(
+    r"\breserve\b|\bbook\b|\baccept\b|\b[ei]?7jez\w*|احجز|حجز|اقبل",
+    re.IGNORECASE,
+)
+# "I've passed your request to a person", "a person has been notified", "your case is with
+# the team": the reply says a person from DawaLink has the case.
+# The person is the one the case went to, right after the verb: "I sent your request to 2
+# pharmacies; someone will answer" is the honest report of an ask, not a hand-over.
+_A_PERSON = (
+    r"(?:a\s+person|a\s+human|the\s+(?:dawalink\s+)?team|someone\s+(?:at|from)\s+dawalink|"
+    r"a\s+(?:dawalink\s+)?(?:person|team\s+member)|(?:dawalink\s+)?staff)"
+)
+_I_HAVE = r"\b(?:i|we)(?:'ve|’ve| have)?\s+(?:just\s+|already\s+|now\s+)?"  # noqa: RUF001
+_SAYS_A_PERSON_HAS_IT = re.compile(
+    rf"{_I_HAVE}(?:passed|sent|forwarded|handed|escalated)\s+"
+    rf"(?:(?:it|this|that|your\s+(?:request|case|message|question))\s+)?"
+    rf"(?:on\s+|over\s+)?to\s+{_A_PERSON}\b|"
+    rf"{_I_HAVE}(?:told|notified|informed|alerted)\s+{_A_PERSON}\b|"
+    rf"\b{_A_PERSON}\b[^.!?\n]{{0,30}}\b(?:has|have|was|were)\s+(?:been\s+)?"
+    r"(?:told|notified|informed|asked|alerted)\b|"
+    rf"\b(?:request|case|question)\b[^.!?\n]{{0,20}}\bis\s+with\s+(?:{_A_PERSON}|them)\b|"
+    rf"\b{_A_PERSON}\b[^.!?\n]{{0,30}}\bhas\s+(?:your|the)\s+(?:request|case)\b",
     re.IGNORECASE,
 )
 
@@ -125,14 +156,23 @@ def check(
     preference: str | None = None,
     budget: Money | None = None,
     client_pickup_day: date | None = None,
+    client_language: str | None = None,
+    product_names: Iterable[str] = (),
+    a_person_has_it: bool = True,
 ) -> Checked:
-    """The reply with links removed, and everything that is wrong with it."""
-    cleaned = reply.model_copy(
-        update={
-            "text": plain(reply.text),
-            "quick_replies": [chip for chip in map(plain, reply.quick_replies) if chip],
-        }
-    )
+    """The reply with links removed, and everything that is wrong with it.
+
+    - `client_language`: the language code decided the client's message is in
+      (`agent/language.py`), when it could tell.
+    - `product_names`: the products this turn is about; their names are not dosing words.
+    - `a_person_has_it`: a person from DawaLink was told in this turn, or a case of the
+      client's is open. False: a reply that says so is refused.
+    """
+    offered = [chip for chip in map(plain, reply.quick_replies) if chip]
+    chips = offered
+    if reply.proposal_ids:
+        chips = [chip for chip in offered if not _DOES_WHAT_THE_CARD_DOES.search(chip)]
+    cleaned = reply.model_copy(update={"text": plain(reply.text), "quick_replies": chips})
     violations: list[Violation] = []
     if not cleaned.text:
         violations.append(Violation(SCHEMA, "The reply text is empty. Write a short message."))
@@ -201,7 +241,9 @@ def check(
     shows_another_brand = any(
         known[proposal_id].kind == ProposalKind.OTHER_BRAND.value for proposal_id in usable
     )
-    if shows_another_brand and any(_CLAIMS_THE_CALL.search(chip) for chip in cleaned.quick_replies):
+    # Judged on what the model offered, before any chip was left out: here the model is
+    # told, so that it doesn't offer it again.
+    if shows_another_brand and any(_CLAIMS_THE_CALL.search(chip) for chip in offered):
         violations.append(
             Violation(
                 CARD,
@@ -345,13 +387,25 @@ def check(
         violations.append(
             Violation(PII, "Remove every email address, phone number and coordinate.")
         )
-    if clinical_reasons(everything):
+    if clinical_reasons(without_names(everything, product_names)):
         violations.append(
             Violation(
                 CLINICAL,
                 "This reads as medical advice (a dose, how often, safety, or what a medicine is "
-                "good for). Say you can't advise on that and that a pharmacist or doctor can, "
-                "then offer to keep searching.",
+                "good for). If you were only naming a product, its strength, or how long a box "
+                "must last, write that sentence again without words about doses or how often. "
+                "If the client asked for advice, say you can't advise on that and that a "
+                "pharmacist or doctor can, then offer to keep searching.",
+            )
+        )
+    if not a_person_has_it and _SAYS_A_PERSON_HAS_IT.search(cleaned.text):
+        # Seen on 2026-11-22: the hand-over failed, and the reply announced it as done.
+        violations.append(
+            Violation(
+                HANDOVER,
+                "Your reply says a person from DawaLink has the case, but nobody was told "
+                "in this turn and no case is open. Call escalate first and reply after its "
+                "result, or don't say it.",
             )
         )
     if claims_completed(cleaned.text):
@@ -400,6 +454,15 @@ def check(
                     if wanted == "arabic"
                     else "Latin letters (English or Arabizi)."
                 ),
+            )
+        )
+    elif client_language == "english" and message_looks_arabizi(everything, at_least=3):
+        # Seen on 2026-11-22: "hello" answered in Arabizi, and the next replies too.
+        violations.append(
+            Violation(
+                LANGUAGE,
+                "The client wrote in English. Write the whole reply and the quick replies "
+                "in English.",
             )
         )
     return Checked(cleaned, tuple(violations))

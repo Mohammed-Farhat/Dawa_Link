@@ -1135,6 +1135,71 @@ So that every page had something waiting, one example of each kind was added to 
 
 ---
 
+### After step 9: the owner's list for the three sides (2026-11-22 to 2026-11-23) 🔨
+
+The owner tried the pharmacy's, the admin's and the client's sides and sent 26 points. Each was checked first against the code, his own test chats and the local database (5 checkers), then fixed. **The docs of steps 01 to 12 are not updated for this round yet, nor for the round before it** (the fixes of the two reviews, "forgot my password", "delete my account", committed on 2026-11-22): one docs pass covers both, after the owner has tried these fixes. `CLAUDE.md` §4 already holds the new rules.
+
+**What the checks found (not all 26 were defects):**
+- already working: one medicine with two expiry dates (one box per batch);
+- by design, explained: the Ministry decides a medicine's name, strength and form, and a "%" in a name is a strength; an ask goes only to a pharmacy that is open (his test was on a Sunday, with a pharmacy closed on Sundays);
+- true: everything else, in whole or in part.
+
+**The owner's decisions (2026-11-23), which replace earlier ones:**
+- **the agent asks once, then always searches** (replaces BLD-D28 and BLD-D29): one message asks where the client wants the pharmacy, for how many days and when; "I don't know" or "any" is an answer; whatever comes back, it searches. Never car or on foot, never the box size;
+- **an area named as where to look is not where the client is** (amends BLD-D14): "in Saida or Beirut" searches the pharmacies of both, with travel times from where the client is;
+- **in a chat, a medicine listed nowhere gets a watch and asks to pharmacies at once, and the agent then says what it did** ("Ask on its own, then tell");
+- **after a team reply the chat is with the team** until the admin closes the case, the client opens a new chat, or 12 hours pass (N-55; amends SM-9 and BLD-D34);
+- asks still go only to open pharmacies (left as it is); the agent's loop stays as it is until the architecture trials.
+
+**Built, the website (4 engineers on Opus, then checked live):**
+- the pharmacy's and the admin's top bar stays in place on a computer;
+- numbered pages of 25 on every list of the three portals (one `Pager`, the page in the address, a `total` from the API); lists that stopped silently at 20 or 50 rows now page;
+- the audit log reads as sentences, with who did it and a link to what it is about, and still never a value of a changed field (`domain/audit_actions.py`: a new audit event without a sentence fails a test);
+- escalations: a new ask on an open case shows as a new ask, with its chat; the closed cases are listed newest first;
+- Health shows the limits per client beside the budget for everyone; the catalog shows strength, form and pack in their own columns;
+- the pharmacy's Today always has "Asks from DawaLink"; a sort "By medicine" on Inventory and Listings;
+- a stock file's strength check no longer takes 2.5 for 25.
+
+**Built, the agent (prompts v1.14):**
+- the prompt, for the decisions above; the examples rewritten;
+- `find_options` and `plan_basket` take `areas`; an option says its strength, form and pack and, when it matters, the last day it can be picked up; an empty answer says why (`why_none`: listed nowhere, not in these areas, over the budget, expires too early, not on that day, not enough in one box);
+- a reply written in the same model message as other tool calls is refused and written again from their results (a failed hand-over had been announced as done);
+- where an ask for a person stands, and the running watches with their IDs, are read from the tables for every turn; the old "escalated" flag in the chat's memory is no longer read;
+- code decides which language a client's message is in (`agent/language.py`) and tells the model; the reply guard checks it;
+- the medical-advice guard no longer stops a product's name ("… BID 1 g") or a question about the days of use; it was first loosened too far, which an independent review caught, and 17 sentences of real advice are now tests;
+- the agent's side of the chat with the team: no turn in a held chat, messages written to the team are shown as such and never answered afterwards, an event that waited is looked at when the case closes, and a new chat takes a waiting event along.
+
+**Checked on the real model (Claude Haiku 5.5):** the owner's own failing chats were replayed ("hello", Panadol with "any day", Amoclan, Crestor with "did you ask the pharmacies?", "Saida or Beirut", asking for a person and then for the assistant again): each now behaves as decided. **The safety suite (suite E4, 70 attacks, 79 answers) was run again:** a first run found 6 failed checks; three were real slips of the new prompt on Arabizi messages (a question about another brand answered with the assistant's own questions; "take the other one out of the line and put me" read as giving up the medicine), fixed in the prompt; the run on the final prompt has 2 failed checks left, both `no_state_change`, on cases where the client then answered the assistant's questions and the medicine was listed nowhere: the assistant started a watch, as the owner's new rule says, and the check still expects that nothing changes. The attack itself was refused in both. The check is left as it is, to be settled with the owner in the final evaluation.
+
+**What this costs, said plainly:** the saved evaluation runs (prompts v1.4 to v1.13) are history. Suite E1's "asks first" checks, the simulated client's answers and the second no-AI policy (`rules_asking`) still encode the questions that are gone: they are rewritten with the owner in the agent's final evaluation, and were left untouched here. The planner is exact on the P-set and the no-AI policy still secures 133 units.
+
+**Left open:** a watch or a request started after "in Beirut" still counts from where the client is, not from Beirut (it would need new columns); an ask is not sent later when a closed pharmacy opens (the owner: leave it for now); a [Use my saved place] button on the chat's location sheet.
+
+### Evaluation branch integration — 2026-11-23
+
+Integrated origin/main through cad4150 into test/agent-evaluation, preserving the
+candidate6 hardening and historical evaluation artifacts. Conflicts combined the
+new search/hand-over behavior with budget, pickup-date, language, grounding,
+basket-completeness and fallback protections. The combined prompt is v1.17;
+neither the teammate's v1.14 results nor candidate6's v1.16 checks validate it.
+
+The owner changed clarification to one round followed by search, removed transport
+questions, and authorized automatic watches/pharmacy asks for unlisted medicines.
+Accepted understanding/safety cases, model-played clients and rules_asking still need
+review against those changes before another final evaluation. Historical accepted
+labels, source pins and outcome files were not rewritten. Paid evaluation remains
+stopped under the existing unresolved-charge protocol. No paid calls were made for
+this integration. The two incoming migrations were exercised only in the test database;
+the development database was not migrated by this integration.
+
+Integration checks: 2,841 backend tests passed on the full run; four failures were
+stale prompt/clarification assertions, an SMTP setting inherited by a test, and a
+synthetic freeze fixture detecting changed catalog overrides. All 115 tests in the
+four affected modules passed after the test repairs, including rejection of stale
+catalog provenance. The real accepted freeze was not updated. Frontend: 519 tests,
+lint and production build passed (local API URL supplied). Backend: Ruff check/format
+and mypy across 385 files passed. No live browser or paid-model verification.
+
 ## 4. Left for a later step
 
 **For the agent's final evaluation (slice 6b), seen in the browser on 2026-11-16:** the agent offers quick replies that read like buttons: "Yes, start sourcing" next to the [Start sourcing] card, "Reserve at Pharmacy C" next to a [Reserve] card. A quick reply only sends its words as a message and never acts, so nothing wrong happens; but a client may think they reserved. To add as regression cases and to the prompt's rules then. Also: `03` PS-10 lets a pharmacy change its phone in its settings, while `10` TH-59 says only an admin changes it (the number is shown to clients). Claude follows TH-59, the newer and stricter one, in slice 7e.

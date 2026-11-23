@@ -20,7 +20,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import ColumnElement, and_, func, or_, select, text
+from sqlalchemy import ColumnElement, Select, and_, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.selectable import Exists
 
@@ -41,6 +41,7 @@ from dawalink.services import (
 )
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 # What "lately" is for a pharmacy's activity on its page (AS-4).
 ACTIVITY_OVER = timedelta(days=30)
@@ -124,19 +125,15 @@ def _pin_to_check_clause() -> ColumnElement[bool]:
     )
 
 
-def listed(
-    tx: Tx,
-    *,
-    status: PharmacyStatus | None = None,
-    query: str = "",
-    offset: int = 0,
-    limit: int = 50,
-) -> list[Listed]:
-    """Pharmacies for the admin's lists. With `PENDING` it is the approval queue, the
-    registration that has waited longest first."""
-    to_check = _pin_to_check_clause()
+def _filtered(status: PharmacyStatus | None, query: str) -> Select[Pharmacy, str, bool]:
+    """The pharmacies an admin's choices keep, with their district and whether their pin
+    waits for a look: what a page of the list reads, and what its total counts."""
     statement = (
-        select(Pharmacy, District.name, to_check)
+        select(
+            Pharmacy,
+            District.name.label("district"),
+            _pin_to_check_clause().label("to_check"),
+        )
         .join(District, District.id == Pharmacy.district_id)
         .where(_email_confirmed_clause())
     )
@@ -148,6 +145,27 @@ def listed(
         statement = statement.where(
             or_(Pharmacy.name.ilike(like), Pharmacy.license_number.ilike(like))
         )
+    return statement
+
+
+def listed_total(tx: Tx, *, status: PharmacyStatus | None = None, query: str = "") -> int:
+    """How many pharmacies the same choices keep, on every page of the list."""
+    # Counted by its pharmacies: the same rows, one column (what `count_rows` takes).
+    return count_rows(tx, _filtered(status, query).with_only_columns(Pharmacy.id))
+
+
+def listed(
+    tx: Tx,
+    *,
+    status: PharmacyStatus | None = None,
+    query: str = "",
+    offset: int = 0,
+    limit: int = 50,
+) -> list[Listed]:
+    """Pharmacies for the admin's lists. With `PENDING` it is the approval queue, the
+    registration that has waited longest first."""
+    to_check = _pin_to_check_clause()
+    statement = _filtered(status, query)
     order = (
         (Pharmacy.created_at, Pharmacy.id)
         if status is PharmacyStatus.PENDING

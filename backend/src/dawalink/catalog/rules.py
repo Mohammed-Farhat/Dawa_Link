@@ -1,6 +1,7 @@
 """The team's catalog rules: controlled medicines, the no-prescription list, corrections.
 
-They live in backend/data/catalog_overrides.toml (docs/04 R-C5 to R-C7).
+They live in backend/data/catalog_overrides.toml (docs/04 R-C5 to R-C7). The Ministry's own
+no-prescription list is read elsewhere (catalog/otc_list.py) and arrives as a mark on the row.
 """
 
 import tomllib
@@ -40,8 +41,13 @@ class CatalogRules:
             return True
         return any(_mentions(i, self.controlled_ingredients) for i in ingredients)
 
-    def needs_prescription(self, ingredients: Sequence[Ingredient]) -> bool:
-        """True unless every ingredient is on the no-prescription list (docs/04 R-C7)."""
+    def needs_prescription(
+        self, ingredients: Sequence[Ingredient], *, on_ministry_list: bool = False
+    ) -> bool:
+        """True unless the Ministry's list names the product (by code and registration number,
+        catalog/otc_list.py), or every ingredient is on the team's own list (docs/04 R-C7)."""
+        if on_ministry_list:
+            return False
         if not ingredients or not self.otc_ingredients:
             return True
         return not all(_mentions(i, self.otc_ingredients) for i in ingredients)

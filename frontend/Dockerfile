@@ -8,8 +8,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# The API's address is built into the website.
+# The API's address is built into the website, for good. Without it every call would go
+# to the website's own address and come back as a page (A#17): stop here, with the reason.
+# (vite.config.ts checks the address itself too.) Declared after `npm ci`, so that a new
+# address doesn't download the packages again.
 ARG VITE_API_URL
+RUN test -n "$VITE_API_URL" || { echo "VITE_API_URL is not set: build with --build-arg VITE_API_URL=<the API's address> (docs/12 §12)." >&2; exit 1; }
 ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 

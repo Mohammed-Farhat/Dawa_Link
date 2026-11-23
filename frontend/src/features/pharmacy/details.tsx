@@ -5,6 +5,7 @@ import type { Schemas } from '../../api/client'
 import { strings } from '../../strings/en'
 import {
   closing,
+  DETAIL_MAX,
   type Draft,
   problemsOf,
   type Range,
@@ -49,6 +50,7 @@ export function DetailsFields({
         description={d.nameHint}
         size="md"
         autoComplete="organization"
+        maxLength={DETAIL_MAX.name}
         value={draft.name}
         onChange={(event) => set({ name: event.currentTarget.value })}
         error={wrong('name')}
@@ -57,6 +59,7 @@ export function DetailsFields({
         label={d.license}
         size="md"
         autoComplete="off"
+        maxLength={DETAIL_MAX.license}
         value={draft.license}
         onChange={(event) => set({ license: event.currentTarget.value })}
         error={wrong('license_number')}
@@ -67,6 +70,7 @@ export function DetailsFields({
         size="md"
         type="tel"
         autoComplete="tel"
+        maxLength={DETAIL_MAX.phone}
         value={draft.phone}
         onChange={(event) => set({ phone: event.currentTarget.value })}
         error={wrong('phone')}
@@ -75,6 +79,7 @@ export function DetailsFields({
         label={d.address}
         size="md"
         autoComplete="street-address"
+        maxLength={DETAIL_MAX.address}
         value={draft.address}
         onChange={(event) => set({ address: event.currentTarget.value })}
         error={wrong('address')}
@@ -101,7 +106,13 @@ export function DetailsFields({
             onChange={(pin) => set({ pin })}
           />
         </Suspense>
-        <span role="status" className={wrong('location') ? 'field-problem' : 'hint'}>
+        {/* A pin on a map has no field to mark: after a refused submit the focus comes
+            to this line (components/FormProblems.tsx). */}
+        <span
+          role="status"
+          className={wrong('location') ? 'field-problem' : 'hint'}
+          {...(!draft.pin && wrong('location') ? { 'data-problem': true, tabIndex: -1 } : {})}
+        >
           {draft.pin ? d.pinSet : wrong('location')}
         </span>
       </fieldset>
@@ -212,7 +223,7 @@ export function HoursFields({
               <button
                 type="button"
                 className="text-button"
-                aria-label={h.addRange(name)}
+                aria-label={h.addNamed(name)}
                 onClick={() => setDay(day, withAfternoon(ranges[0] ?? USUAL))}
               >
                 {h.addShort}
@@ -233,7 +244,7 @@ export function HoursFields({
       })}
       <span className="hint">{h.midnight}</span>
       {problem && (
-        <span role="alert" className="field-problem">
+        <span role="alert" className="field-problem" data-problem tabIndex={-1}>
           {problem}
         </span>
       )}

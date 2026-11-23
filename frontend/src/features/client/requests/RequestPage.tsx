@@ -22,10 +22,15 @@ function timeLeft(until: string, now: string): string {
   return r.timeLeft(Math.floor(minutes / 60), minutes % 60)
 }
 
+/** A pharmacy holds a box for this medicine, waiting for the client's tap. */
+function offerWaits(item: Item): boolean {
+  return item.state !== 'SECURED' && (item.waiting?.open_offer_ids.length ?? 0) > 0
+}
+
 /** How far a medicine is: 1 searching, 2 found (a card or an offer waits), 3 reserved. */
 function stepOf(item: Item): number {
   if (item.state === 'SECURED') return 3
-  if (item.state === 'PROPOSED' || (item.waiting?.open_offer_ids.length ?? 0) > 0) return 2
+  if (item.state === 'PROPOSED' || offerWaits(item)) return 2
   return 1
 }
 
@@ -76,7 +81,15 @@ export function RequestPage() {
     )
   }
   const request = found.data
-  if (!request.conversation_id) return <Tracker request={request} />
+  if (!request.conversation_id) {
+    // A request with no thread: the tracker alone, in a page of its own (B#34).
+    return (
+      <Screen plain narrow>
+        <h1 className="page-title">{r.title(request.ref)}</h1>
+        <Tracker request={request} />
+      </Screen>
+    )
+  }
   const thread = (
     <Conversation
       conversationId={request.conversation_id}
@@ -147,9 +160,14 @@ function Tracker({ request }: { request: Request }) {
                 <span style={{ fontWeight: 600 }}>
                   {item.product.name} × {item.qty}
                 </span>
-                <span className={`status-pill status-pill--${TONE[item.state]}`}>
-                  {item.status_text}
-                </span>
+                {offerWaits(item) ? (
+                  // Amber: the client's tap is needed (docs/11 §2.1, B#17).
+                  <span className="status-pill status-pill--amber">{r.offerWaiting}</span>
+                ) : (
+                  <span className={`status-pill status-pill--${TONE[item.state]}`}>
+                    {item.status_text}
+                  </span>
+                )}
               </div>
               <ol className="tracker-steps" aria-label={r.steps[stepOf(item) - 1]}>
                 {r.steps.map((step, index) => (

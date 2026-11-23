@@ -1,7 +1,6 @@
 """The chat and a request's thread: reading, writing, and tapping a card (docs/06 §6.6, §6.7)."""
 
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, time
 from typing import Annotated, cast
 
@@ -10,7 +9,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, select
 
 from dawalink.agent import limits as agent_limits
-from dawalink.agent.chat import post_client_message
+from dawalink.agent.chat import Posted, post_client_message
 from dawalink.agent.context import identity_of
 from dawalink.agent.guards.redact import redact
 from dawalink.agent.turn import Agent
@@ -35,7 +34,14 @@ from dawalink.domain.accounts import ClientStatus, client_can_use_assistant
 from dawalink.domain.clock import BEIRUT
 from dawalink.domain.numbers import CHAT_MESSAGES_PER_DAY, MAX_PAGE_SIZE
 from dawalink.domain.vocabulary import ReportReason
-from dawalink.services import answer_reports, clients, conversations, proposals, travel
+from dawalink.services import (
+    answer_reports,
+    clients,
+    conversations,
+    escalations,
+    proposals,
+    travel,
+)
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -66,8 +72,7 @@ def new_chat(caller: AsClient, work: DoWork) -> ConversationRef:
     """Starts a fresh chat. The old one is archived, and kept 30 days (R-RET)."""
     with work.tx() as tx:
         _may_use_the_assistant(tx, caller.user_id)
-        conversations.archive_chats(tx, caller.user_id)
-        chat = conversations.active_chat(tx, caller.user_id)
+        chat = conversations.new_chat(tx, caller.user_id)
         return ConversationRef(conversation_id=chat.id, kind="chat")
 
 
@@ -168,6 +173,7 @@ def read_messages(
             last_seq=conversations.last_seq(tx, conversation_id),
             busy=conversations.is_busy(tx, conversation),
             archived=conversation.status == "ARCHIVED",
+            with_team=escalations.held_by_team(tx, conversation_id),
             location=present.location_summary(tx, conversation),
             server_now=tx.now,
         )
@@ -217,6 +223,25 @@ def _sent_today(tx: Tx, client_id: uuid.UUID) -> int:
     ).scalar_one()
 
 
+def _post_to_the_team(
+    tx: Tx, client_id: uuid.UUID, conversation_id: uuid.UUID, body: SendMessage
+) -> Posted:
+    """A message in a conversation DawaLink's team has (`escalations.held_by_team`):
+    stored exactly as any client message is, redacted (INV-10), and asking for no turn.
+
+    A turn already asked for by an event stays asked for: a held request's thread still
+    re-plans on its events.
+    """
+    return post_client_message(
+        tx,
+        client_id=client_id,
+        conversation_id=conversation_id,
+        text=body.text,
+        client_message_id=body.client_message_id,
+        to_the_team=True,
+    )
+
+
 @router.post(
     "/conversations/{conversation_id}/messages",
     response_model=MessageAccepted,
@@ -242,11 +267,18 @@ def send_message(
       `text/event-stream`): progress lines, then the complete, checked reply.
     - **In a request's thread** the answer is `202`: the worker runs the agent's turn,
       and the page sees the reply by polling.
+    - **In a conversation DawaLink's team has** (it replied to the client's case and has
+      not closed it, `with_team`): the message is kept for the team and the answer is
+      `202` with `with_team: true`, at once. No agent turn runs and none is coming; the
+      checks that only matter for the model (the assistant's availability, the day's
+      token budget, a turn already running) don't refuse it. The limits on messages, a
+      suspended account and an earlier chat are checked as always.
     """
     wait_s = cast(Limiter, request.app.state.chat_per_client).wait_s(caller.user_id)
     if wait_s:
         raise ApiError(ErrorCode.RATE_LIMITED, details={"retry_after_s": wait_s})
-    with work.tx() as tx:
+    pool = cast(chat_stream.TurnPool, request.app.state.turn_pool)
+    with chat_stream.TurnSlot(pool) as slot, work.tx() as tx:
         _may_use_the_assistant(tx, caller.user_id)
         conversation = conversations.own(tx, caller.user_id, conversation_id)
         in_chat = conversation.kind == "chat"
@@ -255,6 +287,18 @@ def send_message(
             # the client writes in now (D9).
             raise ServiceError(
                 Code.VALIDATION_ERROR, "This chat is closed. Start a new chat to write again."
+            )
+        if escalations.held_by_team(tx, conversation_id):
+            if _sent_today(tx, caller.user_id) >= CHAT_MESSAGES_PER_DAY:
+                raise ApiError(
+                    ErrorCode.RATE_LIMITED,
+                    "You've reached today's number of messages.",
+                    details={"retry_after_s": 3600},
+                )
+            to_the_team = _post_to_the_team(tx, caller.user_id, conversation_id, body)
+            return JSONResponse(
+                MessageAccepted(message_seq=to_the_team.seq, with_team=True).model_dump(),
+                status_code=202,
             )
         if in_chat:
             if (
@@ -285,6 +329,14 @@ def send_message(
                 "You've reached today's number of messages. Search still works.",
                 details={"retry_after_s": 3600},
             )
+        if in_chat and not slot.take():
+            # Every turn thread is busy: the turn would wait in a queue, its stream
+            # showing nothing. Refused before the message is stored (A#6).
+            raise ServiceError(
+                Code.CONVERSATION_BUSY,
+                "One moment…",
+                retry_after_ms=chat_stream.BUSY_RETRY_MS,
+            )
         posted = post_client_message(
             tx,
             client_id=caller.user_id,
@@ -293,14 +345,15 @@ def send_message(
             client_message_id=body.client_message_id,
         )
     if posted.worker_runs_the_turn:
-        return JSONResponse({"message_seq": posted.seq}, status_code=202)
+        return JSONResponse(MessageAccepted(message_seq=posted.seq).model_dump(), status_code=202)
     assert agent is not None
     stream = chat_stream.answer(
-        cast(ThreadPoolExecutor, request.app.state.turn_pool),
+        pool,
         agent,
         conversation_id,
         client_message_seq=posted.seq,
         request_id=request_id_of(request),
+        taken=slot.taken,
     )
     return StreamingResponse(
         stream,

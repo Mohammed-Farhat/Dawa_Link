@@ -52,6 +52,8 @@ describe('Who sees what', () => {
 
     expect(await screen.findByRole('heading', { name: strings.home.title })).toBeInTheDocument()
     expect(await screen.findByText('R-7K3Q2F')).toBeInTheDocument()
+    // A quantity is written "× 2" on every screen.
+    expect(screen.getByText(`${RESERVATION.product.name} × ${RESERVATION.qty}`, { exact: false })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: strings.home.showAtCounter })).toHaveAttribute(
       'href',
       `/reservations/${RESERVATION.id}`,
@@ -95,6 +97,20 @@ describe('Who sees what', () => {
     expect(await screen.findByText(strings.banner.resent)).toBeInTheDocument()
     // The assistant itself was never asked for: it needs a confirmed email.
     expect(api.sent('GET', '/api/v1/conversations')).toEqual([])
+  })
+
+  it("says the day's limit of emails as the day's, not as a minute (B#36)", async () => {
+    loggedIn()
+    pretendApi({
+      'GET /api/v1/auth/me': { ...CLIENT, email_verified: false },
+      'GET /api/v1/reservations': none,
+      'POST /api/v1/auth/verify-email/resend': refusal(429, 'RATE_LIMITED', { retry_after_s: 3600 }),
+    })
+    renderApp(<AppRoutes />, { path: '/assistant' })
+
+    await userEvent.click(await screen.findByRole('button', { name: strings.banner.resend }))
+
+    expect(await screen.findByText(strings.limits.today)).toBeInTheDocument()
   })
 
   it('shows a clear page for an address that does not exist', async () => {
@@ -245,10 +261,8 @@ describe('Signing up and logging in', () => {
     expect(window.localStorage.length).toBe(0)
   })
 
-  it('confirms the email from the link and logs the client in', async () => {
-    const api = pretendApi({
-      'POST /api/v1/auth/verify-email': { me: CLIENT, token: 'from-the-link', expires_at: '2026-11-23T08:00:00Z' },
-    })
+  it('confirms the email from the link, and leads to the login', async () => {
+    const api = pretendApi({ 'POST /api/v1/auth/verify-email': answer(204) })
 
     renderApp(<AppRoutes />, { path: '/verify-email?token=the-token-of-the-email' })
 
@@ -256,7 +270,9 @@ describe('Signing up and logging in', () => {
     expect(api.sent('POST', '/api/v1/auth/verify-email')[0].body).toEqual({
       token: 'the-token-of-the-email',
     })
-    expect(window.localStorage.getItem('dawalink.token')).toBe('from-the-link')
+    // The link logs nobody in (the owner, 2026-11-22).
+    expect(window.localStorage.getItem('dawalink.token')).toBeNull()
+    expect(screen.getByRole('link', { name: strings.verify.logIn })).toHaveAttribute('href', '/login')
   })
 
   it('says so when the link is no longer valid', async () => {

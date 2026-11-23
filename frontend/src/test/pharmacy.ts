@@ -86,4 +86,4 @@ export const UPLOAD = {
 } satisfies Schemas['StockUpload']
 
 export const stockOf = (items: Schemas['StockItem'][]) =>
-  ({ items, next_cursor: null, server_now: NOW }) satisfies Schemas['Stock']
+  ({ items, next_cursor: null, total: items.length, server_now: NOW }) satisfies Schemas['Stock']

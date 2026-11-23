@@ -41,7 +41,7 @@ from dawalink.domain.geo import Travel
 from dawalink.domain.orders import OrderState
 from dawalink.domain.requests import FINAL_ITEM_STATES, ItemState
 from dawalink.domain.vocabulary import AgentMode
-from dawalink.services import catalog, pharmacies, planning, search
+from dawalink.services import areas, catalog, pharmacies, planning, search
 from dawalink.services.catalog import ProductRef
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
@@ -117,6 +117,74 @@ def travel_out(travel: Travel) -> TravelOut:
     )
 
 
+# --- Where to look ---------------------------------------------------------------------
+
+
+class AreaIn(Arguments):
+    place: str = Field(
+        min_length=2,
+        max_length=60,
+        description="An area, town or district the client wants the pharmacy to be in, as "
+        "they wrote it: 'Beirut', 'saida', 'Hamra'. Only a place the client named.",
+    )
+    district: str | None = Field(
+        default=None,
+        max_length=40,
+        description="The district, only when the client said it or chose it after "
+        "AREA_AMBIGUOUS. Never your own guess.",
+    )
+
+
+Areas = Annotated[
+    list[AreaIn] | None,
+    Field(
+        max_length=3,
+        description="Where the client wants to pick up, when they named places to look in "
+        "('in Beirut', 'Saida or Beirut'): only pharmacies of these areas are searched, all "
+        "of them together. It is not where the client is: travel times still count from "
+        "where they are. Leave empty when they said nearest, anywhere, or nothing.",
+    ),
+]
+
+
+def districts_of(tx: Tx, wanted: list[AreaIn] | None) -> frozenset[str] | None:
+    """The districts the client asked to look in, from the names they wrote (R-S2).
+
+    Each name is looked up in our own list, exactly as `set_area` does: a name that isn't
+    listed, or that stands for places in several districts, is asked about, never guessed
+    (BLD-D14, BLD-D15). A town or a neighbourhood counts as its district: "Hamra" looks in
+    Beirut. The model gets names back, never a point (INV-24).
+    """
+    if not wanted:
+        return None
+    found: set[str] = set()
+    for area in wanted:
+        looked_up = areas.look_up(tx, area.place, area.district)
+        if not looked_up.named:
+            raise Refused(
+                ToolError.AREA_NOT_FOUND,
+                f"No listed area is written like '{area.place}'. If one of `closest` is "
+                "clearly the same place spelled differently, call again with that name. "
+                "Otherwise ask the client for a better-known area or town.",
+                closest=[
+                    {"area": place.name, "district": place.district} for place in looked_up.close
+                ],
+            )
+        districts = {place.district for place in looked_up.named}
+        if len(districts) > 1:
+            raise Refused(
+                ToolError.AREA_AMBIGUOUS,
+                f"Several places are called '{area.place}'. Ask the client which one, with "
+                "each choice as a quick reply ('Hamra, Beirut'), then call again with the "
+                "district. Do not choose for them.",
+                choices=[
+                    {"area": place.name, "district": place.district} for place in looked_up.named
+                ],
+            )
+        found |= districts
+    return frozenset(found)
+
+
 # --- search_catalog --------------------------------------------------------------------
 
 
@@ -169,11 +237,15 @@ class FindOptions(Arguments):
     qty: Qty = 1
     days_of_use: Days = 1
     pickup_day: date | None = Field(
-        default=None, description="One of the upcoming days. Leave empty if the client didn't say."
+        default=None,
+        description="One of the upcoming days, only when the client named one day. Leave "
+        "empty otherwise ('any day', 'today or tomorrow', nothing said): every day the "
+        "pharmacy accepts is then searched, and each option lists the days that work.",
     )
     max_price: Money | None = None
     sort: Literal["best", "nearest", "cheapest", "latest_expiry"] = "best"
     limit: int = Field(default=5, ge=1, le=10)
+    areas: Areas = None
 
 
 class DayHours(Output):
@@ -185,6 +257,10 @@ class OptionOut(Output):
     listing_id: uuid.UUID
     product_id: uuid.UUID
     product: str
+    # Which box this is: one name can come in several strengths, forms and box sizes.
+    strength: str | None = None
+    form: str | None = None
+    pack: str | None = None
     # True: another brand than the client asked for. Show it with show_other_brand;
     # never propose_reservation for it unless the client then asks for that brand.
     is_alternative: bool
@@ -202,6 +278,9 @@ class OptionOut(Output):
     # midday and open again in the afternoon.
     open_hours: list[DayHours]
     expiry_limits_pickup: bool
+    # Set when expiry_limits_pickup is true: the last day this box can be picked up and
+    # still last the client's days of use. From a later day it would not.
+    pick_up_by: date | None = None
 
 
 class NoMatchOut(Output):
@@ -214,6 +293,28 @@ class FindOptionsOut(Output):
     total_found: int
     left_out_by_pickup_day: int
     no_match: NoMatchOut | None = None
+    # Why there is no option, when there is none. Say this reason, never another one:
+    # none_listed (no pharmacy has it at all: another day changes nothing),
+    # not_in_these_areas, over_budget, expires_too_early, not_on_that_day, not_enough
+    # (no single box holds the quantity asked for; `most_in_one_box` says how many one has).
+    why_none: str | None = None
+    most_in_one_box: int | None = None
+    # not_on_that_day: the days on which a pharmacy has it and it still lasts.
+    days_that_work: list[date] = Field(default_factory=list)
+    # not_in_these_areas: how many boxes other areas have (0: none anywhere).
+    elsewhere: int | None = None
+    # over_budget: the lowest price there is.
+    cheapest: str | None = None
+    # The districts that were searched, when `areas` was given.
+    searched_in: list[str] = Field(default_factory=list)
+
+
+def _why_none(found: search.SearchResult, options: list[OptionOut]) -> str | None:
+    if options:
+        return None
+    if found.listings:
+        return "not_enough"
+    return found.why_none.value if found.why_none else None
 
 
 def _same_medicine(tx: Tx, product_ids: list[uuid.UUID]) -> None:
@@ -259,6 +360,7 @@ def _prepare_find_options(turn: Turn, args: FindOptions) -> None:
 
 def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
     _same_medicine(tx, args.product_ids)
+    districts = districts_of(tx, args.areas)
     asked = args.product_ids[0]
     note_asked(turn, tx, asked)
     found = search.search_listings(
@@ -272,6 +374,7 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
         sort=args.sort,
         on_foot=turn.state.preference == "walkable",
         limit=args.limit,
+        districts=districts,
     )
     money = rate(tx)
     hours = pharmacies.weekly_hours(tx, [listing.pharmacy.id for listing in found.listings])
@@ -282,6 +385,9 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
             listing_id=listing.id,
             product_id=listing.product.id,
             product=listing.product.name,
+            strength=listing.product.strength,
+            form=listing.product.form,
+            pack=listing.product.pack,
             is_alternative=listing.product.id not in the_brand,
             prescription_required=listing.product.prescription_required,
             pharmacy=pharmacy_out(listing.pharmacy),
@@ -298,6 +404,11 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
                 for day in listing.pickup_days_allowed
             ],
             expiry_limits_pickup=listing.expiry_limits_pickup,
+            pick_up_by=(
+                listing.pickup_days_allowed[-1]
+                if listing.expiry_limits_pickup and listing.pickup_days_allowed
+                else None
+            ),
         )
         for listing in found.listings
         if listing.available >= args.qty
@@ -315,6 +426,18 @@ def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
             if found.no_match
             else None
         ),
+        # A reason whenever the client is shown nothing. Boxes found, but none with the
+        # quantity asked for, is the tool's own reason: the search doesn't know of it.
+        why_none=_why_none(found, options),
+        most_in_one_box=(
+            max(listing.available for listing in found.listings)
+            if found.listings and not options
+            else None
+        ),
+        days_that_work=list(found.days_that_work),
+        elsewhere=found.elsewhere if found.why_none is search.WhyNone.NOT_IN_THESE_AREAS else None,
+        cheapest=display.money(found.cheapest_lbp, money) if found.cheapest_lbp else None,
+        searched_in=sorted(districts) if districts else [],
     )
 
 
@@ -335,6 +458,7 @@ class PlanBasket(Arguments):
     )
     preference: Literal["fewest_trips", "cheapest", "nearest", "walkable"] | None = None
     max_plans: int = Field(default=3, ge=1, le=3)
+    areas: Areas = None
 
 
 class PlanItemOut(Output):
@@ -415,7 +539,10 @@ def _prepare_plan_basket(turn: Turn, args: PlanBasket) -> None:
 
     def everyone(tx: Tx) -> list[uuid.UUID]:
         return planning.pharmacies_stocking(
-            tx, lines=_lines(turn, tx, args), pickup_day=args.pickup_day
+            tx,
+            lines=_lines(turn, tx, args),
+            pickup_day=args.pickup_day,
+            districts=districts_of(tx, args.areas),
         )
 
     def weighed(tx: Tx) -> list[uuid.UUID]:
@@ -424,6 +551,7 @@ def _prepare_plan_basket(turn: Turn, args: PlanBasket) -> None:
             lines=_lines(turn, tx, args),
             location=location_of(tx, turn),
             pickup_day=args.pickup_day,
+            districts=districts_of(tx, args.areas),
         )
 
     road_times_first(turn, everyone)
@@ -450,6 +578,7 @@ def plan_basket(turn: Turn, tx: Tx, args: PlanBasket) -> PlanBasketOut:
         pickup_day=args.pickup_day,
         preference=args.preference or turn.state.preference,
         max_plans=args.max_plans,
+        districts=districts_of(tx, args.areas),
     )
     names = _names(tx, {item.product_id for item in args.items})
     money = rate(tx)
@@ -460,7 +589,10 @@ def plan_basket(turn: Turn, tx: Tx, args: PlanBasket) -> PlanBasketOut:
                 product_id=gap.product_id,
                 product=names[gap.product_id],
                 qty_missing=gap.qty_missing,
-                reason=gap.reason,
+                # Pharmacies have it, but none in the areas the client asked to look in.
+                reason=(
+                    "not_in_these_areas" if gap.product_id in found.only_elsewhere else gap.reason
+                ),
             )
             for gap in gaps
         ]

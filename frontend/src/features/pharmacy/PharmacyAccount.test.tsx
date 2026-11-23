@@ -73,6 +73,90 @@ describe('A pharmacy registers (PS-1)', () => {
     expect(await accessibilityProblems(container)).toEqual([])
   })
 
+  it("never lets a text grow past the API's bound, so it is never refused for its length (A#35)", async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+
+    expect(await screen.findByLabelText(d.name)).toHaveAttribute('maxlength', '120')
+    expect(screen.getByLabelText(d.license)).toHaveAttribute('maxlength', '40')
+    expect(screen.getByLabelText(d.phone)).toHaveAttribute('maxlength', '30')
+    expect(screen.getByLabelText(d.address)).toHaveAttribute('maxlength', '300')
+    expect(screen.getByLabelText(r.email)).toHaveAttribute('maxlength', '320')
+    expect(screen.getByLabelText(r.password)).toHaveAttribute('maxlength', '200')
+  })
+
+  it('takes the focus to the first mistake, and says by the button how many', async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: r.submit }))
+
+    // Email, password, name, licence, phone, address, district, pin and terms.
+    expect(await screen.findByText(strings.forms.check(9))).toHaveAttribute('role', 'alert')
+    await waitFor(() => expect(screen.getByLabelText(r.email)).toHaveFocus())
+
+    // Each correction counts down, and the line goes once nothing is left.
+    await fillIn(user)
+    expect(screen.getByText(strings.forms.check(1))).toBeInTheDocument()
+    await user.click(screen.getByLabelText(r.terms))
+    expect(screen.queryByText(/marked in red/)).not.toBeInTheDocument()
+  })
+
+  it('takes the focus to the password box when only the password is weak', async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await fillIn(user)
+    const password = screen.getByLabelText(r.password)
+    await user.clear(password)
+    await user.type(password, 'short')
+    await user.click(screen.getByLabelText(r.terms))
+    await user.click(screen.getByRole('button', { name: r.submit }))
+
+    expect(await screen.findByText(strings.forms.check(1))).toBeInTheDocument()
+    await waitFor(() => expect(password).toHaveFocus())
+  })
+
+  it('takes the focus to the terms when only they are not accepted', async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await fillIn(user)
+    await user.click(screen.getByRole('button', { name: r.submit }))
+
+    expect(await screen.findByText(strings.forms.check(1))).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText(r.terms)).toHaveFocus())
+  })
+
+  it('takes the focus to the pin when only the pin is missing', async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByLabelText(r.email), 'owner@hamra.example.com')
+    await user.type(screen.getByLabelText(r.password), 'A long enough passphrase, 1')
+    await user.type(screen.getByLabelText(d.name), 'Hamra Pharmacy')
+    await user.type(screen.getByLabelText(d.license), 'PH 1234')
+    await user.type(screen.getByLabelText(d.phone), '01 234 567')
+    await user.type(screen.getByLabelText(d.address), '12 Hamra Street')
+    await user.selectOptions(await screen.findByRole('combobox', { name: d.district }), '1')
+    await user.click(screen.getByLabelText(r.terms))
+    await user.click(screen.getByRole('button', { name: r.submit }))
+
+    expect(await screen.findByText(strings.forms.check(1))).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(d.problems.location)).toHaveFocus())
+  })
+
+  it('says that our team approves the pharmacy before it lists anything', async () => {
+    visitorApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+
+    expect(await screen.findByText(r.approvalNote)).toBeInTheDocument()
+  })
+
   it('sends the details, the pin and the hours, then says "check your email"', async () => {
     const api = visitorApi({
       'POST /api/v1/auth/register/pharmacy': answer(202, { message: 'Check your email' }),
@@ -83,7 +167,8 @@ describe('A pharmacy registers (PS-1)', () => {
     await fillIn(user)
     expect(await screen.findByText(d.pinSet)).toBeInTheDocument()
     // Saturday closes at midday and reopens; Sunday stays closed.
-    await user.click(screen.getByRole('button', { name: h.addRange('Saturday') }))
+    // The button's spoken name starts with its visible words (WCAG 2.5.3).
+    await user.click(screen.getByRole('button', { name: h.addNamed('Saturday') }))
     await user.click(screen.getByRole('button', { name: d.days(2) }))
     await user.click(screen.getByLabelText(r.terms))
     await user.click(screen.getByRole('button', { name: r.submit }))
@@ -122,6 +207,47 @@ describe('A pharmacy registers (PS-1)', () => {
     await user.click(screen.getByRole('button', { name: r.submit }))
 
     expect(await screen.findByText(d.problems.phone)).toBeInTheDocument()
+    // The field the API refused gets the focus, as the form's own mistakes do.
+    expect(screen.getByText(strings.forms.check(1))).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText(d.phone)).toHaveFocus())
+  })
+
+  it('says a refusal of a field it does not mark above the button, never nothing (A#35)', async () => {
+    visitorApi({
+      // The pickup days are chips: no field of the form shows a problem for them.
+      'POST /api/v1/auth/register/pharmacy': refusal(422, 'VALIDATION_ERROR', {
+        fields: [{ field: 'pharmacy.pickup_days', problem: 'too big' }],
+      }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await fillIn(user)
+    await user.click(screen.getByLabelText(r.terms))
+    await user.click(screen.getByRole('button', { name: r.submit }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.errors.VALIDATION_ERROR)
+  })
+
+  it('says DawaLink is busy for a moment, and keeps everything typed', async () => {
+    const api = visitorApi({
+      'POST /api/v1/auth/register/pharmacy': refusal(503, 'SERVICE_UNAVAILABLE', { retry_after_s: 1 }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/signup' })
+    const user = userEvent.setup()
+
+    await fillIn(user)
+    await user.click(screen.getByLabelText(r.terms))
+    await user.click(screen.getByRole('button', { name: r.submit }))
+
+    expect(await screen.findByText(strings.limits.busy)).toBeInTheDocument()
+    expect(screen.getByLabelText(r.email)).toHaveValue('owner@hamra.example.com')
+    expect(screen.getByLabelText(r.password)).toHaveValue('A long enough passphrase, 1')
+    expect(screen.getByLabelText(d.name)).toHaveValue('Hamra Pharmacy')
+    expect(screen.getByLabelText(r.terms)).toBeChecked()
+    // Pressed again, it sends again.
+    await user.click(screen.getByRole('button', { name: r.submit }))
+    await waitFor(() => expect(api.sent('POST', '/api/v1/auth/register/pharmacy')).toHaveLength(2))
   })
 
   it('says that the licence is already registered', async () => {
@@ -194,6 +320,37 @@ describe('A pharmacy that waits (PS-2)', () => {
     })
     // No stock before approval (P-D2).
     expect(screen.queryByRole('link', { name: s.inventory })).not.toBeInTheDocument()
+  })
+
+  it('takes the focus to the first mistake of its registration', async () => {
+    const api = portalApi({ status: 'PENDING' })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const address = await screen.findByLabelText(d.address)
+    await user.clear(address)
+    await user.click(screen.getByRole('button', { name: d.save }))
+
+    expect(await screen.findByText(strings.forms.check(1))).toBeInTheDocument()
+    await waitFor(() => expect(address).toHaveFocus())
+    expect(api.sent('PATCH', '/api/v1/pharmacy/me/registration')).toEqual([])
+  })
+
+  it('says a refusal of a field it does not mark above the button (A#35)', async () => {
+    portalApi(
+      { status: 'PENDING' },
+      {
+        'PATCH /api/v1/pharmacy/me/registration': refusal(422, 'VALIDATION_ERROR', {
+          fields: [{ field: 'pickup_days', problem: 'too big' }],
+        }),
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: d.save }))
+
+    expect(await screen.findByText(strings.errors.VALIDATION_ERROR)).toBeInTheDocument()
   })
 
   it('after a rejection sees why, and saving sends the registration again', async () => {
@@ -362,6 +519,47 @@ describe("The pharmacy's settings (PS-10)", () => {
     await user.click(screen.getByRole('button', { name: d.save }))
 
     expect(await screen.findByText(strings.errors.PHONE_TAKEN)).toBeInTheDocument()
+  })
+
+  it('says a refusal of a field it does not mark, above the button (A#35)', async () => {
+    portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': refusal(422, 'VALIDATION_ERROR', {
+          fields: [{ field: 'pickup_days', problem: 'too big' }],
+        }),
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: d.days(3) }))
+    await user.click(screen.getByRole('button', { name: d.save }))
+
+    expect(await screen.findByText(strings.errors.VALIDATION_ERROR)).toBeInTheDocument()
+  })
+
+  it('says a refusal of a field the place form does not mark, in its own panel (A#35)', async () => {
+    portalApi(
+      {},
+      {
+        'GET /api/v1/pharmacy/dashboard': answer(404),
+        'PATCH /api/v1/pharmacy/me': refusal(422, 'VALIDATION_ERROR', {
+          fields: [{ field: 'pickup_days', problem: 'too big' }],
+        }),
+      },
+    )
+    renderApp(<AppRoutes />, { path: '/pharmacy/settings' })
+    const user = userEvent.setup()
+
+    const place = await screen.findByRole('region', { name: s.settingsPage.placeTitle })
+    const address = within(place).getByLabelText(d.address)
+    await user.clear(address)
+    await user.type(address, '9 New Street')
+    await user.click(within(place).getByRole('button', { name: s.settingsPage.placeSave }))
+
+    expect(await within(place).findByText(strings.errors.VALIDATION_ERROR)).toBeInTheDocument()
   })
 
   it('refuses hours that overlap before sending them', async () => {

@@ -65,10 +65,13 @@ class TestRegistering:
 
         confirmed = http.post("/api/v1/auth/verify-email", json={"token": link_token(body)})
 
-        me = confirmed.json()["me"]
+        # The link logs nobody in: the pharmacist logs in with the password.
+        assert confirmed.status_code == 204
+        login = http.post("/api/v1/auth/login", json={"email": NEW["email"], "password": PASSWORD})
+        me = login.json()["me"]
         assert (me["role"], me["email_verified"]) == ("pharmacist", True)
         assert me["pharmacy"]["status"] == "PENDING"
-        headers = {"Authorization": f"Bearer {confirmed.json()['token']}"}
+        headers = {"Authorization": f"Bearer {login.json()['token']}"}
         profile = http.get("/api/v1/pharmacy/me", headers=headers).json()
         assert (profile["name"], profile["email_verified"]) == ("Hamra Pharmacy", True)
         assert profile["location"] == {"lat": 33.8959, "lon": 35.4828}

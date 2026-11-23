@@ -111,7 +111,8 @@ class TestARequestsPage:
         )
 
         # Not a stream: the worker runs the turn, and the page sees the reply by polling.
-        assert (answer.status_code, set(answer.json())) == (202, {"message_seq"})
+        assert (answer.status_code, set(answer.json())) == (202, {"message_seq", "with_team"})
+        assert answer.json()["with_team"] is False  # nobody of the team has this thread
 
     def test_the_client_stops_the_search_once(self, sourcing: Sourcing) -> None:
         stopped = sourcing.post(f"/requests/{sourcing.request}/cancel")
@@ -154,16 +155,77 @@ class TestAnOffer:
         assert [held["ref"] for held in item["reservations"]] == [accepted.json()["ref"]]
         assert sourcing.get("/offers").json()["items"] == []
 
+    def test_the_request_says_an_offer_is_waiting_not_still_looking(
+        self, sourcing: Sourcing
+    ) -> None:
+        """B#17: while a box is held for the client, the medicine's words say so."""
+        sourcing.offer_arrives()
+
+        item = sourcing.get(f"/requests/{sourcing.request}").json()["items"][1]
+
+        assert (item["state"], item["status_text"]) == (
+            "WAITING",
+            "An offer is waiting for you: see it below",
+        )
+
+    def test_an_offer_says_the_hours_of_each_day_it_can_be_picked_up(
+        self, sourcing: Sourcing
+    ) -> None:
+        """B#5: as search shows a box, the pharmacy's hours on the day the client picks."""
+        sourcing.offer_arrives()
+
+        (shown,) = sourcing.get("/offers").json()["items"]
+
+        hours = shown["pickup_day_hours"]
+        assert [day["day"] for day in hours] == shown["pickup_days_allowed"]
+        assert all(day["hours"] and day["hours"] != "closed" for day in hours)
+
     def test_an_offer_is_accepted_once_and_needs_its_key(self, sourcing: Sourcing) -> None:
+        """A#28: a tap sent again after its answer was lost gets the reservation it made,
+        never a refusal and never a second one."""
         offer = sourcing.offer_arrives()
         body = {"pickup_day": str(TODAY)}
 
         no_key = sourcing.post(f"/offers/{offer}/accept", body)
-        sourcing.post(f"/offers/{offer}/accept", body, **KEY)
+        first = sourcing.post(f"/offers/{offer}/accept", body, **KEY)
         twice = sourcing.post(f"/offers/{offer}/accept", body, **KEY)
 
         assert code_of(no_key) == "IDEMPOTENCY_KEY_REQUIRED"
-        assert (twice.status_code, code_of(twice)) == (409, "OFFER_NOT_OPEN")
+        assert (twice.status_code, twice.json()) == (201, first.json())
+        held = sourcing.api.world.all(
+            "SELECT state FROM orders WHERE id = :o OR claim_id = "
+            "(SELECT claim_id FROM orders WHERE id = :o)",
+            o=offer,
+        )
+        assert [row.state for row in held] == ["RESERVED"]
+
+    def test_an_offer_given_back_is_not_accepted_again(self, sourcing: Sourcing) -> None:
+        """Only the reservation an accept made is answered again: a cancelled one is not
+        brought back."""
+        offer = sourcing.offer_arrives()
+        body = {"pickup_day": str(TODAY)}
+        sourcing.post(f"/offers/{offer}/accept", body, **KEY)
+        sourcing.post(f"/reservations/{offer}/cancel", {})
+
+        again = sourcing.post(f"/offers/{offer}/accept", body, **KEY)
+
+        assert (again.status_code, code_of(again)) == (409, "OFFER_NOT_OPEN")
+
+    def test_an_accepted_offer_is_never_answered_to_another_client(
+        self, sourcing: Sourcing
+    ) -> None:
+        offer = sourcing.offer_arrives()
+        body = {"pickup_day": str(TODAY)}
+        sourcing.post(f"/offers/{offer}/accept", body, **KEY)
+        stranger = sourcing.api.token(sourcing.api.client())
+
+        taken = sourcing.http.post(
+            f"/api/v1/offers/{offer}/accept",
+            json=body,
+            headers=stranger | {"Idempotency-Key": "stranger-tap"},
+        )
+
+        assert (taken.status_code, code_of(taken)) == (404, "NOT_FOUND")
 
     def test_no_thanks_gives_the_box_back(self, sourcing: Sourcing) -> None:
         offer = sourcing.offer_arrives()

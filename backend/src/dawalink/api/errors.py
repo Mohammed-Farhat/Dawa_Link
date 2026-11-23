@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import DataError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -236,6 +236,29 @@ async def _on_database_error(request: Request, error: Exception) -> JSONResponse
     return error_response(ErrorCode.SERVICE_UNAVAILABLE, request_id_of(request))
 
 
+# PostgreSQL's code for "numeric value out of range": a number no column can hold.
+NUMERIC_VALUE_OUT_OF_RANGE = "22003"
+
+
+async def _on_number_out_of_range(request: Request, error: Exception) -> JSONResponse:
+    """A safety net: a number too large for its column that got past every bound (every
+    number the API takes has one, and a stock file checks its own). It is the sender's
+    mistake, not ours. Logged by its kind only: the database's message may repeat values.
+
+    Any other bad value is a mistake of ours, and stays the standard 500 with its trace.
+    """
+    assert isinstance(error, DataError)
+    if getattr(error.orig, "sqlstate", None) != NUMERIC_VALUE_OUT_OF_RANGE:
+        raise error
+    log.error(
+        "database_number_out_of_range",
+        request_id=request_id_of(request),
+        path=request.url.path,
+        error=type(error).__name__,
+    )
+    return error_response(ErrorCode.VALIDATION_ERROR, request_id_of(request))
+
+
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ApiError, _on_api_error)
     app.add_exception_handler(ServiceError, _on_service_error)
@@ -244,3 +267,4 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(OperationalError, _on_database_error)
     # No free connection within the wait (FX-12): the same answer, "try again".
     app.add_exception_handler(PoolTimeout, _on_database_error)
+    app.add_exception_handler(DataError, _on_number_out_of_range)

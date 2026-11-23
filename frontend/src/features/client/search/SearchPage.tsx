@@ -1,15 +1,17 @@
 import { NativeSelect } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../../api/client'
 import { BackIcon, ChatIcon, HistoryIcon, PinIcon, PrescriptionIcon } from '../../../components/icons'
 import { Banner, Screen } from '../../../components/layout'
 import { useWide } from '../../../components/wide'
-import { calendarDate } from '../../../format'
+import { Placeholder } from '../../../components/Placeholder'
+import { calendarDate, langOf } from '../../../format'
 import { errorMessage, strings } from '../../../strings/en'
+import { failureMessage } from '../../../strings/failure'
 import { LocationSheet } from '../assistant/LocationSheet'
 import { placeBody, useSearchChoices } from './choices'
 import { NotifyMe } from './NotifyMe'
@@ -18,6 +20,8 @@ import { openWords, travelWords } from './words'
 
 const s = strings.search
 const PAGE = 20
+/** A letter of the Arabic script. */
+const ARABIC_LETTER = /[؀-ۿ]/
 
 type Listing = Schemas['Listing']
 type Where = Schemas['LocationSummary']
@@ -75,6 +79,9 @@ export function SearchPage() {
   }
   const [typed] = useDebouncedValue(text.trim(), 250)
   const looking = typed.length >= 1 && !productId
+  // What a screen reader is told when the results change: one short line, never every
+  // row (A#13). The results themselves are not a live region.
+  const [summary, setSummary] = useState('')
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -86,6 +93,11 @@ export function SearchPage() {
     // "back" of its own. One medicine's page, opened from somewhere else, goes back to
     // the search.
     <Screen>
+      {/* The page's title for a screen reader; a medicine's page has its own (A#39). */}
+      {!productId && <h1 className="sr-only">{strings.nav.search}</h1>}
+      <p className="sr-only" role="status">
+        {looking || productId ? summary : ''}
+      </p>
       <form className="search-form" role="search" onSubmit={submit}>
         {productId && typed.length === 0 && (
           <Link to="/search" className="round-button" aria-label={strings.common.back}>
@@ -99,6 +111,10 @@ export function SearchPage() {
           id="medicine-name"
           className="chat__input"
           type="search"
+          // A name typed in Arabic is written right to left (UI-D7).
+          dir="auto"
+          // And read with an Arabic voice when it is in Arabic letters (B#10).
+          lang={langOf(text)}
           autoComplete="off"
           // The page is for typing a name: the box is ready when it opens.
           autoFocus={!productId}
@@ -118,6 +134,7 @@ export function SearchPage() {
       {looking && (
         <ByName
           typed={typed}
+          announce={setSummary}
           onRetype={setText}
           onOpen={() => history.keep(typed)}
           onChoose={(id) => {
@@ -131,14 +148,14 @@ export function SearchPage() {
           {typed.length >= 1 && (
             <button
               type="button"
-              className="text-button"
+              className="text-button wrap-anywhere"
               style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}
               onClick={() => setParams({}, { replace: true })}
             >
               ← {s.backToResults(typed)}
             </button>
           )}
-          <OneMedicine key={productId} productId={productId} />
+          <OneMedicine key={productId} productId={productId} announce={setSummary} />
         </>
       )}
     </Screen>
@@ -176,7 +193,7 @@ function LastSearches({
               <span className="soft" style={{ display: 'flex' }}>
                 <HistoryIcon small />
               </span>
-              <span className="chat-list__title" dir="auto">
+              <span className="chat-list__title" dir="auto" lang={langOf(name)}>
                 {name}
               </span>
             </button>
@@ -208,6 +225,17 @@ function useChoiceBody() {
   }
 }
 
+/**
+ * What a refused search says. The search carries the client's place, and a place is
+ * limited per hour (N-47): its wait is said in minutes, never as "until tomorrow"
+ * (B#37). A medicine nobody may see is a page that isn't there.
+ */
+function searchFailure(error: unknown): string {
+  if (!(error instanceof ApiFailure)) return errorMessage('INTERNAL_ERROR')
+  if (error.code === 'PRODUCT_NOT_ALLOWED') return errorMessage('NOT_FOUND')
+  return failureMessage({ code: error.code, details: error.details }, { hourly: true })
+}
+
 function placeWords(location: Where): string {
   if (location.source === 'shared') return strings.chat.location.yours
   if (location.source === 'place') return strings.chat.location.savedPlace
@@ -218,11 +246,14 @@ function placeWords(location: Where): string {
 /** Every medicine in stock that a typed name stands for, with its best boxes. */
 function ByName({
   typed,
+  announce,
   onRetype,
   onOpen,
   onChoose,
 }: {
   typed: string
+  /** Gives the page the one line a screen reader hears for these results. */
+  announce: (summary: string) => void
   onRetype: (name: string) => void
   /** A box was opened: the name is worth keeping in the last searches. */
   onOpen: () => void
@@ -238,16 +269,23 @@ function ByName({
     placeholderData: (before) => before,
     retry: false,
   })
+  // Said once the answer is for this name: the results kept on screen while the next
+  // name is asked are not announced under it.
+  const fresh = result.data && !result.isPlaceholderData ? result.data : null
+  useEffect(() => {
+    if (!fresh) return
+    const count = fresh.groups.filter((group) => group.items.length > 0).length
+    announce(fresh.closest && count > 0 ? s.summaryClosest(count, typed) : s.summary(count, typed))
+  }, [fresh, typed, announce])
 
   if (result.isError) {
-    const code = result.error instanceof ApiFailure ? result.error.code : 'INTERNAL_ERROR'
     return (
       <Banner tone="red" alert>
-        {errorMessage(code)}
+        {searchFailure(result.error)}
       </Banner>
     )
   }
-  if (!result.data) return <p className="soft">{strings.common.loading}</p>
+  if (!result.data) return <Placeholder height={84} />
 
   const found = result.data
   const ask = () => navigate('/assistant', { state: { draft: s.askDraft(typed) } })
@@ -267,14 +305,16 @@ function ByName({
   return (
     <div className={wide ? 'cols cols--side' : 'cols'}>
       <Filters location={found.location} />
-      <div className="stack" role="status" aria-live="polite">
+      <div className="stack">
         {found.closest && found.groups.length > 0 && <Banner tone="amber">{s.closest(typed)}</Banner>}
         {suggestions}
         {found.groups.length === 0 && (
           <div className="empty">
             <span style={{ fontWeight: 600 }}>{s.nothingInStock(typed)}</span>
             <span className="soft" style={{ fontSize: 15 }}>
-              {s.askToFindHint}
+              {/* Names are matched in English letters: "بنادول" finds nothing (B#6). The
+                  assistant reads Arabic, so it is the way on. */}
+              {ARABIC_LETTER.test(typed) ? s.arabicLetters : s.askToFindHint}
             </span>
             <button type="button" className="pill-button" style={{ alignSelf: 'flex-start' }} onClick={ask}>
               <ChatIcon small />
@@ -418,6 +458,7 @@ function Filters({ location, children }: { location: Where; children?: ReactNode
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44 }}>
             <input
               type="checkbox"
+              className="native-check"
               checked={choices.openNow}
               onChange={(event) => choices.set({ openNow: event.currentTarget.checked })}
             />
@@ -447,9 +488,9 @@ function Filters({ location, children }: { location: Where; children?: ReactNode
 }
 
 /** One medicine and every pharmacy that has it. */
-function OneMedicine({ productId }: { productId: string }) {
+function OneMedicine({ productId, announce }: { productId: string; announce: (summary: string) => void }) {
   const navigate = useNavigate()
-  const { body, key } = useChoiceBody()
+  const { body, key, choices } = useChoiceBody()
   const wide = useWide()
   const [limit, setLimit] = useState(PAGE)
   const result = useQuery({
@@ -459,19 +500,28 @@ function OneMedicine({ productId }: { productId: string }) {
     placeholderData: (before) => before,
     retry: false,
   })
+  const fresh = result.data && !result.isPlaceholderData ? result.data : null
+  useEffect(() => {
+    if (fresh) announce(s.summaryOne(fresh.items.length > 0 ? fresh.total_found : 0, fresh.product.name))
+  }, [fresh, announce])
 
   if (result.isError) {
-    const code = result.error instanceof ApiFailure ? result.error.code : 'INTERNAL_ERROR'
     return (
-      <Banner tone="red" alert>
-        {code === 'PRODUCT_NOT_ALLOWED' ? errorMessage('NOT_FOUND') : errorMessage(code)}
-      </Banner>
+      <>
+        <h1 className="sr-only">{strings.nav.search}</h1>
+        <Banner tone="red" alert>
+          {searchFailure(result.error)}
+        </Banner>
+      </>
     )
   }
-  if (!result.data) return <p className="soft">{strings.common.loading}</p>
+  if (!result.data) return <Placeholder height={84} />
 
   const { product, items, location } = result.data
   const askToFind = () => navigate('/assistant', { state: { draft: s.askDraft(product.name) } })
+  // The client's own filters hid every box: that is not "no stock" (B#7). Nothing to
+  // watch for or to ask the assistant about: the boxes are there.
+  const filtered = choices.maxPriceLbp !== null || choices.openNow
 
   return (
     <div className={wide ? 'cols cols--side' : 'cols'}>
@@ -492,7 +542,7 @@ function OneMedicine({ productId }: { productId: string }) {
         </div>
       </Filters>
 
-      <div className="stack" role="status" aria-live="polite" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 12 }}>
         {items.length > 0 && (
           <span className="soft" style={{ fontSize: 15 }}>
             {s.found(result.data.total_found)}
@@ -503,7 +553,20 @@ function OneMedicine({ productId }: { productId: string }) {
           <ListingRow key={listing.id} listing={listing} />
         ))}
 
-        {items.length === 0 && (
+        {items.length === 0 && filtered && (
+          <div className="empty">
+            <span style={{ fontWeight: 600 }}>{s.noneForChoices}</span>
+            <button
+              type="button"
+              className="pill-button pill-button--grey"
+              style={{ alignSelf: 'flex-start' }}
+              onClick={() => choices.set({ maxPriceLbp: null, openNow: false })}
+            >
+              {s.clearFilters}
+            </button>
+          </div>
+        )}
+        {items.length === 0 && !filtered && (
           <div className="empty">
             <span style={{ fontWeight: 600 }}>{s.empty(product.name)}</span>
             <span className="soft" style={{ fontSize: 15 }}>
@@ -513,7 +576,7 @@ function OneMedicine({ productId }: { productId: string }) {
               <ChatIcon small />
               {s.askToFind}
             </button>
-            <NotifyMe productId={productId} />
+            <NotifyMe productId={productId} now={result.data.server_now} />
           </div>
         )}
         {result.data.next_cursor !== null && limit < 50 && (

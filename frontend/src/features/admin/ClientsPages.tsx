@@ -1,13 +1,32 @@
 import { TextInput } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { api, type Schemas, unwrap } from '../../api/client'
+import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { Banner } from '../../components/layout'
+import { Pager } from '../../components/Pager'
+import { reservationTone } from '../../components/reservationTone'
+import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
 import { errorMessage, strings } from '../../strings/en'
-import { type ClientsHaving, type ClientStatus, codeOf, useAdminClient, useAdminClients, when } from './data'
+import {
+  type ClientsHaving,
+  type ClientStatus,
+  loadProblem,
+  type Note,
+  oneOf,
+  refusal,
+  TYPED_MAX,
+  useAdminClient,
+  useAdminClients,
+  useBackToList,
+  useFromList,
+  when,
+} from './data'
+import { ListFailed } from './ListFailed'
 import { ReasonedButton } from './ReasonedButton'
+import { Said } from './said'
 
 const s = strings.admin
 const c = s.clients
@@ -18,24 +37,20 @@ type Detail = Schemas['AdminClient']
 type Reservation = Schemas['ClientReservation']
 type Request = Schemas['ClientRequest']
 type Flag = Schemas['AbuseFlagRow']
-type Note = { tone: 'green' | 'red' | 'amber'; text: string }
+/** The panels of a client's page whose buttons can be refused. */
+type Place = 'flags' | 'contests' | 'actions' | 'contact'
 
-const STATUSES: (ClientStatus | null)[] = [null, 'ACTIVE', 'PAUSED', 'SUSPENDED']
+const LIST = '/admin/clients'
+
+const STATUSES: (ClientStatus | null)[] = [null, 'ACTIVE', 'PAUSED', 'SUSPENDED', 'DELETED']
 const HAVING: (ClientsHaving | null)[] = [null, 'reservation', 'picked_up', 'request', 'look']
 const TONE: Record<ClientStatus, string> = {
   UNVERIFIED: 'grey',
   ACTIVE: 'green',
   PAUSED: 'amber',
   SUSPENDED: 'red',
-}
-const ORDER_TONE: Record<Reservation['state'], string> = {
-  OFFERED: 'blue',
-  RESERVED: 'blue',
-  PICKED_UP: 'green',
-  NOT_AVAILABLE: 'grey',
-  EXPIRED_NO_SHOW: 'amber',
-  CANCELLED_BY_CLIENT: 'grey',
-  CANCELLED_BY_SYSTEM: 'grey',
+  // The client deleted their account (R-AU10): their ID and past reservations only.
+  DELETED: 'grey',
 }
 
 /** What an admin knows of a client without opening their contact details: a status
@@ -64,59 +79,90 @@ function Pill({ row }: { row: Row }) {
 /** AS-5: clients as statuses and counts. A complaint quotes an order or request number:
  * that number finds its client. */
 export function ClientsPage() {
-  const [status, setStatus] = useState<ClientStatus | null>(null)
-  const [having, setHaving] = useState<ClientsHaving | null>(null)
-  const [ref, setRef] = useState('')
-  const found = useAdminClients(status, having, ref.trim())
+  // The choices, the typed number and the page are in the address (`usePage`): "Back to
+  // the list" finds the same page.
+  const paging = usePage()
+  const { params: choices, choose } = paging
+  const status = oneOf(choices.get('status'), STATUSES)
+  const having = oneOf(choices.get('show'), HAVING)
+  // The box keeps its own text, so typing never waits for the address to change.
+  // Never longer than the API takes, an old address included: it would fail on every visit.
+  const [ref, setRef] = useState((choices.get('ref') ?? '').slice(0, TYPED_MAX.ref))
+  const found = useAdminClients(status, having, ref.trim(), paging.offset)
+  const from = useFromList()
+  // The box is what the list shows. If the address lost its text (a tab of the bar was
+  // pressed on this page), it is written back, so that Back finds the same list.
+  useEffect(() => {
+    if ((choices.get('ref') ?? '') !== ref) choose('ref', ref)
+  }, [choices, choose, ref])
   return (
     <main className="portal__main">
       <div>
         <h1 className="page-title">{c.title}</h1>
         <span className="soft">{c.intro}</span>
       </div>
-      <div className="tabs" role="tablist" aria-label={c.title}>
-        {STATUSES.map((choice) => (
-          <button
-            key={choice ?? 'all'}
-            type="button"
-            role="tab"
-            aria-selected={status === choice}
-            className="tabs__tab"
-            onClick={() => setStatus(choice)}
-          >
-            {choice ? c.statuses[choice] : c.all}
-          </button>
-        ))}
+      {/* Two rows of choices that look alike: each says what it chooses. */}
+      <div className="admin-filter">
+        <span id="clients-account" className="admin-filter__label">
+          {c.account}
+        </span>
+        <div className="tabs tabs--wrap" role="tablist" aria-labelledby="clients-account">
+          {STATUSES.map((choice) => (
+            <button
+              key={choice ?? 'all'}
+              type="button"
+              role="tab"
+              aria-selected={status === choice}
+              className="tabs__tab"
+              onClick={() => choose('status', choice)}
+            >
+              {choice ? c.statuses[choice] : c.all}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="tabs" role="radiogroup" aria-label={c.show}>
-        {HAVING.map((choice) => (
-          <button
-            key={choice ?? 'all'}
-            type="button"
-            role="radio"
-            aria-checked={having === choice}
-            className="tabs__tab"
-            onClick={() => setHaving(choice)}
-          >
-            {c.having[choice ?? 'all']}
-          </button>
-        ))}
+      <div className="admin-filter">
+        <span id="clients-show" className="admin-filter__label">
+          {c.show}
+        </span>
+        <div className="tabs tabs--wrap" role="radiogroup" aria-labelledby="clients-show">
+          {HAVING.map((choice) => (
+            <button
+              key={choice ?? 'all'}
+              type="button"
+              role="radio"
+              aria-checked={having === choice}
+              className="tabs__tab"
+              onClick={() => choose('show', choice)}
+            >
+              {c.having[choice ?? 'all']}
+            </button>
+          ))}
+        </div>
       </div>
       <TextInput
         label={c.ref}
         description={c.refHint}
         size="md"
         autoComplete="off"
+        maxLength={TYPED_MAX.ref}
         value={ref}
-        onChange={(event) => setRef(event.currentTarget.value)}
+        onChange={(event) => {
+          setRef(event.currentTarget.value)
+          choose('ref', event.currentTarget.value)
+        }}
       />
+      {found.failure !== null && <ListFailed failure={found.failure} onRetry={found.retry} />}
+      {found.loading && <Placeholder />}
       {found.loaded && found.items.length === 0 && <div className="empty">{c.none}</div>}
       {found.items.map((row) => (
         <article key={row.id} className="row-card">
-          <Link to={`/admin/clients/${row.id}`} className="row-link" aria-label={c.open(row.id.slice(0, 8))}>
+          {/* Named by what it shows, the status included: "Says they picked it up" is
+              the reason to open it (WCAG 2.5.3). */}
+          <Link to={`/admin/clients/${row.id}`} state={from} className="row-link">
             <div className="row-card__top">
-              <h2 className="card__title audit-change" style={{ margin: 0 }}>
-                {c.name(row.id.slice(0, 8))}
+              <h2 className="card__title" style={{ margin: 0 }}>
+                {c.one} <span className="order-ref">{row.id.slice(0, 8)}</span>
               </h2>
               <Pill row={row} />
             </div>
@@ -124,11 +170,7 @@ export function ClientsPage() {
           </Link>
         </article>
       ))}
-      {found.hasMore && (
-        <button type="button" className="text-button" onClick={found.more}>
-          {s.more}
-        </button>
-      )}
+      <Pager paging={paging} total={found.total} settled={found.settled} />
     </main>
   )
 }
@@ -145,7 +187,7 @@ function ReservationLine({ order }: { order: Reservation }) {
     <li className="row-card" style={{ background: 'var(--page)' }}>
       <div className="row-card__top">
         <span className="order-ref">{order.ref}</span>
-        <span className={`status-pill status-pill--${cleared ? 'grey' : ORDER_TONE[order.state]}`}>
+        <span className={`status-pill status-pill--${cleared ? 'grey' : reservationTone(order.state)}`}>
           {cleared ? c.notCounted : c.orderStates[order.state]}
         </span>
       </div>
@@ -186,24 +228,47 @@ export function ClientPage() {
   const found = useAdminClient(id)
   const [contact, setContact] = useState<Schemas['ClientContact'] | null>(null)
   const [said, setSaid] = useState<Note | null>(null)
+  // The contact view answered that the account was deleted meanwhile (R-AU10).
+  const [goneMeanwhile, setGoneMeanwhile] = useState(false)
+  const back = useBackToList(LIST)
 
   if (found.isError) {
     return (
       <main className="portal__main">
-        <Banner tone="amber">{errorMessage(codeOf(found.error))}</Banner>
-        <Link to="/admin/clients" className="text-button">
+        {/* The section's name as the page's heading: the focus and the tab's title find it
+            when the page could not be read (B#19, B#34). */}
+        <h1 className="page-title">{c.title}</h1>
+        <Banner tone="red" alert>
+          {loadProblem(found.error)}
+        </Banner>
+        <Link to={back} className="text-button">
           {s.back}
         </Link>
       </main>
     )
   }
-  if (!found.data) return <p className="soft">{strings.common.loading}</p>
+  if (!found.data) {
+    return (
+      <main className="portal__main">
+        <p className="soft">{strings.common.loading}</p>
+      </main>
+    )
+  }
   const { client, reservations, requests, contested, flags } = found.data
   const path = { client_id: id }
+  // A deleted account keeps an ID and its past reservations only: nothing to contact,
+  // nothing to suspend or reinstate.
+  const deleted = client.status === 'DELETED' || goneMeanwhile
+  const canAct = !deleted && (['ACTIVE', 'PAUSED', 'SUSPENDED'] as ClientStatus[]).includes(client.status)
+  // A refusal is said in its panel while the panel is there (see `Said`).
+  const present: Place[] = ['contact']
+  if (canAct) present.push('actions')
+  if (flags.length > 0) present.push('flags')
+  if (contested.length > 0) present.push('contests')
 
   /** Runs one action. What it answers is the client's page (or, for a flag, the flag:
-   * the page is then read again). */
-  async function act(call: () => Promise<Detail | Flag>, done: string): Promise<boolean> {
+   * the page is then read again). A success is said at the top, a refusal at `at`. */
+  async function act(call: () => Promise<Detail | Flag>, done: string, at: Place): Promise<boolean> {
     setSaid(null)
     try {
       const answer = await call()
@@ -212,8 +277,7 @@ export function ClientPage() {
       setSaid({ tone: 'green', text: done })
       return true
     } catch (error) {
-      const code = codeOf(error)
-      setSaid({ tone: code === 'CHANGED_SINCE' ? 'amber' : 'red', text: code === 'CHANGED_SINCE' ? s.changed : errorMessage(code) })
+      setSaid(refusal(error, at))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
       return false
     } finally {
@@ -228,31 +292,41 @@ export function ClientPage() {
     try {
       setContact(await unwrap(api.GET('/api/v1/admin/clients/{client_id}/contact', { params: { path } })))
     } catch (error) {
-      setSaid({ tone: 'red', text: codeOf(error) === 'RATE_LIMITED' ? c.contactLimit : errorMessage(codeOf(error)) })
+      if (error instanceof ApiFailure && error.code === 'NOT_FOUND' && error.details.reason === 'ACCOUNT_DELETED') {
+        setGoneMeanwhile(true)
+        void queryClient.invalidateQueries({ queryKey: ['admin', 'client', id] })
+        return
+      }
+      setSaid(refusal(error, 'contact', (code) => (code === 'RATE_LIMITED' ? c.contactLimit : errorMessage(code))))
     }
   }
 
-  const flagAct = (flag: Flag, action: 'warn' | 'suspend') => (reason: string) =>
+  // A flag's own buttons only note what was done. Suspending is under Actions, and it
+  // closes the client's open flags itself (B#58): one button, one meaning.
+  const noteWarning = (flag: Flag) => (reason: string) =>
     act(
       () =>
         unwrap(
           api.POST('/api/v1/admin/abuse-flags/{flag_id}/act', {
             params: { path: { flag_id: flag.id } },
-            body: { action, reason },
+            body: { action: 'warn', reason },
           }),
         ),
-      action === 'suspend' ? c.suspended : f.done,
+      f.done,
+      'flags',
     )
 
   return (
     <div className="portal__columns">
       <main className="portal__main">
-        <Link to="/admin/clients" className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
+        <Link to={back} className="text-button" style={{ alignSelf: 'flex-start', paddingInlineStart: 0 }}>
           {s.back}
         </Link>
         <div>
           <div className="row-card__top">
-            <h1 className="page-title audit-change">{c.name(client.id.slice(0, 8))}</h1>
+            <h1 className="page-title">
+              {c.one} <span className="order-ref">{client.id.slice(0, 8)}</span>
+            </h1>
             <span className={`status-pill status-pill--${TONE[client.status]}`}>{c.statuses[client.status]}</span>
           </div>
           <Counts row={client} />
@@ -262,9 +336,7 @@ export function ClientPage() {
             </span>
           )}
         </div>
-        <div role="status" aria-live="polite">
-          {said && <Banner tone={said.tone}>{said.text}</Banner>}
-        </div>
+        <Said note={said} present={present} />
 
         {flags.length > 0 && (
           <section className="panel" aria-labelledby="flags">
@@ -274,6 +346,7 @@ export function ClientPage() {
               </h2>
               <span className="hint">{c.flagsHint}</span>
             </div>
+            <Said note={said} at="flags" />
             {flags.map((flag) => (
               <div key={flag.id} className="row-card" style={{ background: 'var(--page)' }}>
                 <div className="row-card__top">
@@ -303,13 +376,11 @@ export function ClientPage() {
                           }),
                         ),
                       f.done,
+                      'flags',
                     )
                   }
                 />
-                <ReasonedButton label={f.warn} tone="outline" onConfirm={flagAct(flag, 'warn')} />
-                {client.status !== 'SUSPENDED' && (
-                  <ReasonedButton label={f.suspend} tone="danger" onConfirm={flagAct(flag, 'suspend')} />
-                )}
+                <ReasonedButton label={f.warn} tone="outline" onConfirm={noteWarning(flag)} />
                 <span className="hint">{f.warnHint}</span>
               </div>
             ))}
@@ -324,6 +395,7 @@ export function ClientPage() {
               </h2>
               <span className="hint">{c.contestsHint}</span>
             </div>
+            <Said note={said} at="contests" />
             {contested.map((order) => (
               <div key={order.id} className="row-card" style={{ background: 'var(--page)' }}>
                 <div className="row-card__top">
@@ -346,6 +418,7 @@ export function ClientPage() {
                           }),
                         ),
                       c.cleared,
+                      'contests',
                     )
                   }
                 />
@@ -386,58 +459,67 @@ export function ClientPage() {
       </main>
 
       <aside className="portal__aside">
-        <section className="panel" aria-labelledby="actions">
-          <h2 id="actions" className="panel__title">
-            {c.actions}
-          </h2>
-          {client.status === 'PAUSED' && (
-            <ReasonedButton
-              label={c.liftPause}
-              onConfirm={(reason) =>
-                act(
-                  () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/lift-pause', { params: { path }, body: { reason } })),
-                  c.lifted,
-                )
-              }
-            />
-          )}
-          {(client.status === 'ACTIVE' || client.status === 'PAUSED') && (
-            <>
+        {canAct && (
+          <section className="panel" aria-labelledby="actions">
+            <h2 id="actions" className="panel__title">
+              {c.actions}
+            </h2>
+            <Said note={said} at="actions" />
+            {client.status === 'PAUSED' && (
               <ReasonedButton
-                label={c.suspend}
-                tone="danger"
+                label={c.liftPause}
                 onConfirm={(reason) =>
                   act(
-                    () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/suspend', { params: { path }, body: { reason } })),
-                    c.suspended,
+                    () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/lift-pause', { params: { path }, body: { reason } })),
+                    c.lifted,
+                    'actions',
                   )
                 }
               />
-              <span className="hint">{c.suspendHint}</span>
-            </>
-          )}
-          {client.status === 'SUSPENDED' && (
-            <ReasonedButton
-              label={c.reinstate}
-              tone="plain"
-              onConfirm={(reason) =>
-                act(
-                  () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/reinstate', { params: { path }, body: { reason } })),
-                  c.reinstated,
-                )
-              }
-            />
-          )}
-        </section>
+            )}
+            {(client.status === 'ACTIVE' || client.status === 'PAUSED') && (
+              <>
+                <ReasonedButton
+                  label={c.suspend}
+                  tone="danger"
+                  onConfirm={(reason) =>
+                    act(
+                      () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/suspend', { params: { path }, body: { reason } })),
+                      c.suspended,
+                      'actions',
+                    )
+                  }
+                />
+                <span className="hint">{c.suspendHint}</span>
+              </>
+            )}
+            {client.status === 'SUSPENDED' && (
+              <ReasonedButton
+                label={c.reinstate}
+                tone="plain"
+                onConfirm={(reason) =>
+                  act(
+                    () => unwrap(api.POST('/api/v1/admin/clients/{client_id}/reinstate', { params: { path }, body: { reason } })),
+                    c.reinstated,
+                    'actions',
+                  )
+                }
+              />
+            )}
+          </section>
+        )}
 
         <section className="panel" aria-labelledby="contact">
           <div>
             <h2 id="contact" className="panel__title">
               {c.contact}
             </h2>
-            <span className="hint">{c.contactHint}</span>
+            {!deleted && <span className="hint">{c.contactHint}</span>}
           </div>
-          {contact ? (
+          <Said note={said} at="contact" />
+          {deleted ? (
+            <span className="soft">{c.deletedContact}</span>
+          ) : contact ? (
             <dl className="card__lines">
               <div className="card__line">
                 <dt>{c.fullName}</dt>

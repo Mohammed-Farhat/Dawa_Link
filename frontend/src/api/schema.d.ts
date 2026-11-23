@@ -49,7 +49,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Answer Reports */
+        /**
+         * List Answer Reports
+         * @description The newest first. `total`: the reports the choice matches.
+         */
         get: operations["list_answer_reports"];
         put?: never;
         post?: never;
@@ -148,7 +151,10 @@ export interface paths {
         /**
          * Read Audit Log
          * @description Who changed what, newest first. Read-only: nothing can change or delete an event.
-         *     `action=pharmacy.` gives every action of that kind; `cursor` is the last ID seen.
+         *     `action=pharmacy.` gives every action of that kind, `kind` one family of the "Kind"
+         *     filter. `cursor` is the last ID seen; `offset` skips that many events of what is left
+         *     (numbered pages send only `offset`). `total`: the events the choices match, wherever
+         *     the page is. **A changed field is named, never its value.**
          */
         get: operations["read_audit_log"];
         put?: never;
@@ -187,6 +193,7 @@ export interface paths {
          * Read Catalog
          * @description Every product of the Ministry's list as imported, the controlled ones included.
          *     Nothing here changes the catalog: the import script and the team's files do.
+         *     `total`: the products the text matches.
          */
         get: operations["read_catalog"];
         put?: never;
@@ -209,7 +216,7 @@ export interface paths {
          * @description Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the
          *     client of an order number or a request number. `having` keeps the clients with a
          *     reservation going, who picked an order up, with an open request, or who need a look
-         *     (a contested no-show or an open flag).
+         *     (a contested no-show or an open flag). `total`: the clients the choices match.
          */
         get: operations["list_clients"];
         put?: never;
@@ -366,8 +373,11 @@ export interface paths {
         };
         /**
          * List Escalations
-         * @description Emergency claims first, then the one that waits longest. Without `state`: every
-         *     escalation that is not resolved.
+         * @description Without `state`: every escalation that is not resolved, emergency claims first,
+         *     then the cases that wait for the team (never answered, asked again, or the client
+         *     wrote since the team's reply), then the answered ones; inside each, the one whose
+         *     newest ask is the oldest first. `RESOLVED`: the newest closed first. `total`: the
+         *     cases the choice matches.
          */
         get: operations["list_escalations"];
         put?: never;
@@ -494,7 +504,7 @@ export interface paths {
         /**
          * List Pharmacies
          * @description Pharmacies whose email is confirmed. `status=PENDING` is the approval queue, the
-         *     one that has waited longest first.
+         *     one that has waited longest first. `total`: the pharmacies the choices match.
          */
         get: operations["list_pharmacies"];
         put?: never;
@@ -746,6 +756,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot Password
+         * @description Always the same answer, whatever the email (R-AU9, R-AU7): nobody can find out
+         *     here who uses DawaLink. A link goes only to an account that could log in today.
+         */
+        post: operations["forgot_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register/client": {
         parameters: {
             query?: never;
@@ -801,7 +849,9 @@ export interface paths {
         put?: never;
         /**
          * Verify Email
-         * @description The link of the confirmation email. It also logs the user in (R-AU4).
+         * @description The link of the confirmation email. It confirms the address and logs nobody in
+         *     (R-AU4): every earlier session of the account has ended, and the person logs in with
+         *     their password.
          */
         post: operations["verify_email"];
         delete?: never;
@@ -987,6 +1037,12 @@ export interface paths {
          *       `text/event-stream`): progress lines, then the complete, checked reply.
          *     - **In a request's thread** the answer is `202`: the worker runs the agent's turn,
          *       and the page sees the reply by polling.
+         *     - **In a conversation DawaLink's team has** (it replied to the client's case and has
+         *       not closed it, `with_team`): the message is kept for the team and the answer is
+         *       `202` with `with_team: true`, at once. No agent turn runs and none is coming; the
+         *       checks that only matter for the model (the assistant's availability, the day's
+         *       token budget, a turn already running) don't refuse it. The limits on messages, a
+         *       suspended account and an earlier chat are checked as always.
          */
         post: operations["send_message"];
         delete?: never;
@@ -1127,6 +1183,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/delete-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete Account */
+        post: operations["delete_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/home-place": {
         parameters: {
             query?: never;
@@ -1214,7 +1287,9 @@ export interface paths {
         };
         /**
          * List Notifications
-         * @description The caller's own notifications, the newest first. `cursor` is the last ID seen.
+         * @description The caller's own notifications, the newest first. `cursor` is the last ID seen;
+         *     `offset` skips that many of what is left (the website's numbered pages send only
+         *     `offset`). `total` counts all of the caller's notifications, wherever the page is.
          */
         get: operations["list_notifications"];
         put?: never;
@@ -1295,7 +1370,8 @@ export interface paths {
         /**
          * Accept Offer
          * @description The offer becomes a reservation; the need's other offers are withdrawn at once
-         *     (O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once.
+         *     (O9). An offer is accepted once: a second tap answers with the reservation the first
+         *     one made, as it is (its pickup day included), and reserves nothing more.
          */
         post: operations["accept_offer"];
         delete?: never;
@@ -1409,7 +1485,9 @@ export interface paths {
         };
         /**
          * List Stock
-         * @description The pharmacy's boxes, soonest expiry first. `zone=NEAR_EXPIRY` is its listings.
+         * @description The pharmacy's boxes, soonest expiry first; `sort=medicine` puts the boxes of one
+         *     medicine side by side (one per batch and expiry). `zone=NEAR_EXPIRY` is its
+         *     listings. `total` counts the boxes these choices keep, on every page.
          */
         get: operations["list_stock"];
         put?: never;
@@ -1657,7 +1735,7 @@ export interface paths {
          * List Pharmacy Reservations
          * @description The pharmacy's reservations. With `q`, the one with that order number, however it
          *     was typed ("r7k3q2f" finds R-7K3Q2F), whatever its state: the counter needs to see
-         *     "already picked up" too.
+         *     "already picked up" too. `total` counts the reservations of the view, on every page.
          */
         get: operations["list_pharmacy_reservations"];
         put?: never;
@@ -1826,7 +1904,7 @@ export interface paths {
         /**
          * List Reservations
          * @description `active`: what is reserved now, the soonest pickup first. `history`: the rest,
-         *     the newest first.
+         *     the newest first. `total` counts the reservations of the view, on every page.
          */
         get: operations["list_reservations"];
         put?: never;
@@ -1894,8 +1972,9 @@ export interface paths {
         /**
          * Contest No Show
          * @description [I picked it up] on an expired reservation: the pharmacy forgot to press
-         *     [Picked up] (R-N3). Once per reservation, while the no-show still counts. A person
-         *     from DawaLink looks at it: nothing changes until they do.
+         *     [Picked up] (R-N3). Once per missed trip, while it still counts: the boxes of a plan
+         *     card are contested together. A person from DawaLink looks at it: nothing changes
+         *     until they do.
          */
         post: operations["contest_no_show"];
         delete?: never;
@@ -2080,7 +2159,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED";
+            status: "UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED" | "DELETED";
         };
         /** AdminClients */
         AdminClients: {
@@ -2088,6 +2167,8 @@ export interface components {
             items: components["schemas"]["AdminClientRow"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
         /**
          * AdminHealth
@@ -2146,6 +2227,8 @@ export interface components {
             items: components["schemas"]["AdminPharmacyRow"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
         /**
          * AdminPharmacy
@@ -2330,6 +2413,8 @@ export interface components {
             items: components["schemas"]["AnswerReportRow"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
         /** Approve */
         Approve: {
@@ -2346,14 +2431,25 @@ export interface components {
              */
             state: "ACCEPTED" | "WITHDRAWN" | "DECLINED";
         };
+        /**
+         * AuditAction
+         * @enum {string}
+         */
+        AuditAction: "pharmacy.registered" | "pharmacy.in_queue" | "pharmacy.registration_edit" | "pharmacy.resubmitted" | "pharmacy.approve" | "pharmacy.reject" | "pharmacy.request_info" | "pharmacy.admin_edit" | "pharmacy.pin_checked" | "pharmacy.suspend" | "pharmacy.reinstate" | "pharmacy.phone_changed" | "pharmacy.moved" | "pharmacy.listing_rule" | "pharmacy.settings" | "inventory.add" | "inventory.edit" | "inventory.upload_apply" | "order.reserve" | "order.cancel" | "order.system_cancel" | "order.picked_up" | "order.not_available" | "order.no_show" | "order.no_show_contested" | "order.no_show_cleared" | "order.offer" | "order.accept_offer" | "order.decline_offer" | "order.offer_expired" | "order.withdraw" | "client.registered" | "client.registered_again" | "client.verified" | "client.pause" | "client.pause_lifted" | "client.pause_ended" | "client.suspend" | "client.reinstate" | "client.deleted" | "claim.create" | "claim.state" | "request.create" | "request.change_constraints" | "request.close" | "request.reopen" | "request_item.state" | "early_release.request" | "early_release.close" | "early_release_ask.state" | "escalation.open" | "escalation.append" | "escalation.reply" | "escalation.resolve" | "answer_report.new" | "answer_report.confirm" | "answer_report.dismiss" | "answer_report.export" | "abuse_flag.dismiss" | "abuse_flag.warn" | "abuse_flag.suspend" | "pii.view" | "pii.view_limit" | "login.locked" | "password.changed" | "password.reset" | "admin.created" | "clock.advance";
         /** AuditPage */
         AuditPage: {
             /** Items */
             items: components["schemas"]["AuditRow"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
-        /** AuditRow */
+        /**
+         * AuditRow
+         * @description One event of the log, as an admin reads it. **The values of the fields that
+         *     changed are never here** (only their names): they stay in the table.
+         */
         AuditRow: {
             /** Action */
             action: string;
@@ -2361,20 +2457,21 @@ export interface components {
             actor_id: string | null;
             /** Actor Type */
             actor_type: string;
-            /** After */
-            after: {
-                [key: string]: unknown;
-            } | null;
-            /** Before */
-            before: {
-                [key: string]: unknown;
-            } | null;
+            /** Changed */
+            changed: string[];
+            /** Code */
+            code: string | null;
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
             /** Entity Id */
             entity_id: string | null;
             /** Entity Type */
             entity_type: string;
             /** Id */
             id: number;
+            known_action: components["schemas"]["AuditAction"] | null;
             /**
              * Occurred At
              * Format: date-time
@@ -2382,6 +2479,42 @@ export interface components {
             occurred_at: string;
             /** Reason */
             reason: string | null;
+            /** State From */
+            state_from: string | null;
+            /** State To */
+            state_to: string | null;
+            subject: components["schemas"]["AuditSubject"] | null;
+            who: components["schemas"]["AuditWho"];
+        };
+        /**
+         * AuditSubject
+         * @description The page of the console the event is about. None when there is none: a
+         *     registration whose email was never confirmed, a row deleted since, an admin's login.
+         */
+        AuditSubject: {
+            /** Id */
+            id: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "pharmacy" | "client" | "escalation" | "reports" | "clock";
+        };
+        /**
+         * AuditWho
+         * @description Who did it. An admin by their name and a pharmacy by its approved name; **a client
+         *     by an ID only, never a name** (BLD-D45); the assistant and the system by what they are.
+         */
+        AuditWho: {
+            /** Id */
+            id: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "admin" | "pharmacy" | "client" | "agent" | "system";
+            /** Name */
+            name: string | null;
         };
         /** Body_upload_stock_file */
         Body_upload_stock_file: {
@@ -2401,6 +2534,7 @@ export interface components {
         Card: {
             /** Action Label */
             action_label: string | null;
+            box?: components["schemas"]["CardBox"] | null;
             /** Call Number */
             call_number: string | null;
             /** Card Id */
@@ -2433,6 +2567,25 @@ export interface components {
             title: string;
             /** Type */
             type: string;
+        };
+        /**
+         * CardBox
+         * @description What a reserve, plan or "another brand" card shows of its boxes, as search shows a
+         *     box (B#5). Written by code when the card was made; the model never reads it.
+         */
+        CardBox: {
+            /** Days Of Use */
+            days_of_use: number | null;
+            /**
+             * Expiry Date
+             * Format: date
+             */
+            expiry_date: string;
+            /** Hours On Pickup Day */
+            hours_on_pickup_day: string | null;
+            price: components["schemas"]["Money"];
+            saving: components["schemas"]["Money"];
+            travel: components["schemas"]["Travel"] | null;
         };
         /** CardLine */
         CardLine: {
@@ -2506,6 +2659,8 @@ export interface components {
             items: components["schemas"]["CatalogProduct"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
         /** ChangePassword */
         ChangePassword: {
@@ -2710,6 +2865,8 @@ export interface components {
              * Format: date-time
              */
             contested_at: string;
+            /** Counts As No Show */
+            counts_as_no_show: boolean;
             /** Expired At */
             expired_at: string | null;
             /**
@@ -2779,6 +2936,14 @@ export interface components {
              * @enum {string}
              */
             reason: "keeping_it" | "no_longer_in_stock" | "price" | "other";
+        };
+        /**
+         * DeleteAccount
+         * @description A client deletes their own account (R-AU10): their password, typed again.
+         */
+        DeleteAccount: {
+            /** Password */
+            password: string;
         };
         /**
          * DemoClock
@@ -2883,16 +3048,31 @@ export interface components {
              * Format: uuid
              */
             client_id: string;
+            /** Client Wrote At */
+            client_wrote_at: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Hold Ends At */
+            hold_ends_at: string | null;
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /**
+             * Last Asked At
+             * Format: date-time
+             */
+            last_asked_at: string;
+            /** Last Replied At */
+            last_replied_at: string | null;
+            /** Last Summary */
+            last_summary: string;
+            /** New Ask Since Reply */
+            new_ask_since_reply: boolean;
             /** Notes */
             notes: components["schemas"]["EscalationNote"][];
             /**
@@ -2900,6 +3080,8 @@ export interface components {
              * @enum {string}
              */
             reason: "client_asked_human" | "emergency_claim" | "cannot_resolve" | "window_ending" | "suspicious" | "complaint";
+            /** Reasons */
+            reasons: ("client_asked_human" | "emergency_claim" | "cannot_resolve" | "window_ending" | "suspicious" | "complaint")[];
             /** Request Ref */
             request_ref: string | null;
             /** Resolution Note */
@@ -2920,6 +3102,8 @@ export interface components {
             items: components["schemas"]["EscalationRow"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
         };
         /** ExecuteProposal */
         ExecuteProposal: {
@@ -2956,6 +3140,11 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /** ForgotPassword */
+        ForgotPassword: {
+            /** Email */
+            email: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3149,6 +3338,11 @@ export interface components {
         MessageAccepted: {
             /** Message Seq */
             message_seq: number;
+            /**
+             * With Team
+             * @default false
+             */
+            with_team: boolean;
         };
         /**
          * MessagesPage
@@ -3181,6 +3375,8 @@ export interface components {
              * Format: date-time
              */
             server_now: string;
+            /** With Team */
+            with_team: boolean;
         };
         /** Money */
         Money: {
@@ -3280,6 +3476,8 @@ export interface components {
             items: components["schemas"]["NotificationOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+            /** Total */
+            total: number;
             /** Unread */
             unread: number;
         };
@@ -3312,6 +3510,8 @@ export interface components {
              */
             kind: "matching" | "early_release";
             pharmacy: components["schemas"]["PharmacyCard"];
+            /** Pickup Day Hours */
+            pickup_day_hours?: components["schemas"]["DayHours"][];
             /** Pickup Days Allowed */
             pickup_days_allowed: string[];
             price_each: components["schemas"]["Money"];
@@ -3521,6 +3721,8 @@ export interface components {
              * Format: date-time
              */
             server_now: string;
+            /** Total */
+            total: number;
         };
         /** PharmacyState */
         PharmacyState: {
@@ -3936,6 +4138,8 @@ export interface components {
              * Format: date-time
              */
             server_now: string;
+            /** Total */
+            total: number;
         };
         /** Reserve */
         Reserve: {
@@ -3958,6 +4162,16 @@ export interface components {
             pickup_day: string;
             /** Qty */
             qty: number;
+        };
+        /**
+         * ResetPassword
+         * @description The form of a "set a new password" link: the link's token and the new password.
+         */
+        ResetPassword: {
+            /** New Password */
+            new_password: string;
+            /** Token */
+            token: string;
         };
         /** Resolve */
         Resolve: {
@@ -4191,6 +4405,8 @@ export interface components {
              * Format: date-time
              */
             server_now: string;
+            /** Total */
+            total: number;
         };
         /** StockItem */
         StockItem: {
@@ -4317,6 +4533,8 @@ export interface components {
             created_at: string;
             /** Seq */
             seq: number;
+            /** Starts Another Chat */
+            starts_another_chat: boolean;
             /** Text */
             text: string | null;
         };
@@ -4435,6 +4653,44 @@ export interface components {
             qty: number;
             /** Qty Missing */
             qty_missing: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ACTIVE" | "OFFER_PENDING" | "FULFILLED" | "EXPIRED" | "CANCELLED";
+        };
+        /** WatchStarted */
+        WatchStarted: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Days Of Use */
+            days_of_use: number;
+            /** District */
+            district: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            max_price: components["schemas"]["Money"] | null;
+            product: components["schemas"]["ProductSummary"];
+            /** Qty */
+            qty: number;
+            /** Qty Missing */
+            qty_missing: number;
+            /**
+             * Server Now
+             * Format: date-time
+             */
+            server_now: string;
             /**
              * State
              * @enum {string}
@@ -4720,8 +4976,10 @@ export interface operations {
                 entity_type?: string | null;
                 entity_id?: string | null;
                 action?: string | null;
+                kind?: ("pharmacies" | "stock" | "reservations" | "clients" | "requests" | "escalations" | "reports" | "flags" | "accounts" | "clock") | null;
                 actor?: components["schemas"]["Actor"] | null;
                 cursor?: number | null;
+                offset?: number;
                 limit?: number;
             };
             header?: {
@@ -4821,7 +5079,7 @@ export interface operations {
     list_clients: {
         parameters: {
             query?: {
-                status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED") | null;
+                status?: ("UNVERIFIED" | "ACTIVE" | "PAUSED" | "SUSPENDED" | "DELETED") | null;
                 having?: ("reservation" | "picked_up" | "request" | "look") | null;
                 ref?: string;
                 cursor?: number;
@@ -5791,6 +6049,70 @@ export interface operations {
             };
         };
     };
+    forgot_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     register_client: {
         parameters: {
             query?: never;
@@ -5871,13 +6193,11 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["LoggedIn"];
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -6403,6 +6723,39 @@ export interface operations {
             };
         };
     };
+    delete_account: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccount"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     read_home_place: {
         parameters: {
             query?: never;
@@ -6667,6 +7020,7 @@ export interface operations {
         parameters: {
             query?: {
                 cursor?: number | null;
+                offset?: number;
                 limit?: number;
             };
             header?: {
@@ -7002,6 +7356,7 @@ export interface operations {
             query?: {
                 q?: string;
                 zone?: ("NEAR_EXPIRY" | "EARLY_RELEASE" | "PRIVATE" | "EXPIRED") | null;
+                sort?: "expiry" | "medicine";
                 cursor?: number;
                 limit?: number;
             };
@@ -7929,7 +8284,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Watch"];
+                    "application/json": components["schemas"]["WatchStarted"];
                 };
             };
             /** @description Validation Error */

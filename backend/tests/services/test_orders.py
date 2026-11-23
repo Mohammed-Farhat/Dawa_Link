@@ -352,6 +352,165 @@ class TestGroupReserve:
         assert world.all("SELECT 1 FROM orders WHERE client_id = :c", c=shop.client) == []
 
 
+class TestAMissedTripIsOneMissedPickup:
+    """R-N1, A#10: the boxes one tap reserved together (a plan card) and not collected
+    are one missed pickup, not one per medicine. Each box still expires on its own and
+    still tells the client; reservations made separately still count separately."""
+
+    def plan_card(
+        self, shop: Shop, world: World, *, boxes: int, key: str, late: bool = False
+    ) -> list[uuid.UUID]:
+        """One tap on a plan card, a box at each of `boxes` pharmacies. With `late`, the
+        last pharmacy closes two hours after the others (23:00 instead of 21:00)."""
+        lines = [shop.line(1)]
+        for number in range(1, boxes):
+            closes = "23:00" if late and number == boxes - 1 else "21:00"
+            pharmacy = world.make.pharmacy(hours={day: [("08:00", closes)] for day in range(7)})
+            box = world.make.item(pharmacy_id=pharmacy, product_id=world.make.product())
+            lines.append(shop.line(1, item_id=box))
+        tx = world.tx()
+        made = orders.reserve(
+            tx,
+            client_id=shop.client,
+            lines=lines,
+            pickup_day=world.tx().today,
+            source=OrderSource.ASSISTANT,
+            idempotency_key=key,
+        )
+        world.settle(tx)
+        return [order.id for order in made]
+
+    def miss_everything(self, world: World) -> int:
+        world.later(hours=24)
+        return world.clock_tasks().expire_reservations()
+
+    def client(self, shop: Shop) -> Any:
+        return shop.world.one("SELECT * FROM client_profiles WHERE user_id = :id", id=shop.client)
+
+    def test_a_first_missed_plan_card_of_three_boxes_pauses_nobody(
+        self, shop: Shop, world: World
+    ) -> None:
+        trip = self.plan_card(shop, world, boxes=3, key="card")
+
+        assert self.miss_everything(world) == 3
+
+        assert self.client(shop).status == "ACTIVE"
+        assert [shop.order(order).counts_as_no_show for order in trip] == [True] * 3
+        # Each box still tells the client it expired; nobody is told of a pause.
+        assert world.notifications(shop.client).count("CN-7") == 3
+        assert "CN-8" not in world.notifications(shop.client)
+        assert world.all("SELECT 1 FROM abuse_flags WHERE subject_id = :c", c=shop.client) == []
+        assert len(orders.missed_trips(world.tx(), shop.client)) == 1
+
+    def test_a_missed_reservation_then_a_missed_plan_card_pause_seven_days_not_fourteen(
+        self, shop: Shop, world: World
+    ) -> None:
+        shop.reserve(key="alone")
+        self.miss_everything(world)
+        self.plan_card(shop, world, boxes=2, key="card")
+
+        self.miss_everything(world)
+
+        paused = self.client(shop)
+        assert paused.status == "PAUSED"
+        assert paused.paused_until == NOW + timedelta(hours=48) + 7 * DAY
+        assert world.notifications(shop.client).count("CN-8") == 1
+        flag = world.one("SELECT * FROM abuse_flags WHERE subject_id = :c", c=shop.client)
+        assert flag.evidence == {"counted_no_shows": 2}
+
+    def test_reservations_made_separately_still_count_separately(
+        self, shop: Shop, world: World
+    ) -> None:
+        other = world.make.item(pharmacy_id=shop.pharmacy, product_id=world.make.product())
+        shop.reserve(key="one")
+        shop.reserve(key="two", item_id=other)
+
+        assert self.miss_everything(world) == 2
+
+        assert self.client(shop).status == "PAUSED"
+
+    def test_one_contest_covers_the_trip_and_clearing_it_clears_every_box(
+        self, shop: Shop, world: World
+    ) -> None:
+        """R-N3: [I picked it up] once for the trip; [Clear] once lifts the pause."""
+        shop.reserve(key="alone")
+        self.miss_everything(world)
+        first, second = self.plan_card(shop, world, boxes=2, key="card")
+        self.miss_everything(world)
+        assert self.client(shop).status == "PAUSED"
+        admin = world.make.user("admin", totp_secret=b"x")
+
+        tx = world.tx()
+        orders.contest_no_show(tx, shop.client, second)
+        world.settle(tx)
+        again = refusal(lambda: orders.contest_no_show(world.tx(), shop.client, first))
+        contested = [shop.order(order).contested_at for order in (first, second)]
+        tx = world.tx()
+        orders.clear_no_show(tx, admin, first, reason="the pharmacy confirmed the pickup")
+        world.settle(tx)
+
+        assert again.code is Code.NOT_CONTESTABLE
+        assert contested == [world.clock.now()] * 2
+        assert [shop.order(order).counts_as_no_show for order in (first, second)] == [False] * 2
+        assert self.client(shop).status == "ACTIVE"
+        assert [o.ref for o in orders.missed_trip(world.tx(), shop.order(first))] == [
+            shop.order(first).ref
+        ]
+
+    def test_a_box_of_the_trip_that_expires_after_the_contest_joins_it(
+        self, shop: Shop, world: World
+    ) -> None:
+        """The boxes of one card may be at pharmacies that close at different times."""
+        shop.reserve(key="alone")
+        self.miss_everything(world)
+        early, late = self.plan_card(shop, world, boxes=2, key="card", late=True)
+        world.later(hours=11)  # 21:00 in Beirut: the first pharmacy has closed
+        assert world.clock_tasks().expire_reservations() == 1
+        paused_until = self.client(shop).paused_until
+        tx = world.tx()
+        orders.contest_no_show(tx, shop.client, early)
+        world.settle(tx)
+
+        world.later(hours=2)  # 23:00: the second has closed too
+        assert world.clock_tasks().expire_reservations() == 1
+
+        joined = shop.order(late)
+        assert (joined.counts_as_no_show, joined.contested_at) == (
+            True,
+            shop.order(early).contested_at,
+        )
+        # Still one missed pickup: the pause was not made longer.
+        assert self.client(shop).paused_until == paused_until
+        assert world.notifications(shop.client).count("CN-8") == 1
+
+    def test_a_box_of_the_trip_that_expires_after_it_was_cleared_is_cleared_too(
+        self, shop: Shop, world: World
+    ) -> None:
+        """Clearing one clears the trip, also a box that expires later the same day."""
+        shop.reserve(key="alone")
+        self.miss_everything(world)
+        early, late = self.plan_card(shop, world, boxes=2, key="card", late=True)
+        world.later(hours=11)  # 21:00: the first pharmacy has closed
+        world.clock_tasks().expire_reservations()
+        admin = world.make.user("admin", totp_secret=b"x")
+        tx = world.tx()
+        orders.contest_no_show(tx, shop.client, early)
+        orders.clear_no_show(tx, admin, early, reason="it was collected")
+        world.settle(tx)
+        assert self.client(shop).status == "ACTIVE"
+
+        world.later(hours=2)  # 23:00: the second has closed too
+        assert world.clock_tasks().expire_reservations() == 1
+
+        cleared = shop.order(late)
+        assert (cleared.state, cleared.counts_as_no_show) == ("EXPIRED_NO_SHOW", False)
+        assert cleared.contested_at is not None
+        assert self.client(shop).status == "ACTIVE"
+        assert len(orders.missed_trips(world.tx(), shop.client)) == 1
+        # The box still tells the client it expired.
+        assert world.notifications(shop.client).count("CN-7") == 3
+
+
 class TestConversationRouting:
     def test_a_search_order_never_reaches_the_chat(self, shop: Shop, world: World) -> None:
         """R-AG5."""
@@ -500,6 +659,11 @@ class TestAtTheCounter:
         # The units weren't there: they leave the shelf count too.
         assert shop.stock() == (3, 0)
         assert world.notifications(shop.client) == ["CN-3", "CN-5"]
+        said = world.one(
+            "SELECT payload FROM notifications WHERE user_id = :id AND type = 'CN-5'",
+            id=shop.client,
+        )
+        assert said.payload["units_still_reserved"] == 0
         reconciled(world)
 
     def test_some_units_not_available_keeps_the_rest_reserved(
@@ -515,6 +679,12 @@ class TestAtTheCounter:
         assert shop.stock() == (3, 1)
         # One notification per mark, and one audit event per mark.
         assert world.notifications(shop.client) == ["CN-3", "CN-5", "CN-5"]
+        # Each says what is still to pick up: its email keeps the deadline while it is > 0.
+        said = world.all(
+            "SELECT payload FROM notifications WHERE user_id = :id AND type = 'CN-5' ORDER BY id",
+            id=shop.client,
+        )
+        assert [row.payload["units_still_reserved"] for row in said] == [2, 1]
         assert world.audit_actions(order.id) == [
             "order.reserve",
             "order.not_available",

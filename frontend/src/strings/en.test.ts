@@ -29,3 +29,18 @@ describe('What the website says for each error code', () => {
     expect(errorMessage('A_CODE_NOBODY_KNOWS')).toBe(strings.errors.INTERNAL_ERROR)
   })
 })
+
+describe('One name for one thing, and one for one (B wording table)', () => {
+  it('writes one day and one minute in the singular', () => {
+    expect(strings.offer.lastsYour(1)).toBe('Lasts your 1 day')
+    expect(strings.offer.lastsYour(7)).toBe('Lasts your 7 days')
+    expect(strings.offer.doesntLast(1, '20 Nov')).toContain('before your 1 day ends')
+    expect(strings.admin.clock.ahead(1)).toBe('1 minute ahead of the real time.')
+  })
+
+  it('calls a request a request, and spells licence one way', () => {
+    expect(strings.request.cancelTitle).toContain('request')
+    expect(Object.values(strings.request.closed).join(' ')).not.toMatch(/the search has ended|this search/i)
+    expect(strings.errors.LICENSE_TAKEN).toContain('licence')
+  })
+})

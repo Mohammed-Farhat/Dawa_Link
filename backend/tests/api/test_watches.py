@@ -2,12 +2,13 @@
 CS-12, PS-11; slice 7g)."""
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
 
-from dawalink.services import inventory
+from dawalink.domain.orders import OrderSource
+from dawalink.services import inventory, orders
 from tests.api.conftest import Api, code_of
 from tests.db.factories import TODAY
 
@@ -92,6 +93,19 @@ class TestNotifyMe:
         assert (again.status_code, code_of(again)) == (409, "CLAIM_NOT_ACTIVE")
         assert http.get(WATCHES, headers=login).json()["items"] == []
         assert len(http.get(f"{WATCHES}?state=all", headers=login).json()["items"]) == 1
+
+    def test_the_answer_says_the_servers_time(self, api: Api, product: uuid.UUID) -> None:
+        """B#39: the page says "until tomorrow 01:30" from the server's clock, never the
+        device's: the demo clock may be ahead of it."""
+        http = api.http()
+        login = api.token(api.client())
+        api.world.later(hours=9, minutes=30)  # 19:30 in Beirut: the watch ends after midnight
+
+        made = http.post(WATCHES, json={"product_id": str(product)}, headers=login).json()
+
+        now = api.world.clock.now()
+        assert datetime.fromisoformat(made["server_now"]) == now
+        assert datetime.fromisoformat(made["ends_at"]) == now + timedelta(hours=6)
 
     def test_only_during_request_hours_and_only_for_a_client_who_can_reserve(
         self, api: Api, product: uuid.UUID
@@ -200,6 +214,40 @@ class TestNotifications:
         assert one.status_code == 204
         assert [row["read"] for row in after_one["items"]] == [True] + [False] * (len(mine) - 1)
         assert http.get(f"{NOTES}/unread-count", headers=their_login).json()["count"] == 0
+
+    def test_a_pharmacys_tap_goes_where_the_reservation_is(self, api: Api) -> None:
+        """B#52: a new reservation is to hand over; a cancelled one is in the history,
+        never an empty "To hand over"."""
+        http = api.http()
+        make = api.world.make
+        owner = make.user("pharmacist", email_verified_at=api.world.clock.now())
+        pharmacy = make.pharmacy(owner_user_id=owner)
+        box = make.item(pharmacy_id=pharmacy, product_id=make.product(), days_left=60)
+        client = api.client()
+        tx = api.world.tx()
+        price = api.world.one(
+            "SELECT price_lbp FROM visible_listings(:today) WHERE inventory_item_id = :id",
+            today=TODAY,
+            id=box,
+        )[0]
+        (made,) = orders.reserve(
+            tx,
+            client_id=client,
+            lines=[orders.ReserveLine(box, 1, price)],
+            pickup_day=TODAY,
+            source=OrderSource.SEARCH,
+            idempotency_key=f"tap-{uuid.uuid4()}",
+        )
+        api.world.settle(tx)
+        http.post(f"/api/v1/reservations/{made.id}/cancel", headers=api.token(client))
+
+        page = http.get(NOTES, headers=api.token(owner)).json()["items"]
+
+        links = {row["type"]: row["link"] for row in page}
+        assert links == {
+            "PN-4": "/pharmacy/reservations",
+            "PN-8": "/pharmacy/reservations?view=history",
+        }
 
     def test_a_pharmacy_reads_its_own_with_the_teams_words(self, api: Api) -> None:
         """PS-11. What DawaLink's team wrote about a registration is shown as it is."""

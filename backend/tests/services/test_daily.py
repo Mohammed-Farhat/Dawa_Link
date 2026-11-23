@@ -460,6 +460,31 @@ class TestOtherRows:
         left = world.all("SELECT token_hash FROM email_verification_tokens")
         assert [bytes(row.token_hash) for row in left] == [b"waiting"]
 
+    def test_reset_links_go_once_used_or_expired_in_real_time(self, world: World) -> None:
+        """R-AU9: a link that is still good survives a demo clock moved a week ahead."""
+        client = world.make.client()
+        real = datetime.now(UTC)
+        rows = {
+            b"expired": {"expires_at": real - timedelta(minutes=1)},
+            b"used": {"expires_at": real + timedelta(minutes=20), "used_at": real},
+            b"waiting": {"expires_at": real + timedelta(minutes=20)},
+        }
+        for token, values in rows.items():
+            insert(
+                world,
+                "password_reset_tokens",
+                id=uuid.uuid4(),
+                user_id=client,
+                token_hash=token,
+                **values,
+            )
+        world.later(days=7)
+
+        run(world)
+
+        left = world.all("SELECT token_hash FROM password_reset_tokens")
+        assert [bytes(row.token_hash) for row in left] == [b"waiting"]
+
     def test_travel_times_go_after_24_hours(self, world: World) -> None:
         pharmacy = world.make.pharmacy()
         for cell, age in (("33.894,35.502", 25), ("33.895,35.502", 23)):

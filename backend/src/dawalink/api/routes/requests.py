@@ -27,6 +27,7 @@ from dawalink.api.schemas.requests import (
     SourcingRequests,
     Waiting,
 )
+from dawalink.api.schemas.search import DayHours
 from dawalink.db.models import (
     Claim,
     Conversation,
@@ -53,7 +54,7 @@ router = APIRouter(tags=["requests"])
 _HELD = (OrderState.RESERVED.value, OrderState.PICKED_UP.value)
 
 
-def _item_words(item: ItemRow) -> str:
+def _item_words(item: ItemRow, waiting: Waiting | None = None) -> str:
     """A medicine's state in plain words (docs/03 §1.1): never a raw state."""
     missing = item.qty - item.qty_secured
     if item.state == "SECURED":
@@ -66,6 +67,10 @@ def _item_words(item: ItemRow) -> str:
             if item.qty_secured == 0
             else f"{item.qty_secured} of {item.qty} reserved; the rest was not found in time"
         )
+    if waiting is not None and waiting.open_offer_ids:
+        # A box is held for the client and waits for their tap: say so, as the page does
+        # (B#17), never "still looking".
+        return "An offer is waiting for you: see it below"
     if item.qty_secured:
         return f"{item.qty_secured} of {item.qty} reserved, looking for {missing} more"
     return {
@@ -151,6 +156,7 @@ def _requests(tx: Tx, rows: list[RequestRow]) -> list[SourcingRequest]:
     shown = []
     for row in rows:
         own = [item for item in items if item.request_id == row.id]
+        waits = {item.id: waiting(item) for item in own}
         shown.append(
             SourcingRequest(
                 id=row.id,
@@ -173,9 +179,9 @@ def _requests(tx: Tx, rows: list[RequestRow]) -> list[SourcingRequest]:
                             else None
                         ),
                         state=item.state,
-                        status_text=_item_words(item),
+                        status_text=_item_words(item, waits[item.id]),
                         reservations=held.get(item.id, []),
-                        waiting=waiting(item),
+                        waiting=waits[item.id],
                     )
                     for item in own
                 ],
@@ -301,6 +307,10 @@ def _offers(tx: Tx, rows: list[Order]) -> list[Offer]:
                 request_id=request_of_item.get(row.request_item_id)
                 if row.request_item_id
                 else None,
+                pickup_day_hours=[
+                    DayHours(day=day, hours=pharmacies.day_hours(hours[row.pharmacy_id], day))
+                    for day in allowed
+                ],
             )
         )
     return shown
@@ -329,7 +339,8 @@ def accept_offer(
     offer_id: uuid.UUID, body: AcceptOffer, caller: AsClient, work: DoWork, _key: IdempotencyKey
 ) -> Reservation:
     """The offer becomes a reservation; the need's other offers are withdrawn at once
-    (O9). A second tap answers `OFFER_NOT_OPEN`: an offer is accepted once."""
+    (O9). An offer is accepted once: a second tap answers with the reservation the first
+    one made, as it is (its pickup day included), and reserves nothing more."""
     with work.tx() as tx:
         order = orders.accept_offer(tx, caller.user_id, offer_id, body.pickup_day)
         return present.reservations(tx, [order])[0]

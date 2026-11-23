@@ -8,6 +8,7 @@ import { tidy } from './choices'
 import { errorMessage, strings } from '../../../strings/en'
 import {
   accessibilityProblems,
+  answer,
   CHAT_ID,
   CLIENT,
   CONFIG,
@@ -104,7 +105,8 @@ describe('Searching without the assistant', () => {
     expect(row).toHaveAttribute('href', `/listings/${LISTING_ID}`)
     expect(row).toHaveTextContent('600,000 LBP')
     expect(row).toHaveTextContent('Save 400,000')
-    expect(row).toHaveTextContent('21 min walk · 4 min by car')
+    // The car first, then the walk, in the words of the assistant's cards (A#37).
+    expect(row).toHaveTextContent('4 min by car · 21 min on foot')
     expect(row).toHaveTextContent('5+ left')
     expect(within(group).getByText(s.prescription)).toBeInTheDocument()
     // The name travels in a body, like the place: never in an address.
@@ -118,6 +120,24 @@ describe('Searching without the assistant', () => {
     await user.click(within(group).getByRole('button', { name: s.seeAll(4) }))
     expect(await screen.findByRole('heading', { level: 1, name: PRODUCT.name })).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/listings/search').at(-1)?.body).toMatchObject({ product_id: PRODUCT.id })
+  })
+
+  it("says a refused place as the hour's limit it is, never as the day's (B#37)", async () => {
+    // The place a search carries is limited per hour (N-47); its wait may be long.
+    const limited = refusal(429, 'RATE_LIMITED', { retry_after_s: 3600 })
+    searchApi({ 'POST /api/v1/listings/search-by-name': limited, 'POST /api/v1/listings/search': limited })
+    renderApp(<AppRoutes />, { path: '/search' })
+
+    await userEvent.type(await screen.findByLabelText(s.label), 'augmentin')
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.limits.tryInMinutes(60))
+    expect(screen.queryByText(strings.limits.today)).not.toBeInTheDocument()
+  })
+
+  it("says a refused place on one medicine's page as the hour's limit too", async () => {
+    searchApi({ 'POST /api/v1/listings/search': refusal(429, 'RATE_LIMITED', { retry_after_s: 1500 }) })
+    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.limits.tryInMinutes(25))
   })
 
   it('searches what is in stock from the first letter typed', async () => {
@@ -324,6 +344,47 @@ describe('Reserving from an offer', () => {
     expect(sent.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/)
   })
 
+  it('gives the total in dollars too, and says why [+] stops at the limit', async () => {
+    searchApi()
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+    const user = userEvent.setup()
+
+    // [Directions] says that the map opens in a new tab (WCAG 3.2.5).
+    expect(
+      await screen.findByRole('link', { name: `${strings.ticket.directions} ${strings.common.opensNewTab}` }),
+    ).toHaveAttribute('target', '_blank')
+    await user.click(screen.getByRole('button', { name: strings.offer.reserve }))
+    const sheet = await screen.findByRole('dialog', { name: strings.reserve.title })
+    expect(within(sheet).getByText(strings.common.aboutUsd('6.7'))).toBeInTheDocument()
+    expect(within(sheet).queryByText(strings.reserve.mostPacks)).not.toBeInTheDocument()
+    const more = within(sheet).getByRole('button', { name: strings.reserve.more })
+    await user.click(more)
+    await user.click(more)
+
+    expect(within(sheet).getByText(strings.common.aboutUsd('20.1'))).toBeInTheDocument()
+    expect(more).toBeDisabled()
+    expect(within(sheet).getByText(strings.reserve.mostPacks)).toBeInTheDocument()
+  })
+
+  it('says when [+] stops at what this pharmacy has left', async () => {
+    searchApi({
+      [`POST /api/v1/listings/${LISTING_ID}/view`]: {
+        listing: { ...LISTING, available: 2, more_available: false },
+        week: [{ day: '2026-11-16', hours: '08:00-21:00' }],
+        location: { source: 'profile', label: 'Beirut' },
+        server_now: CONFIG.server_now,
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: strings.offer.reserve }))
+    await user.click(await screen.findByRole('button', { name: strings.reserve.more }))
+
+    expect(screen.getByText(strings.reserve.onlyLeft(2))).toBeInTheDocument()
+    expect(screen.queryByText(strings.reserve.mostPacks)).not.toBeInTheDocument()
+  })
+
   it('says in plain words why a reservation was refused', async () => {
     searchApi({ 'POST /api/v1/reservations': refusal(409, 'NOT_ENOUGH_STOCK', { available: 0 }) })
     renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
@@ -412,6 +473,272 @@ describe('Reserving from an offer', () => {
     expect(api.sent('POST', `/api/v1/listings/${LISTING_ID}/view`).at(-1)?.body).toMatchObject({
       days_of_use: null,
     })
+  })
+})
+
+describe('What a screen reader hears on Search (A#13, A#39)', () => {
+  it('has a title from the start, keeps the box focused, and announces a summary, never every row', async () => {
+    searchApi()
+    const { container } = renderApp(<AppRoutes />, { path: '/search' })
+
+    expect(await screen.findByRole('heading', { level: 1, name: strings.nav.search })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText(s.label)).toHaveFocus())
+
+    await userEvent.type(screen.getByLabelText(s.label), 'augmentin')
+    const row = await screen.findByRole('link', { name: /Hamra Pharmacy/ })
+
+    expect(await screen.findByText(s.summary(1, 'augmentin'))).toHaveAttribute('role', 'status')
+    // The results are not a live region: a change would read every row again.
+    expect(row.closest('[role="status"], [aria-live]')).toBeNull()
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+})
+
+describe('A name typed in Arabic letters (B#6)', () => {
+  it('writes it right to left, and says that search reads English letters, with the assistant as the way on', async () => {
+    searchApi({ 'POST /api/v1/listings/search-by-name': byName({ groups: [] }) })
+    renderApp(<AppRoutes />, { path: '/search' })
+
+    const box = await screen.findByLabelText(s.label)
+    expect(box).toHaveAttribute('dir', 'auto')
+    await userEvent.type(box, 'بنادول')
+
+    expect(await screen.findByText(s.arabicLetters)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.askToFind })).toBeInTheDocument()
+    // Read with an Arabic voice, as it is written (B#10).
+    expect(box).toHaveAttribute('lang', 'ar')
+  })
+
+  it('reads a last search in Arabic letters with an Arabic voice, and the others as English', async () => {
+    searchApi({ 'GET /api/v1/me/searches': { items: ['بنادول', 'augmentin'] } })
+    renderApp(<AppRoutes />, { path: '/search' })
+
+    const last = await screen.findByRole('region', { name: s.lastSearches })
+    expect(within(last).getByText('بنادول')).toHaveAttribute('lang', 'ar')
+    expect(within(last).getByText('augmentin')).not.toHaveAttribute('lang')
+    // The page's own words beside them stay English.
+    expect(within(last).getByText(s.lastSearches)).not.toHaveAttribute('lang')
+    expect(screen.getByLabelText(s.label)).not.toHaveAttribute('lang')
+  })
+
+  it('keeps the usual words for a name in English letters', async () => {
+    searchApi({ 'POST /api/v1/listings/search-by-name': byName({ groups: [] }) })
+    renderApp(<AppRoutes />, { path: '/search' })
+
+    await userEvent.type(await screen.findByLabelText(s.label), 'zzz')
+
+    expect(await screen.findByText(s.askToFindHint)).toBeInTheDocument()
+    expect(screen.queryByText(s.arabicLetters)).not.toBeInTheDocument()
+  })
+})
+
+describe("A medicine's page that the filters emptied (B#7)", () => {
+  it('says the filters hide it, clears them, and offers no watch or assistant meanwhile', async () => {
+    const api = searchApi({ 'POST /api/v1/listings/search': result([]) })
+    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: new RegExp(s.filters) }))
+    await user.type(await screen.findByLabelText(s.maxPrice), '1000')
+
+    expect(await screen.findByText(s.noneForChoices)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: s.notify.button })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: s.askToFind })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: s.clearFilters }))
+
+    expect(await screen.findByText(s.empty(PRODUCT.name))).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.notify.button })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(api.sent('POST', '/api/v1/listings/search').at(-1)?.body).toMatchObject({
+        max_price: null,
+        open_now: false,
+      }),
+    )
+  })
+})
+
+describe('[Notify me] speaks of notifying (B#38, B#39)', () => {
+  const WATCH = {
+    id: 'aaaaaaaa-7777-4777-8777-aaaaaaaaaaaa',
+    product: PRODUCT,
+    qty: 1,
+    qty_missing: 1,
+    days_of_use: 1,
+    max_price: null,
+    state: 'ACTIVE',
+    district: 'Beirut',
+    created_at: CONFIG.server_now,
+  }
+
+  it('says the day a watch ends when it is not today, by the server clock', async () => {
+    // Started at 19:30 in Beirut, by the clock of the answer itself (a day after the
+    // search's, as after a move of the demo clock): it ends at 01:30 the next day.
+    searchApi({
+      'POST /api/v1/listings/search': result([]),
+      'POST /api/v1/watches': answer(201, {
+        ...WATCH,
+        ends_at: '2026-11-17T23:30:00Z',
+        server_now: '2026-11-17T17:30:00Z',
+      }),
+    })
+    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: s.notify.button }))
+    await user.click(screen.getByRole('button', { name: s.notify.start }))
+
+    expect(await screen.findByText(s.notify.watching('tomorrow 01:30'))).toBeInTheDocument()
+  })
+
+  it('says the limit in its own words', async () => {
+    searchApi({
+      'POST /api/v1/listings/search': result([]),
+      'POST /api/v1/watches': refusal(409, 'LIMIT_WATCHES'),
+    })
+    renderApp(<AppRoutes />, { path: `/search?product=${PRODUCT.id}` })
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: s.notify.button }))
+    await user.click(screen.getByRole('button', { name: s.notify.start }))
+
+    expect(await screen.findByText(s.notify.tooMany)).toBeInTheDocument()
+    expect(screen.queryByText(errorMessage('LIMIT_WATCHES'))).not.toBeInTheDocument()
+  })
+})
+
+describe("An offer's page", () => {
+  it('writes the expiry date once', async () => {
+    searchApi()
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    expect(await screen.findByText(strings.offer.makeSure('15 Jan 2027'))).toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(s.expires('15 Jan 2027')))).not.toBeInTheDocument()
+  })
+})
+
+describe("The reserve sheet's own words (A#40, B#14)", () => {
+  async function tapReserve() {
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: strings.offer.reserve }))
+    await user.click(await screen.findByRole('button', { name: strings.reserve.submit(1) }))
+  }
+
+  it('names the new price, and asks to reserve at it', async () => {
+    searchApi({ 'POST /api/v1/reservations': refusal(409, 'PRICE_CHANGED', { new_price: 700_000 }) })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapReserve()
+
+    const said = await screen.findByRole('alert')
+    expect(said).toHaveTextContent(strings.reserve.priceChanged('700,000 LBP'))
+    expect(said).not.toHaveTextContent(/fresh options/)
+  })
+
+  it('reserves at the new price on the next tap', async () => {
+    let refused = false
+    const api = searchApi({
+      // The offer, read again after the refusal, has the new price.
+      [`POST /api/v1/listings/${LISTING_ID}/view`]: () => ({
+        listing: refused ? { ...LISTING, price: { lbp: 700_000, usd_approx: 7.8 } } : LISTING,
+        week: [{ day: '2026-11-16', hours: '08:00-21:00' }],
+        location: { source: 'profile', label: 'Beirut' },
+        server_now: CONFIG.server_now,
+      }),
+      'POST /api/v1/reservations': () => {
+        if (refused) return answer(201, RESERVATION)
+        refused = true
+        return refusal(409, 'PRICE_CHANGED', { new_price: 700_000 })
+      },
+      [`GET /api/v1/reservations/${RESERVATION.id}`]: RESERVATION,
+      'GET /api/v1/reservations': { items: [RESERVATION], next_cursor: null, server_now: CONFIG.server_now },
+    })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+    const user = userEvent.setup()
+
+    await tapReserve()
+    await screen.findByRole('alert')
+    const submit = screen.getByRole('button', { name: strings.reserve.submit(1) })
+    await waitFor(() => expect(submit).toBeEnabled())
+    await user.click(submit)
+
+    await waitFor(() => expect(api.sent('POST', '/api/v1/reservations')).toHaveLength(2))
+    expect(api.sent('POST', '/api/v1/reservations')[1].body).toMatchObject({ expected_price_lbp: 700_000 })
+  })
+
+  it('says the limit counts what is already reserved', async () => {
+    searchApi({ 'POST /api/v1/reservations': refusal(409, 'LIMIT_GROUP_UNITS') })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapReserve()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.reserve.tooManyPacks)
+  })
+
+  it("points to the medicine's other pharmacies when the box went", async () => {
+    searchApi({ 'POST /api/v1/reservations': refusal(409, 'NOT_ENOUGH_STOCK', { available: 0 }) })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapReserve()
+
+    expect(await screen.findByRole('link', { name: strings.reserve.otherPharmacies })).toHaveAttribute(
+      'href',
+      `/search?product=${PRODUCT.id}`,
+    )
+  })
+})
+
+describe('One reservation per tap, whatever the network did (A#28)', () => {
+  function keysSent(api: ReturnType<typeof searchApi>) {
+    return api.sent('POST', '/api/v1/reservations').map((call) => call.headers.get('Idempotency-Key'))
+  }
+
+  async function tapTwice() {
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: strings.offer.reserve }))
+    const submit = await screen.findByRole('button', { name: strings.reserve.submit(1) })
+    await user.click(submit)
+    await screen.findByRole('alert')
+    await waitFor(() => expect(submit).toBeEnabled())
+    await user.click(submit)
+  }
+
+  it("keeps the key after a gateway's error, whose outcome is unknown", async () => {
+    // A CloudFront 504 can come after a slow reserve that did commit.
+    const api = searchApi({ 'POST /api/v1/reservations': answer(504, '<html>Gateway Timeout</html>') })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapTwice()
+
+    await waitFor(() => expect(keysSent(api)).toHaveLength(2))
+    const [first, second] = keysSent(api)
+    expect(second).toBe(first)
+  })
+
+  it('keeps the key when the API could not be reached', async () => {
+    const api = searchApi({
+      'POST /api/v1/reservations': () => {
+        throw new TypeError('Failed to fetch')
+      },
+    })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapTwice()
+
+    await waitFor(() => expect(keysSent(api)).toHaveLength(2))
+    const [first, second] = keysSent(api)
+    expect(second).toBe(first)
+  })
+
+  it('takes a new key after a refusal, which proves nothing was reserved', async () => {
+    const api = searchApi({ 'POST /api/v1/reservations': refusal(409, 'NOT_ENOUGH_STOCK', { available: 0 }) })
+    renderApp(<AppRoutes />, { path: `/listings/${LISTING_ID}` })
+
+    await tapTwice()
+
+    await waitFor(() => expect(keysSent(api)).toHaveLength(2))
+    const [first, second] = keysSent(api)
+    expect(second).not.toBe(first)
   })
 })
 

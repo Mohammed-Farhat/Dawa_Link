@@ -1,8 +1,9 @@
 """Joins the Ministry's downloads into one catalog file: python -m dawalink.ops.build_catalog
 
-Run after `fetch_moph`. It writes `catalog.csv` and `catalog.json` next to the downloads,
-in backend/data/moph/, which is never committed (decision log O5). `import_catalog` reads
-them, and they are small enough to ship inside the backend image.
+Run after `fetch_moph` (and `fetch_otc_list`, for the no-prescription list). It writes
+`catalog.csv` and `catalog.json` next to the downloads, in backend/data/moph/, which is never
+committed (decision log O5). `import_catalog` reads them, and they are small enough to ship
+inside the backend image.
 """
 
 import argparse
@@ -10,6 +11,7 @@ import json
 from pathlib import Path
 
 from dawalink.catalog.moph import join, read_database_pages, read_price_list, write_catalog
+from dawalink.catalog.otc_list import OTC_LIST_FILE, mark_otc, read_otc_list
 
 CATALOG_FILE = "catalog.csv"
 DETAILS_FILE = "catalog.json"
@@ -25,7 +27,6 @@ def build(folder: Path) -> dict[str, object]:
         raise ValueError("The price list states no date or no exchange rate.")
     database = read_database_pages(folder / "pages")
     rows, report = join(price_list.rows, database)
-    write_catalog(folder / CATALOG_FILE, rows)
     details: dict[str, object] = {
         "file_name": price_list_file.name,
         "source_date": price_list.source_date.isoformat(),
@@ -37,6 +38,22 @@ def build(folder: Path) -> dict[str, object]:
         "not_found": report.not_found,
         "unclear": report.unclear,
     }
+    otc_file = folder / OTC_LIST_FILE
+    if otc_file.is_file():
+        rows, marks = mark_otc(rows, read_otc_list(otc_file))
+        details |= {
+            "otc_listed": marks.listed,
+            "otc_marked": marks.marked,
+            "otc_name_differs": marks.name_differs,
+            "otc_not_in_catalog": marks.not_in_catalog,
+            "otc_code_with_another_registration": marks.code_with_another_registration,
+        }
+    else:
+        print(
+            f"No {OTC_LIST_FILE} in {folder} (run dawalink.ops.fetch_otc_list): "
+            "every product keeps the prescription notice."
+        )
+    write_catalog(folder / CATALOG_FILE, rows)
     (folder / DETAILS_FILE).write_text(json.dumps(details, indent=2) + "\n", encoding="utf-8")
     return details
 

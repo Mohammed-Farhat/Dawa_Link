@@ -200,6 +200,9 @@ class OutboxState(StrEnum):
     SENT = "SENT"
     FAILED = "FAILED"
     DEAD = "DEAD"
+    # Not sent, on purpose: its recipient deleted their account (R-AU10). Nobody is told,
+    # and no alert is raised.
+    DROPPED = "DROPPED"
 
 
 class TravelMode(StrEnum):

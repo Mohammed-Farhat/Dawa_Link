@@ -1,7 +1,13 @@
 """Settings: what's required, and that a bad setting never leaks its value (FX-17)."""
 
-import pytest
+import hashlib
+from decimal import Decimal
+from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
+from dawalink import config
 from dawalink.config import ConfigError, Settings, load_settings
 
 SETTING_NAMES = [
@@ -12,7 +18,13 @@ SETTING_NAMES = [
     "DEMO_MODE",
     "LOG_LEVEL",
     "WORKER_HEARTBEAT_FILE",
+    "APP_SECRET_KEY",
+    "DEMO_ACCOUNTS_PASSWORD",
+    "LLM_MONTHLY_BUDGET_USD",
 ]
+# Invented for these tests: long enough for AWS, and published nowhere.
+A_GOOD_KEY = "test-only-9Yq2vN7xK4pL8sD1fG6hJ3mB5cR0tW"
+A_GOOD_PASSWORD = "Test-only demo password, 7"
 
 
 @pytest.fixture
@@ -84,3 +96,108 @@ def test_website_url_is_reduced_to_its_origin() -> None:
 def test_website_url_must_be_an_origin(value: str) -> None:
     with pytest.raises(ValueError, match="origin"):
         Settings(database_url="postgresql+psycopg://u@h/d", website_url=value)
+
+
+def test_the_monthly_model_budget_defaults_to_the_owners_20(
+    clean_environment: pytest.MonkeyPatch,
+) -> None:
+    """BLD-D13: a forgotten LLM_MONTHLY_BUDGET_USD must not allow five times as much."""
+    clean_environment.setenv("DATABASE_URL", "postgresql+psycopg://user:pw@db/dawalink")
+    clean_environment.setenv("WEBSITE_URL", "https://example.cloudfront.net")
+
+    assert load_settings().llm_monthly_budget_usd == Decimal(20)
+
+
+class TestInAws:
+    """A#16: what is fine on a laptop is refused in AWS, by name and never by value."""
+
+    def aws(self, env: pytest.MonkeyPatch, **values: str) -> Settings:
+        settings = {
+            "APP_ENV": "aws",
+            "DATABASE_URL": "postgresql+psycopg://user:pw@db/dawalink",
+            "WEBSITE_URL": "https://example.cloudfront.net",
+            "APP_SECRET_KEY": A_GOOD_KEY,
+            "DEMO_MODE": "true",
+            "DEMO_ACCOUNTS_PASSWORD": A_GOOD_PASSWORD,
+        } | values
+        for name, value in settings.items():
+            env.setenv(name, value)
+        return load_settings()
+
+    def test_good_settings_load(self, clean_environment: pytest.MonkeyPatch) -> None:
+        assert self.aws(clean_environment).app_env == "aws"
+
+    def test_a_short_secret_key_is_refused(self, clean_environment: pytest.MonkeyPatch) -> None:
+        short = A_GOOD_KEY[: config.AWS_MIN_SECRET_KEY_CHARS - 1]
+
+        with pytest.raises(ConfigError, match="APP_SECRET_KEY") as failure:
+            self.aws(clean_environment, APP_SECRET_KEY=short)
+
+        assert short not in str(failure.value)
+        assert failure.value.__cause__ is None
+
+    def test_no_secret_key_is_refused(self, clean_environment: pytest.MonkeyPatch) -> None:
+        with pytest.raises(ConfigError, match="APP_SECRET_KEY"):
+            self.aws(clean_environment, APP_SECRET_KEY="")
+
+    def test_demo_mode_needs_its_password(self, clean_environment: pytest.MonkeyPatch) -> None:
+        with pytest.raises(ConfigError, match="DEMO_ACCOUNTS_PASSWORD"):
+            self.aws(clean_environment, DEMO_ACCOUNTS_PASSWORD="")
+
+        without_demo = self.aws(clean_environment, DEMO_MODE="false", DEMO_ACCOUNTS_PASSWORD="")
+        assert without_demo.demo_accounts_password is None
+
+    def test_an_http_website_is_refused(self, clean_environment: pytest.MonkeyPatch) -> None:
+        with pytest.raises(ConfigError, match="WEBSITE_URL"):
+            self.aws(clean_environment, WEBSITE_URL="http://example.cloudfront.net")
+
+    def test_the_values_published_in_the_example_are_refused(
+        self, clean_environment: pytest.MonkeyPatch
+    ) -> None:
+        """Compared by hash, as the code keeps them. Here with invented values in their place."""
+        key, password = "x" * 40, "Published, so known 1"
+        published = frozenset(
+            hashlib.sha256(value.encode()).hexdigest() for value in (key, password)
+        )
+        clean_environment.setattr(config, "PUBLISHED_EXAMPLE_HASHES", published)
+
+        with pytest.raises(ConfigError) as failure:
+            self.aws(clean_environment, APP_SECRET_KEY=key, DEMO_ACCOUNTS_PASSWORD=password)
+
+        message = str(failure.value)
+        assert "APP_SECRET_KEY" in message
+        assert "DEMO_ACCOUNTS_PASSWORD" in message
+        assert key not in message
+        assert password not in message
+
+    def test_every_value_the_example_file_holds_is_known_to_the_check(self) -> None:
+        """If .env.example ever gets a new value for one of the two, its hash must be added."""
+        example = Path(__file__).parents[3] / ".env.example"
+        for line in example.read_text(encoding="utf-8").splitlines():
+            name, _, value = line.partition("=")
+            value = value.strip().strip("\"'")
+            if name.strip() in ("APP_SECRET_KEY", "DEMO_ACCOUNTS_PASSWORD") and value:
+                digest = hashlib.sha256(value.encode()).hexdigest()
+                assert digest in config.PUBLISHED_EXAMPLE_HASHES, name
+
+    def test_locally_and_in_tests_nothing_changes(self) -> None:
+        for env in ("local", "test"):
+            settings = Settings(
+                app_env=env,
+                database_url="postgresql+psycopg://u@h/d",
+                website_url="http://localhost:5173",
+                app_secret_key="short",
+                demo_mode=True,
+                demo_accounts_password=None,
+            )
+            assert settings.website_url == "http://localhost:5173"
+
+    def test_the_check_is_part_of_the_settings_themselves(self) -> None:
+        """So every process that builds them (API, worker, commands) refuses the same way."""
+        with pytest.raises(ValidationError):
+            Settings(
+                app_env="aws",
+                database_url="postgresql+psycopg://u@h/d",
+                website_url="https://site.test",
+                app_secret_key="short",
+            )

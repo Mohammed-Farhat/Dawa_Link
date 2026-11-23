@@ -5,8 +5,10 @@ import { api, ApiFailure, unwrap } from '../../api/client'
 import { useSession } from '../../api/session'
 import { TicketIcon } from '../../components/icons'
 import { Banner, Screen } from '../../components/layout'
-import { beirutHour, clock, dayAndClock } from '../../format'
-import { errorMessage, strings } from '../../strings/en'
+import { Placeholder } from '../../components/Placeholder'
+import { beirutHour, dayAndClock, dayClockInSentence } from '../../format'
+import { strings } from '../../strings/en'
+import { type Failure, failureMessage } from '../../strings/failure'
 import { useOffers, useRequests, useReservations, useWatches } from './data'
 import { OfferCard } from './requests/OfferCard'
 
@@ -15,14 +17,17 @@ const s = strings.home
 /** "Confirm your email", with [Send the link again] (docs/11 §4, Banner). */
 export function UnverifiedBanner({ text }: { text?: string }) {
   const b = strings.banner
-  const [state, setState] = useState<'idle' | 'sent' | string>('idle')
+  const [state, setState] = useState<'idle' | 'sent' | Failure>('idle')
 
   async function resend() {
     try {
       await unwrap(api.POST('/api/v1/auth/verify-email/resend'))
       setState('sent')
     } catch (error) {
-      setState(error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR')
+      // The day's limit of emails is said as the day's, not as "wait a minute" (B#36).
+      setState(
+        error instanceof ApiFailure ? { code: error.code, details: error.details } : { code: 'INTERNAL_ERROR' },
+      )
     }
   }
 
@@ -36,7 +41,7 @@ export function UnverifiedBanner({ text }: { text?: string }) {
         </button>
       }
     >
-      {state === 'idle' ? (text ?? b.unverified) : errorMessage(state)}
+      {state === 'idle' ? (text ?? b.unverified) : failureMessage(state)}
     </Banner>
   )
 }
@@ -90,6 +95,8 @@ export function HomePage() {
         <Banner tone="amber">{strings.banner.paused(dayAndClock(client.paused_until, now))}</Banner>
       )}
 
+      {/* The tickets' shapes while the reservations load: nothing jumps when they come (B#43). */}
+      {active.isPending && <Placeholder count={2} height={150} />}
       <div className="cols cols--cards">
         {reservations.map((order) => (
           <section key={order.id} className="today" aria-label={`${s.pickUp} ${order.ref}`}>
@@ -102,7 +109,7 @@ export function HomePage() {
                 {order.deadline ? s.pickUpBy(dayAndClock(order.deadline, now)) : order.status_text}
               </span>
               <span className="today__what">
-                {order.product.name} ×{order.qty} · {order.pharmacy.name}, {order.pharmacy.district}
+                {order.product.name} × {order.qty} · {order.pharmacy.name}, {order.pharmacy.district}
               </span>
             </div>
             <Link to={`/reservations/${order.id}`} className="pill-button pill-button--white">
@@ -135,12 +142,15 @@ export function HomePage() {
           <Link key={watch.id} to="/medicines" className="tile">
             <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span className="tile__title">
-                {watch.product.name} ×{watch.qty}
+                {watch.product.name} × {watch.qty}
               </span>
               <span className="tile__hint">
                 {watch.state === 'OFFER_PENDING'
                   ? strings.medicines.watchOffer
-                  : strings.medicines.watchUntil(clock(watch.ends_at), watch.district)}
+                  : strings.medicines.watchUntil(
+                      dayClockInSentence(watch.ends_at, watches.data?.server_now ?? now),
+                      watch.district,
+                    )}
               </span>
             </span>
           </Link>

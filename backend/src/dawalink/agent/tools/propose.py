@@ -53,7 +53,7 @@ from dawalink.services import (
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.orders import ReserveLine
-from dawalink.services.proposals import CardText
+from dawalink.services.proposals import BoxFacts, CardText
 from dawalink.services.search import visible_boxes
 
 ASSISTANT = frozenset({AgentMode.ASSISTANT})
@@ -95,6 +95,23 @@ def _keep(
 
 def _packs(qty: int) -> str:
     return "1 pack" if qty == 1 else f"{qty} packs"
+
+
+def _saving(product: Product, price_lbp: int, qty: int) -> int:
+    """What the client saves against the public price, as search counts it."""
+    return max(0, product.public_price_lbp - price_lbp) * qty
+
+
+def _with_strength(product: Product) -> str:
+    """ "CONCOR 5mg": the Ministry's name with its strength, when the name doesn't say it.
+    Only for the screen: the model is given the name alone, as always."""
+    strength = (product.dosage_text or "").strip()
+    if (
+        not strength
+        or strength.replace(" ", "").lower() in product.moph_name.replace(" ", "").lower()
+    ):
+        return product.moph_name
+    return f"{product.moph_name} {strength}"
 
 
 def _trip(way: object) -> str:
@@ -185,6 +202,7 @@ def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Propose
     hours = pharmacies.weekly_hours(tx, [box.pharmacy_id])
     pharmacy = pharmacies.cards(tx, [box.pharmacy_id], hours)[box.pharmacy_id]
     way = travel.travel_to(tx, location_of(tx, turn), [box.pharmacy_id])[box.pharmacy_id]
+    brand = [("Brand", "Another brand than you first asked for, at your request")] * another_brand
     card = CardText(
         title=f"{product.moph_name} at {pharmacy.name}",
         lines=[
@@ -194,13 +212,25 @@ def propose_reservation(turn: Turn, tx: Tx, args: ProposeReservation) -> Propose
             ("Pick up", display.day(args.pickup_day)),
             ("Expires", display.day(box.expiry_date) + f" {box.expiry_date.year}"),
             ("Travel", _trip(way)),
-            *(
-                [("Brand", "Another brand than you first asked for, at your request")]
-                * another_brand
-            ),
+            *brand,
         ],
         prescription_notice=product.prescription_required,
         recommended=args.recommended,
+        # The screen shows the price, the expiry and the trip from `box`, in its own words.
+        screen_lines=[
+            ("Pharmacy", f"{pharmacy.name}, {pharmacy.district}"),
+            ("Quantity", _packs(args.qty)),
+            ("Pick up", display.day(args.pickup_day)),
+            *brand,
+        ],
+        box=BoxFacts(
+            price_lbp=box.price_lbp * args.qty,
+            saving_lbp=_saving(product, box.price_lbp, args.qty),
+            expiry_date=box.expiry_date,
+            days_of_use=args.days_of_use,
+            hours_on_pickup_day=pharmacies.day_hours(hours[box.pharmacy_id], args.pickup_day),
+            travel=way,
+        ),
     )
     payload: dict[str, object] = {
         "listing_id": str(args.listing_id),
@@ -307,6 +337,20 @@ def show_other_brand(turn: Turn, tx: Tx, args: ShowOtherBrand) -> Proposed:
             ("Before you go", "Call the pharmacy and ask the pharmacist if this brand suits you"),
         ],
         prescription_notice=product.prescription_required,
+        screen_lines=[
+            ("Instead of", asked.moph_name),
+            ("It has", "the same ingredient, strength and form"),
+            ("Pharmacy", f"{pharmacy.name}, {pharmacy.district}"),
+            ("Before you go", "Call the pharmacy and ask the pharmacist if this brand suits you"),
+        ],
+        # No pickup day: nothing is reserved from this card, so no day's hours.
+        box=BoxFacts(
+            price_lbp=box.price_lbp,
+            saving_lbp=_saving(product, box.price_lbp, 1),
+            expiry_date=box.expiry_date,
+            days_of_use=args.days_of_use,
+            travel=way,
+        ),
     )
     payload: dict[str, object] = {
         "listing_id": str(args.listing_id),
@@ -385,6 +429,9 @@ def propose_plan(turn: Turn, tx: Tx, args: ProposePlan) -> ProposedPlan:
         pharmacy = tx.session.get_one(Pharmacy, group.pharmacy_id)
         named = [(products[boxes[pick.listing_id].product_id], pick) for pick in group.picks]
         total = sum(pick.price_lbp * pick.qty for pick in group.picks)
+        days = {pick.days_of_use for pick in group.picks}
+        saved = sum(_saving(product, pick.price_lbp, pick.qty) for product, pick in named)
+        weekly = pharmacies.weekly_hours(tx, [group.pharmacy_id])[group.pharmacy_id]
         card = CardText(
             title=f"{pharmacy.name} · {len(group.picks)} "
             + ("medicine" if len(group.picks) == 1 else "medicines"),
@@ -400,6 +447,24 @@ def propose_plan(turn: Turn, tx: Tx, args: ProposePlan) -> ProposedPlan:
                 ("Pick up", display.day(plan.pickup_day)),
             ],
             prescription_notice=any(product.prescription_required for product, _ in named),
+            # The total, its saving and the soonest expiry are shown from `box`.
+            screen_lines=[
+                *(
+                    (
+                        f"{product.moph_name} x {pick.qty}",
+                        proposals.screen_money(pick.price_lbp * pick.qty, money),
+                    )
+                    for product, pick in named
+                ),
+                ("Pick up", display.day(plan.pickup_day)),
+            ],
+            box=BoxFacts(
+                price_lbp=total,
+                saving_lbp=saved,
+                expiry_date=min(boxes[pick.listing_id].expiry_date for pick in group.picks),
+                days_of_use=days.pop() if len(days) == 1 else None,
+                hours_on_pickup_day=pharmacies.day_hours(weekly, plan.pickup_day),
+            ),
         )
         payload: dict[str, object] = {
             "pharmacy_id": str(group.pharmacy_id),
@@ -503,18 +568,25 @@ def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> 
     profile = tx.session.get(ClientProfile, turn.client_id)
     money = rate(tx)
     lines: list[tuple[str, str]] = []
+    on_screen: list[tuple[str, str]] = []
     stored = []
     notice = False
     for item in args.items:
         product = catalog.allowed_product(tx, item.product_id)
         notice = notice or product.prescription_required
         limit = display.in_lbp(item.max_price, money)
+        days = f"for {item.days_of_use} day" + ("" if item.days_of_use == 1 else "s")
         lines.append(
             (
                 f"{product.moph_name} x {item.qty}",
-                f"for {item.days_of_use} day"
-                + ("" if item.days_of_use == 1 else "s")
-                + (f", up to {display.money(limit, money)}" if limit is not None else ""),
+                days + (f", up to {display.money(limit, money)}" if limit is not None else ""),
+            )
+        )
+        on_screen.append(
+            (
+                f"{_with_strength(product)} x {item.qty}",
+                days
+                + (f", up to {proposals.screen_money(limit, money)}" if limit is not None else ""),
             )
         )
         stored.append(
@@ -526,9 +598,18 @@ def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> 
             }
         )
     hours = int(SEARCH_WINDOW.total_seconds() // 3600)
-    lines.append(("Tell me about other brands", "yes" if args.alternatives_ok else "no"))
-    lines.append(("DawaLink keeps searching for", f"{hours} hours"))
-    card = CardText(title="Find these medicines for me", lines=lines, prescription_notice=notice)
+    settings = [
+        ("Tell me about other brands", "yes" if args.alternatives_ok else "no"),
+        ("DawaLink keeps searching for", f"{hours} hours"),
+    ]
+    lines.extend(settings)
+    card = CardText(
+        title="Find these medicines for me",
+        lines=lines,
+        prescription_notice=notice,
+        # The strength the client asked for, and the dollars as the website writes them.
+        screen_lines=[*on_screen, *settings],
+    )
     payload: dict[str, object] = {
         "items": stored,
         "alternatives_ok": args.alternatives_ok,
@@ -605,6 +686,13 @@ def propose_constraint_change(turn: Turn, tx: Tx, args: ProposeConstraintChange)
                 ("Medicine", product.moph_name),
                 ("Budget now", display.money(item.max_price_lbp, money)),
                 ("New budget", display.money(new_limit, money)),
+            ],
+            # The dollars as the website writes them (B#31).
+            screen_lines=[
+                ("Request", request.ref),
+                ("Medicine", product.moph_name),
+                ("Budget now", proposals.screen_money(item.max_price_lbp, money)),
+                ("New budget", proposals.screen_money(new_limit, money)),
             ],
         )
     return _keep(turn, tx, ProposalKind.CONSTRAINT_CHANGE, payload, card)

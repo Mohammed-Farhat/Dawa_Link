@@ -124,3 +124,27 @@ export function bodyOf(draft: Draft): Schemas['PharmacyDetails'] {
     hours: hoursOf(draft.week),
   }
 }
+
+/** The API's bounds on a pharmacy's details (api/schemas/accounts.py): a longer text is
+ * never sent, so it is never refused for its length (A#35). The admin's correction uses
+ * them too. */
+export const DETAIL_MAX = { name: 120, license: 40, phone: 30, address: 300 } as const
+
+/** The longest batch the API takes once its spaces are tidied (`BATCH_MAX` in
+ * domain/pharmacy_details.py). */
+export const BATCH_MAX = 30
+// The same rule as `clean_batch`: a letter or a digit first, then letters, digits and
+// space . / _ -. ASCII only, as the API's own pattern.
+const BATCH = /^[A-Za-z0-9][A-Za-z0-9 ./_-]*$/
+
+/** A batch as the API stores it: on one line, its spaces tidied. */
+export function tidyBatch(value: string): string {
+  return value.split(/\s+/).filter(Boolean).join(' ')
+}
+
+/** Whether the API would take this batch (`clean_batch`). The form says the rule
+ * otherwise, instead of a refusal after the tap. */
+export function batchFits(value: string): boolean {
+  const batch = tidyBatch(value)
+  return batch.length >= 1 && batch.length <= BATCH_MAX && BATCH.test(batch)
+}

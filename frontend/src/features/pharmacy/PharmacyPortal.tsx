@@ -1,29 +1,48 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
-import type { Schemas } from '../../api/client'
+import { ApiFailure, type Schemas } from '../../api/client'
 import { useSession } from '../../api/session'
+import { NotFoundPage } from '../../app/NotFoundPage'
 import { Banner } from '../../components/layout'
-import { clock, dayAndClock } from '../../format'
-import { strings } from '../../strings/en'
+import { Pager } from '../../components/Pager'
+import { Placeholder } from '../../components/Placeholder'
+import { usePage } from '../../components/usePage'
+import { clock, dateAndClock, dayAndClock } from '../../format'
+import { errorMessage, strings } from '../../strings/en'
 import { UnverifiedBanner } from '../client/HomePage'
 import { NotificationsList } from '../client/NotificationsPage'
 import { AskCard } from './AskCard'
 import {
+  useAnsweredAsks,
   useAsks,
   useDashboard,
+  useDueReservations,
   usePharmacy,
   usePharmacyReservations,
   useReservationByNumber,
 } from './data'
 import { InventoryPage } from './InventoryPage'
 import { ListingsPage } from './ListingsPage'
+import { type CardNotice, noticeFor } from './notice'
 import { RegistrationPanel, SettingsPage } from './ProfilePages'
 import { ReservationCard } from './ReservationCard'
 
 const s = strings.pharmacy
 
 type Profile = Schemas['PharmacyProfile']
+
+// One meaning per colour (docs/11 §2): approved is done, waiting needs a step, a
+// rejected or suspended pharmacy is stopped.
+const STATUS_COLOUR: Record<string, string> = {
+  APPROVED: 'var(--green)',
+  PENDING: 'var(--amber)',
+  REJECTED: 'var(--red)',
+  SUSPENDED: 'var(--red)',
+}
+
+/** The order number's longest form the API reads (`GET /pharmacy/reservations?q=`). */
+const ORDER_NUMBER_MAX = 20
 
 /**
  * The pharmacy's portal (docs/11 §3.2): a top bar of pill tabs, desktop first, and every
@@ -57,7 +76,7 @@ export default function PharmacyPortal() {
         {pharmacy.status === 'REJECTED' && (
           <Banner tone="red">{s.rejected(pharmacy.status_reason)}</Banner>
         )}
-        {pharmacy.status === 'SUSPENDED' && <Banner tone="amber">{s.suspended}</Banner>}
+        {pharmacy.status === 'SUSPENDED' && <Banner tone="red">{s.suspended}</Banner>}
         {works ? (
           <Routes>
             <Route index element={<TodayPage pharmacy={pharmacy} />} />
@@ -70,6 +89,17 @@ export default function PharmacyPortal() {
               element={
                 <main className="portal__main">
                   <NotificationsList />
+                </main>
+              }
+            />
+            {/* An address of the portal that isn't a page, or one this pharmacy can't open
+                now (the stock of a suspended one): a page that says so, with its main
+                area and its heading, as in the admin's console (B#34). */}
+            <Route
+              path="*"
+              element={
+                <main className="portal__main">
+                  <NotFoundPage />
                 </main>
               }
             />
@@ -103,9 +133,20 @@ function Bar({
         </span>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 16, fontWeight: 600 }}>{pharmacy.name}</span>
-          <span style={{ fontSize: 13, color: pharmacy.status === 'APPROVED' ? 'var(--green)' : 'var(--amber)' }}>
-            {pharmacy.email_verified ? s.status[pharmacy.status] : s.notConfirmed}
-            {pharmacy.status === 'APPROVED' && ` · ${pharmacy.open_now ? s.open(closes) : s.closed}`}
+          <span style={{ fontSize: 13 }}>
+            <span
+              style={{
+                color: pharmacy.email_verified
+                  ? (STATUS_COLOUR[pharmacy.status] ?? 'var(--amber)')
+                  : 'var(--amber)',
+              }}
+            >
+              {pharmacy.email_verified ? s.status[pharmacy.status] : s.notConfirmed}
+            </span>
+            {/* Open or closed is a fact, not a status: it isn't green. */}
+            {pharmacy.status === 'APPROVED' && (
+              <span className="soft"> · {pharmacy.open_now ? s.open(closes) : s.closed}</span>
+            )}
           </span>
         </div>
       </div>
@@ -148,22 +189,77 @@ function Bar({
 function TodayPage({ pharmacy }: { pharmacy: Profile }) {
   const [typed, setTyped] = useState('')
   const [asked, setAsked] = useState('')
+  // Each Find, or tap on a row, counts once: the card it finds gets the focus once,
+  // never again when the lists refresh (the focus would jump under the pharmacist).
+  const [finds, setFinds] = useState(0)
+  const focusedFor = useRef(0)
+  const results = useRef<HTMLDivElement>(null)
+  const [notice, setNotice] = useState<CardNotice | null>(null)
   const found = useReservationByNumber(asked)
-  const active = usePharmacyReservations('active')
+  const active = useDueReservations()
   const approved = pharmacy.status === 'APPROVED'
   const numbers = useDashboard(true)
   const asks = useAsks(approved)
+  const answered = useAnsweredAsks(approved)
+  const openAsks = asks.data?.items ?? []
   const now = active.data?.server_now ?? pharmacy.server_now
   const isToday = (item: Schemas['PharmacyReservation']) =>
     Boolean(item.deadline && dayAndClock(item.deadline, now).startsWith(strings.common.today))
-  const dueToday = (active.data?.items ?? []).filter(isToday)
+  const waiting = active.data?.items ?? []
+  const dueToday = waiting.filter(isToday)
   // Reserved for a later day: the box must be put aside now all the same (PS-3).
-  const later = (active.data?.items ?? []).filter((item) => !isToday(item))
+  const later = waiting.filter((item) => !isToday(item))
+  // Today is the counter, not a list to page: past its 50 the rest is on Reservations,
+  // the latest deadlines (the list is in deadline order).
+  const notShown = (active.data?.total ?? 0) - waiting.length
+  const shown = new Set([
+    ...openAsks.map((ask) => ask.id),
+    ...(found.data?.items ?? []).map((reservation) => reservation.id),
+  ])
+  // An answered ask leaves its list: what the server said stays on the page.
+  const leftOver = notice && !shown.has(notice.key) ? notice : null
+
+  function look(number: string) {
+    setTyped(number)
+    setAsked(number)
+    setFinds((count) => count + 1)
+    // The next client: what was said about the last one is over.
+    setNotice(null)
+  }
 
   function find(event: FormEvent) {
     event.preventDefault()
-    setAsked(typed.trim())
+    look(typed.trim())
   }
+
+  // The card found appears in the counter panel, which may be far above a row tapped
+  // on a phone: it is brought into view and takes the focus, and the keyboard closes.
+  useEffect(() => {
+    if (finds === focusedFor.current || !found.isSuccess || found.isFetching) return
+    focusedFor.current = finds
+    const card = results.current?.querySelector<HTMLElement>('.counter-card')
+    if (!card) return
+    card.scrollIntoView?.({ block: 'nearest' })
+    card.focus()
+  }, [finds, found.isSuccess, found.isFetching, found.data])
+
+  const lookupFailed =
+    asked && found.isError ? (found.error instanceof ApiFailure ? found.error.code : 'INTERNAL_ERROR') : null
+  const row = (item: Schemas['PharmacyReservation'], when: string) => (
+    <button key={item.id} type="button" className="due-row" onClick={() => look(item.ref)}>
+      {item.is_new && <span className="due-row__new">{s.isNew}</span>}
+      <span className="order-ref">{item.ref}</span>
+      <span style={{ flex: 1, textAlign: 'start' }}>
+        {item.product.name} × {item.qty}
+        {when === 'today' && item.product.prescription_required && ` · ${s.prescriptionShort}`}
+      </span>
+      {item.deadline && (
+        <span className="soft">
+          {s.by(when === 'today' ? deadlineClock(item.deadline) : dayAndClock(item.deadline, now))}
+        </span>
+      )}
+    </button>
+  )
 
   return (
     <div className="portal__columns">
@@ -177,7 +273,9 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
             <span className="soft">{s.counterHint}</span>
           </div>
           <form onSubmit={find} style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            <label htmlFor="order-number" className="sr-only">
+            {/* A label that stays in sight: "R-" in the box goes as soon as one types
+                (docs/11 §9). On a line of its own, above the box and its button. */}
+            <label htmlFor="order-number" style={{ flexBasis: '100%', fontWeight: 600 }}>
               {s.orderNumber}
             </label>
             <input
@@ -187,47 +285,75 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
               autoComplete="off"
               autoCapitalize="characters"
               placeholder="R-"
+              maxLength={ORDER_NUMBER_MAX}
               value={typed}
+              // The next client's number replaces the last one without erasing it first.
+              onFocus={(event) => event.currentTarget.select()}
               onChange={(event) => setTyped(event.currentTarget.value.toUpperCase())}
             />
             <button type="submit" className="pill-button counter-find" disabled={!typed.trim()}>
               {s.find}
             </button>
           </form>
-          <div role="status" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            ref={results}
+            role="status"
+            aria-live="polite"
+            style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
             {found.data?.items.map((reservation) => (
-              <ReservationCard key={reservation.id} reservation={reservation} />
+              <ReservationCard
+                key={reservation.id}
+                reservation={reservation}
+                notice={noticeFor(notice, reservation.id)}
+                onNotice={setNotice}
+              />
             ))}
             {asked && found.isSuccess && found.data.items.length === 0 && (
               <Banner tone="amber">{s.noSuchNumber(asked)}</Banner>
             )}
+            {lookupFailed && (
+              <Banner tone="red" alert>
+                {errorMessage(lookupFailed)}
+              </Banner>
+            )}
           </div>
         </section>
+
+        {/* An ask must be answered within hours: on a phone it comes before what is due
+            today, never at the bottom of the page (PS-3: urgent first). */}
+        {leftOver && (
+          <Banner tone={leftOver.tone} alert={leftOver.tone === 'red'}>
+            {leftOver.text}
+          </Banner>
+        )}
+        {/* Always on Today, so that a pharmacist knows where an ask will appear
+            (PS-9): the open ones, or what will come here, and the last ones answered. */}
+        {approved && (
+          <section className="panel" aria-labelledby="asks">
+            <h2 id="asks" className="panel__title">
+              {s.ask.section}
+            </h2>
+            {openAsks.map((ask) => (
+              <AskCard
+                key={ask.id}
+                ask={ask}
+                now={asks.data?.server_now ?? now}
+                notice={noticeFor(notice, ask.id)}
+                onNotice={setNotice}
+              />
+            ))}
+            {asks.isSuccess && openAsks.length === 0 && <span className="soft">{s.ask.empty}</span>}
+            <AnsweredAsks asks={answered.data ?? []} />
+          </section>
+        )}
 
         <section className="panel" aria-labelledby="due">
           <h2 id="due" className="panel__title">
             {s.dueToday}
           </h2>
           {active.isSuccess && dueToday.length === 0 && <span className="soft">{s.nothingDue}</span>}
-          {dueToday.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="due-row"
-              onClick={() => {
-                setTyped(item.ref)
-                setAsked(item.ref)
-              }}
-            >
-              {item.is_new && <span className="due-row__new">{s.isNew}</span>}
-              <span className="order-ref">{item.ref}</span>
-              <span style={{ flex: 1, textAlign: 'start' }}>
-                {item.product.name} × {item.qty}
-                {item.product.prescription_required && ` · ${s.prescriptionShort}`}
-              </span>
-              {item.deadline && <span className="soft">{s.by(deadlineClock(item.deadline))}</span>}
-            </button>
-          ))}
+          {dueToday.map((item) => row(item, 'today'))}
         </section>
 
         {later.length > 0 && (
@@ -235,32 +361,19 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
             <h2 id="later" className="panel__title">
               {s.comingNext}
             </h2>
-            {later.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="due-row"
-                onClick={() => {
-                  setTyped(item.ref)
-                  setAsked(item.ref)
-                }}
-              >
-                {item.is_new && <span className="due-row__new">{s.isNew}</span>}
-                <span className="order-ref">{item.ref}</span>
-                <span style={{ flex: 1, textAlign: 'start' }}>
-                  {item.product.name} × {item.qty}
-                </span>
-                {item.deadline && <span className="soft">{s.by(dayAndClock(item.deadline, now))}</span>}
-              </button>
-            ))}
+            {later.map((item) => row(item, 'later'))}
           </section>
+        )}
+        {notShown > 0 && (
+          <p style={{ margin: 0 }}>
+            <Link to="/pharmacy/reservations" className="text-button" style={{ paddingInlineStart: 0 }}>
+              {s.moreOnReservations(notShown)}
+            </Link>
+          </p>
         )}
       </main>
 
       <aside className="portal__aside">
-        {(asks.data?.items ?? []).map((ask) => (
-          <AskCard key={ask.id} ask={ask} now={asks.data?.server_now ?? now} />
-        ))}
         {numbers.data && (
           <section className="panel" aria-label={s.numbers}>
             <h2 className="panel__title">{s.numbers}</h2>
@@ -274,6 +387,31 @@ function TodayPage({ pharmacy }: { pharmacy: Profile }) {
         )}
       </aside>
     </div>
+  )
+}
+
+/** The last asks answered, or ended, under the open ones: what happened to each. Nothing
+ * when there are none. */
+function AnsweredAsks({ asks }: { asks: Schemas['EarlyReleaseAsk'][] }) {
+  if (asks.length === 0) return null
+  return (
+    <>
+      <h3 className="ask-card__title" style={{ fontSize: 17 }}>
+        {s.ask.answeredTitle}
+      </h3>
+      <ul className="plain-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {asks.map((ask) => (
+          <li key={ask.id} style={{ fontSize: 15 }}>
+            <strong>
+              {ask.qty_needed} × {ask.product.name}
+            </strong>{' '}
+            · {s.ask.answered[ask.state] ?? ask.state}
+            {/* An ask that ran out or was withdrawn may have no answer: its deadline. */}
+            <span className="hint"> · {dateAndClock(ask.answered_at ?? ask.respond_by)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
 
@@ -291,11 +429,19 @@ function Number({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
-/** PS-4: every reservation, waiting or over. */
+/** PS-4: every reservation, waiting or over. The tab is in the address
+ * (`?view=history`), so that a notification about a cancelled reservation opens where
+ * that reservation is, never an empty "To hand over" (B#52). */
 function ReservationsPage() {
-  const [view, setView] = useState<'active' | 'history'>('active')
-  const found = usePharmacyReservations(view)
+  const paging = usePage()
+  const view = paging.params.get('view') === 'history' ? 'history' : 'active'
+  // A tab is a choice of the list: back to its first page in the same change.
+  const setView = (tab: 'active' | 'history') => paging.choose('view', tab === 'history' ? tab : null)
+  const found = usePharmacyReservations(view, paging.offset)
   const items = found.data?.items ?? []
+  const [notice, setNotice] = useState<CardNotice | null>(null)
+  // A reservation handed over leaves "To hand over": what the server said stays here.
+  const leftOver = notice && !items.some((item) => item.id === notice.key) ? notice : null
   return (
     <main className="portal__main">
       <h1 className="page-title">{s.reservations}</h1>
@@ -307,18 +453,33 @@ function ReservationsPage() {
             role="tab"
             aria-selected={view === tab}
             className="tabs__tab"
-            onClick={() => setView(tab)}
+            onClick={() => {
+              setView(tab)
+              setNotice(null)
+            }}
           >
             {s[tab]}
           </button>
         ))}
       </div>
-      {found.isSuccess && items.length === 0 && (
+      {leftOver && (
+        <Banner tone={leftOver.tone} alert={leftOver.tone === 'red'}>
+          {leftOver.text}
+        </Banner>
+      )}
+      {found.isPending && <Placeholder />}
+      {found.isSuccess && items.length === 0 && !found.data.total && (
         <span className="soft">{view === 'active' ? s.nothingActive : s.nothingBefore}</span>
       )}
       {items.map((reservation) => (
-        <ReservationCard key={reservation.id} reservation={reservation} />
+        <ReservationCard
+          key={reservation.id}
+          reservation={reservation}
+          notice={noticeFor(notice, reservation.id)}
+          onNotice={setNotice}
+        />
       ))}
+      <Pager paging={paging} total={found.data?.total} settled={found.isSuccess && !found.isPlaceholderData} />
     </main>
   )
 }

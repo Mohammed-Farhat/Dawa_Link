@@ -20,7 +20,7 @@ from dawalink.agent.context import identity_of
 from dawalink.agent.guards.redact import redact
 from dawalink.db.models import ChatMessage, SourcingRequest
 from dawalink.domain.numbers import MAX_MESSAGE_CHARS
-from dawalink.services import clients, conversations, escalations
+from dawalink.services import clients, conversations, escalations, events
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -41,8 +41,17 @@ def post_client_message(
     conversation_id: uuid.UUID,
     text: str,
     client_message_id: uuid.UUID,
+    to_the_team: bool = False,
 ) -> Posted:
-    """Stores a client's message, redacted. The same `client_message_id` is stored once."""
+    """Stores a client's message, redacted. The same `client_message_id` is stored once.
+
+    `to_the_team`: DawaLink's team has this conversation (`escalations.held_by_team`), so
+    the message is for them. It is stored exactly the same way, and asks for no agent turn.
+
+    When the team's hold ran out by itself and the client writes again, one card says that
+    the assistant answers from here on, before the message: it is what tells the agent's
+    side, and the client, that this message is the assistant's to answer.
+    """
     clients.require_search(clients.profile(tx, client_id))
     text = text.strip()
     if not text:
@@ -63,6 +72,10 @@ def post_client_message(
     before = conversations.sent_before(tx, conversation_id, client_message_id)
     if before is not None:
         return Posted(before.seq, seen_before=True, worker_runs_the_turn=in_thread)
+    if not to_the_team and escalations.team_has_the_last_word(
+        tx, conversation_id, conversations.history(tx, conversation_id)
+    ):
+        events.post_card(tx, conversation_id, escalations.ASSISTANT_BACK_CARD)
     message = conversations.append(
         tx,
         conversation,
@@ -71,10 +84,12 @@ def post_client_message(
         text=redact(text, identity_of(tx, client_id)).text,
         client_message_id=client_message_id,
     )
-    if in_thread and conversation.pending_turn_at is None:
+    if in_thread and not to_the_team and conversation.pending_turn_at is None:
         conversation.pending_turn_at = tx.now
         conversation.turn_attempts = 0
-    return Posted(message.seq, seen_before=False, worker_runs_the_turn=in_thread)
+    return Posted(
+        message.seq, seen_before=False, worker_runs_the_turn=in_thread and not to_the_team
+    )
 
 
 def post_team_reply(

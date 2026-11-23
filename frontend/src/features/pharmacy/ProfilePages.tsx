@@ -4,10 +4,12 @@ import { type FormEvent, lazy, Suspense, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { ChangePassword } from '../../components/ChangePassword'
+import { FormProblems } from '../../components/FormProblems'
 import { Banner } from '../../components/layout'
 import { errorMessage, strings } from '../../strings/en'
 import { useDistricts } from '../client/data'
 import { DetailsFields, HoursFields, PickupDays } from './details'
+import { DETAIL_MAX } from './draft'
 import { bodyOf, draftOf, hoursOf, phoneProblem, problemsOf, weekOf, weekProblem } from './draft'
 
 // The map is downloaded only when the settings open (docs/11 §10).
@@ -18,6 +20,9 @@ const s = strings.pharmacy.settingsPage
 
 type Profile = Schemas['PharmacyProfile']
 type Failure = { code: string; field: string | null }
+
+/** The fields the "Where you are" form marks itself when the server refuses one. */
+const PLACE_FIELDS = ['address', 'district_id', 'location']
 
 function failureOf(error: unknown): Failure {
   const refusal = error instanceof ApiFailure ? error : null
@@ -36,15 +41,27 @@ export function RegistrationPanel({ pharmacy }: { pharmacy: Profile }) {
   const districts = useDistricts()
   const [draft, setDraft] = useState(() => draftOf(pharmacy))
   const [tried, setTried] = useState(false)
+  // Each refused save, by the form or by the API: the focus goes to the first mistake.
+  const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<'idle' | 'sending' | 'saved'>('idle')
   const [failed, setFailed] = useState<Failure | null>(null)
   const rejected = pharmacy.status === 'REJECTED'
+  const problems = problemsOf(draft)
+  // Only a field this form marks: a refusal of any other (the pickup days, which are
+  // chips) is said in the banner, never lost (A#35).
+  const refused = failed?.field && Object.hasOwn(problems, failed.field) ? failed.field : null
+  const marked = Object.entries(problems).filter(
+    ([field, problem]) => (tried && problem) || refused === field,
+  ).length
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setTried(true)
     setFailed(null)
-    if (Object.values(problemsOf(draft)).some(Boolean)) return
+    if (Object.values(problems).some(Boolean)) {
+      setAttempt((count) => count + 1)
+      return
+    }
     setState('sending')
     try {
       let saved = await unwrap(api.PATCH('/api/v1/pharmacy/me/registration', { body: bodyOf(draft) }))
@@ -53,8 +70,10 @@ export function RegistrationPanel({ pharmacy }: { pharmacy: Profile }) {
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       setState('saved')
     } catch (error) {
-      setFailed(failureOf(error))
+      const failure = failureOf(error)
+      setFailed(failure)
       setState('idle')
+      if (failure.field && Object.hasOwn(problems, failure.field)) setAttempt((count) => count + 1)
     }
   }
 
@@ -73,12 +92,13 @@ export function RegistrationPanel({ pharmacy }: { pharmacy: Profile }) {
             }}
             districts={districts.data ?? []}
             tried={tried}
-            refused={failed?.field ?? null}
+            refused={refused}
           />
           <div role="status" aria-live="polite">
             {state === 'saved' && <Banner tone="green">{d.saved}</Banner>}
-            {failed && !failed.field && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+            {failed && !refused && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
           </div>
+          <FormProblems count={marked} attempt={attempt} />
           <button
             type="submit"
             className="pill-button"
@@ -170,6 +190,7 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
               size="md"
               type="tel"
               autoComplete="tel"
+              maxLength={DETAIL_MAX.phone}
               value={phone}
               onChange={(event) => {
                 setPhone(event.currentTarget.value)
@@ -182,7 +203,10 @@ export function SettingsPage({ pharmacy }: { pharmacy: Profile }) {
             />
             <div role="status" aria-live="polite">
               {state === 'saved' && <Banner tone="green">{d.saved}</Banner>}
-              {failed && !failed.field && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+              {/* A refusal of a field this form doesn't mark is said here, never lost (A#35). */}
+              {failed && !(failed.field === 'hours' || failed.field === 'phone') && (
+                <Banner tone="red">{errorMessage(failed.code)}</Banner>
+              )}
             </div>
             <button
               type="submit"
@@ -273,7 +297,7 @@ function ListingRule({ pharmacy }: { pharmacy: Profile }) {
         <fieldset className="choice">
           <legend>{s.ruleLabel}</legend>
           {choices.map((choice) => (
-            <label key={choice} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}>
+            <label key={choice} className="radio-row">
               <input
                 type="radio"
                 name="auto-list-days"
@@ -351,6 +375,7 @@ function PlaceSettings({ pharmacy }: { pharmacy: Profile }) {
           label={d.address}
           size="md"
           autoComplete="street-address"
+          maxLength={DETAIL_MAX.address}
           value={address}
           onChange={(event) => {
             setAddress(event.currentTarget.value)
@@ -390,7 +415,10 @@ function PlaceSettings({ pharmacy }: { pharmacy: Profile }) {
         </fieldset>
         <div role="status" aria-live="polite">
           {state === 'saved' && <Banner tone="green">{s.placeSaved}</Banner>}
-          {failed && !failed.field && <Banner tone="red">{errorMessage(failed.code)}</Banner>}
+          {/* A refusal of a field this form doesn't mark is said here, never lost (A#35). */}
+          {failed && !(failed.field && PLACE_FIELDS.includes(failed.field)) && (
+            <Banner tone="red">{errorMessage(failed.code)}</Banner>
+          )}
         </div>
         <button
           type="submit"

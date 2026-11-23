@@ -6,11 +6,11 @@ see (a client never gets coordinates or private stock; a pharmacy never gets a c
 
 import uuid
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 
 from dawalink.api.schemas import accounts as account_schemas
 from dawalink.api.schemas import chat as chat_schemas
@@ -52,6 +52,7 @@ from dawalink.services import (
 )
 from dawalink.services.catalog import ProductRef
 from dawalink.services.context import Tx
+from dawalink.services.orders import TRIP
 
 # --- Small pieces -----------------------------------------------------------------------
 
@@ -154,7 +155,7 @@ def listings(
             days_left=listing.days_left,
             available=listing.available,
             more_available=listing.more_available,
-            travel=search_schemas.Travel(
+            travel=common.Travel(
                 car_min=listing.travel.car_min,
                 walk_min=listing.travel.walk_min,
                 km=listing.travel.km,
@@ -178,8 +179,10 @@ def me(tx: Tx, user: User) -> account_schemas.Me:
         profile = tx.session.get_one(ClientProfile, user.id)
         home = tx.session.get(District, profile.district_id) if profile.district_id else None
         town = tx.session.get(Area, profile.home_area_id) if profile.home_area_id else None
+        # Missed pickups are trips, as the pause counts them (R-N1): a plan card of two
+        # boxes not collected is one, so this never says "2 of 2" to a client not paused.
         missed = tx.session.execute(
-            select(func.count())
+            select(func.count(distinct(TRIP)))
             .select_from(Order)
             .where(
                 Order.client_id == user.id,
@@ -262,7 +265,8 @@ def status_text(order: Order, now: datetime) -> str:
         OrderState.RESERVED: "Reserved",
         OrderState.PICKED_UP: "Picked up",
         OrderState.NOT_AVAILABLE: "Not available: the pharmacy didn't have it",
-        OrderState.EXPIRED_NO_SHOW: "Expired: it wasn't picked up in time",
+        # "Expired" is kept for a box's expiry date, which the ticket shows beside this.
+        OrderState.EXPIRED_NO_SHOW: "Missed pickup: it wasn't picked up in time",
         OrderState.CANCELLED_BY_CLIENT: "Cancelled by you",
         OrderState.CANCELLED_BY_SYSTEM: "Cancelled by DawaLink",
     }.get(state, "Not reserved")
@@ -375,8 +379,26 @@ SYSTEM_CARD_FACTS = frozenset(
 )
 
 
+def _card_box(stored: Any, lbp_per_usd: Decimal | None) -> chat_schemas.CardBox | None:
+    """A card's boxes as search shows a box (B#5). Absent on cards made before they were
+    stored: those show their lines alone, as they always did."""
+    if not isinstance(stored, dict):
+        return None
+    way = stored.get("travel")
+    return chat_schemas.CardBox(
+        price=money(int(stored["price_lbp"]), lbp_per_usd),
+        saving=money(int(stored["saving_lbp"]), lbp_per_usd),
+        expiry_date=date.fromisoformat(str(stored["expiry_date"])),
+        days_of_use=stored.get("days_of_use"),
+        hours_on_pickup_day=stored.get("hours_on_pickup_day"),
+        travel=common.Travel(**way) if isinstance(way, dict) else None,
+    )
+
+
 def _proposal_card(tx: Tx, proposal: Proposal, lbp_per_usd: Decimal | None) -> chat_schemas.Card:
     stored = proposal.payload.get("card", {})
+    # The screen's own lines when the card has them; the model reads `lines` (B#31, A#37).
+    lines = stored.get("screen_lines", stored.get("lines", []))
     kind = ProposalKind(proposal.kind)
     items = [
         chat_schemas.SelectableItem(
@@ -392,10 +414,7 @@ def _proposal_card(tx: Tx, proposal: Proposal, lbp_per_usd: Decimal | None) -> c
         origin="proposal",
         type=kind.value,
         title=str(stored.get("title", "")),
-        lines=[
-            chat_schemas.CardLine(label=str(label), value=str(value))
-            for label, value in stored.get("lines", [])
-        ],
+        lines=[chat_schemas.CardLine(label=str(label), value=str(value)) for label, value in lines],
         prescription_notice=bool(stored.get("prescription_notice")),
         recommended=bool(stored.get("recommended")),
         state=proposals.state_of(tx, proposal),
@@ -404,6 +423,7 @@ def _proposal_card(tx: Tx, proposal: Proposal, lbp_per_usd: Decimal | None) -> c
         selectable_items=items,
         call_number=proposals.call_number(tx.session, proposal),
         data={},
+        box=_card_box(stored.get("box"), lbp_per_usd),
     )
 
 

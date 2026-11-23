@@ -10,7 +10,8 @@ from typing import Literal
 
 from pydantic import Field
 
-from dawalink.api.schemas.common import In, Lbp, Money, Out, ProductSummary
+from dawalink.api.schemas.common import CountedPage, In, Lbp, Money, Out, ProductSummary
+from dawalink.domain.numbers import MAX_BOX_QUANTITY
 
 
 class StockPrice(Out):
@@ -47,7 +48,7 @@ class StockItem(Out):
     last_edited_at: datetime | None
 
 
-class Stock(Out):
+class Stock(CountedPage):
     items: list[StockItem]
     next_cursor: str | None
     server_now: datetime
@@ -57,14 +58,14 @@ class AddStockItem(In):
     product_id: uuid.UUID
     batch: str = Field(min_length=1, max_length=60)
     expiry_date: date
-    qty: int = Field(ge=0, le=100_000)
+    qty: int = Field(ge=0, le=MAX_BOX_QUANTITY)
 
 
 class StockItemChange(In):
     """Only what is sent changes. `price_override_lbp: null` goes back to the system's
     price."""
 
-    qty_on_hand: int | None = Field(default=None, ge=0, le=100_000)
+    qty_on_hand: int | None = Field(default=None, ge=0, le=MAX_BOX_QUANTITY)
     price_override_lbp: Lbp | None = None
     paused: bool | None = None
     # true: list this box now, whatever the pharmacy's rule says. false: back to the rule.

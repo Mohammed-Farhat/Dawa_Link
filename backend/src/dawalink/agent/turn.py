@@ -35,7 +35,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.orm import Session, sessionmaker
 
-from dawalink.agent import architectures, context, limits, state
+from dawalink.agent import architectures, context, language, limits, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
@@ -74,6 +74,7 @@ from dawalink.db.models import (
     AgentToolCall,
     ChatMessage,
     Conversation,
+    Product,
     SourcingRequest,
 )
 from dawalink.domain.clock import Clock
@@ -89,6 +90,7 @@ from dawalink.domain.numbers import (
 from dawalink.domain.vocabulary import EscalationReason, RunOutcome, TurnTrigger
 from dawalink.services import conversations, escalations, proposals
 from dawalink.services.context import Tx, unit_of_work
+from dawalink.services.escalations import AskState
 from dawalink.services.travel import RoutingService
 
 log = structlog.get_logger(__name__)
@@ -100,6 +102,15 @@ NO_TOOL_CALLS_LEFT = (
     "using what you have; any other tool call will be refused."
 )
 # A guardrail note for a turn the model never ended with a usable reply.
+# A reply may come in the same model message as these tools only: their answer adds
+# nothing the reply needs. With any other tool the reply was written blind, before the
+# tool's result existed (seen on 2026-11-22: "I asked the pharmacies", when nobody was).
+REPLY_MAY_COME_WITH = frozenset({"escalate"})
+REPLIED_TOO_EARLY = (
+    "You wrote this reply before you had the results of the tool calls sent with it. Read "
+    "those results now, then reply again: say only what they show. If a call failed, "
+    "say plainly what you could not do, and never that it was done."
+)
 NO_REPLY = "no_reply"
 INJECTION = "injection"
 MODEL_REFUSAL = "model_refusal"
@@ -245,6 +256,17 @@ def _load_context(graph_state: _State) -> _State:
             work.result = TurnResult(Status.NOTHING)
             return graph_state
 
+        if conversation.kind == "chat" and escalations.held_by_team(tx, conversation.id):
+            # DawaLink's team has this chat (the owner, 2026-11-22): the assistant says
+            # nothing in it until the case is closed or the hold runs out. An event that
+            # waits is looked at then (closing the case brings the turn forward).
+            hold_ends = escalations.team_hold_ends_at(tx, conversation.id)
+            if conversation.pending_turn_at is not None and hold_ends is not None:
+                conversation.pending_turn_at = hold_ends
+            conversations.release_lease(conversation, work.owner)
+            work.result = TurnResult(Status.NOTHING)
+            return graph_state
+
         # The lease is held now, so nobody else is working on this conversation: is
         # the turn still wanted? The worker read its list a moment ago, and another
         # turn may have answered since. A second turn would cost money and repeat
@@ -353,18 +375,45 @@ def _guard_input(graph_state: _State) -> _State:
 # --- 3. agent (the model) --------------------------------------------------------------
 
 
+class OutOfTime(LLMError):
+    """The turn reached its time limit (N-37) while no model call of it had failed.
+
+    Its time went elsewhere: tools waiting for a slow routing service or database, or
+    slow answers that still came. The turn falls back like any other, but the circuit
+    breaker doesn't count it against the model (A#25, `limits.TIME_LIMIT`).
+    """
+
+
 def _ask(work: _Work, prompt: Prompt) -> ModelReply:
     """One model call, retried on what a retry can fix (N-35, N-36)."""
     attempts = 1 + len(LLM_RETRY_BACKOFF_S)
+    failed: LLMError | None = None
     for attempt in range(attempts):
         left = work.time_left()
         if left <= 0:
-            raise LLMUnavailable("the turn's time limit was reached")
+            # Once a model call of this turn has failed (`retries`), running out of time
+            # is the model's failure too: a provider that times out on half its calls
+            # must still open the breaker.
+            if failed is not None:
+                raise failed
+            if work.retries:
+                raise LLMUnavailable("the turn's time limit was reached")
+            raise OutOfTime("the turn's time limit was reached")
+        timeout_s = min(LLM_TIMEOUT_S, left)
         try:
-            return work.agent.model.complete(prompt, timeout_s=min(LLM_TIMEOUT_S, left))
+            return work.agent.model.complete(prompt, timeout_s=timeout_s)
         except LLMError as error:
+            if (
+                work.retries == 0
+                and error.retryable
+                and timeout_s < LLM_TIMEOUT_S
+                and work.time_left() <= 0
+            ):
+                # Cut short by what was left of the turn, not by the model's own limit.
+                raise OutOfTime("the turn's time limit was reached") from None
             if not error.retryable or attempt == attempts - 1:
                 raise
+            failed = error
             work.retries += 1
             work.agent.sleep(min(LLM_RETRY_BACKOFF_S[attempt], max(work.time_left(), 0)))
     raise AssertionError("unreachable")
@@ -488,6 +537,7 @@ def _agent(graph_state: _State) -> _State:
             cost_usd=str(call_cost),
             retries=work.retries - retries_before,
         )
+    _note_spending(work)
     work.messages.append(AssistantTurn(answer))
     if answer.tool_calls:
         work.route = "tools"
@@ -501,6 +551,32 @@ def _agent(graph_state: _State) -> _State:
     work.candidate, work.candidate_call_id = Reply(text=text[:1200]), None
     work.route = "guard_output"
     return graph_state
+
+
+def _note_spending(work: _Work) -> None:
+    """Writes what the turn's model calls have used so far on its `agent_runs` row (A#21).
+
+    The run's numbers are otherwise written when the turn ends. A turn that never ends, the
+    worker stopped or killed in the middle of it, would leave money spent that no cap
+    counts (R-AS, N-46). The save writes the same numbers again, with the rest. Best effort:
+    the turn doesn't fail for it.
+    """
+    try:
+        with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
+            tx.session.execute(
+                update(AgentRun)
+                .where(AgentRun.id == work.run_id)
+                .values(
+                    tokens_in=work.tokens_in,
+                    tokens_out=work.tokens_out,
+                    tokens_cached=work.tokens_cached,
+                    cost_usd=work.cost,
+                    llm_calls=work.llm_calls,
+                )
+            )
+    except Exception as error:
+        # Its kind only: a database error's message repeats the values (FS-13).
+        log.warning("agent_run_spending_not_written", error=type(error).__name__)
 
 
 def _last_input(messages: list[Message]) -> Any:
@@ -527,6 +603,8 @@ def _tools(graph_state: _State) -> _State:
     work.pending_results = []
     work.candidate = None
     replied = False
+    # The other tools of this model message, with whether each worked.
+    came_with: list[tuple[str, bool]] = []
     for call in last.reply.tool_calls:
         if call.name == REPLY:
             # Only the first reply of a model call counts, valid or not. Seen on real runs:
@@ -553,6 +631,8 @@ def _tools(graph_state: _State) -> _State:
                 )
             continue
         if work.tool_calls >= MAX_TOOL_CALLS_PER_TURN:
+            # Not counted in `came_with`: the tool never ran, so a reply sent with it
+            # can't be wrong about it.
             work.pending_results.append(
                 _error(
                     call.id,
@@ -589,12 +669,19 @@ def _tools(graph_state: _State) -> _State:
             )
         work.tool_calls += 1
         work.outcomes.append(outcome)
+        came_with.append((call.name, outcome.ok))
         work.pending_results.append(
             ToolResult(call.id, call.name, outcome.as_json(), is_error=not outcome.ok)
         )
     if work.outcomes and not _renew_lease(work):
         work.route = "lost"
         return graph_state
+    if work.candidate is not None and _replied_too_early(work, came_with):
+        assert work.candidate_call_id is not None
+        work.pending_results.append(
+            _error(work.candidate_call_id, REPLY, ToolError.INVALID_ARGUMENTS, REPLIED_TOO_EARLY)
+        )
+        work.candidate = None
     if work.candidate is not None:
         work.route = "guard_output"
         return graph_state
@@ -604,6 +691,24 @@ def _tools(graph_state: _State) -> _State:
     )
     work.route = "agent"
     return graph_state
+
+
+def _replied_too_early(work: _Work, came_with: list[tuple[str, bool]]) -> bool:
+    """Was this reply written before the model could read what its tools answered?
+
+    A reply sent in the same model message as other tool calls can't know their results.
+    It is refused, and the model answers again from the results, when:
+    - one of those calls failed: the reply can't be right about it (on 2026-11-22 a failed
+      hand-over was announced to the client as done);
+    - or one of them is a tool whose answer the reply needs, and a model call is left.
+    A reply next to a successful `escalate` alone is kept: the answer adds nothing.
+    """
+    if not came_with:
+        return False
+    if any(not worked for _, worked in came_with):
+        return True
+    needs_the_answer = any(name not in REPLY_MAY_COME_WITH for name, _ in came_with)
+    return needs_the_answer and work.llm_calls < MAX_LLM_CALLS_PER_TURN
 
 
 def _error(call_id: str, name: str, code: ToolError, hint: str) -> ToolResult:
@@ -685,6 +790,44 @@ def _verify_draft(work: _Work) -> bool:
     return False
 
 
+def _product_names(tx: Tx, work: _Work) -> set[str]:
+    """The names of the products this turn is about: what its tools returned, and the
+    medicines the conversation holds. The reply guard doesn't read them as dosing words."""
+    assert work.turn is not None
+    names: set[str] = set()
+
+    def collect(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, inner in value.items():
+                if key in ("name", "product") and isinstance(inner, str):
+                    names.add(inner)
+                else:
+                    collect(inner)
+        elif isinstance(value, list):
+            for inner in value:
+                collect(inner)
+
+    for outcome in work.outcomes:
+        collect(outcome.content)
+    kept = {item.product_id for item in work.turn.state.items_in_focus}
+    kept |= set(work.turn.state.asked_product_ids)
+    if kept:
+        names |= set(
+            tx.session.execute(select(Product.moph_name).where(Product.id.in_(kept))).scalars()
+        )
+    return names
+
+
+def _a_person_has_it(tx: Tx, work: _Work) -> bool:
+    """May the reply say that a person from DawaLink has the case? Yes when this turn told
+    one, or when the client has a case open (read from the table)."""
+    assert work.loaded is not None
+    if any(outcome.name == "escalate" and outcome.ok for outcome in work.outcomes):
+        return True
+    ask = escalations.person_ask(tx, work.loaded.client_id, work.loaded.conversation_id)
+    return ask.state in (AskState.ASKED, AskState.ANSWERED)
+
+
 def _guard_output(graph_state: _State) -> _State:
     """Checks the reply. One chance to fix it, then our own words (docs/07 §7.2, AG-D9)."""
     work = graph_state["work"]
@@ -715,6 +858,9 @@ def _guard_output(graph_state: _State) -> _State:
                 budget=work.turn.state.budget if work.turn else None,
                 client_pickup_day=work.turn.state.client_pickup_day if work.turn else None,
                 on_foot=work.turn is not None and work.turn.state.preference == "walkable",
+                client_language=language.language_of(work.loaded.client_text),
+                product_names=_product_names(tx, work),
+                a_person_has_it=_a_person_has_it(tx, work),
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)
@@ -964,6 +1110,18 @@ def _save(graph_state: _State) -> _State:
                     # The turn outlived its lease, and another one may have run: saving
                     # now could write a second reply. Nothing is saved; it is retried (FA-16).
                     raise _LeaseLost
+                if conversation.kind == "chat" and escalations.held_by_team(tx, conversation.id):
+                    # The team replied while this turn ran: their word stands, and the
+                    # assistant's reply is not sent on top of it. What the turn read and
+                    # noted is kept, so the same message is not answered again later
+                    # (its tools may already have started a watch).
+                    noted = state.apply_notes(work.turn.state, reply.case_notes, work.turn.clean)
+                    noted.read_up_to = loaded.last_seq
+                    conversation.case_state = state.dump(state.tidy(noted, tx.today))
+                    _finish_run(tx, work, work.outcome)
+                    conversations.release_lease(conversation, work.owner)
+                    work.result = TurnResult(Status.NOTHING, work.outcome, run_id=work.run_id)
+                    return graph_state
                 noted = state.apply_notes(work.turn.state, reply.case_notes, work.turn.clean)
                 noted.read_up_to = loaded.last_seq
                 conversation.case_state = state.dump(state.tidy(noted, tx.today))
@@ -1041,6 +1199,12 @@ def _try_again_later(tx: Tx, conversation: Conversation, *, counted: bool) -> No
 def _hand_to_a_person(tx: Tx, conversation: Conversation, summary: str) -> None:
     """Escalates `cannot_resolve`, tells the client once, and stops asking for turns."""
     case = state.load(conversation.case_state)
+    # Read from the table, never from the chat's memory: a case closed since then means
+    # the client is told again.
+    told_before = escalations.person_ask(tx, conversation.client_id, conversation.id).state in (
+        AskState.ASKED,
+        AskState.ANSWERED,
+    )
     escalations.escalate(
         tx,
         client_id=conversation.client_id,
@@ -1049,9 +1213,7 @@ def _hand_to_a_person(tx: Tx, conversation: Conversation, summary: str) -> None:
         conversation_id=conversation.id,
         request_id=conversation.request_id,
     )
-    if not case.escalated:
-        case.escalated = True
-        conversation.case_state = state.dump(case)
+    if not told_before:
         conversations.append(
             tx,
             conversation,
@@ -1074,10 +1236,13 @@ def _fallback(graph_state: _State) -> _State:
         error=type(work.failure).__name__ if work.failure else None,
         runs_in=work.runs_in,
     )
+    if isinstance(work.failure, OutOfTime) and limits.TIME_LIMIT not in work.guardrails:
+        work.guardrails.append(limits.TIME_LIMIT)
     with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
         conversation = conversations.locked(tx, work.conversation_id)
         _finish_run(tx, work, RunOutcome.FALLBACK)
         if conversations.holds_lease(tx, conversation, work.owner):
+            _keep_followups_used(conversation, work)
             if work.runs_in == "worker":
                 _try_again_later(tx, conversation, counted=True)
             conversations.release_lease(conversation, work.owner)
@@ -1157,9 +1322,81 @@ def _crashed(work: _Work) -> None:
             conversation = conversations.locked(tx, work.conversation_id)
             if work.loaded is not None:
                 _finish_run(tx, work, RunOutcome.ERROR)
-            if conversations.holds_lease(tx, conversation, work.owner):
-                if work.runs_in == "worker":
-                    _try_again_later(tx, conversation, counted=True)
+            holds = conversations.holds_lease(tx, conversation, work.owner)
+            if holds:
+                _keep_followups_used(conversation, work)
+            # A crash in the opening transaction undid the lease with everything else, so
+            # nobody holds it. It is still this turn's failure: uncounted, the worker would
+            # pick the conversation again on every pass and never hand it to a person
+            # (SM-12, A#27). A lease someone else holds is their turn's business.
+            if work.runs_in == "worker" and (holds or not conversations.is_busy(tx, conversation)):
+                _try_again_later(tx, conversation, counted=True)
+                _follow_up_waits_too(tx, conversation)
+            if holds:
                 conversations.release_lease(conversation, work.owner)
     except Exception:
         log.exception("agent_turn_cleanup_failed", run_id=str(work.run_id))
+        if work.runs_in == "worker":
+            _put_aside(work)
+
+
+def _keep_followups_used(conversation: Conversation, work: _Work) -> None:
+    """A turn that isn't saved still keeps count of the follow-ups it scheduled.
+
+    `schedule_followup` commits the follow-up at once, and counts it in the turn's case
+    state, which only a saved turn writes. Without this, a turn that fell back would
+    leave a follow-up nobody counted, and its retry could schedule more than N-39 allows.
+    Only the counter is written, and only upwards: the rest of the state is the saved turns'.
+    """
+    if work.turn is None:
+        return
+    stored = dict(conversation.case_state or {})
+    before = stored.get("followups_used", 0)
+    used = work.turn.state.followups_used
+    if isinstance(before, int) and used > before:
+        stored["followups_used"] = used
+        conversation.case_state = stored
+
+
+def _follow_up_waits_too(tx: Tx, conversation: Conversation) -> None:
+    """A follow-up that was due waits for the retry with the rest.
+
+    The worker picks a conversation whose follow-up is due whatever its other mark says, so
+    a follow-up the crash left due would bring it back on the next pass, not after the wait.
+    """
+    if (
+        conversation.followup_at is not None
+        and conversation.followup_at <= tx.now
+        and conversation.pending_turn_at is not None
+    ):
+        conversation.followup_at = conversation.pending_turn_at
+
+
+def _put_aside(work: _Work) -> None:
+    """The last resort, when even the clean-up failed: the conversation's marks are pushed
+    back by the longest wait, so a turn that can't run isn't tried again every few seconds.
+
+    Nothing is counted (the counting is what failed); the error is in the log.
+    """
+    try:
+        with unit_of_work(work.agent.sessions, work.agent.clock) as tx:
+            later = tx.now + TURN_RETRY_AFTER[-1]
+            mine = Conversation.id == work.conversation_id
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.pending_turn_at <= tx.now)
+                .values(pending_turn_at=later)
+            )
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.followup_at <= tx.now)
+                .values(followup_at=later)
+            )
+            tx.session.execute(
+                update(Conversation)
+                .where(mine, Conversation.turn_owner == work.owner)
+                .values(turn_lease_until=None, turn_owner=None)
+            )
+        log.error("agent_turn_put_aside", conversation_id=str(work.conversation_id))
+    except Exception as error:
+        log.error("agent_turn_put_aside_failed", error=type(error).__name__)

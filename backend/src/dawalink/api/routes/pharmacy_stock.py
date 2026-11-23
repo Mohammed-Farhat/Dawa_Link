@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Response, UploadFile
 from dawalink.api import present
 from dawalink.api.deps import AsPharmacist, DoWork
 from dawalink.api.routes.pharmacy import OwnPharmacy
-from dawalink.api.schemas.common import Money, Skip
+from dawalink.api.schemas.common import Money, Skip, next_cursor
 from dawalink.api.schemas.stock import (
     AddStockItem,
     Stock,
@@ -119,23 +119,29 @@ def list_stock(
     work: DoWork,
     q: Annotated[str, Query(max_length=100)] = "",
     zone: Literal["NEAR_EXPIRY", "EARLY_RELEASE", "PRIVATE", "EXPIRED"] | None = None,
+    sort: Literal["expiry", "medicine"] = "expiry",
     cursor: Skip = 0,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> Stock:
-    """The pharmacy's boxes, soonest expiry first. `zone=NEAR_EXPIRY` is its listings."""
+    """The pharmacy's boxes, soonest expiry first; `sort=medicine` puts the boxes of one
+    medicine side by side (one per batch and expiry). `zone=NEAR_EXPIRY` is its
+    listings. `total` counts the boxes these choices keep, on every page."""
     with work.tx() as tx:
         inventory.can_manage(tx, pharmacy_id)
+        chosen_zone = Zone(zone) if zone else None
         lines = inventory.stock_lines(
             tx,
             pharmacy_id,
             query=q,
-            zone=Zone(zone) if zone else None,
+            zone=chosen_zone,
+            sort=sort,
             offset=cursor,
             limit=limit + 1,
         )
         return Stock(
             items=_items(tx, pharmacy_id, lines[:limit]),
-            next_cursor=str(cursor + limit) if len(lines) > limit else None,
+            next_cursor=next_cursor(cursor, limit, len(lines)),
+            total=inventory.count_stock(tx, pharmacy_id, query=q, zone=chosen_zone),
             server_now=tx.now,
         )
 

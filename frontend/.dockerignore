@@ -1,2 +1,6 @@
 node_modules
 dist
+# A settings file on the laptop must not be copied into the image, nor change what it is
+# built with: the API's address comes from the build argument only (docs/12 §12).
+.env*
+**/.env*

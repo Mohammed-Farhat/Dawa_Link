@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from dawalink.api import present
 from dawalink.api.deps import AsClient, DoWork
-from dawalink.api.schemas.common import Skip
+from dawalink.api.schemas.common import Skip, next_cursor
 from dawalink.api.schemas.orders import Reservation, ReservationsPage
 from dawalink.db.models import Order
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
@@ -18,6 +18,7 @@ from dawalink.domain.vocabulary import EscalationReason
 from dawalink.services import escalations, orders
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 router = APIRouter(tags=["reservations"])
 
@@ -33,7 +34,7 @@ def list_reservations(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> ReservationsPage:
     """`active`: what is reserved now, the soonest pickup first. `history`: the rest,
-    the newest first."""
+    the newest first. `total` counts the reservations of the view, on every page."""
     with work.tx() as tx:
         statement = select(Order).where(Order.client_id == caller.user_id)
         if view == "active":
@@ -45,10 +46,10 @@ def list_reservations(
                 Order.state.in_(_SHOWN), Order.state != OrderState.RESERVED.value
             ).order_by(Order.closed_at.desc(), Order.id)
         rows = tx.session.execute(statement.offset(cursor).limit(limit + 1)).scalars().all()
-        more = len(rows) > limit
         return ReservationsPage(
             items=present.reservations(tx, rows[:limit]),
-            next_cursor=str(cursor + limit) if more else None,
+            next_cursor=next_cursor(cursor, limit, len(rows)),
+            total=count_rows(tx, statement),
             server_now=tx.now,
         )
 
@@ -79,20 +80,29 @@ def cancel_reservation(reservation_id: uuid.UUID, caller: AsClient, work: DoWork
 @router.post("/reservations/{reservation_id}/contest")
 def contest_no_show(reservation_id: uuid.UUID, caller: AsClient, work: DoWork) -> Reservation:
     """[I picked it up] on an expired reservation: the pharmacy forgot to press
-    [Picked up] (R-N3). Once per reservation, while the no-show still counts. A person
-    from DawaLink looks at it: nothing changes until they do."""
+    [Picked up] (R-N3). Once per missed trip, while it still counts: the boxes of a plan
+    card are contested together. A person from DawaLink looks at it: nothing changes
+    until they do."""
     with work.tx() as tx:
         order = orders.contest_no_show(tx, caller.user_id, reservation_id)
+        summary = (
+            f"The client says they collected order {order.ref}, but the pharmacy never"
+            " pressed [Picked up]: it was counted as a missed pickup."
+        )
+        others = [other.ref for other in orders.missed_trip(tx, order)[1:]]
+        if others:
+            # Reserved in one tap and missed together: one missed pickup (R-N1). A plan
+            # card has at most 5 lines, so this stays within a summary's 300 characters.
+            summary += f" One trip with {', '.join(others)}: clearing it clears them too."
         escalations.escalate(
             tx,
             client_id=caller.user_id,
             reason=EscalationReason.COMPLAINT,
             # An order number names no person.
-            summary=(
-                f"The client says they collected order {order.ref}, but the pharmacy never"
-                " pressed [Picked up]: it was counted as a missed pickup."
-            ),
+            summary=summary,
             conversation_id=orders.conversation_of(tx, order),
             actor=Actor.CLIENT,
+            # The case shows this reservation and its trip, and how they ended (B#61).
+            contested_order=order.id,
         )
         return present.reservations(tx, [order])[0]

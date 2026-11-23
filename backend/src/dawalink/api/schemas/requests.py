@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import Field
 
 from dawalink.api.schemas.common import In, Money, Out, PharmacyCard, ProductSummary
+from dawalink.api.schemas.search import DayHours
 
 
 class ReservationRef(Out):
@@ -83,6 +84,8 @@ class Offer(Out):
     # The days the client may come for it, the soonest first.
     pickup_days_allowed: list[date]
     request_id: uuid.UUID | None
+    # The pharmacy's opening hours on each of those days, as search shows them (B#5).
+    pickup_day_hours: list[DayHours] = Field(default_factory=list)
 
 
 class Offers(Out):

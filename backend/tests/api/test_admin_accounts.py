@@ -13,7 +13,9 @@ import pytest
 
 from dawalink.domain.clock import beirut_date
 from dawalink.domain.orders import OrderSource
-from dawalink.services import daily, orders
+from dawalink.domain.state_machine import Actor
+from dawalink.domain.vocabulary import EscalationReason
+from dawalink.services import daily, escalations, orders
 from dawalink.services.orders import ReserveLine
 from tests.api.conftest import PASSWORD, Api, code_of
 
@@ -444,6 +446,7 @@ class TestClients:
             "orders_cancelled": 1,
             "requests_closed": 1,
             "watches_ended": 1,
+            "flags_closed": 0,
         }
 
     def test_a_request_that_closed_fulfilled_stays_closed(
@@ -553,6 +556,103 @@ class TestContestingANoShow:
         ]
         # A contest comes from a button, not from a chat: there is no chat to show.
         assert case["thread"] == []
+        # Which reservation it is about is the case's own memory, never "added later".
+        assert case["escalation"]["notes"] == []
+        assert case["contested"][0]["counts_as_no_show"] is True
+
+    def test_a_case_shows_its_own_missed_pickup_and_how_it_ended(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """B#61: the block follows the case, not the client. A case of another kind has
+        none, and a closed contest says whether it was cleared."""
+        http = api.http()
+        login = api.token(shop.client)
+        first, second = shop.no_show(), shop.no_show()
+
+        def resolved_case() -> str:
+            (case,) = http.get(f"{ADMIN}/escalations", headers=admin).json()["items"]
+            http.post(f"{ADMIN}/escalations/{case['id']}/resolve", json={}, headers=admin)
+            return str(case["id"])
+
+        def about(case_id: str) -> list[tuple[str, bool]]:
+            case = http.get(f"{ADMIN}/escalations/{case_id}", headers=admin).json()
+            return [(row["ref"], row["counts_as_no_show"]) for row in case["contested"]]
+
+        http.post(f"/api/v1/reservations/{first.id}/contest", headers=login)
+        http.post(
+            f"{ADMIN}/reservations/{first.id}/clear-no-show",
+            json={"reason": "The pharmacy confirmed the pickup."},
+            headers=admin,
+        )
+        cleared_case = resolved_case()
+        http.post(f"/api/v1/reservations/{second.id}/contest", headers=login)
+        refused_case = resolved_case()
+        tx = api.world.tx()
+        asked = escalations.escalate(
+            tx,
+            client_id=shop.client,
+            reason=EscalationReason.CLIENT_ASKED_HUMAN,
+            summary="The client asked for a person.",
+            actor=Actor.CLIENT,
+        )
+        api.world.settle(tx)
+
+        # Cleared, then closed: the case says so, with nothing left to clear.
+        assert about(cleared_case) == [(first.ref, False)]
+        # Closed without clearing: it still counts, and only this case's reservation.
+        assert about(refused_case) == [(second.ref, True)]
+        # Another kind of case of the same client: no missed pickup on it.
+        assert about(str(asked.escalation_id)) == []
+
+        # A contest added to that open case is about its own reservation there too.
+        third = shop.no_show()
+        http.post(f"/api/v1/reservations/{third.id}/contest", headers=login)
+        joined = http.get(f"{ADMIN}/escalations/{asked.escalation_id}", headers=admin).json()
+        assert [(row["ref"], row["counts_as_no_show"]) for row in joined["contested"]] == [
+            (third.ref, True)
+        ]
+        assert [note["reason"] for note in joined["escalation"]["notes"]] == ["complaint"]
+
+    def test_an_older_complaint_shows_the_reservation_it_names(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """A contest made before cases remembered their reservation names it in its
+        summary; a complaint the assistant wrote about something else names none."""
+        http = api.http()
+        missed = shop.no_show()
+        http.post(f"/api/v1/reservations/{missed.id}/contest", headers=api.token(shop.client))
+        (case,) = http.get(f"{ADMIN}/escalations", headers=admin).json()["items"]
+        with api.world.as_owner():  # as such a case was stored
+            api.world.connection.exec_driver_sql(
+                "UPDATE escalations SET notes = '[]'::jsonb WHERE id = %s", (case["id"],)
+            )
+        http.post(
+            f"{ADMIN}/reservations/{missed.id}/clear-no-show",
+            json={"reason": "The pharmacy confirmed."},
+            headers=admin,
+        )
+        http.post(f"{ADMIN}/escalations/{case['id']}/resolve", json={}, headers=admin)
+        # A contest that still counts, in a case of its own, closed without clearing.
+        still = shop.no_show()
+        http.post(f"/api/v1/reservations/{still.id}/contest", headers=api.token(shop.client))
+        (open_case,) = http.get(f"{ADMIN}/escalations", headers=admin).json()["items"]
+        http.post(f"{ADMIN}/escalations/{open_case['id']}/resolve", json={}, headers=admin)
+        tx = api.world.tx()
+        other = escalations.escalate(
+            tx,
+            client_id=shop.client,
+            reason=EscalationReason.COMPLAINT,
+            summary="The client says the pharmacist was rude.",
+        )
+        api.world.settle(tx)
+
+        older = http.get(f"{ADMIN}/escalations/{case['id']}", headers=admin).json()
+        written = http.get(f"{ADMIN}/escalations/{other.escalation_id}", headers=admin).json()
+
+        assert [(row["ref"], row["counts_as_no_show"]) for row in older["contested"]] == [
+            (missed.ref, False)
+        ]
+        assert written["contested"] == []
 
     def test_a_reservation_that_is_not_a_counted_no_show_cannot_be_contested(
         self, api: Api, shop: Shop
@@ -660,12 +760,52 @@ class TestAbuseFlags:
         )
 
         assert (before["flags_open"], before["flags_high"]) == (1, 1)
-        assert acted.json()["action"] == "suspend"
+        assert (acted.json()["state"], acted.json()["action"]) == ("ACTIONED", "suspend")
         assert shop.state_of(reserved.id) == "CANCELLED_BY_SYSTEM"
         status = api.world.one(
             "SELECT status FROM client_profiles WHERE user_id = :id", id=shop.client
         )[0]
         assert status == "SUSPENDED"
+        # Closed once, by the suspension: one event for the flag, not two.
+        assert api.world.audit_actions(uuid.UUID(flag["id"])) == ["abuse_flag.suspend"]
+
+    def test_suspending_from_the_clients_page_closes_their_flags(
+        self, api: Api, shop: Shop, admin: dict[str, str]
+    ) -> None:
+        """B#58: whichever button suspended them, a suspended client no longer needs a
+        look, and each flag says it was handled by the suspension."""
+        http = api.http()
+        shop.no_show()
+        shop.no_show()  # paused: a low flag
+        with api.world.as_owner():
+            api.world.connection.exec_driver_sql(
+                "INSERT INTO abuse_flags (subject_type, subject_id, rule, severity, evidence) "
+                "VALUES ('client', %s, 'guardrail_repeat', 'high', %s::jsonb)",
+                (shop.client, '{"triggers_24h": 3}'),
+            )
+        page = f"{ADMIN}/clients/{shop.client}"
+        flags = http.get(page, headers=admin).json()["flags"]
+
+        suspended = http.post(
+            f"{page}/suspend", json={"reason": "Abusive messages."}, headers=admin
+        ).json()
+        listed = http.get(f"{ADMIN}/clients?having=look", headers=admin).json()["items"]
+        overview = http.get(f"{ADMIN}/overview", headers=admin).json()
+
+        assert len(flags) == 2
+        assert (suspended["flags"], suspended["client"]["flags_open"]) == ([], 0)
+        assert str(shop.client) not in [row["id"] for row in listed]
+        assert overview["flags_open"] == 0
+        closed = api.world.all(
+            "SELECT id, state, action, resolved_by FROM abuse_flags WHERE subject_id = :c",
+            c=shop.client,
+        )
+        admin_id = api.world.one("SELECT id FROM users WHERE role = 'admin'")[0]
+        assert {(row.state, row.action, row.resolved_by) for row in closed} == {
+            ("ACTIONED", "suspend", admin_id)
+        }
+        for row in closed:
+            assert api.world.audit_actions(row.id) == ["abuse_flag.suspend"]
 
 
 class TestCatalogAndHealth:

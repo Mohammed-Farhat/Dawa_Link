@@ -14,12 +14,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy import text as sql_text
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as upsert
 
 from dawalink.db.models import (
-    AbuseFlag,
     Claim,
     ClaimSkip,
     ClientProfile,
@@ -64,6 +62,10 @@ from dawalink.services.notify import Template, notify
 from dawalink.services.search import Box, visible_boxes
 
 OPEN = tuple(state.value for state in OPEN_STATES)
+# One trip to the pharmacies, for counting missed pickups (R-N1): the reservations made
+# together by one tap share a `group_id`; a reservation made alone is a trip of its own.
+# `func.count(distinct(TRIP))` counts missed pickups the way the pause rule does.
+TRIP = func.coalesce(Order.group_id, Order.id)
 
 
 @dataclass(frozen=True)
@@ -309,9 +311,30 @@ def _sold_out(tx: Tx, item: InventoryItem | None) -> bool:
 
 
 def _check_request_items(
-    tx: Tx, client_id: uuid.UUID, lines: Sequence[ReserveLine], boxes: dict[uuid.UUID, Box]
+    tx: Tx,
+    client_id: uuid.UUID,
+    lines: Sequence[ReserveLine],
+    boxes: dict[uuid.UUID, Box],
+    *,
+    lock: bool = False,
 ) -> None:
-    """A line for a request item must be for that item's medicine, in its open request."""
+    """A line for a request item must be for that item's medicine, in its open request.
+
+    Under a tap (`lock`), the request items are locked first, in the order a closing
+    request locks them (`requests.close_if_done`), and the request is read after the
+    lock is granted. A request that closes at this very moment then either counts this
+    reservation, or this tap is told it closed: never a reservation on a closed request
+    that secures nothing.
+    """
+    request_items = {line.request_item_id for line in lines if line.request_item_id}
+    if lock and request_items:
+        tx.session.execute(
+            select(RequestItem.id)
+            .join(SourcingRequest, SourcingRequest.id == RequestItem.request_id)
+            .where(RequestItem.id.in_(request_items), SourcingRequest.client_id == client_id)
+            .order_by(RequestItem.request_id, RequestItem.position)
+            .with_for_update(of=RequestItem)
+        ).all()
     for line in lines:
         if line.request_item_id is None:
             continue
@@ -319,6 +342,7 @@ def _check_request_items(
             select(RequestItem, SourcingRequest)
             .join(SourcingRequest, SourcingRequest.id == RequestItem.request_id)
             .where(RequestItem.id == line.request_item_id, SourcingRequest.client_id == client_id)
+            .execution_options(populate_existing=True)
         ).one_or_none()
         if found is None:
             raise ServiceError(Code.NOT_FOUND, "Unknown request item.")
@@ -340,17 +364,20 @@ def _guards(
     lines: Sequence[ReserveLine],
     pickup_day: date,
     items: dict[uuid.UUID, InventoryItem],
+    *,
+    locked: bool = False,
 ) -> tuple[dict[uuid.UUID, Box], dict[uuid.UUID, Product]]:
     """Everything that can refuse a reservation, in one place (O1's guards).
 
-    A tap runs it under the items' locks. A proposal tool runs it without any lock, to
-    refuse a card the tap would refuse anyway (docs/07 §4.3). Either way the answer comes
-    from the same code, so a card and its button can't disagree.
+    A tap runs it under the items' locks (`locked`), and locks the request items it
+    reserves for too. A proposal tool runs it without any lock, to refuse a card the tap
+    would refuse anyway (docs/07 §4.3). Either way the answer comes from the same code,
+    so a card and its button can't disagree.
     """
     boxes = {
         box.item_id: box for box in visible_boxes(tx, item_ids=[line.item_id for line in lines])
     }
-    _check_request_items(tx, client_id, lines, boxes)
+    _check_request_items(tx, client_id, lines, boxes, lock=locked)
 
     failures = []
     for line in lines:
@@ -466,7 +493,7 @@ def reserve(
     )
     held_by_offers = [offer.inventory_item_id for offer in open_offers(tx, claim_ids)]
     items = lock_items(tx, [*(line.item_id for line in lines), *held_by_offers])
-    boxes, products = _guards(tx, client_id, lines, pickup_day, items)
+    boxes, products = _guards(tx, client_id, lines, pickup_day, items, locked=True)
 
     group_id = uuid.uuid4() if len(lines) > 1 else None
     orders: list[Order] = []
@@ -644,10 +671,19 @@ def expire_no_show(tx: Tx, order_id: uuid.UUID) -> Order | None:
     if tx.now < order.deadline:
         return None
     units = _release(tx, order, item)
-    order.counts_as_no_show = True
+    # The client's row is locked, so the other boxes of the trip read here are settled.
+    trip = _rest_of_missed_trip(tx, order, cleared_too=True)
     order.close_reason = CloseReason.EXPIRED.value
+    # A box of a trip whose first box already expired is the same missed pickup: counted
+    # (and paused for) with that box, contested with it, and cleared with it. An admin
+    # who cleared the trip cleared this box too (the boxes of one card may be at
+    # pharmacies that close at different times).
+    order.counts_as_no_show = all(other.counts_as_no_show for other in trip)
+    if trip:
+        order.contested_at = next((o.contested_at for o in trip if o.contested_at), None)
     move(tx, order, OrderState.EXPIRED_NO_SHOW, Actor.SYSTEM, "order.no_show")
-    _pause_after_no_shows(tx, client)
+    if not trip:
+        _pause_after_no_shows(tx, client)
     ended = needs.need_ended(tx, order, units, Actor.SYSTEM)
     if ended is not None:
         withdraw_offers(tx, ended.id, reason="the client didn't come")
@@ -668,24 +704,67 @@ def expire_no_show(tx: Tx, order_id: uuid.UUID) -> Order | None:
     return order
 
 
-def _pause_after_no_shows(tx: Tx, client: ClientProfile) -> None:
-    """Two counted no-shows in 30 days pause the client for 7 days; each later one adds 7 (R-N1).
+def _rest_of_missed_trip(
+    tx: Tx, order: Order, *, lock: bool = False, cleared_too: bool = False
+) -> list[Order]:
+    """The other boxes of this order's trip that were missed and still count, oldest
+    first; with `cleared_too`, also the ones an admin cleared. Empty for a reservation
+    made on its own."""
+    if order.group_id is None:
+        return []
+    statement = (
+        select(Order)
+        .where(
+            Order.client_id == order.client_id,
+            Order.group_id == order.group_id,
+            Order.id != order.id,
+            Order.state == OrderState.EXPIRED_NO_SHOW.value,
+        )
+        .order_by(Order.closed_at, Order.id)
+    )
+    if not cleared_too:
+        statement = statement.where(Order.counts_as_no_show.is_(True))
+    if lock:
+        statement = statement.with_for_update().execution_options(populate_existing=True)
+    return list(tx.session.execute(statement).scalars())
 
-    The client's row is already locked, so two no-shows handled at once can't both miss
-    the pause.
+
+def missed_trip(tx: Tx, order: Order) -> list[Order]:
+    """The boxes of this order's trip that count as one missed pickup, this one first:
+    what one contest is about (R-N1, R-N3)."""
+    return [order, *_rest_of_missed_trip(tx, order)]
+
+
+def missed_trips(tx: Tx, client_id: uuid.UUID) -> list[datetime]:
+    """When each trip the client missed was missed: one moment per trip (R-N1).
+
+    **A missed pickup is a trip, not a box.** The boxes one tap reserved together (a
+    plan card: one `group_id`) and not collected are one missed pickup, at the moment
+    the first of them expired. A box reserved on its own is a trip of its own.
     """
-    counted = list(
-        tx.session.execute(
-            select(Order.closed_at).where(
-                Order.client_id == client.user_id,
+    return [
+        moment
+        for moment in tx.session.execute(
+            select(func.min(Order.closed_at))
+            .where(
+                Order.client_id == client_id,
                 Order.counts_as_no_show.is_(True),
                 Order.closed_at.is_not(None),
             )
+            .group_by(TRIP)
         ).scalars()
-    )
-    until = pause_after_no_show(
-        [moment for moment in counted if moment], tx.now, client.paused_until
-    )
+        if moment
+    ]
+
+
+def _pause_after_no_shows(tx: Tx, client: ClientProfile) -> None:
+    """Two missed trips in 30 days pause the client for 7 days; each later one adds 7 (R-N1).
+
+    Called once per missed trip, with its first box. The client's row is already locked,
+    so two no-shows handled at once can't both miss the pause.
+    """
+    counted = missed_trips(tx, client.user_id)
+    until = pause_after_no_show(counted, tx.now, client.paused_until)
     if until is None or until == client.paused_until:
         return
     before = {"status": client.status, "paused_until": str(client.paused_until)}
@@ -716,40 +795,13 @@ def _pause_after_no_shows(tx: Tx, client: ClientProfile) -> None:
         {"paused_until": until.isoformat()},
         event=f"pause:{until.isoformat()}",
     )
-    tx.session.execute(
-        upsert(AbuseFlag)
-        .values(
-            subject_type="client",
-            subject_id=client.user_id,
-            rule="no_show_pause",
-            severity="low",
-            evidence={"no_shows": len(counted)},
-        )
-        .on_conflict_do_nothing(
-            index_elements=["subject_type", "subject_id", "rule"],
-            index_where=sql_text("state = 'OPEN'"),
-        )
-    )
-
-
-def _counted_no_shows(tx: Tx, client_id: uuid.UUID) -> list[datetime]:
-    return [
-        moment
-        for moment in tx.session.execute(
-            select(Order.closed_at).where(
-                Order.client_id == client_id,
-                Order.counts_as_no_show.is_(True),
-                Order.closed_at.is_not(None),
-            )
-        ).scalars()
-        if moment
-    ]
 
 
 def contest_no_show(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID) -> Order:
     """[I picked it up] on an expired reservation (R-N3): the pharmacy forgot to press
-    [Picked up]. Once per reservation, while the no-show still counts (30 days). It
-    changes nothing by itself: a person from DawaLink looks at it.
+    [Picked up]. Once per missed trip, while it still counts (30 days): the other boxes
+    of the trip are contested with it. It changes nothing by itself: a person from
+    DawaLink looks at it.
     """
     clients.profile(tx, client_id, lock=True)
     seen = _peek(tx, order_id)
@@ -766,23 +818,27 @@ def contest_no_show(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID) -> Order:
     )
     if not still_counts:
         raise ServiceError(Code.NOT_CONTESTABLE, "This reservation can't be contested.")
-    order.contested_at = tx.now
-    audit.record(
-        tx,
-        Actor.CLIENT,
-        "order.no_show_contested",
-        "order",
-        order.id,
-        actor_id=client_id,
-        after={"state": order.state, "contested": True},
-    )
+    for contested in [order, *_rest_of_missed_trip(tx, order, lock=True)]:
+        if contested.contested_at is not None:
+            continue
+        contested.contested_at = tx.now
+        audit.record(
+            tx,
+            Actor.CLIENT,
+            "order.no_show_contested",
+            "order",
+            contested.id,
+            actor_id=client_id,
+            after={"state": contested.state, "contested": True},
+        )
     return order
 
 
 def clear_no_show(tx: Tx, admin_id: uuid.UUID, order_id: uuid.UUID, *, reason: str) -> Order:
-    """An admin accepts a contest: the reservation no longer counts as a no-show, and a
-    pause it caused is lifted if the client's other no-shows don't justify it (R-N3).
-    The reservation itself stays what it is: expired (INV-4's one exception)."""
+    """An admin accepts a contest: the reservation, and the other boxes of its trip, no
+    longer count as a missed pickup, and a pause it caused is lifted if the client's other
+    missed trips don't justify it (R-N3). The reservations themselves stay what they are:
+    expired (INV-4's one exception)."""
     reason = audit.required_reason(reason)
     seen = _peek(tx, order_id)
     if seen is None:
@@ -798,20 +854,22 @@ def clear_no_show(tx: Tx, admin_id: uuid.UUID, order_id: uuid.UUID, *, reason: s
         raise ServiceError(
             Code.NOT_CONTESTABLE, "Only a contested no-show that still counts can be cleared."
         )
-    order.counts_as_no_show = False
-    audit.record(
-        tx,
-        Actor.ADMIN,
-        "order.no_show_cleared",
-        "order",
-        order.id,
-        actor_id=admin_id,
-        before={"counts_as_no_show": True},
-        after={"counts_as_no_show": False},
-        reason=reason,
-    )
+    # One missed pickup is the whole trip: clearing it clears every box of it.
+    for cleared in [order, *_rest_of_missed_trip(tx, order, lock=True)]:
+        cleared.counts_as_no_show = False
+        audit.record(
+            tx,
+            Actor.ADMIN,
+            "order.no_show_cleared",
+            "order",
+            cleared.id,
+            actor_id=admin_id,
+            before={"counts_as_no_show": True},
+            after={"counts_as_no_show": False},
+            reason=reason,
+        )
     if client.status == ClientStatus.PAUSED.value:
-        recent = [m for m in _counted_no_shows(tx, client.user_id) if m > tx.now - NO_SHOW_WINDOW]
+        recent = [m for m in missed_trips(tx, client.user_id) if m > tx.now - NO_SHOW_WINDOW]
         if len(recent) < NO_SHOWS_BEFORE_PAUSE:
             CLIENT_MACHINE.check(ClientStatus.PAUSED, ClientStatus.ACTIVE, Actor.ADMIN)
             before = {"status": client.status, "paused_until": str(client.paused_until)}
@@ -964,6 +1022,8 @@ def accept_offer(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID, pickup_day: 
     """The client accepts an offer: it becomes a reservation (O9).
 
     The claim's other offers are withdrawn at once, so a need is never served twice (INV-20).
+    Accepting an offer that is already this client's reservation answers with it, as made:
+    a retried tap never reserves twice and is never refused.
     """
     client = clients.profile(tx, client_id, lock=True)
     clients.require_reserve(tx, client)
@@ -974,6 +1034,11 @@ def accept_offer(tx: Tx, client_id: uuid.UUID, order_id: uuid.UUID, pickup_day: 
     items = lock_items(tx, [seen.inventory_item_id, *(o.inventory_item_id for o in siblings)])
     order = lock_order(tx, order_id)
     assert order is not None
+    if order.state == OrderState.RESERVED.value:
+        # Accepted already, by this client (an offer is only ever theirs): the same tap,
+        # sent again because its answer was lost on the way. It gets the reservation it
+        # made, as it is, and nothing changes (A#28).
+        return order
     if order.state != "OFFERED" or order.offer_expires_at is None:
         raise ServiceError(Code.OFFER_NOT_OPEN, "This offer is no longer open.", reason=order.state)
     if tx.now >= order.offer_expires_at:

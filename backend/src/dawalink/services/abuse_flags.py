@@ -4,6 +4,10 @@ A flag is raised by code: a client whose messages keep tripping the injection gu
 a client paused for no-shows. It holds IDs and counts, never a message or a name. An
 admin dismisses it, records a warning, or suspends the account it is about; a suspension
 goes through the same service as any other, with its effects and its audit event.
+
+**A client's suspension closes every open flag about them**, whichever button suspended
+them (the flag's own, or [Suspend this client] on their page): the flags are then
+ACTIONED with the action "suspend", each with its own audit event.
 """
 
 import uuid
@@ -16,7 +20,7 @@ from sqlalchemy.sql import text as sql_text
 from dawalink.db.models import AbuseFlag
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import FlagRule, FlagSeverity, FlagState, FlagSubject
-from dawalink.services import admin_clients, admin_pharmacies, audit
+from dawalink.services import admin_clients, admin_pharmacies, audit, clients
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 
@@ -111,6 +115,32 @@ def dismiss(tx: Tx, admin_id: uuid.UUID, flag_id: uuid.UUID, *, reason: str) -> 
     return flag
 
 
+def close_for_suspended_client(
+    tx: Tx, admin_id: uuid.UUID, client_id: uuid.UUID, *, reason: str
+) -> int:
+    """The client was just suspended: every flag about them that nobody had handled is
+    closed as handled by that suspension, each with its own audit event. Whichever button
+    suspended them, a suspended client no longer "needs a look" (B#58). How many."""
+    found = (
+        tx.session.execute(
+            select(AbuseFlag)
+            .where(
+                AbuseFlag.subject_type == FlagSubject.CLIENT.value,
+                AbuseFlag.subject_id == client_id,
+                AbuseFlag.state == FlagState.OPEN.value,
+            )
+            .order_by(AbuseFlag.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        .scalars()
+        .all()
+    )
+    for flag in found:
+        _close(tx, flag, admin_id, FlagState.ACTIONED, "suspend", reason)
+    return len(found)
+
+
 def act(tx: Tx, admin_id: uuid.UUID, flag_id: uuid.UUID, *, action: str, reason: str) -> AbuseFlag:
     """`warn` records that the admin warned the account's owner (by a reply to their
     escalation, or outside DawaLink); `suspend` suspends the account, with everything a
@@ -118,11 +148,22 @@ def act(tx: Tx, admin_id: uuid.UUID, flag_id: uuid.UUID, *, action: str, reason:
     reason = audit.required_reason(reason)
     if action not in ACTIONS:
         raise ServiceError(Code.VALIDATION_ERROR, "Unknown action.", field="action")
+    subject = tx.session.execute(
+        select(AbuseFlag.subject_type, AbuseFlag.subject_id).where(AbuseFlag.id == flag_id)
+    ).one_or_none()
+    if subject is None:
+        raise ServiceError(Code.NOT_FOUND, "Unknown flag.")
+    about_a_client = subject.subject_type == FlagSubject.CLIENT.value
+    if action == "suspend" and about_a_client:
+        # The client before their flags, as a suspension from their page locks them: two
+        # admins pressing both buttons at once never wait for each other in a circle.
+        clients.profile(tx, subject.subject_id, lock=True)
     flag = _open(tx, flag_id)
+    if action == "suspend" and about_a_client:
+        # The suspension closes this flag, and the client's other open ones, itself.
+        admin_clients.suspend(tx, admin_id, flag.subject_id, reason=reason)
+        return flag
     if action == "suspend":
-        if flag.subject_type == FlagSubject.CLIENT.value:
-            admin_clients.suspend(tx, admin_id, flag.subject_id, reason=reason)
-        else:
-            admin_pharmacies.suspend(tx, admin_id, flag.subject_id, reason=reason)
+        admin_pharmacies.suspend(tx, admin_id, flag.subject_id, reason=reason)
     _close(tx, flag, admin_id, FlagState.ACTIONED, action, reason)
     return flag

@@ -11,7 +11,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Connection, delete, func, insert, select, text
+from sqlalchemy import Connection, delete, func, insert, select, text, update
 from sqlalchemy.dialects.postgresql import insert as upsert
 
 from dawalink.catalog.composition import (
@@ -60,7 +60,9 @@ def product_values(row: CatalogRow, rules: CatalogRules) -> tuple[dict[str, Any]
         "atc_code": row.atc or None,
         "public_price_lbp": row.price_lbp,
         "units_per_pack": 1,
-        "prescription_required": rules.needs_prescription(ingredients),
+        "prescription_required": rules.needs_prescription(
+            ingredients, on_ministry_list=row.otc_listed
+        ),
         "controlled": rules.is_controlled(row.atc, ingredients),
         "equivalence_key": equivalence_key(ingredients, group, row.atc),
     }
@@ -167,3 +169,56 @@ def import_catalog(
         no_prescription_notice=count(Product.prescription_required.is_(False)),
         overrides_capped=capped,
     )
+
+
+@dataclass(frozen=True)
+class MarkRefresh:
+    notice_removed: int
+    notice_restored: int
+    # The file says "no notice", but the database's product under that code has another
+    # registration number or name (an older or newer list): it keeps its notice.
+    kept_other_product: int
+
+
+def refresh_prescription_marks(
+    connection: Connection, rows: Sequence[CatalogRow], rules: CatalogRules
+) -> MarkRefresh:
+    """Sets the prescription mark of products already in the database to what an import of
+    `rows` would give them (R-C7), and changes nothing else about them.
+
+    For a database whose catalog was imported before the mark existed: `prepare_db` imports
+    only into an empty catalog. Matched on the Ministry's code, as an import is. The notice is
+    put back by the code alone, which is always safe; it is taken away only when the product
+    under that code is the file's very product (same registration number and name), because a
+    code is sometimes reused by another product. Running it again changes nothing.
+    """
+    wanted = {row.code: product_values(row, rules)[0] for row in rows}
+    current = connection.execute(
+        select(
+            Product.moph_code,
+            Product.registration_number,
+            Product.moph_name,
+            Product.prescription_required,
+        ).where(Product.moph_code.in_(list(wanted)))
+    )
+    remove: list[int] = []
+    restore: list[int] = []
+    kept = 0
+    for code, registration, name, required in current:
+        values = wanted[code]
+        if values["prescription_required"] == required:
+            continue
+        if values["prescription_required"]:
+            restore.append(code)
+        elif (registration, name) == (values["registration_number"], values["moph_name"]):
+            remove.append(code)
+        else:
+            kept += 1
+    for codes, required in ((remove, False), (restore, True)):
+        for start in range(0, len(codes), BATCH):
+            connection.execute(
+                update(Product)
+                .where(Product.moph_code.in_(codes[start : start + BATCH]))
+                .values(prescription_required=required)
+            )
+    return MarkRefresh(len(remove), len(restore), kept)

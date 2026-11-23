@@ -314,6 +314,25 @@ def has_pharmacies(connection: Connection) -> bool:
     return bool(connection.execute(select(func.count()).select_from(Pharmacy)).scalar_one())
 
 
+class NoCatalogYet(Exception):
+    """Demo pharmacies seeded before the catalog would stay without stock for good: every
+    later run sees pharmacies and skips the seed (docs/12 §7)."""
+
+
+def refuse_without_a_catalog(connection: Connection) -> None:
+    """Called before seeding: the demo data needs products a pharmacy may hold."""
+    stockable = connection.execute(
+        select(func.count()).select_from(Product).where(Product.controlled.is_(False))
+    ).scalar_one()
+    if not stockable:
+        raise NoCatalogYet(
+            "Demo mode is on but the catalog is empty, so no demo pharmacy was created: "
+            "they would have no stock, for good. Build the catalog (python -m "
+            "dawalink.ops.build_catalog, docs/12 §7) and run this again, or set "
+            "DEMO_MODE=false."
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
@@ -327,6 +346,7 @@ def main() -> None:
             if has_pharmacies(connection):
                 log.info("demo_seed_skipped", reason="pharmacies already exist")
             else:
+                refuse_without_a_catalog(connection)
                 result = seed_demo(connection, seed=arguments.seed, now=SystemClock().now())
                 log.info(
                     "demo_seeded",
@@ -334,11 +354,15 @@ def main() -> None:
                     clients=result.clients,
                     inventory_items=result.inventory_items,
                 )
-            if settings.demo_accounts_password is not None:
+            # Only in demo mode, as prepare_db does: the settings judge the password in AWS
+            # only then (config.py).
+            if settings.demo_mode and settings.demo_accounts_password is not None:
                 accounts = set_demo_passwords(
                     connection, settings.demo_accounts_password.get_secret_value()
                 )
                 log.info("demo_passwords_set", accounts=accounts)
+    except NoCatalogYet as stopped:
+        raise SystemExit(str(stopped)) from None
     finally:
         engine.dispose()
 

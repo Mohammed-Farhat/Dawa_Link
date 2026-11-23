@@ -3,18 +3,31 @@ import { type FormEvent, useState } from 'react'
 
 import { api, ApiFailure, unwrap } from '../../../api/client'
 import { Banner } from '../../../components/layout'
-import { clock } from '../../../format'
-import { errorMessage, strings } from '../../../strings/en'
+import { dayClockInSentence } from '../../../format'
+import { strings } from '../../../strings/en'
+import { type Failure, failureMessage } from '../../../strings/failure'
 import { placeBody, useSearchChoices } from './choices'
 
 const s = strings.search.notify
+
+/** The sheet's own words for a refusal: it speaks of "notify me", never of "watching". */
+function refusalWords(failure: Failure, now: string): { tone: 'green' | 'red' | 'amber'; text: string } {
+  const { code } = failure
+  // Already asked: that is what the client wanted.
+  if (code === 'WATCH_EXISTS') return { tone: 'green', text: s.already }
+  if (code === 'LIMIT_WATCHES') return { tone: 'amber', text: s.tooMany }
+  // Outside request hours, when they open again, by the server's clock (B#37).
+  return { tone: code === 'OUTSIDE_REQUEST_HOURS' ? 'amber' : 'red', text: failureMessage(failure, { now }) }
+}
 
 /**
  * [Notify me] on a search that found nothing (docs/03 CS-6): DawaLink watches for the
  * medicine for the next 6 hours and offers the first box that appears. A price limit
  * is optional. The place is the search's own, sent in the body and kept nowhere here.
+ *
+ * `now`: the server's clock, from the search the page made.
  */
-export function NotifyMe({ productId }: { productId: string }) {
+export function NotifyMe({ productId, now }: { productId: string; now: string }) {
   const choices = useSearchChoices()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -38,16 +51,17 @@ export function NotifyMe({ productId }: { productId: string }) {
           },
         }),
       )
-      setSaid({ tone: 'green', text: s.watching(clock(made.ends_at)) })
+      // "until tomorrow 01:30" from the server's clock when it answered: never the
+      // device's, which the demo clock may be ahead of (B#39).
+      setSaid({ tone: 'green', text: s.watching(dayClockInSentence(made.ends_at, made.server_now)) })
       setOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['watches'] })
     } catch (error) {
-      const code = error instanceof ApiFailure ? error.code : 'INTERNAL_ERROR'
-      // Already watching it: that is what the client wanted.
       setSaid(
-        code === 'WATCH_EXISTS'
-          ? { tone: 'green', text: s.already }
-          : { tone: code === 'OUTSIDE_REQUEST_HOURS' ? 'amber' : 'red', text: errorMessage(code) },
+        refusalWords(
+          error instanceof ApiFailure ? { code: error.code, details: error.details } : { code: 'INTERNAL_ERROR' },
+          now,
+        ),
       )
     } finally {
       setState('idle')

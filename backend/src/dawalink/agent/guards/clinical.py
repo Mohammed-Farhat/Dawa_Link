@@ -10,6 +10,7 @@ purpose, so a sentence with a refusal in it is not checked for the softer patter
 """
 
 import re
+from collections.abc import Iterable
 
 _APOSTROPHE = "(?:'|’)?"  # noqa: RUF001  (phones type the curly one)
 _NUMBER = r"\d+(?:[.,]\d+)?"
@@ -22,10 +23,10 @@ _COUNTED = (
 )
 # "Two pills" in one word.
 _DUAL = r"(?:7abbten|7abbtein|habbten|habbtein|حبتين|ملعقتين)"
-_SOME = (
-    rf"(?:{_METRIC}|\b(?:{_NUMBER}|one|two|three|half|noss)\s*{_COUNTED}(?!\w)|"
-    rf"(?<!\w){_DUAL}(?!\w))"
-)
+# An amount to swallow: "2 tablets", "7abbten". Not a strength: "500 mg" is also how a
+# product is named.
+_UNITS = rf"(?:\b(?:{_NUMBER}|one|two|three|half|noss)\s*{_COUNTED}(?!\w)|(?<!\w){_DUAL}(?!\w))"
+_SOME = rf"(?:{_METRIC}|{_UNITS})"
 # How often, with a count: "twice a day", "3 times daily", "marrten bil nhar".
 _FREQUENCY = (
     r"(?:\b(?:once|twice|thrice|\d+\s*(?:x|times?))\s*(?:a|per|every|each)?\s*"
@@ -50,6 +51,16 @@ _ADVICE_VERB = (
     r"\b(?:khod|khede|khedi|khdo|khdiya|est3mel|esta3mel|ista3mel|jarreb|jarrbe|w2ef|wa22ef)\b|"
     r"(?<!\w)(?:خذ|خذي|خدي|استعمل|استعملي|جرب|جربي)(?!\w)|توقف\s+عن)"
 )
+# The one sentence about "taking it" that is logistics: asking, or saying back, for how
+# many days the client takes the medicine ("for how many days will you take it?", "you
+# take it for 7 days, so the box of 24 tablets lasts"). Next to a strength or a box size
+# it read as a dose (found on 2026-11-22). It is let through only when the sentence is
+# about days and says nothing of how often, of hours or of food.
+_ASKS_THE_DAYS = re.compile(
+    rf"\b(?:you|you{_APOSTROPHE}ll|will\s+you|do\s+you|to)\s+take\s+(?:it|them)\b",
+    re.IGNORECASE,
+)
+_ABOUT_DAYS = re.compile(r"\bdays?\b|\bhow\s+long\b|\blasts?\b", re.IGNORECASE)
 _WITH_FOOD = (
     r"(?:\b(?:with|after|before)\s+(?:food|meals?|eating)\b|\bempty\s+stomach\b|"
     r"\b(?:abel|2abel|ba3d|ba3ed|ma3)\s+(?:l\s*|el\s*)?akel\b|"
@@ -79,10 +90,25 @@ ADVICE = re.compile(
     rf"{_ADVICE_VERB}.{{0,60}}?(?:{_SOME}|{_FREQUENCY}|{_EVERY_HOURS}|{_WITH_FOOD})",
     re.IGNORECASE,
 )
+_HOW_OFTEN_OR_FOOD = re.compile(
+    rf"{_FREQUENCY}|{_DAILY}|{_EVERY_HOURS}|{_WITH_FOOD}", re.IGNORECASE
+)
 # 4. Claims about safety, interactions or side effects.
 SAFETY_CLAIM = re.compile(
     rf"(?:\b(?:is|are|it{_APOSTROPHE}s|that{_APOSTROPHE}s)\s+"
-    r"(?:safe|fine|ok|okay|dangerous|harmful)\s+(?:to|for|with|during|in)\b|"
+    r"(?:safe|dangerous|harmful)\s+(?:to|for|with|during|in)\b|"
+    # "Fine" and "ok" are also how plain things are said ("any day is fine for the pickup",
+    # "'I don't know' is fine for the last two", "is that ok with you?", "it's fine to
+    # answer any"). Only those plain objects are let through: fine for anyone, for a
+    # symptom or for an organ, fine to take, and fine with another medicine stay claims.
+    rf"\b(?:is|are|it{_APOSTROPHE}s|that{_APOSTROPHE}s)\s+(?:fine|ok|okay)\s+"
+    r"(?:to\s+(?!me\b|us\b|you\b|say\b|answer\b|leave\b|skip\b|wait\b|come\b|pick\b|ask\b|"
+    r"tell\b|write\b|choose\b|search\b|reply\b|go\b)|"
+    r"with\s+(?!me\b|us\b|you\b|that\b|this\b|them\b|the\s+pharmac)|"
+    r"for\s+(?!(?:the\s+)?(?:pickup|pick-up|days?|last|first|second|third|others?|rest|"
+    r"search|card|pharmacy|trip|price|budget|moment|time)\b|those\b|these\b|that\b|this\b|"
+    r"you\b|me\b|us\b|both\b|either\b|any\b|all\b|now\b|today\b|tomorrow\b)|"
+    r"during\b|in\s+pregnan)|"
     r"\bno\s+(?:known\s+)?(?:interactions?|side\s+effects?)\b|"
     rf"\b(?:does\s*n{_APOSTROPHE}t|does\s+not|do\s+not|don{_APOSTROPHE}t|won{_APOSTROPHE}t)"
     r"\s+interact\b|"
@@ -131,13 +157,33 @@ _CHECKS = (
 )
 
 
+def without_names(text: str, names: Iterable[str]) -> str:
+    """The text with these product names taken out, before it is checked.
+
+    The Ministry writes some products with a word that is also dosing shorthand ("… BID",
+    "… TID"): naming such a product with its strength read as "a dose with how often", and
+    a plain search answer was replaced by a refusal (found on 2026-11-22).
+    """
+    for name in sorted({name.strip() for name in names if name}, key=len, reverse=True):
+        if len(name) >= 3:
+            text = re.sub(re.escape(name), "the medicine", text, flags=re.IGNORECASE)
+    return text
+
+
 def clinical_reasons(text: str) -> list[str]:
     """Why this text reads as medical advice; empty when it doesn't."""
     reasons: list[str] = []
     for sentence in _SENTENCES.findall(text):
         refusing = bool(_REFUSING.search(sentence))
+        asks_the_days = bool(
+            _ASKS_THE_DAYS.search(sentence)
+            and _ABOUT_DAYS.search(sentence)
+            and not _HOW_OFTEN_OR_FOOD.search(sentence)
+        )
         for name, pattern, skipped_when_refusing in _CHECKS:
             if skipped_when_refusing and refusing:
+                continue
+            if name == "advice" and asks_the_days:
                 continue
             if name not in reasons and pattern.search(sentence):
                 reasons.append(name)

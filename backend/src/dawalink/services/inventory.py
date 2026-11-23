@@ -8,12 +8,14 @@ Two rules run through everything here:
 
 import csv
 import io
+import re
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.orm import aliased
 
 from dawalink.catalog.composition import normalize
@@ -34,13 +36,14 @@ from dawalink.domain.expiry import (
     zone_of,
 )
 from dawalink.domain.inventory import ListingControl, Stock
-from dawalink.domain.numbers import NEAR_EXPIRY_MAX_DAYS
+from dawalink.domain.numbers import MAX_BOX_QUANTITY, NEAR_EXPIRY_MAX_DAYS
 from dawalink.domain.pharmacy_details import clean_batch
 from dawalink.domain.pricing import is_valid_override
 from dawalink.domain.state_machine import Actor
 from dawalink.services import audit, catalog, matching, orders
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 MAX_FILE_BYTES = 5 * 1024 * 1024  # N-15
 MAX_ROWS = 10_000  # N-15
@@ -68,6 +71,14 @@ MAX_CHOICES = 8
 DELIMITERS = (",", ";", "\t")
 # A cell that starts like this is a formula in a spreadsheet: the file is refused (SM-4).
 FORMULA_STARTS = ("=", "+", "@", "\t", "\r")
+# A quantity and a code are plain digits 0 to 9, nothing else: `isdigit()` also takes
+# "²", which `int()` then refuses. A quantity of more than six digits is past
+# MAX_BOX_QUANTITY (a barcode in the quantity column), and is never turned into a number.
+# No Ministry code is near 12 digits.
+PLAIN_DIGITS = re.compile(r"[0-9]+")
+QUANTITY_MAX_DIGITS = len(str(MAX_BOX_QUANTITY))
+PLAIN_CODE = re.compile(r"[0-9]{1,12}")
+NO_SUCH_NAME = "no product with this name"
 UNSET: Any = object()
 
 
@@ -78,9 +89,21 @@ class Edited:
     reserved_kept: bool
 
 
-def can_manage(tx: Tx, pharmacy_id: uuid.UUID) -> Pharmacy:
-    """Only an approved pharmacy has an inventory (P-D2)."""
-    pharmacy = tx.session.get(Pharmacy, pharmacy_id)
+def can_manage(tx: Tx, pharmacy_id: uuid.UUID, *, lock: bool = False) -> Pharmacy:
+    """Only an approved pharmacy has an inventory (P-D2).
+
+    `lock` makes the pharmacy's other work of this kind wait for this transaction. It is
+    FOR NO KEY UPDATE: a client reserving one of its boxes is never held up by it.
+    """
+    if lock:
+        pharmacy = tx.session.execute(
+            select(Pharmacy)
+            .where(Pharmacy.id == pharmacy_id)
+            .with_for_update(key_share=True)  # FOR NO KEY UPDATE on PostgreSQL
+            .execution_options(populate_existing=True)
+        ).scalar()
+    else:
+        pharmacy = tx.session.get(Pharmacy, pharmacy_id)
     if pharmacy is None or not pharmacy_can_manage_inventory(PharmacyStatus(pharmacy.status)):
         raise ServiceError(Code.PHARMACY_NOT_APPROVED, "This pharmacy can't manage inventory.")
     return pharmacy
@@ -283,33 +306,89 @@ def _read_rows(content: bytes) -> list[dict[str, str]]:
 
 def _choice(product: Product) -> str:
     """One of several medicines with the same name, as the errors file lists it: what
-    tells it apart (its form, its pack, its maker), then the code to copy into the file."""
-    what = " ".join(filter(None, (product.form_text, product.presentation_text)))
+    tells it apart (its form, its pack, its maker), then the code to copy into the file.
+
+    A pack the Ministry writes as a bare number ("30") is said as "Pack: 30", as the
+    website says it: after a form it would read as part of it ("Tablet, film coated 30").
+    """
+    pack = (product.presentation_text or "").strip()
+    if pack.isascii() and pack.isdigit():
+        pack = f"Pack: {pack}"
+    what = " ".join(filter(None, (product.form_text, pack)))
     told_apart = ", ".join(filter(None, (what, product.manufacturer)))
     return f"{told_apart or product.moph_name}: code {product.moph_code}"
 
 
+def _products_named(tx: Tx, rows: list[dict[str, str]]) -> dict[str, list[Product]]:
+    """The catalog's products for every name the file uses, in one query: a file of
+    10,000 rows must not cost 10,000 questions to the database (N-15)."""
+    names = {normalize(row.get("product", "")) for row in rows} - {""}
+    by_name: dict[str, list[Product]] = {}
+    if names:
+        for product in tx.session.execute(
+            select(Product).where(Product.search_name.in_(names))
+        ).scalars():
+            by_name.setdefault(product.search_name, []).append(product)
+    return by_name
+
+
+# How a strength's numbers are written. The Ministry groups thousands with a comma
+# ("100,000 IU"); a spreadsheet set to French writes the decimal point as a comma
+# ("2,5 mg", in a file saved with semicolons).
+_THOUSANDS_COMMA = re.compile(r"(?<=\d),(?=\d{3}(?!\d))")
+_DECIMAL_COMMA = re.compile(r"(?<=\d),(?=\d)")
+_BARE_POINT = re.compile(r"(?<!\d)\.(?=\d)")
+_STRENGTH_PARTS = re.compile(r"\d+(?:\.\d+)?|[a-z]+")
+
+
+def _strength_key(text: str) -> str:
+    """A strength as two strengths are compared: "2.5 mg", "2.5MG", "2,5mg" and "2.50 mg"
+    are one strength, **"25 mg" is another**. A number keeps its decimal point; capitals,
+    spaces and every other sign only separate the parts, so "5mg/5ml" matches
+    "5 mg / 5 ml" and "100,000 IU" matches "100000 IU".
+
+    Before, every sign was dropped, so 2.5 mg and 25 mg were the same strength.
+    """
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    plain = _THOUSANDS_COMMA.sub("", plain.lower())
+    plain = _DECIMAL_COMMA.sub(".", plain)
+    plain = _BARE_POINT.sub("0.", plain)  # ".5 mg" is 0.5 mg, never 5 mg
+    key = ""
+    for part in _STRENGTH_PARTS.findall(plain):
+        # Two numbers in a row stay apart ("1/25" is not "12/5"); words are joined, as
+        # they were before, so "mg/ml" is "mgml".
+        if key and key[-1].isdigit() and part[0].isdigit():
+            key += " "
+        key += _plain_number(part)
+    return key
+
+
+def _plain_number(part: str) -> str:
+    """A number without the zeros that change nothing after its point: "2.50" is "2.5",
+    "2.0" is "2". A word is left as it is."""
+    if "." not in part or not part[0].isdigit():
+        return part
+    return part.rstrip("0").rstrip(".")
+
+
 def _match_product(
-    tx: Tx, name: str, strength: str, code: str = ""
+    by_name: list[Product], strength: str, code: str = ""
 ) -> tuple[Product | None, dict[str, Any]]:
-    """The catalog product a row names, or why not, with close names to suggest (R-C9).
+    """The catalog product a row names, or why not (R-C9). `by_name` is every product
+    whose name is the row's. Close names to suggest for an unknown one are the caller's.
 
     **A code chooses among the products the name already matches; it never replaces the
     name.** A mistyped code would otherwise put another medicine on the shelf, at another
     price, without anyone seeing it: the row has to say the same thing twice.
     """
-    wanted = normalize(name)
-    by_name = list(
-        tx.session.execute(select(Product).where(Product.search_name == wanted)).scalars()
-    )
-    found = by_name
+    found = list(by_name)
     # A row's strength that no product of that name has: without a code it is taken as a
     # slip of the pen when the name is enough by itself. With a code it is a
     # contradiction, and the row is refused: the code may not overrule what the row says.
     strength_is_wrong = False
     if strength:
-        compact = normalize(strength).replace(" ", "")
-        with_it = [p for p in by_name if normalize(p.dosage_text or "").replace(" ", "") == compact]
+        wanted = _strength_key(strength)
+        with_it = [p for p in by_name if _strength_key(p.dosage_text or "") == wanted]
         strength_is_wrong = not with_it
         found = with_it or by_name
     if any(product.controlled for product in found):
@@ -318,7 +397,8 @@ def _match_product(
         named = [
             p
             for p in found
-            if not strength_is_wrong and code.isdigit() and p.moph_code == int(code)
+            # Plain digits only: "²" passes `isdigit()` and then breaks `int()`.
+            if not strength_is_wrong and PLAIN_CODE.fullmatch(code) and p.moph_code == int(code)
         ]
         if named:
             return named[0], {}
@@ -346,9 +426,37 @@ def _match_product(
             "makers): write the code of yours in the code column, or add this box by hand",
             "did_you_mean": [_choice(p) for p in found[:MAX_CHOICES]],
         }
-    suggestions = catalog.search_products(tx, name, limit=3)
-    names = [p.name for p in suggestions.products] or suggestions.did_you_mean
-    return None, {"problem": "no product with this name", "did_you_mean": names}
+    return None, {"problem": NO_SUCH_NAME}
+
+
+class _CloseNames:
+    """The "did you mean" of an unknown name, asked once per name in one upload.
+
+    A fuzzy search costs about 50 ms on the real catalog, and a file in the pharmacy's
+    own names may have thousands of them (BLD-D44, Q65): asked for every row, a large
+    file took minutes, past the API's time limit.
+    """
+
+    def __init__(self, tx: Tx) -> None:
+        self._tx = tx
+        self._known: dict[str, list[str]] = {}
+
+    def of(self, name: str) -> list[str]:
+        key = normalize(name)
+        if key not in self._known:
+            found = catalog.search_products(self._tx, name, limit=3)
+            self._known[key] = [p.name for p in found.products] or found.did_you_mean
+        return self._known[key]
+
+
+def _quantity(cell: str) -> int | str:
+    """A row's quantity, or what is wrong with it."""
+    if not PLAIN_DIGITS.fullmatch(cell):
+        return "the quantity must be a whole number, 0 or more"
+    digits = cell.lstrip("0") or "0"
+    if len(digits) > QUANTITY_MAX_DIGITS or int(digits) > MAX_BOX_QUANTITY:
+        return f"the quantity must be {MAX_BOX_QUANTITY:,} or fewer"
+    return int(digits)
 
 
 def needs_a_code(tx: Tx, product_ids: set[uuid.UUID]) -> set[uuid.UUID]:
@@ -392,27 +500,19 @@ def validate_upload(
     can_manage(tx, pharmacy_id)
     rows = _read_rows(content)
 
-    waiting = tx.session.execute(
-        select(InventoryUpload)
-        .where(InventoryUpload.pharmacy_id == pharmacy_id, InventoryUpload.status == "VALIDATED")
-        .with_for_update()
-    ).scalar()
-    if waiting is not None:
-        tx.session.execute(
-            delete(InventoryUploadRow).where(InventoryUploadRow.upload_id == waiting.id)
-        )
-        waiting.status = "DISCARDED"
-        tx.session.flush()
-
     staged: dict[tuple[uuid.UUID, str, date], int] = {}
     errors: list[dict[str, Any]] = []
     rows_error = 0
     # "3/31/2027" or "31/03/2027"? Read only if the file's own dates show which (FI-20).
     order = day_month_order(row.get("expiry", "") for row in rows)
+    products_named = _products_named(tx, rows)
+    close_names = _CloseNames(tx)
     for number, row in enumerate(rows, start=2):  # row 1 is the header
         problem: dict[str, Any] = {}
         product, problem = _match_product(
-            tx, row.get("product", ""), row.get("strength", ""), row.get("code", "")
+            products_named.get(normalize(row.get("product", "")), []),
+            row.get("strength", ""),
+            row.get("code", ""),
         )
         expiry: date | None = None
         quantity: int | None = None
@@ -431,10 +531,11 @@ def validate_upload(
                 if expiry < tx.today:
                     problem = {"problem": "this box has already expired"}
         if product is not None and not problem:
-            if row.get("quantity", "").isdigit():
-                quantity = int(row["quantity"])
+            read = _quantity(row.get("quantity", ""))
+            if isinstance(read, str):
+                problem = {"problem": read}
             else:
-                problem = {"problem": "the quantity must be a whole number, 0 or more"}
+                quantity = read
         if product is not None and not problem:
             try:
                 batch = clean_batch(row.get("batch", ""))
@@ -444,14 +545,47 @@ def validate_upload(
                     if not row.get("batch")
                     else "the batch must be letters and digits, as printed on the box"
                 }
+        # R-U1: rows for the same box are added up, and the sum is a box's quantity too.
+        # The row that would take the sum over the most is refused; the ones above stand.
+        if (
+            product is not None
+            and expiry is not None
+            and quantity is not None
+            and not problem
+            and staged.get((product.id, batch, expiry), 0) + quantity > MAX_BOX_QUANTITY
+        ):
+            problem = {
+                "problem": "with the rows above for the same box, the quantity is more "
+                f"than {MAX_BOX_QUANTITY:,}"
+            }
         if problem or product is None or expiry is None or quantity is None:
             rows_error += 1
             if len(errors) < MAX_ERRORS_KEPT:
+                if problem.get("problem") == NO_SUCH_NAME:
+                    # Only for the rows that are shown: the search is the slow part.
+                    problem = {**problem, "did_you_mean": close_names.of(row.get("product", ""))}
                 # Only the start of what was typed is kept, to show which row it was.
                 errors.append({"row": number, "product": row.get("product", "")[:80], **problem})
             continue
         key = (product.id, batch, expiry)
-        staged[key] = staged.get(key, 0) + quantity  # R-U1: duplicate keys are summed
+        staged[key] = staged.get(key, 0) + quantity
+
+    # The same file sent twice at once (a double click, a retry): the second waits here
+    # for the first, then replaces it. Otherwise both see no file waiting, and the second
+    # breaks the rule of one waiting file per pharmacy with a server error. Taken only
+    # now, after the slow reading, so nothing else of the pharmacy's waits on it long.
+    can_manage(tx, pharmacy_id, lock=True)
+    waiting = tx.session.execute(
+        select(InventoryUpload)
+        .where(InventoryUpload.pharmacy_id == pharmacy_id, InventoryUpload.status == "VALIDATED")
+        .with_for_update()
+    ).scalar()
+    if waiting is not None:
+        tx.session.execute(
+            delete(InventoryUploadRow).where(InventoryUploadRow.upload_id == waiting.id)
+        )
+        waiting.status = "DISCARDED"
+        tx.session.flush()
 
     existing = {
         (item.product_id, item.batch, item.expiry_date): item
@@ -668,6 +802,11 @@ class StockLine:
     system_price_lbp: int | None
 
 
+# The orders of the stock's list: the soonest expiry first, or one medicine's boxes side
+# by side (two batches of one medicine, each with its own expiry), the soonest first.
+STOCK_SORTS = ("expiry", "medicine")
+
+
 def stock_lines(
     tx: Tx,
     pharmacy_id: uuid.UUID,
@@ -675,26 +814,78 @@ def stock_lines(
     query: str = "",
     zone: Zone | None = None,
     item_ids: list[uuid.UUID] | None = None,
+    sort: str = "expiry",
     offset: int = 0,
     limit: int = 50,
 ) -> list[StockLine]:
-    """The pharmacy's boxes, soonest expiry first. Private: only the pharmacy reads this."""
+    """The pharmacy's boxes, soonest expiry first, or by medicine (`STOCK_SORTS`).
+    Private: only the pharmacy reads this."""
     days = InventoryItem.expiry_date - tx.today
-    zone_now = func.expiry_zone(days, Product.controlled.is_(False))
-    statement = (
+    statement = _stock_filtered(
         select(
             InventoryItem,
             Product,
             days,
-            zone_now,
+            func.expiry_zone(days, Product.controlled.is_(False)),
             func.effective_price_lbp(
                 Product.public_price_lbp, InventoryItem.price_override_lbp, days
             ),
             func.effective_price_lbp(Product.public_price_lbp, None, days),
+        ),
+        tx,
+        pharmacy_id,
+        query=query,
+        zone=zone,
+        item_ids=item_ids,
+    )
+    if sort == "medicine":
+        statement = statement.order_by(
+            Product.moph_name, Product.id, InventoryItem.expiry_date, InventoryItem.id
         )
-        .join(Product, Product.id == InventoryItem.product_id)
-        .where(InventoryItem.pharmacy_id == pharmacy_id)
-        .order_by(InventoryItem.expiry_date, Product.moph_name, InventoryItem.id)
+    else:
+        statement = statement.order_by(
+            InventoryItem.expiry_date, Product.moph_name, InventoryItem.id
+        )
+    return [
+        StockLine(
+            item=item,
+            product=product,
+            days_left=int(left),
+            zone=Zone(zone_text),
+            price_lbp=int(price) if price is not None and zone_text == Zone.NEAR_EXPIRY else None,
+            system_price_lbp=int(system) if system is not None else None,
+        )
+        for item, product, left, zone_text, price, system in tx.session.execute(
+            statement.offset(offset).limit(limit)
+        )
+    ]
+
+
+def count_stock(
+    tx: Tx, pharmacy_id: uuid.UUID, *, query: str = "", zone: Zone | None = None
+) -> int:
+    """How many boxes `stock_lines` lists with these choices, on every page: the same
+    filters, counted (the "134 in all" under the list)."""
+    return count_rows(
+        tx, _stock_filtered(select(InventoryItem.id), tx, pharmacy_id, query=query, zone=zone)
+    )
+
+
+def _stock_filtered(
+    statement: Select[Any],
+    tx: Tx,
+    pharmacy_id: uuid.UUID,
+    *,
+    query: str,
+    zone: Zone | None,
+    item_ids: list[uuid.UUID] | None = None,
+) -> Select[Any]:
+    """The pharmacy's boxes that the choices keep, in one place for the list and its
+    count, so that the two never disagree about what a choice means."""
+    days = InventoryItem.expiry_date - tx.today
+    zone_now = func.expiry_zone(days, Product.controlled.is_(False))
+    statement = statement.join(Product, Product.id == InventoryItem.product_id).where(
+        InventoryItem.pharmacy_id == pharmacy_id
     )
     if item_ids is not None:
         statement = statement.where(InventoryItem.id.in_(item_ids))
@@ -709,16 +900,4 @@ def stock_lines(
         )
     if zone is not None:
         statement = statement.where(zone_now == zone.value)
-    return [
-        StockLine(
-            item=item,
-            product=product,
-            days_left=int(left),
-            zone=Zone(zone_text),
-            price_lbp=int(price) if price is not None and zone_text == Zone.NEAR_EXPIRY else None,
-            system_price_lbp=int(system) if system is not None else None,
-        )
-        for item, product, left, zone_text, price, system in tx.session.execute(
-            statement.offset(offset).limit(limit)
-        )
-    ]
+    return statement

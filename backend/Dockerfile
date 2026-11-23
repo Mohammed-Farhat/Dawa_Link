@@ -20,7 +20,21 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 # Reference data, the catalog rules and, when it was built on this laptop, the catalog file.
 COPY data ./data
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+# APP_ENV is "aws" unless something says otherwise: a task definition that forgets it is
+# then still safe, because only in AWS is CloudFront's statement of the visitor's address
+# believed (R-AU8) and the interactive API docs left out (A#2). docker-compose.yml sets
+# "local" for the laptop.
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 APP_ENV=aws
+# The version /health shows: `docker build --build-arg APP_VERSION=<git sha>` (docs/12 §12).
+# Last, so a new version rebuilds nothing above it.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 USER dawalink
 EXPOSE 8000
-CMD ["uvicorn", "dawalink.api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# --timeout-keep-alive: an idle connection stays open longer than the load balancer keeps
+# it (60 s, docs/12 §5), so the load balancer is always the one to close it; the other way
+# round it may send a request on a connection being closed, and answer 502 (A#15).
+# --timeout-graceful-shutdown: on a stop, open answers get 30 s to finish; then the chat
+# turns still running finish and save their reply (up to N-37's 60 s). ECS must give the
+# task 120 s for both (docs/12 §6).
+CMD ["uvicorn", "dawalink.api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]

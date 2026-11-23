@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../../api/client'
 import { ThumbDownIcon } from '../../../components/icons'
+import { langOf } from '../../../format'
 import { Banner } from '../../../components/layout'
 import { errorMessage, strings } from '../../../strings/en'
 
@@ -66,7 +67,11 @@ export function ReportAnswer({
   }
   return (
     <form ref={form} className="report-form" onSubmit={send}>
-      <div className="chips" role="group" aria-label={s.title}>
+      {/* The question is on the screen, not only said to a screen reader. */}
+      <span id={`report-question-${seq}`} style={{ fontSize: 15, fontWeight: 600 }}>
+        {s.title}
+      </span>
+      <div className="chips" role="group" aria-labelledby={`report-question-${seq}`}>
         {REASONS.map((choice) => (
           <button
             key={choice}
@@ -86,6 +91,7 @@ export function ReportAnswer({
         id={`report-${seq}`}
         className="text-area"
         dir="auto"
+        lang={langOf(comment)}
         maxLength={MAX_COMMENT}
         aria-describedby={`report-hint-${seq}`}
         value={comment}
@@ -99,10 +105,12 @@ export function ReportAnswer({
           {errorMessage(failed)}
         </Banner>
       )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <button type="submit" className="pill-button" disabled={!reason || state === 'sending'}>
           {s.send}
         </button>
+        {/* Why [Send] is grey: a reason is the one thing needed. */}
+        {!reason && <span className="hint">{s.chooseReason}</span>}
         <button type="button" className="text-button" onClick={() => setState('closed')}>
           {s.cancel}
         </button>

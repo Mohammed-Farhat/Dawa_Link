@@ -2,15 +2,30 @@
 TH-41). The sign-up limit is counted per address, so a visitor must not be able to choose
 theirs."""
 
+import threading
 from pathlib import Path
 
 import pytest
 from starlette.requests import Request
 
+from dawalink.api import deps
 from dawalink.api.deps import caller_address, stated_address
+from dawalink.config import Settings
 from tests.api.conftest import Api, api, code_of  # noqa: F401  (the fixture)
 from tests.conftest import UNREACHABLE_DATABASE, logged, make_settings
 from tests.services.conftest import world  # noqa: F401  (the fixture)
+
+
+def aws_settings(tmp_path: Path) -> Settings:
+    """What AWS accepts (A#16): a long secret key and an https website."""
+    return make_settings(
+        UNREACHABLE_DATABASE,
+        tmp_path,
+        app_env="aws",
+        website_url="https://website.example.org",
+        app_secret_key="test-only-kU3n8Qz1rT6vW0yB4dF7hJ2mP5sX9cL0",
+    )
+
 
 NEW = {
     "password": "A long enough passphrase, 1",
@@ -35,7 +50,7 @@ def a_request(headers: dict[str, str], peer: str = "10.0.0.7") -> Request:
 
 
 def test_in_aws_the_address_is_the_one_cloudfront_states(tmp_path: Path) -> None:
-    aws = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="aws")
+    aws = aws_settings(tmp_path)
 
     stated = a_request({"CloudFront-Viewer-Address": "198.51.100.10:46532"})
     ipv6 = a_request({"CloudFront-Viewer-Address": "2001:0db8:85a3:0000:0000:8a2e:0370:7334:46532"})
@@ -51,7 +66,7 @@ def test_in_aws_the_address_is_the_one_cloudfront_states(tmp_path: Path) -> None
 def test_a_header_a_visitor_can_write_is_never_believed(tmp_path: Path) -> None:
     """`X-Forwarded-For` is the visitor's own text. Nor is CloudFront's header believed
     where there is no CloudFront in front: on a laptop anyone could send it."""
-    aws = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="aws")
+    aws = aws_settings(tmp_path)
     local = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="local")
     forged = a_request(
         {"X-Forwarded-For": "203.0.113.99", "X-Real-IP": "203.0.113.99", "Forwarded": "for=1.2.3.4"}
@@ -86,7 +101,7 @@ def test_in_aws_without_cloudfronts_header_nobodys_address_is_known(
     """If the distribution ever stops stating the visitor's address, every request would
     seem to come from the load balancer. A limit per address is then not counted at all,
     rather than counted for everybody together, and the log says so (docs/12 §4)."""
-    aws = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="aws")
+    aws = aws_settings(tmp_path)
     local = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="local")
 
     assert stated_address(a_request({}), aws) is None
@@ -95,3 +110,27 @@ def test_in_aws_without_cloudfronts_header_nobodys_address_is_known(
         "198.51.100.10"
     )
     assert stated_address(a_request({}), local) == "10.0.0.7"
+
+
+def test_cloudfront_in_front_without_app_env_aws_is_said_once(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A#2: behind CloudFront with APP_ENV forgotten, every visitor would count as the load
+    balancer. The log names the missing setting, once per process; the header is still not
+    believed, because outside AWS anyone can send it."""
+    monkeypatch.setattr(deps, "_APP_ENV_MISSING_SAID", threading.Event())
+    local = make_settings(UNREACHABLE_DATABASE, tmp_path, app_env="local")
+    behind_cloudfront = a_request({"CloudFront-Viewer-Address": "198.51.100.10:46532"})
+
+    assert stated_address(a_request({}), local) == "10.0.0.7"
+    assert logged(caplog, "cloudfront_in_front_but_app_env_is_not_aws") == []
+
+    first = stated_address(behind_cloudfront, local)
+    second = caller_address(behind_cloudfront, local)
+
+    assert first == second == "10.0.0.7"
+    (said,) = logged(caplog, "cloudfront_in_front_but_app_env_is_not_aws")
+    assert said["missing_setting"] == "APP_ENV=aws"
+    assert "198.51.100.10" not in str(said)
+    (record,) = [r for r in caplog.records if r.msg is said]
+    assert record.levelname == "ERROR"

@@ -8,10 +8,11 @@ escalation or the report of an answer, as it was stored, without personal detail
 """
 
 import uuid
+from collections.abc import Sequence
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 
 from dawalink.agent.chat import post_team_reply
 from dawalink.agent.context import identity_of
@@ -23,12 +24,12 @@ from dawalink.api.schemas.common import BeforeId, Pin, Skip
 from dawalink.db.models import (
     AbuseFlag,
     AnswerReport,
-    AuditEvent,
     ChatMessage,
     Escalation,
     Order,
 )
 from dawalink.domain.accounts import ClientStatus, PharmacyStatus
+from dawalink.domain.audit_actions import AuditAction
 from dawalink.domain.numbers import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from dawalink.domain.state_machine import Actor
 from dawalink.domain.vocabulary import EscalationState, ReportCategory, ReportState
@@ -73,8 +74,9 @@ def overview(_caller: AsAdmin, work: DoWork, settings: TheSettings) -> schemas.A
             reports_new=answer_reports.new_count(tx),
             flags_open=flags_open,
             flags_high=flags_high,
+            # One per missed trip: one contest covers every box of a plan card (R-N3).
             contests_waiting=tx.session.execute(
-                select(func.count())
+                select(func.count(distinct(orders.TRIP)))
                 .select_from(Order)
                 .where(Order.counts_as_no_show.is_(True), Order.contested_at.is_not(None))
             ).scalar_one(),
@@ -135,16 +137,18 @@ def list_pharmacies(
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.AdminPharmacies:
     """Pharmacies whose email is confirmed. `status=PENDING` is the approval queue, the
-    one that has waited longest first."""
+    one that has waited longest first. `total`: the pharmacies the choices match."""
+    chosen = PharmacyStatus(status) if status else None
     with work.tx() as tx:
         rows = admin_pharmacies.listed(
             tx,
-            status=PharmacyStatus(status) if status else None,
+            status=chosen,
             query=q,
             offset=cursor,
             limit=limit + 1,
         )
         return schemas.AdminPharmacies(
+            total=admin_pharmacies.listed_total(tx, status=chosen, query=q),
             items=[
                 schemas.AdminPharmacyRow(
                     id=row.pharmacy.id,
@@ -277,18 +281,40 @@ def _client_row(row: admin_clients.Listed) -> schemas.AdminClientRow:
     )
 
 
-def _contested(tx: Tx, client_id: uuid.UUID) -> list[schemas.ContestedReservation]:
+def _contested_rows(
+    tx: Tx, found: list[admin_clients.OrderLine]
+) -> list[schemas.ContestedReservation]:
     return [
         schemas.ContestedReservation(
-            id=found.order.id,
-            ref=found.order.ref,
-            product=found.product,
-            pharmacy=found.pharmacy,
-            expired_at=found.order.closed_at,
-            contested_at=found.order.contested_at or tx.now,
+            id=line.order.id,
+            ref=line.order.ref,
+            product=line.product,
+            pharmacy=line.pharmacy,
+            expired_at=line.order.closed_at,
+            contested_at=line.order.contested_at or tx.now,
+            counts_as_no_show=line.order.counts_as_no_show,
         )
-        for found in admin_clients.contested_orders(tx, client_id)
+        for line in found
     ]
+
+
+def _contested(tx: Tx, client_id: uuid.UUID) -> list[schemas.ContestedReservation]:
+    """The client's contests that still count: on their page, each waits for [Clear]."""
+    return _contested_rows(tx, admin_clients.contested_orders(tx, client_id))
+
+
+def _contested_in_case(tx: Tx, row: Escalation) -> list[schemas.ContestedReservation]:
+    """What this case is about, never what the client contests elsewhere (B#61): the
+    reservation pressed, with its trip and how it ended. Nothing for a case of another
+    kind. A complaint from before the case remembered its reservation is about the
+    contested reservations its summary names."""
+    pressed = escalations.contested_orders(row)
+    if pressed:
+        found = admin_clients.missed_trips_of(tx, row.client_id, pressed)
+    else:
+        refs = escalations.refs_in_complaints(row)
+        found = admin_clients.contested_by_number(tx, row.client_id, refs)
+    return _contested_rows(tx, found)
 
 
 def _flag(row: AbuseFlag) -> schemas.AbuseFlagRow:
@@ -354,17 +380,19 @@ def list_clients(
     """Clients as statuses and counts: **no name, no email, no phone**. `ref` finds the
     client of an order number or a request number. `having` keeps the clients with a
     reservation going, who picked an order up, with an open request, or who need a look
-    (a contested no-show or an open flag)."""
+    (a contested no-show or an open flag). `total`: the clients the choices match."""
+    chosen = ClientStatus(status) if status else None
     with work.tx() as tx:
         rows = admin_clients.listed(
             tx,
-            status=ClientStatus(status) if status else None,
+            status=chosen,
             having=having,
             ref=ref,
             offset=cursor,
             limit=limit + 1,
         )
         return schemas.AdminClients(
+            total=admin_clients.listed_total(tx, status=chosen, having=having, ref=ref),
             items=[_client_row(row) for row in rows[:limit]],
             next_cursor=_next(cursor, limit, len(rows)),
         )
@@ -479,14 +507,16 @@ def read_catalog(
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.CatalogProducts:
     """Every product of the Ministry's list as imported, the controlled ones included.
-    Nothing here changes the catalog: the import script and the team's files do."""
+    Nothing here changes the catalog: the import script and the team's files do.
+    `total`: the products the text matches."""
     with work.tx() as tx:
-        rows = catalog.admin_products(tx, q, offset=cursor, limit=limit + 1)
+        rows, total = catalog.admin_products(tx, q, offset=cursor, limit=limit + 1)
         shown = rows[:limit]
         sizes = catalog.group_sizes(
             tx, [row.equivalence_key for row in shown if row.equivalence_key]
         )
         return schemas.CatalogProducts(
+            total=total,
             items=[
                 schemas.CatalogProduct(
                     id=row.id,
@@ -554,7 +584,7 @@ def read_health(
 # --- Escalations (AS-6) -----------------------------------------------------------------------
 
 
-def _escalation(tx: Tx, row: Escalation) -> schemas.EscalationRow:
+def _escalation(tx: Tx, row: Escalation, mark: escalations.Marks) -> schemas.EscalationRow:
     return schemas.EscalationRow(
         id=row.id,
         client_id=row.client_id,
@@ -573,7 +603,19 @@ def _escalation(tx: Tx, row: Escalation) -> schemas.EscalationRow:
         created_at=row.created_at,
         resolved_at=row.resolved_at,
         resolution_note=row.resolution_note,
+        reasons=mark.reasons,
+        last_summary=mark.last_summary,
+        last_asked_at=mark.last_asked_at,
+        last_replied_at=mark.last_replied_at,
+        new_ask_since_reply=mark.new_ask_since_reply,
+        client_wrote_at=mark.client_wrote_at,
+        hold_ends_at=mark.hold_ends_at,
     )
+
+
+def _escalation_rows(tx: Tx, rows: Sequence[Escalation]) -> list[schemas.EscalationRow]:
+    known = escalations.marks(tx, rows)
+    return [_escalation(tx, row, known[row.id]) for row in rows]
 
 
 def _card_kinds(tx: Tx, message: ChatMessage) -> list[str]:
@@ -581,9 +623,10 @@ def _card_kinds(tx: Tx, message: ChatMessage) -> list[str]:
 
 
 def _escalation_detail(tx: Tx, row: Escalation) -> schemas.EscalationDetail:
-    thread = escalations.thread(tx, row)
+    parts = escalations.thread_parts(tx, row)
+    (shown,) = _escalation_rows(tx, [row])
     return schemas.EscalationDetail(
-        escalation=_escalation(tx, row),
+        escalation=shown,
         thread=[
             schemas.ThreadMessage(
                 seq=message.seq,
@@ -591,10 +634,12 @@ def _escalation_detail(tx: Tx, row: Escalation) -> schemas.EscalationDetail:
                 text=message.text_redacted,
                 cards=_card_kinds(tx, message),
                 created_at=message.created_at,
+                starts_another_chat=number > 0 and place == 0,
             )
-            for message in thread
+            for number, part in enumerate(parts)
+            for place, message in enumerate(part)
         ],
-        contested=_contested(tx, row.client_id),
+        contested=_contested_in_case(tx, row),
     )
 
 
@@ -606,18 +651,22 @@ def list_escalations(
     cursor: Cursor = 0,
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.Escalations:
-    """Emergency claims first, then the one that waits longest. Without `state`: every
-    escalation that is not resolved."""
+    """Without `state`: every escalation that is not resolved, emergency claims first,
+    then the cases that wait for the team (never answered, asked again, or the client
+    wrote since the team's reply), then the answered ones; inside each, the one whose
+    newest ask is the oldest first. `RESOLVED`: the newest closed first. `total`: the
+    cases the choice matches."""
     with work.tx() as tx:
-        rows = escalations.listed(
+        found = escalations.listed(
             tx,
             state=EscalationState(state) if state else None,
             offset=cursor,
             limit=limit + 1,
         )
         return schemas.Escalations(
-            items=[_escalation(tx, row) for row in rows[:limit]],
-            next_cursor=_next(cursor, limit, len(rows)),
+            items=_escalation_rows(tx, found.rows[:limit]),
+            next_cursor=_next(cursor, limit, len(found.rows)),
+            total=found.total,
         )
 
 
@@ -726,13 +775,15 @@ def list_answer_reports(
     cursor: Cursor = 0,
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.AnswerReports:
+    """The newest first. `total`: the reports the choice matches."""
     with work.tx() as tx:
-        rows = answer_reports.listed(
+        found = answer_reports.listed(
             tx, state=ReportState(state) if state else None, offset=cursor, limit=limit + 1
         )
         return schemas.AnswerReports(
-            items=[_report(row) for row in rows[:limit]],
-            next_cursor=_next(cursor, limit, len(rows)),
+            items=[_report(row) for row in found.rows[:limit]],
+            next_cursor=_next(cursor, limit, len(found.rows)),
+            total=found.total,
         )
 
 
@@ -791,19 +842,31 @@ def confirm_answer_report(
 
 # --- The audit log (AS-11) --------------------------------------------------------------------
 
+# The codes the console has a sentence for (`domain/audit_actions.py`).
+_KNOWN_ACTIONS = {code.value: code for code in AuditAction}
 
-def _audit_row(row: AuditEvent) -> schemas.AuditRow:
+
+def _audit_row(row: audit.Shown) -> schemas.AuditRow:
+    event = row.event
     return schemas.AuditRow(
-        id=row.id,
-        occurred_at=row.occurred_at,
-        actor_type=row.actor_type,
-        actor_id=row.actor_id,
-        entity_type=row.entity_type,
-        entity_id=row.entity_id,
-        action=row.action,
-        before=row.before,
-        after=row.after,
-        reason=row.reason,
+        id=event.id,
+        occurred_at=event.occurred_at,
+        actor_type=event.actor_type,
+        actor_id=event.actor_id,
+        entity_type=event.entity_type,
+        entity_id=event.entity_id,
+        action=event.action,
+        known_action=_KNOWN_ACTIONS.get(event.action),
+        who=schemas.AuditWho(kind=row.who.kind, name=row.who.name, id=row.who.id),
+        subject=None
+        if row.subject is None
+        else schemas.AuditSubject(kind=row.subject.kind, id=row.subject.id),
+        changed=row.changed,
+        state_from=row.state_from,
+        state_to=row.state_to,
+        counts=row.counts,
+        code=row.code,
+        reason=event.reason,
     )
 
 
@@ -814,24 +877,29 @@ def read_audit_log(
     entity_type: Annotated[str | None, Query(max_length=40)] = None,
     entity_id: uuid.UUID | None = None,
     action: Annotated[str | None, Query(max_length=60)] = None,
+    kind: schemas.AuditKindName | None = None,
     actor: Annotated[Actor | None, Query()] = None,
     cursor: BeforeId = None,
+    offset: Skip = 0,
     limit: PageSize = DEFAULT_PAGE_SIZE,
 ) -> schemas.AuditPage:
     """Who changed what, newest first. Read-only: nothing can change or delete an event.
-    `action=pharmacy.` gives every action of that kind; `cursor` is the last ID seen."""
+    `action=pharmacy.` gives every action of that kind, `kind` one family of the "Kind"
+    filter. `cursor` is the last ID seen; `offset` skips that many events of what is left
+    (numbered pages send only `offset`). `total`: the events the choices match, wherever
+    the page is. **A changed field is named, never its value.**"""
+    choices: dict[str, Any] = {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "action": action,
+        "kind": kind,
+        "actor_type": actor,
+    }
     with work.tx() as tx:
-        rows = audit.listed(
-            tx,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            action=action,
-            actor_type=actor,
-            before_id=cursor,
-            limit=limit + 1,
-        )
+        rows = audit.listed(tx, **choices, before_id=cursor, offset=offset, limit=limit + 1)
         shown = rows[:limit]
         return schemas.AuditPage(
-            items=[_audit_row(row) for row in shown],
+            items=[_audit_row(row) for row in audit.shown(tx, shown)],
             next_cursor=str(shown[-1].id) if len(rows) > limit and shown else None,
+            total=audit.listed_total(tx, **choices),
         )

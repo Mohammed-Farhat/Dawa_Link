@@ -8,8 +8,11 @@ Two halves, kept apart on purpose:
   database connection, let alone a lock.
 """
 
+import threading
+import time
 import uuid
-from collections.abc import Mapping, Sequence
+import weakref
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
@@ -19,7 +22,11 @@ from sqlalchemy.dialects.postgresql import insert as upsert
 
 from dawalink.db.models import Area, Conversation, District, Pharmacy, TravelTimeCache
 from dawalink.domain.geo import Point, Travel, cell, estimate, rounded
-from dawalink.domain.numbers import AUTOMATIC_REACH_CAR_MIN, TRAVEL_CACHE_TTL
+from dawalink.domain.numbers import (
+    AUTOMATIC_REACH_CAR_MIN,
+    ROUTING_PAUSE_AFTER_FAILURE_S,
+    TRAVEL_CACHE_TTL,
+)
 from dawalink.domain.planning import CLIENT, Leg
 from dawalink.domain.vocabulary import LocationSource
 from dawalink.services.context import Tx
@@ -208,10 +215,41 @@ def missing(
     return Wanted(needed_origins, needed_pins)
 
 
-def fetch(routing: RoutingService, wanted: Wanted) -> list[dict[str, Any]]:
+class _Pauses:
+    """When each routing service may be asked again, after it failed (A#25).
+
+    A service that is down or slow costs every caller its whole timeout: without a pause,
+    an agent turn would wait for it on each tool call and run out of time. So after one
+    failure nobody asks that service for a while, the search page and the agent alike, and
+    the straight-line estimate is used. Kept per service object, in real time (the demo
+    clock must not end a pause), and safe to read from several threads.
+    """
+
+    def __init__(self) -> None:
+        self._until: weakref.WeakKeyDictionary[RoutingService, float] = weakref.WeakKeyDictionary()
+        self._lock = threading.Lock()
+
+    def paused(self, routing: RoutingService, now: float) -> bool:
+        with self._lock:
+            return now < self._until.get(routing, 0.0)
+
+    def failed(self, routing: RoutingService, now: float) -> None:
+        with self._lock:
+            self._until[routing] = now + ROUTING_PAUSE_AFTER_FAILURE_S
+
+
+_PAUSES = _Pauses()
+
+
+def fetch(
+    routing: RoutingService, wanted: Wanted, *, monotonic: Callable[[], float] = time.monotonic
+) -> list[dict[str, Any]]:
     """Asks the routing service, outside any transaction. A failure gives nothing back:
-    the estimate is used, and a failure never reaches the client (FX-18)."""
+    the estimate is used, and a failure never reaches the client (FX-18). After a failure
+    the service isn't asked again for a minute (`_Pauses`)."""
     if not wanted:
+        return []
+    if _PAUSES.paused(routing, monotonic()):
         return []
     rows: list[dict[str, Any]] = []
     try:
@@ -232,6 +270,7 @@ def fetch(routing: RoutingService, wanted: Wanted) -> list[dict[str, Any]]:
     except Exception as error:
         # The message may quote the request, which holds a location: only its type is logged.
         log.warning("routing_failed", error=type(error).__name__)
+        _PAUSES.failed(routing, monotonic())
         return []
     return rows
 

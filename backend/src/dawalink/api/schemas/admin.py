@@ -11,7 +11,8 @@ from typing import Any, Literal
 from pydantic import Field
 
 from dawalink.api.schemas.accounts import OpeningRange, PinIn
-from dawalink.api.schemas.common import DistrictId, In, Out, Pin
+from dawalink.api.schemas.common import CountedPage, DistrictId, In, Out, Pin
+from dawalink.domain.audit_actions import AuditAction
 
 PharmacyStatusName = Literal["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]
 EscalationStateName = Literal["OPEN", "IN_PROGRESS", "RESOLVED"]
@@ -60,7 +61,7 @@ class AdminPharmacyRow(Out):
     approved_at: datetime | None
 
 
-class AdminPharmacies(Out):
+class AdminPharmacies(CountedPage):
     items: list[AdminPharmacyRow]
     next_cursor: str | None
 
@@ -157,9 +158,26 @@ class EscalationRow(Out):
     created_at: datetime
     resolved_at: datetime | None
     resolution_note: str | None
+    # Every reason of the case, the first one first, each once: "Missed pickup
+    # contested", "Asked for a person"…
+    reasons: list[EscalationReasonName]
+    # The newest ask: what the list shows, and when it came (the app's clock).
+    last_summary: str
+    last_asked_at: datetime
+    # The team's last reply, on the app's clock. None before any (or for a reply sent
+    # before replies were remembered).
+    last_replied_at: datetime | None
+    # The client asked again after the team's last reply: "New ask since your reply".
+    new_ask_since_reply: bool
+    # The client wrote in a chat the team replied in, after the team's last reply there:
+    # when the newest such message was stored. Such a case is listed first.
+    client_wrote_at: datetime | None
+    # While the client's chat is with the team: when the assistant answers again by
+    # itself if nobody closes the case (N-55). None when no chat is with the team.
+    hold_ends_at: datetime | None
 
 
-class Escalations(Out):
+class Escalations(CountedPage):
     items: list[EscalationRow]
     next_cursor: str | None
 
@@ -173,6 +191,9 @@ class ThreadMessage(Out):
     # What the cards under it were ("reserve", "plan", "status"), never their content.
     cards: list[str]
     created_at: datetime
+    # The first message of another chat of the case (a later ask, or a reply that went
+    # to the chat the client had then): the page marks where it starts.
+    starts_another_chat: bool
 
 
 class ContestedReservation(Out):
@@ -184,6 +205,9 @@ class ContestedReservation(Out):
     pharmacy: str
     expired_at: datetime | None
     contested_at: datetime
+    # False once an admin cleared it: it no longer counts as a missed pickup, and has
+    # nothing left to clear (R-N3).
+    counts_as_no_show: bool
 
 
 class EscalationDetail(Out):
@@ -191,8 +215,10 @@ class EscalationDetail(Out):
     # Empty when there is no chat to show: the case came from a button, not from a
     # chat, or the chat was deleted after its 30 days.
     thread: list[ThreadMessage]
-    # The no-shows this client contests and that still count: what a complaint about a
-    # missed pickup is about, with [Clear] beside it.
+    # What this case's contested missed pickup is about: the reservation the client
+    # pressed [I picked it up] on, with the other boxes of its trip, cleared or not.
+    # Empty on a case of another kind. A complaint made before cases remembered their
+    # reservation shows the contested reservations its summary names.
     contested: list[ContestedReservation]
 
 
@@ -260,7 +286,7 @@ class AnswerReportRow(Out):
     created_at: datetime
 
 
-class AnswerReports(Out):
+class AnswerReports(CountedPage):
     items: list[AnswerReportRow]
     next_cursor: str | None
 
@@ -291,27 +317,81 @@ class RegressionCases(Out):
 # --- The audit log (AS-11) --------------------------------------------------------------------
 
 
+# The families of the "Kind" filter (`domain/audit_actions.py`, `KINDS`).
+AuditKindName = Literal[
+    "pharmacies",
+    "stock",
+    "reservations",
+    "clients",
+    "requests",
+    "escalations",
+    "reports",
+    "flags",
+    "accounts",
+    "clock",
+]
+
+
+class AuditWho(Out):
+    """Who did it. An admin by their name and a pharmacy by its approved name; **a client
+    by an ID only, never a name** (BLD-D45); the assistant and the system by what they are."""
+
+    kind: Literal["admin", "pharmacy", "client", "agent", "system"]
+    name: str | None
+    # The pharmacy's or the client's ID, for the link to their page.
+    id: uuid.UUID | None
+
+
+class AuditSubject(Out):
+    """The page of the console the event is about. None when there is none: a
+    registration whose email was never confirmed, a row deleted since, an admin's login."""
+
+    kind: Literal["pharmacy", "client", "escalation", "reports", "clock"]
+    id: uuid.UUID | None
+
+
 class AuditRow(Out):
+    """One event of the log, as an admin reads it. **The values of the fields that
+    changed are never here** (only their names): they stay in the table."""
+
     id: int
     occurred_at: datetime
     actor_type: str
     actor_id: uuid.UUID | None
     entity_type: str
     entity_id: uuid.UUID | None
+    # The stored code, as it is: an event written before its sentence existed still shows.
     action: str
-    before: dict[str, Any] | None
-    after: dict[str, Any] | None
+    # The same code when the console has a sentence for it (every code the backend
+    # writes has one: a test says so), else None.
+    known_action: AuditAction | None
+    who: AuditWho
+    subject: AuditSubject | None
+    # The names of the fields that changed ("phone", "hours"), never their values.
+    changed: list[str]
+    # A move between two of the app's own states ("PENDING" to "APPROVED"); a request's
+    # close gives how it ended. Never a text a person typed.
+    state_from: str | None
+    state_to: str | None
+    # How many things the action ended or touched ("offers_cancelled": 3).
+    counts: dict[str, int]
+    # A code the app chose from a list of its own: an escalation's or a report's reason,
+    # whether a wait is a watch or a request's medicine.
+    code: str | None
+    # The admin's reason (or the code's, for an automatic change).
     reason: str | None
 
 
-class AuditPage(Out):
+class AuditPage(CountedPage):
     items: list[AuditRow]
     next_cursor: str | None
 
 
 # --- Clients (AS-5) ---------------------------------------------------------------------------
 
-ClientStatusName = Literal["UNVERIFIED", "ACTIVE", "PAUSED", "SUSPENDED"]
+# DELETED: the client deleted their account (R-AU10). Their page shows its ID, this
+# status and their past reservations; nothing else is kept.
+ClientStatusName = Literal["UNVERIFIED", "ACTIVE", "PAUSED", "SUSPENDED", "DELETED"]
 
 
 class AdminClientRow(Out):
@@ -329,7 +409,7 @@ class AdminClientRow(Out):
     flags_open: int
 
 
-class AdminClients(Out):
+class AdminClients(CountedPage):
     items: list[AdminClientRow]
     next_cursor: str | None
 
@@ -430,7 +510,7 @@ class CatalogProduct(Out):
     same_medicine: int
 
 
-class CatalogProducts(Out):
+class CatalogProducts(CountedPage):
     items: list[CatalogProduct]
     next_cursor: str | None
 

@@ -8,7 +8,16 @@ from typing import Literal
 from pydantic import Field
 
 from dawalink.api.schemas.accounts import OpeningRange, PinIn
-from dawalink.api.schemas.common import DistrictId, In, Lbp, Money, Out, Pin, ProductSummary
+from dawalink.api.schemas.common import (
+    CountedPage,
+    DistrictId,
+    In,
+    Lbp,
+    Money,
+    Out,
+    Pin,
+    ProductSummary,
+)
 from dawalink.api.schemas.search import DayHours
 
 
@@ -115,7 +124,7 @@ class PharmacyReservation(Out):
     closed_at: datetime | None
 
 
-class PharmacyReservations(Out):
+class PharmacyReservations(CountedPage):
     items: list[PharmacyReservation]
     next_cursor: str | None
     server_now: datetime

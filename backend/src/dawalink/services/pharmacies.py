@@ -69,6 +69,17 @@ def cards(
     }
 
 
+def district_names(tx: Tx, pharmacy_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Each pharmacy's district, by name: to keep the pharmacies of the areas a client
+    asked to look in."""
+    rows = tx.session.execute(
+        select(Pharmacy.id, District.name)
+        .join(District, District.id == Pharmacy.district_id)
+        .where(Pharmacy.id.in_(pharmacy_ids))
+    ).all()
+    return {row[0]: row[1] for row in rows}
+
+
 def day_hours(hours: WeeklyHours, day: date) -> str:
     """The opening hours of one day, as "08:00-13:00, 16:00-21:00", or "closed"."""
     ranges = hours.on(day)

@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from dawalink.db.models import ProductIngredient
 from tests.api.conftest import Api, code_of
@@ -119,6 +120,78 @@ class TestWhatANameFinds:
         assert found["closest"] is True
         assert found["did_you_mean"] == ["PANDERM"]
 
+    @pytest.mark.parametrize("same_medicine", [True, False])
+    def test_a_medicine_nobody_stocks_is_never_taken_for_a_misspelling(
+        self, shelf: Shelf, same_medicine: bool
+    ) -> None:
+        """Review B#1: "concor" is written right, is in the catalog, and is on no shelf;
+        B-Cor is, and shares a word with it. The page says nobody has Concor. It never
+        says "the closest name is B-Cor" with [Reserve]: another brand is shown only by the
+        assistant, with "ask the pharmacist first" (R-S4, INV-26). The same with a B-Cor
+        of another strength: the client named a medicine, and it is that one or nothing."""
+        make = shelf.api.world.make
+        key = "bisoprolol=5mg | tablet | C07AB07"
+        make.product(moph_name="CONCOR", search_name="concor", equivalence_key=key)
+        other = make.product(
+            moph_name="B-COR",
+            search_name="b cor",
+            equivalence_key=key if same_medicine else "bisoprolol=2.5mg | tablet | C07AB07",
+        )
+        make.item(pharmacy_id=shelf.pharmacy, product_id=other, days_left=60, qty_on_hand=4)
+
+        found = shelf.search("concor").json()
+
+        assert (found["groups"], found["closest"], found["did_you_mean"]) == ([], False, [])
+
+    def test_a_named_medicine_in_stock_is_shown_alone(self, shelf: Shelf) -> None:
+        """When a pharmacy has Concor, Concor is what the name finds, and only Concor."""
+        make = shelf.api.world.make
+        key = "bisoprolol=5mg | tablet | C07AB07"
+        concor = make.product(moph_name="CONCOR", search_name="concor", equivalence_key=key)
+        other = make.product(moph_name="B-COR", search_name="b cor", equivalence_key=key)
+        for product in (concor, other):
+            make.item(pharmacy_id=shelf.pharmacy, product_id=product, days_left=60, qty_on_hand=4)
+
+        found = shelf.search("concor").json()
+
+        assert [group["product"]["name"] for group in found["groups"]] == ["CONCOR"]
+        assert (found["closest"], found["did_you_mean"]) == (False, [])
+
+    def test_a_misspelling_never_leads_to_another_brand_of_what_it_means(
+        self, shelf: Shelf
+    ) -> None:
+        """ "zandol" is a misspelling of Zanadol, which nobody stocks. Zadol, in stock, is
+        the closest name on a shelf, and another brand of Zanadol: it is not offered,
+        neither as the closest name nor as "Did you mean…?"."""
+        make = shelf.api.world.make
+        key = "zanamol=10mg | tablet | X01"
+        make.product(moph_name="ZANADOL", search_name="zanadol", equivalence_key=key)
+        other = make.product(moph_name="ZADOL", search_name="zadol", equivalence_key=key)
+        make.item(pharmacy_id=shelf.pharmacy, product_id=other, days_left=60, qty_on_hand=4)
+
+        found = shelf.search("zandol").json()
+
+        assert (found["groups"], found["closest"], found["did_you_mean"]) == ([], False, [])
+
+    def test_a_misspelling_finds_the_closest_name_in_stock_when_it_is_another_medicine(
+        self, shelf: Shelf
+    ) -> None:
+        """The same misspelling, with a Zadol that is not Zanadol: it is offered as the
+        closest name, and said to be."""
+        make = shelf.api.world.make
+        make.product(
+            moph_name="ZANADOL", search_name="zanadol", equivalence_key="zanamol=10mg | tablet"
+        )
+        other = make.product(
+            moph_name="ZADOL", search_name="zadol", equivalence_key="zadomol=5mg | tablet"
+        )
+        make.item(pharmacy_id=shelf.pharmacy, product_id=other, days_left=60, qty_on_hand=4)
+
+        found = shelf.search("zandol").json()
+
+        assert [group["product"]["name"] for group in found["groups"]] == ["ZADOL"]
+        assert found["closest"] is True
+
     def test_a_strength_moves_the_medicine_that_has_it_first(self, shelf: Shelf) -> None:
         assert shelf.names("panadol extra 500")[0] == "PANADOL EXTRA"
         assert shelf.names("panadol 500mg")[0] == "PANADOL"
@@ -192,6 +265,43 @@ class TestTheSameRulesAsTheMedicinesOwnPage:
 
         assert nobody.status_code == 401
         assert (empty.status_code, code_of(empty)) == (422, "VALIDATION_ERROR")
+
+
+class TestWhatASearchCosts:
+    def statements(self, shelf: Shelf, q: str) -> tuple[int, Any]:
+        seen: list[str] = []
+
+        def count(*args: Any) -> None:
+            seen.append(args[2])
+
+        event.listen(shelf.api.world.connection, "before_cursor_execute", count)
+        try:
+            answer = shelf.search(q)
+        finally:
+            event.remove(shelf.api.world.connection, "before_cursor_execute", count)
+        assert answer.status_code == 200
+        return len(seen), answer.json()
+
+    def test_one_letter_costs_the_same_for_thirty_medicines_as_for_three(
+        self, shelf: Shelf
+    ) -> None:
+        """Review A#29: "p" matched up to 40 medicines and ran a whole listing search for
+        each, 324 statements on the real catalog. The boxes, the hours, the travel times and
+        the pharmacies are now read once for all of them."""
+        make = shelf.api.world.make
+        self.statements(shelf, "p")  # the first request of an app does a few things once
+
+        few, found = self.statements(shelf, "p")
+        assert len(found["groups"]) == 3
+        for number in range(27):
+            pharmacy = make.pharmacy(name=f"Pharmacy {number}", lat=33.9 + number / 1000, lon=35.5)
+            product = make.product(moph_name=f"PILLEX {number:02d}", search_name=f"pillex {number}")
+            make.item(pharmacy_id=pharmacy, product_id=product, days_left=60, qty_on_hand=2)
+        many, found = self.statements(shelf, "p")
+
+        assert len(found["groups"]) == 30
+        assert many == few
+        assert many < 30
 
 
 class TestTheLastSearches:

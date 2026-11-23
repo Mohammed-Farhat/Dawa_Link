@@ -5,15 +5,17 @@ Controlled medicines are never returned, by any path (INV-6).
 
 import re
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import Row, func, select, text
 
 from dawalink.catalog.composition import normalize
 from dawalink.db.models import CatalogImport, Product
 from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
+from dawalink.services.paging import count_rows
 
 # Below this score a match is a guess: the client is asked "did you mean…?".
 CONFIDENT = 0.6
@@ -143,9 +145,9 @@ SHORT = 3
 def find_by_name(tx: Tx, query: str, *, among: Sequence[uuid.UUID] | None = None) -> NameSearch:
     """Every medicine a typed name stands for (CS-6).
 
-    `among`: only these products are looked at. The search page passes the medicines that
-    are in stock, so one letter is enough and nothing is shown that no pharmacy has
-    (the owner, 2026-11-18, BLD-D42).
+    `among`: only these products are looked at. The search page itself asks
+    `find_in_stock`, which looks at the whole catalog first (review B#1); the last
+    searches ask this one, to keep only a name the catalog knows.
 
     One or two letters are the start of a name's word ("p": Panadol, Plavix), never a
     guess at a spelling: two letters look like too many names.
@@ -155,45 +157,159 @@ def find_by_name(tx: Tx, query: str, *, among: Sequence[uuid.UUID] | None = None
     have it up. It is the search page's own function: the agent's `search_catalog` keeps
     `search_products`, whose answers the evaluation is measured on.
     """
-    words = normalize(query[:MAX_QUERY_LENGTH]).split()
-    name = " ".join(word for word in words if not word[0].isdigit())
-    strengths = [word for word in words if word[0].isdigit()]
+    name, strengths = _name_and_strengths(query)
     if not name or among == []:
         return NameSearch([], False, frozenset(), [])
+    if len(name) < SHORT:
+        return _starting_with(tx, name, among)
+    rows = _scored(tx, name, among)
+    if not rows:
+        return NameSearch([], False, frozenset(), [])
+
+    confident = {row.id: row for row in rows if _is_confident(row)}
+    closest = False
+    if confident:
+        chosen = confident
+        # Other brand words that look like the query ("brofen" finds ibuprofen by its
+        # letters; Brufen is offered next to it).
+        others = [row for row in rows if row.id not in confident and row.by_word >= CLOSE_WORD]
+    else:
+        near = [row for row in rows if row.by_word >= CLOSE_WORD]
+        if not near:
+            names = sorted(rows, key=lambda row: -max(row.by_name, row.by_word))
+            return NameSearch([], False, frozenset(), _first_names(tx, [r.id for r in names]))
+        best = _best(near)
+        chosen = {row.id: row for row in near if row.closest_word == best.closest_word}
+        # Everything else that looked a little like the query is offered by name.
+        others = [row for row in rows if row.id not in chosen]
+        closest = True
+    return _answer(tx, name, strengths, chosen, others, closest=closest)
+
+
+def find_in_stock(tx: Tx, query: str, stocked: Collection[uuid.UUID]) -> NameSearch:
+    """What a typed name stands for on the search page: **the medicine it names, in stock,
+    or nothing** (CS-6; R-S4, INV-26).
+
+    The whole catalog is asked first. When the words name a medicine ("concor" is
+    Concor), only that medicine is shown, and with none on a shelf the answer is empty:
+    the page says that no pharmacy has it and offers the assistant. It is never "the
+    closest name in stock", which would call a correct name a misspelling and lead the
+    client to another brand (B-Cor) with [Reserve] and no "ask the pharmacist first"
+    (review B#1). Another brand is shown only by the assistant (BLD-D17).
+
+    Only when the catalog knows no medicine by the words is the closest name in stock
+    offered, and said to be the closest ("pandol": the Panadols). Even then, never
+    another brand of what the words most likely mean, nor as a "Did you mean…?".
+
+    One or two letters are the start of a name's word among the medicines in stock, as
+    in `find_by_name`.
+    """
+    name, strengths = _name_and_strengths(query)
+    in_stock = set(stocked)
+    if not name or not in_stock:
+        return NameSearch([], False, frozenset(), [])
+    if len(name) < SHORT:
+        return _starting_with(tx, name, list(in_stock))
+    rows = _scored(tx, name, None)
+
+    confident = {row.id: row for row in rows if _is_confident(row)}
+    if confident:
+        chosen = {
+            product_id: row for product_id, row in confident.items() if product_id in in_stock
+        }
+        if not chosen:
+            return NameSearch([], False, frozenset(), [])
+        another_brand = _another_brand_of(list(confident.values()))
+        others = [
+            row
+            for row in rows
+            if row.id in in_stock
+            and row.id not in chosen
+            and row.by_word >= CLOSE_WORD
+            and not another_brand(row)
+        ]
+        return _answer(tx, name, strengths, chosen, others, closest=False)
+
+    # No medicine has this name: the words are taken as a misspelling. What they most
+    # likely mean is the closest brand word of the whole catalog, in stock or not.
+    near = [row for row in rows if row.by_word >= CLOSE_WORD]
+    another_brand = _another_brand_of(
+        [row for row in near if row.closest_word == _best(near).closest_word] if near else []
+    )
+    shelf = [row for row in rows if row.id in in_stock and not another_brand(row)]
+    near_shelf = [row for row in shelf if row.by_word >= CLOSE_WORD]
+    if not near_shelf:
+        names = sorted(shelf, key=lambda row: -max(row.by_name, row.by_word))
+        return NameSearch([], False, frozenset(), _first_names(tx, [r.id for r in names]))
+    best = _best(near_shelf)
+    chosen = {row.id: row for row in near_shelf if row.closest_word == best.closest_word}
+    others = [row for row in shelf if row.id not in chosen]
+    return _answer(tx, name, strengths, chosen, others, closest=True)
+
+
+def _name_and_strengths(query: str) -> tuple[str, list[str]]:
+    """The words of a typed name, and the strengths in it ("panadol 500": "500")."""
+    words = normalize(query[:MAX_QUERY_LENGTH]).split()
+    name = " ".join(word for word in words if not word[0].isdigit())
+    return name, [word for word in words if word[0].isdigit()]
+
+
+def _is_confident(row: Row[Any]) -> bool:
+    return bool(max(row.by_name, row.by_ingredient) >= CONFIDENT)
+
+
+def _best(rows: Sequence[Row[Any]]) -> Row[Any]:
+    """The row whose brand word is closest to the query."""
+    return max(rows, key=lambda row: (row.by_word, row.closest_word))
+
+
+def _another_brand_of(meant: Sequence[Row[Any]]) -> Callable[[Row[Any]], bool]:
+    """Whether a row is another brand of one of these medicines: the same equivalence key
+    under another name (R-C10). The same name is the same medicine, whoever makes it (Q38)."""
+    keys = {row.equivalence_key for row in meant if row.equivalence_key is not None}
+    names = {row.search_name for row in meant}
+    return lambda row: row.equivalence_key in keys and row.search_name not in names
+
+
+def _starting_with(tx: Tx, name: str, among: Sequence[uuid.UUID] | None) -> NameSearch:
+    """One or two letters: the medicines with a word that starts with them."""
     scope = "AND p.id = ANY(:among)" if among is not None else ""
     limits = {"among": list(among)} if among is not None else {}
-
-    if len(name) < SHORT:
-        starts = tx.session.execute(
-            text(
-                f"""
-                SELECT p.id FROM products p
-                WHERE NOT p.controlled {scope}
-                  AND (p.search_name LIKE :start ESCAPE '!' OR p.search_name LIKE :word ESCAPE '!')
-                -- A name that begins with the letters comes before one that has them in a
-                -- later word: "p" is Panadol before "Micardis Plus".
-                ORDER BY (p.search_name LIKE :start ESCAPE '!') DESC, p.moph_name, p.moph_code
-                LIMIT :most
-                """
-            ),
-            {
-                "start": _like(name) + "%",
-                "word": "% " + _like(name) + "%",
-                "most": MAX_NAME_MATCHES,
-                **limits,
-            },
-        ).scalars()
-        ids = list(starts)
-        found = {
-            p.id: p
-            for p in tx.session.execute(select(Product).where(Product.id.in_(ids))).scalars()
-        }
-        return NameSearch([found[i] for i in ids if i in found], False, frozenset(), [])
-
-    rows = tx.session.execute(
+    starts = tx.session.execute(
         text(
             f"""
-            SELECT p.id,
+            SELECT p.id FROM products p
+            WHERE NOT p.controlled {scope}
+              AND (p.search_name LIKE :start ESCAPE '!' OR p.search_name LIKE :word ESCAPE '!')
+            -- A name that begins with the letters comes before one that has them in a
+            -- later word: "p" is Panadol before "Micardis Plus".
+            ORDER BY (p.search_name LIKE :start ESCAPE '!') DESC, p.moph_name, p.moph_code
+            LIMIT :most
+            """
+        ),
+        {
+            "start": _like(name) + "%",
+            "word": "% " + _like(name) + "%",
+            "most": MAX_NAME_MATCHES,
+            **limits,
+        },
+    ).scalars()
+    ids = list(starts)
+    found = {
+        p.id: p for p in tx.session.execute(select(Product).where(Product.id.in_(ids))).scalars()
+    }
+    return NameSearch([found[i] for i in ids if i in found], False, frozenset(), [])
+
+
+def _scored(tx: Tx, name: str, among: Sequence[uuid.UUID] | None) -> Sequence[Row[Any]]:
+    """The products the words look like, with how much: by their name, by an ingredient,
+    by their closest word. Never a controlled one (INV-6)."""
+    scope = "AND p.id = ANY(:among)" if among is not None else ""
+    limits = {"among": list(among)} if among is not None else {}
+    return tx.session.execute(
+        text(
+            f"""
+            SELECT p.id, p.equivalence_key, p.search_name,
                    word_similarity(:q, p.search_name) AS by_name,
                    COALESCE((SELECT max(word_similarity(:q, pi.name_normalized))
                              FROM product_ingredients pi WHERE pi.product_id = p.id), 0)
@@ -214,27 +330,18 @@ def find_by_name(tx: Tx, query: str, *, among: Sequence[uuid.UUID] | None = None
         ),
         {"q": name, "start": _like(name) + "%", "word": "% " + _like(name) + "%", **limits},
     ).all()
-    if not rows:
-        return NameSearch([], False, frozenset(), [])
 
-    confident = {row.id: row for row in rows if max(row.by_name, row.by_ingredient) >= CONFIDENT}
-    closest = False
-    if confident:
-        chosen = confident
-        # Other brand words that look like the query ("brofen" finds ibuprofen by its
-        # letters; Brufen is offered next to it).
-        others = [row for row in rows if row.id not in confident and row.by_word >= CLOSE_WORD]
-    else:
-        near = [row for row in rows if row.by_word >= CLOSE_WORD]
-        if not near:
-            names = sorted(rows, key=lambda row: -max(row.by_name, row.by_word))
-            return NameSearch([], False, frozenset(), _first_names(tx, [r.id for r in names]))
-        best = max(near, key=lambda row: (row.by_word, row.closest_word))
-        chosen = {row.id: row for row in near if row.closest_word == best.closest_word}
-        # Everything else that looked a little like the query is offered by name.
-        others = [row for row in rows if row.id not in chosen]
-        closest = True
 
+def _answer(
+    tx: Tx,
+    name: str,
+    strengths: Sequence[str],
+    chosen: Mapping[uuid.UUID, Row[Any]],
+    others: Sequence[Row[Any]],
+    *,
+    closest: bool,
+) -> NameSearch:
+    """The chosen medicines, best first, and the other names to offer."""
     products = list(tx.session.execute(select(Product).where(Product.id.in_(chosen))).scalars())
 
     def has_the_strength(product: Product) -> bool:
@@ -253,14 +360,15 @@ def find_by_name(tx: Tx, query: str, *, among: Sequence[uuid.UUID] | None = None
         word.startswith(first) for p in shown for word in (p.search_name or "").split()
     ):
         closest = all(chosen[p.id].by_name >= chosen[p.id].by_ingredient for p in shown)
-    others.sort(key=lambda row: -row.by_word)
     return NameSearch(
         products=shown,
         closest=closest,
         by_ingredient=frozenset(
             p.id for p in shown if chosen[p.id].by_ingredient > chosen[p.id].by_name
         ),
-        did_you_mean=_first_names(tx, [row.id for row in others]),
+        did_you_mean=_first_names(
+            tx, [row.id for row in sorted(others, key=lambda row: -row.by_word)]
+        ),
     )
 
 
@@ -336,23 +444,28 @@ def products_in_group(tx: Tx, product: Product, *, with_equivalents: bool) -> Se
     return [product.id, *(other.id for other in equivalents(tx, product.id))]
 
 
-def admin_products(tx: Tx, query: str, *, offset: int = 0, limit: int = 50) -> list[Product]:
+def admin_products(
+    tx: Tx, query: str, *, offset: int = 0, limit: int = 50
+) -> tuple[list[Product], int]:
     """The catalog as an admin reads it (AS-9): every product, **the controlled ones
     included**, which nobody else ever sees (R-C6). Read-only: the catalog changes by the
-    import script and the team's override files."""
+    import script and the team's override files.
+
+    Returns a page of it and how many products the same text matches (numbered pages)."""
     statement = select(Product)
     wanted = normalize(query)
     if query.strip() and not wanted:
         # Typed, but no letter or digit in it ("%", "_"): that names no product. Without
         # this it would list the whole catalog, as an empty search does.
-        return []
+        return [], 0
     if wanted:
         statement = statement.where(Product.search_name.contains(wanted, autoescape=True))
-    return list(
+    page = list(
         tx.session.execute(
             statement.order_by(Product.moph_name, Product.moph_code).offset(offset).limit(limit)
         ).scalars()
     )
+    return page, count_rows(tx, statement)
 
 
 def group_sizes(tx: Tx, keys: Sequence[str]) -> dict[str, int]:

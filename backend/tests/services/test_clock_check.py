@@ -5,11 +5,12 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+import psycopg
 import pytest
 from sqlalchemy.exc import OperationalError
 
 from dawalink.domain.orders import OrderSource
-from dawalink.services import orders
+from dawalink.services import daily, orders
 from dawalink.services.orders import ReserveLine
 from dawalink.worker.loop import ClockCheck
 from tests.conftest import logged
@@ -17,6 +18,10 @@ from tests.db.factories import NOW
 from tests.services.conftest import World
 
 DAY = timedelta(days=1)
+
+
+class WorkerKilled(BaseException):
+    """The process ending mid-row (SIGKILL): nothing in the worker catches it."""
 
 
 def reserve(world: World, client: uuid.UUID, *, key: str) -> uuid.UUID:
@@ -243,19 +248,135 @@ class TestTheWorkerLoop:
 
         def crash_on_the_second(tx: Any, order_id: uuid.UUID) -> Any:
             if len(handled) == 1:
-                raise RuntimeError("the worker was killed")
+                raise WorkerKilled
             handled.append(order_id)
             return real(tx, order_id)
 
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(orders, "expire_no_show", crash_on_the_second)
-            with pytest.raises(RuntimeError):
+            with pytest.raises(WorkerKilled):
                 tasks.expire_reservations()
         states = [order_row(world, order).state for order in (first, second, third)]
 
         assert states.count("EXPIRED_NO_SHOW") == 1
         assert tasks.expire_reservations() == 2
         assert {order_row(world, o).state for o in (first, second, third)} == {"EXPIRED_NO_SHOW"}
+
+    def test_a_row_that_fails_is_logged_and_the_rows_behind_it_are_handled(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A#26: one row that always fails (a bug, a broken invariant) never holds up the
+        others, even when it is the oldest deadline of a full batch."""
+        client = world.make.client()
+        made = {reserve(world, client, key=key) for key in "abc"}
+        world.later(hours=12)
+        tasks = world.clock_tasks()
+        tasks._batch = 1  # the broken row fills the whole batch
+        real = orders.expire_no_show
+        broken: list[uuid.UUID] = []
+
+        def fails_on_the_first_one_seen(tx: Any, order_id: uuid.UUID) -> Any:
+            if not broken:
+                broken.append(order_id)
+            if order_id == broken[0]:
+                raise RuntimeError("a bug in this row")
+            return real(tx, order_id)
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(orders, "expire_no_show", fails_on_the_first_one_seen)
+            handled = [tasks.expire_reservations() for _ in range(3)]
+
+        assert handled == [0, 1, 1]
+        assert order_row(world, broken[0]).state == "RESERVED"
+        assert {order_row(world, o).state for o in made - set(broken)} == {"EXPIRED_NO_SHOW"}
+        failures = logged(caplog, "clock_row_failed")
+        assert {(entry["task"], entry["row"]) for entry in failures} == {
+            ("expire_reservations", str(broken[0]))
+        }
+        assert len(failures) == 3  # tried again every pass, after the others
+
+    def test_a_statement_that_times_out_on_one_row_is_that_rows_failure(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A#26: a time-out, a deadlock or a lock that isn't free is not "the database
+        can't be reached": the other rows of the pass are handled."""
+        client = world.make.client()
+        slow, other = (reserve(world, client, key=key) for key in "ab")
+        world.later(hours=12)
+        real = orders.expire_no_show
+
+        def times_out_on_one(tx: Any, order_id: uuid.UUID) -> Any:
+            if order_id == slow:
+                raise OperationalError("UPDATE orders", {}, psycopg.errors.QueryCanceled())
+            return real(tx, order_id)
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(orders, "expire_no_show", times_out_on_one)
+            handled = world.clock_tasks().expire_reservations()
+
+        assert handled == 1
+        assert order_row(world, other).state == "EXPIRED_NO_SHOW"
+        assert [entry["row"] for entry in logged(caplog, "clock_row_failed")] == [str(slow)]
+
+    def test_a_lost_connection_ends_the_task_at_once(self, world: World) -> None:
+        client = world.make.client()
+        for key in "ab":
+            reserve(world, client, key=key)
+        world.later(hours=12)
+        tried: list[uuid.UUID] = []
+
+        def connection_lost(tx: Any, order_id: uuid.UUID) -> Any:
+            tried.append(order_id)
+            raise OperationalError("UPDATE orders", {}, Exception("server closed the connection"))
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(orders, "expire_no_show", connection_lost)
+            with pytest.raises(OperationalError):
+                world.clock_tasks().expire_reservations()
+
+        assert len(tried) == 1
+
+    def test_a_task_whose_statement_times_out_is_logged_and_the_pass_goes_on(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        ran: list[str] = []
+
+        def expire_offers() -> None:
+            raise OperationalError("SELECT", {}, psycopg.errors.QueryCanceled())
+
+        check = ClockCheck([expire_offers, lambda: ran.append("later task")], tmp_path / "beat")
+
+        check.run_pass()
+
+        assert ran == ["later task"]
+        assert logged(caplog, "clock_check_paused") == []
+        assert [entry["task"] for entry in logged(caplog, "clock_task_failed")] == ["expire_offers"]
+
+    def test_a_daily_check_that_fails_is_not_run_again_every_pass(
+        self, world: World, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The day is marked done with its reminders, before the books are checked: a
+        check that times out is logged, and the purge doesn't run again 5 s later."""
+        purges: list[int] = []
+        real_purge = daily.purge
+
+        def counted_purge(tx: Any) -> dict[str, int]:
+            purges.append(1)
+            return real_purge(tx)
+
+        def times_out(_: Any) -> dict[str, list[str]]:
+            raise OperationalError("SELECT", {}, psycopg.errors.QueryCanceled())
+
+        tasks = world.clock_tasks()
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(daily, "purge", counted_purge)
+            patch.setattr(daily, "books_that_are_off", times_out)
+            tasks.run_daily_tasks()
+            again = tasks.run_daily_tasks()
+
+        assert (len(purges), again) == (1, 0)
+        assert len(logged(caplog, "books_check_failed")) == 1
+        assert daily.due_today(world.tx()) is False
 
     def test_when_the_database_is_down_the_pass_pauses_and_the_worker_stays_alive(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture

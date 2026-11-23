@@ -1,12 +1,13 @@
 import { Modal } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { CheckIcon, CloseIcon, MapIcon, PhoneIcon, PrescriptionIcon } from '../../components/icons'
 import { Banner } from '../../components/layout'
-import { aboutUsd, calendarDate, dayAndClock, directionsUrl, lbp } from '../../format'
+import { reservationTone } from '../../components/reservationTone'
+import { aboutUsd, calendarDate, dayAndClock, directionsUrl, lbp, reservationWords } from '../../format'
 import { errorMessage, strings } from '../../strings/en'
 import { useReservation } from './data'
 
@@ -14,25 +15,23 @@ const s = strings.ticket
 
 type Reservation = Schemas['Reservation']
 
-// One word and one color per state (docs/11 §2.1): color is never the only signal.
-const TONE: Record<Reservation['state'], 'green' | 'red' | 'grey'> = {
-  RESERVED: 'green',
-  PICKED_UP: 'green',
-  NOT_AVAILABLE: 'red',
-  EXPIRED_NO_SHOW: 'red',
-  CANCELLED_BY_CLIENT: 'grey',
-  CANCELLED_BY_SYSTEM: 'grey',
+/** What the page's heading says: what to do with a live ticket, or what happened to one
+ * that is no longer waiting, by its state, whatever words the server uses (A#36, B#13). */
+function headingOf(reservation: Reservation | undefined): string {
+  if (!reservation) return strings.shell.reservationTitle
+  if (reservation.state === 'RESERVED') return s.header
+  return s.ended[reservation.state] ?? strings.shell.reservationTitle
 }
 
-function statusWord(reservation: Reservation): string {
-  // "Reserved: pick up by today 21:00" is cut to its first word on a small badge.
-  return reservation.status_text.split(':')[0]
-}
-
-/** CS-10: the pickup ticket. The order number, huge, for the pharmacist to read. */
+/** CS-10: the pickup ticket. The order number, huge, for the pharmacist to read.
+ *
+ * A reservation that is no longer waiting (cancelled, missed, not available, picked up)
+ * opens on the same page, which says so first: no "Show this at the counter", no "Pay at
+ * the counter", and Directions and Call as plain buttons (A#36). */
 export function TicketPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const { key: visit } = useLocation()
   const queryClient = useQueryClient()
   const found = useReservation(id)
   const [asking, setAsking] = useState(false)
@@ -76,6 +75,8 @@ export function TicketPage() {
   }
 
   const reservation = found.data
+  const live = reservation?.state === 'RESERVED'
+  const ended = reservation !== undefined && !live
   return (
     <div className="ticket-screen">
       <main className="ticket-screen__inner">
@@ -84,11 +85,20 @@ export function TicketPage() {
             type="button"
             className="round-button round-button--dark"
             aria-label={strings.common.close}
-            onClick={() => navigate(-1)}
+            // Opened straight from a link or an email, there is no page to go back to.
+            onClick={() => (visit === 'default' ? navigate('/') : navigate(-1))}
           >
             <CloseIcon />
           </button>
-          <span>{s.header}</span>
+          {/* Shown once the reservation is known: the focus goes to the heading on arrival,
+              and "Cancelled" or "Missed pickup" must be the first thing heard. */}
+          {found.isPending ? (
+            <span />
+          ) : (
+            <h1 className={`ticket-screen__title${ended ? ' ticket-screen__title--ended' : ''}`}>
+              {headingOf(reservation)}
+            </h1>
+          )}
           <span style={{ width: 48 }} />
         </header>
 
@@ -106,12 +116,15 @@ export function TicketPage() {
 
         {reservation && (
           <>
-            <section className="ticket" aria-label={s.header}>
+            {ended && <Banner tone={reservationTone(reservation.state)}>{reservationWords(reservation)}</Banner>}
+            <section className="ticket" aria-label={headingOf(reservation)}>
               <div className="ticket__head">
-                <span className={`status-pill status-pill--${TONE[reservation.state]}`} style={{ alignSelf: 'center' }}>
-                  {reservation.state === 'RESERVED' && <CheckIcon small />}
-                  {statusWord(reservation)}
-                </span>
+                {live && (
+                  <span className="status-pill status-pill--green" style={{ alignSelf: 'center' }}>
+                    <CheckIcon small />
+                    {s.reserved}
+                  </span>
+                )}
                 <span className="ticket__label">{s.orderNumber}</span>
                 <span className="ticket__ref">{reservation.ref}</span>
                 <span className="ticket__product">
@@ -129,17 +142,18 @@ export function TicketPage() {
                   </div>
                 )}
                 <div>
-                  <dt>{s.pay}</dt>
+                  <dt>{live ? s.pay : s.total}</dt>
                   <dd>{lbp(reservation.total.lbp)}</dd>
                   {aboutUsd(reservation.total) && (
                     <dd className="ticket__sub">{aboutUsd(reservation.total)}</dd>
                   )}
                 </div>
-                {reservation.saving.lbp > 0 && (
+                {/* A saving is the client's only if they come, or came, for the box. */}
+                {(live || reservation.state === 'PICKED_UP') && reservation.saving.lbp > 0 && (
                   <div>
                     <dt>{s.youSave}</dt>
                     <dd>
-                      <span className="saving" style={{ fontSize: 15, padding: '2px 10px' }}>
+                      <span className="saving saving--big">
                         {lbp(reservation.saving.lbp)}
                       </span>
                     </dd>
@@ -164,13 +178,15 @@ export function TicketPage() {
 
             <div className="ticket-screen__actions">
               <a
-                className="pill-button"
+                className={live ? 'pill-button' : 'pill-button pill-button--dark'}
                 href={directionsUrl(reservation.pharmacy.pin)}
                 target="_blank"
                 rel="noreferrer"
               >
                 <MapIcon small />
-                {s.directions}
+                {s.directions}{' '}
+                {/* Heard, never seen: the map opens in another tab (WCAG 3.2.5). */}
+                <span className="sr-only">{strings.common.opensNewTab}</span>
               </a>
               <a className="pill-button pill-button--dark" href={`tel:${reservation.pharmacy.phone}`}>
                 <PhoneIcon small />

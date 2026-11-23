@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from dawalink.api.schemas.common import Money, Out, PharmacyCard, ProductSummary
+from dawalink.api.schemas.common import CountedPage, Money, Out, PharmacyCard, ProductSummary
 
 
 class Reservation(Out):
@@ -44,7 +44,7 @@ class Reservation(Out):
     server_now: datetime
 
 
-class ReservationsPage(Out):
+class ReservationsPage(CountedPage):
     items: list[Reservation]
     next_cursor: str | None
     server_now: datetime

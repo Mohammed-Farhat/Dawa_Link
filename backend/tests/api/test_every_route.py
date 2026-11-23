@@ -20,6 +20,9 @@ PUBLIC = {
     ("POST", "/api/v1/auth/register/pharmacy"),
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/verify-email"),  # the link of the confirmation email
+    # "Forgot my password" (R-AU9): asked for, and used, by someone who can't log in.
+    ("POST", "/api/v1/auth/password/forgot"),
+    ("POST", "/api/v1/auth/password/reset"),
 }
 # Any logged-in user: these are about the login itself.
 ANY_ROLE = {

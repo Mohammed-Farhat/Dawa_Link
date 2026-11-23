@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import Connection, text
 
-from dawalink.catalog.importer import ImportResult, import_catalog
+from dawalink.catalog.importer import ImportResult, import_catalog, refresh_prescription_marks
 from dawalink.catalog.moph import CatalogRow
 from dawalink.catalog.rules import CatalogRules, rules_from
 from tests.db import factories as make
@@ -208,3 +208,116 @@ def test_a_controlled_product_is_never_visible_even_if_it_is_in_stock(db: Connec
 
     assert plain in visible
     assert codeine not in visible
+
+
+class TestTheMinistrysOtcList:
+    """R-C7 with the Ministry's list: the mark comes on the row (catalog/otc_list.py), and
+    nothing else about the product changes. These rules list no ingredient as OTC."""
+
+    RULES = rules_from({"controlled": {"atc_prefixes": ["N02A"], "ingredients": ["codeine"]}})
+
+    def test_a_marked_product_has_no_notice_and_an_unmarked_twin_keeps_it(
+        self, db: Connection
+    ) -> None:
+        run_import(
+            db,
+            [
+                row(511, "LISTEDTEST", "Ibuprofen - 200mg", otc_listed=True),
+                row(512, "TWINTEST", "Ibuprofen - 200mg"),
+            ],
+            self.RULES,
+        )
+
+        assert products(db)[511].prescription_required is False
+        assert products(db)[512].prescription_required is True
+
+    def test_a_marked_controlled_product_stays_controlled_and_hidden(self, db: Connection) -> None:
+        """R-C6 wins: a controlled product is never shown, whatever the list says."""
+        run_import(
+            db,
+            [row(513, "CODLISTED", "Paracetamol - 500mg, Codeine - 8mg", otc_listed=True)],
+            self.RULES,
+        )
+        box = make.item(db, product_id=products(db)[513].id, days_left=60)
+
+        visible = set(
+            db.execute(
+                text("SELECT inventory_item_id FROM visible_listings(:today)"),
+                {"today": make.TODAY},
+            ).scalars()
+        )
+
+        assert products(db)[513].controlled is True
+        assert box not in visible
+
+    def test_the_teams_correction_can_put_the_notice_back(self, db: Connection) -> None:
+        rules = rules_from({"products": {"514": {"prescription_required": True}}})
+
+        run_import(db, [row(514, "BACKTEST", "Ibuprofen - 200mg", otc_listed=True)], rules)
+
+        assert products(db)[514].prescription_required is True
+
+
+class TestRefreshingTheMarksOfAnImportedCatalog:
+    """prepare_db imports only into an empty catalog, so a database imported before the
+    Ministry's list existed gets the marks this way: the mark only, both ways."""
+
+    RULES = rules_from({"products": {"524": {"prescription_required": True}}})
+
+    def marked(self, *codes: int) -> list[CatalogRow]:
+        return [
+            row(521, "REFRESHTEST", "Ibuprofen - 200mg", otc_listed=521 in codes),
+            row(522, "STAYTEST", "Ibuprofen - 200mg", otc_listed=522 in codes),
+            row(523, "LEAVETEST", "Ibuprofen - 400mg", otc_listed=523 in codes),
+            row(524, "OVERRIDETEST", "Ibuprofen - 200mg", otc_listed=524 in codes),
+        ]
+
+    def test_it_sets_the_mark_both_ways_and_nothing_else(self, db: Connection) -> None:
+        first = run_import(db, self.marked(523), self.RULES)
+        before = products(db)
+        imports = db.execute(text("SELECT count(*) FROM catalog_imports")).scalar_one()
+
+        result = refresh_prescription_marks(db, self.marked(521, 524), self.RULES)
+        after = products(db)
+
+        assert {code: p.prescription_required for code, p in after.items()} == {
+            521: False,  # newly on the list
+            522: True,
+            523: True,  # taken off the list: the notice comes back
+            524: True,  # the team's correction still wins
+        }
+        assert (result.notice_removed, result.notice_restored) == (1, 1)
+        assert db.execute(text("SELECT count(*) FROM catalog_imports")).scalar_one() == imports
+        for code, product in after.items():
+            assert product.import_id == first.import_id
+            unchanged = before[code]._asdict() | {
+                "prescription_required": product.prescription_required
+            }
+            assert product._asdict() == unchanged
+
+    def test_running_it_again_changes_nothing(self, db: Connection) -> None:
+        run_import(db, self.marked(), self.RULES)
+        refresh_prescription_marks(db, self.marked(521), self.RULES)
+
+        again = refresh_prescription_marks(db, self.marked(521), self.RULES)
+
+        assert (again.notice_removed, again.notice_restored, again.kept_other_product) == (0, 0, 0)
+
+    def test_a_product_missing_from_the_file_is_left_as_it_is(self, db: Connection) -> None:
+        run_import(db, [*self.marked(), row(525, "GONETEST", "Ibuprofen - 200mg")], self.RULES)
+
+        refresh_prescription_marks(db, self.marked(521), self.RULES)
+
+        assert products(db)[525].prescription_required is True
+
+    def test_another_product_under_the_code_keeps_its_notice(self, db: Connection) -> None:
+        """A code is sometimes reused: the notice is taken away only from the file's very
+        product (the same registration number and name)."""
+        run_import(db, [row(526, "OLDTEST", "Ibuprofen - 200mg", registration_number="9/9")])
+
+        result = refresh_prescription_marks(
+            db, [row(526, "NEWTEST", "Ibuprofen - 200mg", otc_listed=True)], self.RULES
+        )
+
+        assert products(db)[526].prescription_required is True
+        assert (result.notice_removed, result.kept_other_product) == (0, 1)

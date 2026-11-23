@@ -17,6 +17,8 @@ class ClientStatus(StrEnum):
     ACTIVE = "ACTIVE"
     PAUSED = "PAUSED"
     SUSPENDED = "SUSPENDED"
+    # The client deleted their own account (R-AU10). Final: nothing leads out of it.
+    DELETED = "DELETED"
 
 
 PHARMACY_MACHINE = StateMachine(
@@ -39,6 +41,11 @@ CLIENT_MACHINE = StateMachine(
         (ClientStatus.ACTIVE, ClientStatus.SUSPENDED): by(Actor.ADMIN),
         (ClientStatus.PAUSED, ClientStatus.SUSPENDED): by(Actor.ADMIN),
         (ClientStatus.SUSPENDED, ClientStatus.ACTIVE): by(Actor.ADMIN),
+        # Only the client deletes their account, and never while suspended: a suspended
+        # client can't log in (R-AU10).
+        (ClientStatus.UNVERIFIED, ClientStatus.DELETED): by(Actor.CLIENT),
+        (ClientStatus.ACTIVE, ClientStatus.DELETED): by(Actor.CLIENT),
+        (ClientStatus.PAUSED, ClientStatus.DELETED): by(Actor.CLIENT),
     },
 )
 
@@ -54,7 +61,7 @@ def pharmacy_can_update_reservations(status: PharmacyStatus) -> bool:
 
 
 def client_can_search(status: ClientStatus) -> bool:
-    return status is not ClientStatus.SUSPENDED
+    return status in (ClientStatus.UNVERIFIED, ClientStatus.ACTIVE, ClientStatus.PAUSED)
 
 
 def client_can_use_assistant(status: ClientStatus) -> bool:

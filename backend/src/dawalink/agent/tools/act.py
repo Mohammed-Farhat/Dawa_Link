@@ -82,9 +82,9 @@ class SetArea(Arguments):
     place: str = Field(
         min_length=2,
         max_length=60,
-        description="The area, neighbourhood, town or village the client said they are in, "
+        description="The area, neighbourhood, town or village the client said they ARE in, "
         "as they wrote it: 'Hamra', 'jounieh', or its Arabic spelling. Only a place the "
-        "client named.",
+        "client named as where they are, never one they only want to pick up in.",
     )
     district: str | None = Field(
         default=None,
@@ -187,6 +187,16 @@ class Asked(Output):
     asked: int
     answers_by_display: str | None = None
     reason: str | None = None
+    # What to tell the client when nobody could be asked.
+    note: str | None = None
+
+
+NOBODY_ASKED = (
+    "Nobody was asked: right now no pharmacy that is open and within reach keeps an unlisted "
+    "box of this medicine that lasts the client's days. Tell the client that no pharmacy "
+    "could be asked right now. Never say that you asked. The watch keeps running; you may "
+    "ask again later in its 6 hours, because pharmacies open and close."
+)
 
 
 def request_early_release(turn: Turn, tx: Tx, args: RequestEarlyRelease) -> Asked:
@@ -197,8 +207,10 @@ def request_early_release(turn: Turn, tx: Tx, args: RequestEarlyRelease) -> Aske
         tx, claim_id=claim.id, idempotency_key=f"{turn.key}:early-release:{claim.id}"
     )
     if asked.pharmacies_asked == 0 or asked.request_id is None:
-        # All the model may know (R-E8): nobody could be asked right now.
-        return Asked(asked=0, reason="no_candidates")
+        # All the model may know (R-E8): nobody could be asked right now. The sentence is
+        # ours, so that the reply never invents a reason or claims an ask (seen on a real
+        # run, 2026-11-22: "no pharmacy is open to that", then "no request was sent").
+        return Asked(asked=0, reason="no_candidates", note=NOBODY_ASKED)
     answer_by = tx.session.execute(
         select(func.max(EarlyReleaseAsk.respond_by)).where(
             EarlyReleaseAsk.er_request_id == asked.request_id
@@ -249,10 +261,13 @@ def schedule_followup(turn: Turn, tx: Tx, args: ScheduleFollowup) -> FollowupSet
 
 class Escalate(Arguments):
     reason: EscalationReason
+    # Longer than what is kept (`MAX_SUMMARY`): a summary that runs long is cut by code,
+    # never refused. A refused call here left a client believing a person had the case.
     summary: str = Field(
         min_length=1,
-        max_length=300,
-        description="What a person needs to know. No names, phone numbers or emails.",
+        max_length=2000,
+        description="What a person needs to know, in one or two sentences. No names, phone "
+        "numbers or emails.",
     )
 
 
@@ -287,8 +302,11 @@ TOOLS = (
     ),
     Tool(
         "set_area",
-        "Sets where the client is from a place they named ('I'm in Hamra'), when they "
-        "don't share their phone's location. Searches then count travel times from it.",
+        "Sets where the client IS, from a place they named as their own ('I'm in Hamra', "
+        "'I live in Jounieh'), when they don't share their phone's location. Searches then "
+        "count travel times from it. Not for a place they only want to pick up in ('I need "
+        "it in Beirut', 'Saida or Beirut'): pass those as `areas` to find_options or "
+        "plan_basket instead.",
         SetArea,
         set_area,
         ASSISTANT,
@@ -304,7 +322,8 @@ TOOLS = (
     Tool(
         "request_early_release",
         "Asks up to 3 open pharmacies to release stock they keep private, for a watch or a "
-        "waiting request item. You only learn how many were asked.",
+        "waiting request item. You only learn how many were asked. When `asked` is 0, "
+        "nobody was asked: say so.",
         RequestEarlyRelease,
         request_early_release,
         BOTH,

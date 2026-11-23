@@ -16,6 +16,7 @@ from dawalink.db.models import (
     AgentRun,
     AppState,
     AuditEvent,
+    ChatMessage,
     Conversation,
     EarlyReleaseAsk,
     EmailOutbox,
@@ -24,8 +25,12 @@ from dawalink.db.models import (
     SourcingRequest,
     User,
 )
-from dawalink.domain.clock import at_beirut
-from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
+from dawalink.domain.clock import BEIRUT, at_beirut
+from dawalink.domain.numbers import (
+    CHAT_MESSAGES_PER_DAY,
+    DAILY_SPEND_CAP_SHARE,
+    DAILY_TOKEN_BUDGET_PER_CLIENT,
+)
 from dawalink.domain.orders import OrderState
 from dawalink.domain.vocabulary import UserRole
 from dawalink.services import daily
@@ -273,6 +278,49 @@ def _admin_locked_lately(tx: Tx) -> bool:
     )
 
 
+def _clients_at_token_limit(tx: Tx) -> int:
+    """How many clients used their day's tokens (R-AS): counted as `agent.limits` counts
+    them for each client (their turns since midnight in Beirut, on the app's clock, a
+    request's worker turns included), never stored."""
+    over = (
+        select(Conversation.client_id)
+        .join(AgentRun, AgentRun.conversation_id == Conversation.id)
+        .where(AgentRun.started_at >= at_beirut(tx.today, time(0, 0)))
+        .group_by(Conversation.client_id)
+        .having(func.sum(AgentRun.tokens_in + AgentRun.tokens_out) >= DAILY_TOKEN_BUDGET_PER_CLIENT)
+        .subquery()
+    )
+    return int(tx.session.execute(select(func.count()).select_from(over)).scalar_one())
+
+
+def _clients_at_message_limit(tx: Tx) -> int:
+    """How many clients wrote their day's messages (N-17): counted as the chat counts
+    them, since midnight in Beirut on the real clock (`api/routes/conversations.py`)."""
+    midnight = datetime.combine(tx.real_now.astimezone(BEIRUT).date(), time.min, BEIRUT)
+    over = (
+        select(Conversation.client_id)
+        .join(ChatMessage, ChatMessage.conversation_id == Conversation.id)
+        .where(ChatMessage.author == "client", ChatMessage.created_at >= midnight)
+        .group_by(Conversation.client_id)
+        .having(func.count() >= CHAT_MESSAGES_PER_DAY)
+        .subquery()
+    )
+    return int(tx.session.execute(select(func.count()).select_from(over)).scalar_one())
+
+
+def _limits(tx: Tx) -> dict[str, Any]:
+    """Each client's own daily limits for the assistant, and who reached them today.
+    The numbers are the rules' own (`domain/numbers.py`), sent so that the page never
+    repeats them. A limit in tokens, not in dollars: what a token costs depends on the
+    model, and a measured average is no ceiling."""
+    return {
+        "messages_per_day_per_client": CHAT_MESSAGES_PER_DAY,
+        "tokens_per_day_per_client": DAILY_TOKEN_BUDGET_PER_CLIENT,
+        "clients_at_token_limit_today": _clients_at_token_limit(tx),
+        "clients_at_message_limit_today": _clients_at_message_limit(tx),
+    }
+
+
 def _alerts(
     tx: Tx, system: dict[str, Any], monthly_budget_usd: Decimal
 ) -> tuple[list[str], dict[str, Any]]:
@@ -285,14 +333,16 @@ def _alerts(
     # The month and the day are Beirut's, as the caps themselves count them (N-46).
     spent = _spent_since(tx, at_beirut(tx.today.replace(day=1), time(0, 0)))
     spent_today = _spent_since(tx, at_beirut(tx.today, time(0, 0)))
+    # The budget for everyone is a setting of this deployment (`LLM_MONTHLY_BUDGET_USD`),
+    # and a day may use its share of it (N-46). Either reached, the assistant is off for
+    # every client: until midnight for the day's, until the month ends for the month's.
+    day_budget = monthly_budget_usd * DAILY_SPEND_CAP_SHARE / 100
     alerts = []
     if recent[0] and recent[1] / recent[0] > ERROR_RATE_ALERT:
         alerts.append("agent_error_rate")
     if monthly_budget_usd > 0 and Decimal(spent) > SPEND_ALERT_SHARE * monthly_budget_usd:
         alerts.append("llm_spend")
-    if monthly_budget_usd > 0 and (
-        Decimal(spent_today) >= monthly_budget_usd * DAILY_SPEND_CAP_SHARE / 100
-    ):
+    if monthly_budget_usd > 0 and Decimal(spent_today) >= day_budget:
         alerts.append("llm_daily_cap")
     if system["emails_dead_last_hour"] > DEAD_EMAILS_ALERT:
         alerts.append("dead_emails")
@@ -314,6 +364,9 @@ def _alerts(
     return alerts, {
         "month_spend_usd": float(spent),
         "month_budget_usd": float(monthly_budget_usd),
+        "day_spend_usd": float(spent_today),
+        "day_budget_usd": float(day_budget),
+        "day_share_percent": DAILY_SPEND_CAP_SHARE,
     }
 
 
@@ -324,7 +377,7 @@ def read(tx: Tx, *, days: int = 7, monthly_budget_usd: Decimal = Decimal(0)) -> 
     alerts, spend = _alerts(tx, system, monthly_budget_usd)
     return Health(
         days=days,
-        agent={**agent, **spend},
+        agent={**agent, **spend, **_limits(tx)},
         requests=_requests(tx, since, agent["cost_usd"]),
         marketplace=_marketplace(tx, since),
         system=system,

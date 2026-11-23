@@ -13,6 +13,7 @@ import {
   CONFIG,
   loggedIn,
   pretendApi,
+  refusal,
   renderApp,
   RESERVATION,
 } from '../../test/render'
@@ -68,10 +69,119 @@ function pharmacyApi(more: Record<string, unknown> = {}) {
     'GET /api/v1/pharmacy/dashboard': NUMBERS,
     'GET /api/v1/pharmacy/reservations': (call: { path: string }) =>
       call.path.includes('q=') && !call.path.includes('q=R-7K3Q2F') ? list([]) : list([HELD]),
-    'GET /api/v1/pharmacy/early-release-asks': { items: [ASK], server_now: NOW },
+    'GET /api/v1/pharmacy/early-release-asks': (call: { path: string }) =>
+      call.path.includes('view=history') ? { items: [], server_now: NOW } : { items: [ASK], server_now: NOW },
     ...more,
   })
 }
+
+describe('Asks from DawaLink, on Today (PS-9)', () => {
+  it('is always there: it says what will appear, and when', async () => {
+    pharmacyApi({ 'GET /api/v1/pharmacy/early-release-asks': { items: [], server_now: NOW } })
+    const { container } = renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const asks = await screen.findByRole('region', { name: s.ask.section })
+    expect(await within(asks).findByText(s.ask.empty)).toBeInTheDocument()
+    // Nothing answered yet: no list, not even its heading.
+    expect(within(asks).queryByText(s.ask.answeredTitle)).not.toBeInTheDocument()
+    // The counter stays first (docs/11 §3.2).
+    const counter = screen.getByRole('heading', { name: s.counter })
+    expect(counter.compareDocumentPosition(asks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(await accessibilityProblems(container)).toEqual([])
+  })
+
+  it('holds the open asks, and under them the last five answered with what happened', async () => {
+    const answered = (state: string, at: number) => ({
+      ...ASK,
+      id: `88888888-8888-4888-8888-88888888880${at}`,
+      state,
+      answered_at: state === 'EXPIRED' ? null : NOW,
+    })
+    pharmacyApi({
+      'GET /api/v1/pharmacy/early-release-asks': (call: { path: string }) =>
+        call.path.includes('view=history')
+          ? {
+              items: [
+                answered('ACCEPTED', 1),
+                answered('DECLINED', 2),
+                answered('EXPIRED', 3),
+                answered('WITHDRAWN', 4),
+                answered('DECLINED', 5),
+                answered('DECLINED', 6),
+              ],
+              server_now: NOW,
+            }
+          : { items: [ASK], server_now: NOW },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const asks = await screen.findByRole('region', { name: s.ask.section })
+    expect(await within(asks).findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })).toBeInTheDocument()
+    expect(within(asks).queryByText(s.ask.empty)).not.toBeInTheDocument()
+    const lately = await within(asks).findByRole('list')
+    expect(within(lately).getAllByRole('listitem')).toHaveLength(5)
+    expect(within(lately).getByText(/you released it/)).toBeInTheDocument()
+    expect(within(lately).getByText(/not answered in time/)).toBeInTheDocument()
+    expect(within(lately).getByText(/withdrawn by DawaLink/)).toBeInTheDocument()
+  })
+
+  it('is not shown to a suspended pharmacy, which is asked nothing', async () => {
+    pharmacyApi({ 'GET /api/v1/pharmacy/me': { ...PROFILE, status: 'SUSPENDED' } })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    expect(await screen.findByRole('heading', { name: s.counter })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: s.ask.section })).not.toBeInTheDocument()
+  })
+})
+
+describe('Today is the counter, not a list to page', () => {
+  it('asks for 50 waiting reservations, and says how many more are on Reservations', async () => {
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': (call: { path: string }) =>
+        call.path.includes('q=') ? list([]) : { ...list([HELD]), next_cursor: '50', total: 53 },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const more = await screen.findByRole('link', { name: s.moreOnReservations(52) })
+    expect(more).toHaveAttribute('href', '/pharmacy/reservations')
+    const asked = api.sent('GET', '/api/v1/pharmacy/reservations?view=active').map((call) => call.path)
+    expect(asked[0]).toContain('limit=50')
+    expect(screen.queryByRole('navigation', { name: strings.pager.label })).not.toBeInTheDocument()
+  })
+
+  it('says nothing more when everything waiting is shown', async () => {
+    pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': () => ({ ...list([HELD]), total: 1 }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    expect(await screen.findByText(s.isNew)).toBeInTheDocument()
+    expect(screen.queryByText(/more on Reservations/)).not.toBeInTheDocument()
+  })
+})
+
+describe('Reservations in numbered pages', () => {
+  it('pages each tab by 25, and a tab goes back to its first page', async () => {
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': (call: { path: string }) => ({
+        ...list([{ ...HELD, ref: call.path.includes('cursor=25') ? 'R-PAGE22' : 'R-PAGE11' }]),
+        total: 30,
+      }),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations?view=history&page=2' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('R-PAGE22')).toBeInTheDocument()
+    const pages = screen.getByRole('navigation', { name: strings.pager.label })
+    expect(within(pages).getByText(strings.pager.summary(2, 2, 30))).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: s.active }))
+
+    expect(await screen.findByText('R-PAGE11')).toBeInTheDocument()
+    const asked = api.sent('GET', '/api/v1/pharmacy/reservations?').map((call) => call.path)
+    expect(asked).toContainEqual(expect.stringContaining('view=history&cursor=25&limit=25'))
+    expect(asked).toContainEqual(expect.stringContaining('view=active&cursor=0&limit=25'))
+  })
+})
 
 describe("The pharmacy's Today", () => {
   it('opens for a pharmacist, with what is due and what needs an answer', async () => {
@@ -132,6 +242,120 @@ describe("The pharmacy's Today", () => {
 
     expect(await screen.findByText(s.noSuchNumber('R-222222'))).toBeInTheDocument()
   })
+
+  it('takes no more than the API reads, and says why a lookup was refused', async () => {
+    pharmacyApi({ 'GET /api/v1/pharmacy/reservations': refusal(503, 'SERVICE_UNAVAILABLE') })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const box = await screen.findByLabelText(s.orderNumber)
+    expect(box).toHaveAttribute('maxLength', '20')
+    // Its label stays in sight, not only "R-" in the box (docs/11 §9).
+    expect(screen.getByText(s.orderNumber, { selector: 'label' })).not.toHaveClass('sr-only')
+    await user.type(box, 'R-7K3Q2F')
+    await user.click(screen.getByRole('button', { name: s.find }))
+
+    expect(await screen.findByText(strings.errors.SERVICE_UNAVAILABLE)).toBeInTheDocument()
+  })
+
+  it('brings the card of a tapped row into view and gives it the focus', async () => {
+    pharmacyApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    // A row of "Due today" or "For the next days": both are taps on the number.
+    await user.click(await screen.findByRole('button', { name: /R-7K3Q2F/ }))
+
+    const card = await screen.findByRole('article', { name: s.reservation('R-7K3Q2F') })
+    await waitFor(() => expect(card).toHaveFocus())
+  })
+
+  it('puts an ask, which must be answered within hours, before what is due today', async () => {
+    pharmacyApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const ask = await screen.findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })
+    const due = screen.getByRole('region', { name: s.dueToday })
+    // On a phone the columns stack: the ask must come first in the page's own order.
+    expect(ask.compareDocumentPosition(due) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it("says inside the dialog why [Not available] was refused", async () => {
+    pharmacyApi({
+      [`POST /api/v1/pharmacy/reservations/${HELD.id}/not-available`]: refusal(
+        409,
+        'RESERVATION_NOT_ACTIVE',
+      ),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations' })
+    const user = userEvent.setup()
+
+    const card = await screen.findByRole('article', { name: s.reservation('R-7K3Q2F') })
+    await user.click(within(card).getByRole('button', { name: s.notAvailable }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: s.confirmNotAvailable }))
+
+    expect(
+      await within(dialog).findByText(strings.errors.RESERVATION_NOT_ACTIVE),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps what the server said when the card leaves the list', async () => {
+    let picked = false
+    pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': () => list(picked ? [] : [HELD]),
+      [`POST /api/v1/pharmacy/reservations/${HELD.id}/picked-up`]: () => {
+        picked = true
+        return refusal(409, 'PICKUP_DEADLINE_PASSED')
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations' })
+    const user = userEvent.setup()
+
+    const card = await screen.findByRole('article', { name: s.reservation('R-7K3Q2F') })
+    await user.click(within(card).getByRole('button', { name: s.pickedUp }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('article', { name: s.reservation('R-7K3Q2F') })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText(strings.errors.PICKUP_DEADLINE_PASSED)).toBeInTheDocument()
+  })
+
+  it('opens the history from a notification about a cancelled reservation (B#52)', async () => {
+    const cancelled = { ...HELD, state: 'CANCELLED_BY_CLIENT', closed_at: NOW } as const
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/reservations': (call: { path: string }) =>
+        list(call.path.includes('view=history') ? [cancelled] : []),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations?view=history' })
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('article', { name: s.reservation('R-7K3Q2F') })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: s.history })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText(s.nothingActive)).not.toBeInTheDocument()
+    // The tabs still work, and the address follows them.
+    await user.click(screen.getByRole('tab', { name: s.active }))
+    expect(await screen.findByText(s.nothingActive)).toBeInTheDocument()
+    expect(api.sent('GET', '/api/v1/pharmacy/reservations?view=active')).not.toEqual([])
+  })
+})
+
+describe("The pharmacy's bar", () => {
+  it.each([
+    ['APPROVED', 'var(--green)'],
+    ['PENDING', 'var(--amber)'],
+    ['REJECTED', 'var(--red)'],
+    ['SUSPENDED', 'var(--red)'],
+  ])('shows %s in its own colour', async (status, colour) => {
+    pharmacyApi({
+      'GET /api/v1/pharmacy/me': { ...PROFILE, status },
+      'GET /api/v1/districts': [],
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+
+    const banner = await screen.findByRole('banner')
+    expect(within(banner).getByText(s.status[status] ?? '')).toHaveStyle({ color: colour })
+  })
 })
 
 describe('An early-release ask', () => {
@@ -156,6 +380,96 @@ describe('An early-release ask', () => {
     })
   })
 
+  it('says what is offered, and keeps the thank-you after the ask has gone', async () => {
+    let answered = false
+    pharmacyApi({
+      'GET /api/v1/pharmacy/early-release-asks': () => ({
+        items: answered ? [] : [ASK],
+        server_now: NOW,
+      }),
+      [`POST /api/v1/pharmacy/early-release-asks/${ASK.id}/accept`]: () => {
+        answered = true
+        return { state: 'WITHDRAWN', message: 'Thank you, this need was just met.' }
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const ask = await screen.findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })
+    // 600,000 of a public price of 800,000: a quarter off.
+    expect(within(ask).getByText(s.ask.offer(2, '600,000 LBP', 25))).toBeInTheDocument()
+    await user.click(within(ask).getByRole('button', { name: s.ask.accept }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText('Thank you, this need was just met.')).toBeInTheDocument()
+  })
+
+  it('never sends an emptied price, nor cuts down one above the public price', async () => {
+    const api = pharmacyApi()
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const ask = await screen.findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })
+    const price = within(ask).getByLabelText(s.ask.price)
+    const accept = within(ask).getByRole('button', { name: s.ask.accept })
+    await user.clear(price)
+    expect(price).toHaveValue('')
+    expect(accept).toBeDisabled()
+    expect(within(ask).getByText(s.ask.range('800,000'))).toBeInTheDocument()
+
+    await user.type(price, '8000000')
+    await user.tab()
+    // Left as typed, never clamped to the public price behind the pharmacist's back.
+    expect(price).toHaveValue('8,000,000')
+    expect(accept).toBeDisabled()
+    await user.click(accept)
+    expect(api.sent('POST', '/api/v1/pharmacy/early-release-asks')).toEqual([])
+  })
+
+  it('offers a box for free only once the pharmacist ticks that it is free', async () => {
+    const api = pharmacyApi({
+      [`POST /api/v1/pharmacy/early-release-asks/${ASK.id}/accept`]: {
+        state: 'ACCEPTED',
+        message: 'Thank you. The client has two hours to accept.',
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const ask = await screen.findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })
+    const price = within(ask).getByLabelText(s.ask.price)
+    const accept = within(ask).getByRole('button', { name: s.ask.accept })
+    await user.clear(price)
+    await user.type(price, '0')
+    expect(accept).toBeDisabled()
+    await user.click(within(ask).getByLabelText(s.ask.free))
+    expect(within(ask).getByText(s.ask.offerFree(2))).toBeInTheDocument()
+    await user.click(accept)
+
+    await waitFor(() => expect(api.sent('POST', '/api/v1/pharmacy/early-release-asks')).toHaveLength(1))
+    expect(api.sent('POST', '/api/v1/pharmacy/early-release-asks')[0].body).toEqual({
+      qty: 2,
+      price_lbp: 0,
+    })
+  })
+
+  it('says inside the dialog why a decline was refused', async () => {
+    pharmacyApi({
+      [`POST /api/v1/pharmacy/early-release-asks/${ASK.id}/decline`]: refusal(409, 'ASK_NOT_OPEN'),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    const user = userEvent.setup()
+
+    const ask = await screen.findByRole('region', { name: s.ask.title(2, 'CONCOR 5MG') })
+    await user.click(within(ask).getByRole('button', { name: s.ask.decline }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: s.ask.confirmDecline }))
+
+    expect(await within(dialog).findByText(strings.errors.ASK_NOT_OPEN)).toBeInTheDocument()
+  })
+
   it('is declined with a reason from a list, never typed words', async () => {
     const api = pharmacyApi({
       [`POST /api/v1/pharmacy/early-release-asks/${ASK.id}/decline`]: answer(204),
@@ -170,6 +484,7 @@ describe('An early-release ask', () => {
 
     await waitFor(() => expect(api.sent('POST', '/api/v1/pharmacy/early-release-asks')).toHaveLength(1))
     expect(api.sent('POST', '/api/v1/pharmacy/early-release-asks')[0].body).toEqual({ reason: 'price' })
+    expect(await screen.findByText(s.ask.declined)).toBeInTheDocument()
     // The decline sheet holds a list and buttons: nowhere to type.
     expect(screen.queryByRole('textbox', { name: s.ask.declineTitle })).not.toBeInTheDocument()
   })
@@ -183,6 +498,16 @@ describe('Who sees the portal', () => {
 
     expect(await screen.findByText(s.pending)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: s.counter })).not.toBeInTheDocument()
+  })
+
+  it("shows a page that isn't there, with its main area and heading, for an address it can't open (B#34)", async () => {
+    // A suspended pharmacy keeps its reservations, never its stock.
+    pharmacyApi({ 'GET /api/v1/pharmacy/me': { ...PROFILE, status: 'SUSPENDED' } })
+    const { container } = renderApp(<AppRoutes />, { path: '/pharmacy/inventory' })
+
+    const heading = await screen.findByRole('heading', { level: 1, name: strings.notFound.title })
+    expect(screen.getByRole('main')).toContainElement(heading)
+    expect(await accessibilityProblems(container)).toEqual([])
   })
 
   it('sends a client who types its address back to their own Home', async () => {

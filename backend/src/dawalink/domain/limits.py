@@ -81,8 +81,10 @@ def pause_after_no_show(
 ) -> datetime | None:
     """The new `paused_until` after a no-show at `now`, or None if the client isn't paused (R-N1).
 
-    `counted_no_shows` are the times of the client's counted no-shows, this one included.
-    Two in a rolling 30 days pause the client for 7 days; each later one adds 7 more.
+    `counted_no_shows` are the times of the client's counted no-shows, this one included:
+    one per missed trip, so the boxes of one plan card missed together are one no-show.
+    Call it once per missed trip. Two in a rolling 30 days pause the client for 7 days;
+    each later one adds 7 more.
     """
     recent = [moment for moment in counted_no_shows if now - moment < NO_SHOW_WINDOW]
     if len(recent) < NO_SHOWS_BEFORE_PAUSE:

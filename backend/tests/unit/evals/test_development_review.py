@@ -170,6 +170,23 @@ def test_freeze_gates_human_coverage_and_preserves_originals(
         path: development_review.digest(development_review.ROOT / path)
         for path in provenance["rule_sources"]
     }
+    # The copied fixture models a fresh review against current catalog inputs.
+    # Real frozen provenance remains untouched; stale inputs must still be rejected.
+    development_review.dump(folder / "provenance.json", provenance)
+    snapshot = provenance["catalog"]
+    if (
+        development_review.digest(development_review.ROOT / snapshot["path"]) != snapshot["sha256"]
+        or development_review.digest(
+            development_review.ROOT / "backend/data/catalog_overrides.toml"
+        )
+        != snapshot["overrides_sha256"]
+    ):
+        with pytest.raises(ValueError, match="catalog snapshot changed"):
+            development_review.freeze(folder)
+    snapshot["sha256"] = development_review.digest(development_review.ROOT / snapshot["path"])
+    snapshot["overrides_sha256"] = development_review.digest(
+        development_review.ROOT / "backend/data/catalog_overrides.toml"
+    )
     development_review.dump(folder / "provenance.json", provenance)
     queue = json.loads((folder / "review/human-queue.json").read_text())
     ids = queue["required_flagged"] + queue["agreed_sample"]

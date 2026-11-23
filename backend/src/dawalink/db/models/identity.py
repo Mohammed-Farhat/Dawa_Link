@@ -102,6 +102,15 @@ class ClientProfile(Base):
         values_check("status", ClientStatus),
         check("paused_has_an_end", "status <> 'PAUSED' OR paused_until IS NOT NULL"),
         check("home_place_is_whole", "(home_lat IS NULL) = (home_lon IS NULL)"),
+        # A deleted account says when; an account is emptied only after it was deleted.
+        check("deleted_has_a_moment", "(status = 'DELETED') = (deleted_at IS NOT NULL)"),
+        check("emptied_after_deleted", "emptied_at IS NULL OR deleted_at IS NOT NULL"),
+        # What the clean-up looks for: deleted accounts it has not emptied yet (R-AU10).
+        Index(
+            "ix_client_profiles_to_empty",
+            "user_id",
+            postgresql_where=text("status = 'DELETED' AND emptied_at IS NULL"),
+        ),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"), primary_key=True)
@@ -123,6 +132,12 @@ class ClientProfile(Base):
     # keep (N-43). Searches and the agent's tools start from it; it never leaves code.
     home_lat: Mapped[Decimal | None] = mapped_column(Numeric(7, 3))
     home_lon: Mapped[Decimal | None] = mapped_column(Numeric(7, 3))
+    # The client deleted their account (R-AU10): when, in real time. What was personal on
+    # this row and on the user's was erased at that moment.
+    deleted_at: Mapped[datetime | None] = mapped_column(Moment)
+    # When the clean-up erased what the app's login may not delete (the chats, the
+    # notifications, the emails, the ended logins). Null until then.
+    emptied_at: Mapped[datetime | None] = mapped_column(Moment)
 
 
 class SearchHistory(Base):
@@ -160,6 +175,20 @@ class Session(Base):
 
 class EmailVerificationToken(Base):
     __tablename__ = "email_verification_tokens"
+
+    id: Mapped[UuidKey]
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"), index=True)
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
+    expires_at: Mapped[datetime] = mapped_column(Moment)
+    used_at: Mapped[datetime | None] = mapped_column(Moment)
+
+
+class PasswordResetToken(Base):
+    """A "set a new password" link (docs/04 R-AU9). Like a confirmation link, only the
+    token's hash is stored. It works once, for 30 minutes of real time, and only the
+    newest of a user's links works."""
+
+    __tablename__ = "password_reset_tokens"
 
     id: Mapped[UuidKey]
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, references("users.id"), index=True)
