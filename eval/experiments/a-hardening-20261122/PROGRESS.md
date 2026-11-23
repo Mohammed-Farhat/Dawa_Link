@@ -180,3 +180,24 @@ and provider failures do not qualify. On-foot nearest behavior requires supporte
 walking-nearest recommendation, not notes alone. Ambiguous peer/price associations
 remain explicitly manual review rather than forced automatic passes.
 Next: one full backend/static pass, then free baselines, review pack and final report.
+
+## Candidate6 integrated validation and free-run phase
+
+Source snapshot468971f5df8dc113089ffad22376b0420df0e2cb, prompt1.16;244 runtime/config
+hashes in candidate6-source-pin.json (reproduction only, not final held-out freeze or
+paid authorization). 2320 backend tests passed in159.36s;2297 warnings; Ruff356 files
+and mypy352 files pass. Only two type-only test corrections were needed. Results/hashes:
+evidence/candidate6-integrated-checks.json. No unchanged full-suite rerun needed.
+
+review-pack-20261123 contains177 unreviewed selections with raw pointers; all100 recorded
+safety contexts included. Seeded played sample0 because no candidate5 played run
+completed. Pack plus three primary run privacy scans:0 flags across24 text/JSON files.
+Latest preservation/budget audit passes, unchanged$3.957847 known/$11.61 unknown holds.
+
+Free search baseline first failed before world creation because invoked from repository
+root instead of backend (catalog relative paths); failed setup attempt retained. Correct
+backend invocation completed; rules baseline dispatched next, sequentially. Need verify
+terminal run metrics/comparability, then rules_asking and one free gate pass.
+REPORT.md rewritten around current evidence; simulation section remains pending until
+terminal artifacts are checked. REPRODUCE.md/DEMO.md identify STOP_PAID and stale paid
+candidate5 harness explicitly. No paid calls or new uncertainty authorization inferred.

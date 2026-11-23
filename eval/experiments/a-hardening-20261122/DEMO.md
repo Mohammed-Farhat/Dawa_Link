@@ -1,6 +1,6 @@
 # Repeatable local demo (synthetic infrastructure only)
 
-Live-model status: NOT YET VERIFIED. The older scripted journeys are supporting UI
+Live-model status: BLOCKED BY STOP_PAID; NOT VERIFIED. The older scripted journeys are supporting UI
 transport/state evidence. Do not describe them as live-model validation.
 
 Prerequisites: local isolated evaluation PostgreSQL/Mailpit; local.env from the existing
@@ -8,7 +8,12 @@ ignored integration checkpoint; live-model key in ignored root .env; canonical l
 with applicable expanded-stage room and a $0.645 conservative call reservation. Never
 replace the production/development database or show credentials in recordings.
 
-1. From backend, initialize the new disposable fixture:
+Before any live run, resolve STOP_PAID through attributable billing evidence or explicit
+revised authorization, then pin live_browser.py to the approved candidate6 source.
+The current factory still references candidate5 and rejects source drift. Do not remove
+the stop or treat this script as authorization.
+
+1. After those prerequisites, from backend initialize the disposable fixture:
    `.venv/bin/python ../eval/experiments/a-hardening-20261122/live_browser.py init`
 2. Launch the factory on loopback port58000 using the same Python environment:
    `.venv/bin/python -m uvicorn live_browser:make --factory --app-dir ../eval/experiments/a-hardening-20261122 --host 127.0.0.1 --port 58000`

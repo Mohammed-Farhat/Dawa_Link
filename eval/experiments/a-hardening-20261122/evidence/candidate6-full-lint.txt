@@ -1,0 +1,36 @@
+F821 Undefined name `result`
+   --> tests/agent/test_cards.py:252:12
+    |
+250 |         assert result.text is not None
+251 |         assert result.text is not None
+252 |     assert result.text.startswith("لا أستطيع أن أنصح")
+    |            ^^^^^^
+253 |
+254 |     def test_advice_fixed_at_the_first_try_is_sent(self, scene: Scene) -> None:
+    |
+
+F821 Undefined name `result`
+   --> tests/agent/test_cards.py:263:12
+    |
+261 |         assert result.text is not None
+262 |         assert result.text is not None
+263 |     assert result.text.startswith("I can't advise")
+    |            ^^^^^^
+264 |
+265 |     def test_a_phone_number_or_a_link_never_reaches_the_client(self, scene: Scene) -> None:
+    |
+
+Found 2 errors.
+unformatted: File would be reformatted
+   --> tests/agent/test_cards.py:252:1
+    |
+251 |         assert result.text is not None
+252 +
+253 |     assert result.text.startswith("لا أستطيع أن أنصح")
+--------------------------------------------------------------------------------
+263 |         assert result.text is not None
+264 +
+265 |     assert result.text.startswith("I can't advise")
+    |
+
+1 file would be reformatted, 355 files already formatted
