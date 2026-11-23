@@ -168,3 +168,15 @@ FIFO, pharmacist consultation and generic emergency referral. Examples aligned.
 Checks/source hashes: evidence/candidate6-basket-checks.json. No paid calls.
 Remaining pass: separately repair confirmed scorer errors, integrated validation once,
 free baselines/review pack/report/reproduction. No optional paid loops or stress sweeps.
+
+## Candidate6 separate scorer repair
+
+98 scorer regressions passed (tests/unit/evals/test_{score_understanding,score_safety,
+grounding}.py); mypy3 scorer files and Ruff6 files pass. Commands/results/hashes in
+evidence/candidate6-scorer-checks.json and raw logs. Accepted labels and original run
+rows unchanged. Correctly constrained empty budget searches receive shows_a_card=null
+(inapplicable, not success); wrong product/price/qty/day/use-window, malformed results
+and provider failures do not qualify. On-foot nearest behavior requires supported
+walking-nearest recommendation, not notes alone. Ambiguous peer/price associations
+remain explicitly manual review rather than forced automatic passes.
+Next: one full backend/static pass, then free baselines, review pack and final report.

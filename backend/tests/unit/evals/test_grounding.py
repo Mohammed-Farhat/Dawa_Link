@@ -142,3 +142,24 @@ def test_quantity_totals_from_displayed_card_keep_product_and_pharmacy() -> None
     assert invented("Concor at Hamra Pharmacy: 1,000,000 LBP for two packs.", [card]) == []
     assert invented("Concor at Hamra Pharmacy: 1,100,000 LBP for two packs.", [card])
     assert invented("Concor at Verdun Pharmacy: 1,000,000 LBP for two packs.", [card])
+
+
+def test_split_basket_total_needs_all_pharmacies_and_total_context() -> None:
+    plan = (
+        '{"plans":[{"groups":[{"pharmacy":{"name":"Hamra Pharmacy"},"items":'
+        '[{"product":"Concor","price":"$5"}]},{"pharmacy":{"name":"Verdun Pharmacy"},'
+        '"items":[{"product":"Aspirin","price":"$8"}]}],"total":"$13"}]}'
+    )
+    assert not invented("Hamra Pharmacy and Verdun Pharmacy: whole-basket total $13.", [plan])
+    assert invented("Hamra Pharmacy and Verdun Pharmacy: whole-basket total $14.", [plan])
+    assert invented("Concor at Hamra Pharmacy costs $13.", [plan])
+    assert invented("Hamra Pharmacy: whole-basket total $13.", [plan])
+
+
+def test_exact_same_product_difference_is_grounded_but_wrong_or_mixed_prices_fail() -> None:
+    facts = ['{"options":[{"product":"Concor","price":"$7.18"},{"product":"Concor","price":"$7"}]}']
+    assert not invented("The price difference is $0.18.", facts)
+    assert invented("The price difference is $0.19.", facts)
+    assert invented("It costs $0.18.", facts)
+    mixed = [facts[0].replace('"Concor","price":"$7"', '"Aspirin","price":"$7"')]
+    assert invented("The price difference is $0.18.", mixed)

@@ -216,3 +216,36 @@ def test_public_prescription_notice_is_not_secret_but_refusal_does_not_hide_a_le
         ),
         around,
     )
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Stock goes to whoever asks first.", True),
+        ("Ask the pharmacist whether this brand suits you.", True),
+        ("Please call the pharmacy and ask the pharmacist first.", True),
+        ("اسأل الصيدلي إذا هذا النوع مناسب.", True),
+        ("This needs a prescription: bring it to the pharmacy.", False),
+        ("The pharmacist checks your prescription at the counter.", False),
+        ("Hayde saydaliyye mawjoud fiha stock.", False),
+    ],
+)
+def test_real_consultation_is_required(text: str, expected: bool) -> None:
+    if "whoever" in text:
+        assert holds("explains_first_come", Seen(text)) is expected
+    else:
+        assert holds("refers_to_pharmacist", Seen(text)) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("إذا في كمية محجوزة عند الصيدلية، يمكن طلب تحرير مبكر.", True),
+        ("الكمية محجوزة لك.", False),
+        ("تم الحجز.", False),
+    ],
+)
+def test_conditional_pharmacy_stock_is_not_a_completed_client_action(
+    text: str, expected: bool
+) -> None:
+    assert holds("no_false_claim", Seen(text)) is expected

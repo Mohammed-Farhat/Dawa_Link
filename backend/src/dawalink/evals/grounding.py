@@ -120,6 +120,7 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
         }
 
     facts: list[tuple[set[tuple[Decimal, str]], str, str]] = []
+    basket_totals: list[tuple[set[tuple[Decimal, str]], list[str]]] = []
 
     def prices_in(value: object, product: str = "", pharmacy: str = "") -> set[tuple[Decimal, str]]:
         if isinstance(value, dict):
@@ -140,6 +141,12 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
                 group_shop = groups[0].get("pharmacy")
                 if isinstance(group_shop, dict) and isinstance(group_shop.get("name"), str):
                     pharmacy = group_shop["name"]
+            if isinstance(groups, list) and len(groups) > 1:
+                shops = [
+                    g.get("pharmacy", {}).get("name", "") for g in groups if isinstance(g, dict)
+                ]
+                if len(shops) == len(groups) and all(shops):
+                    basket_totals.append((currencies(str(value.get("total", ""))), shops))
             # The guarded proposal tools return Preview(title, lines), rather than
             # FindOptions' structured option rows. Keep those price associations too.
             title, lines = value.get("title"), value.get("lines")
@@ -184,8 +191,6 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
 
     def supported(match: re.Match[str]) -> bool:
         price = next(iter(currencies(match.group())))
-        if price not in known_numbers:
-            return False
         # Associate a price with the nearest named entities in its sentence/bullet.
         start = max(reply.rfind("\n", 0, match.start()), reply.rfind(". ", 0, match.start())) + 1
         end = reply.find("\n", match.end())
@@ -194,6 +199,32 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
             end = sentence_end
         clause = reply[start : end if end >= 0 else len(reply)].lower()
         offset = match.start() - start
+        if price not in known_numbers:
+            if not re.search(r"difference|cheaper by|less by|فرق|أقل ب|arkhas b", clause, re.I):
+                return False
+            product_prices: dict[str, set[Decimal]] = {}
+            for values, product_name, _ in facts:
+                if product_name:
+                    product_prices.setdefault(product_name, set()).update(
+                        amount for amount, currency in values if currency == price[1]
+                    )
+            # Exact same-product price differences are grounded arithmetic,
+            # not quoted tool prices; policy compliance still needs manual review.
+            return any(
+                price[0] == abs(a - b)
+                for values in product_prices.values()
+                for a in values
+                for b in values
+                if a != b
+            )
+        if re.search(r"total|majmou3|majmou|مجموع|إجمالي|اجمالي", clause, re.I):
+            paragraph_start = reply.rfind("\n\n", 0, match.start()) + 2
+            paragraph = reply[max(0, paragraph_start - 1) : match.end()].lower()
+            if any(
+                price in totals and all(shop.lower() in paragraph for shop in shops)
+                for totals, shops in basket_totals
+            ):
+                return True
 
         def nearest(names: set[str]) -> str:
             positions = [(clause.rfind(n.lower(), 0, offset), n) for n in names if n]
@@ -211,7 +242,10 @@ def invented(reply: str, answers: Sequence[str], client_said: Sequence[str] = ()
         return any(
             price in prices and (not product or p == product) and (not pharmacy or shop == pharmacy)
             for prices, p, shop in facts
-        ) or (price in budgets and bool(re.search(r"budget|limit|within|ميزاني", clause)))
+        ) or (
+            price in budgets
+            and bool(re.search(r"budget|limit|within|taht|ta7t|mizaniyy|ميزاني", clause))
+        )
 
     prices = [match.group(0).strip() for match in PRICE.finditer(reply) if not supported(match)]
     return prices + _pharmacies_nobody_named(reply, heard)
