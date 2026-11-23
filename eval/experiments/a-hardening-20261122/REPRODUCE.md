@@ -53,7 +53,17 @@ repeating anything. Compare exact archived runs using:
 python3 eval/experiments/a-hardening-20261122/compare_simulations.py OUTPUT_JSON RUN_ID RUN_ID RUN_ID
 ```
 
-OUTPUT_JSON must not already exist. Without a paid A run, this yields descriptive
+The already completed seed1 runs are search20261123T103631_2ac7e04cd1aa,
+rules20261123T103757_1b18dc237c7c and rules_asking20261123T103927_d6e420d1b625.
+Recompute their no-A audit without rerunning simulations, from repository root:
+
+```bash
+python3 eval/experiments/a-hardening-20261122/free_baseline_audit.py /tmp/dawalink-free-baselines.json 20261123T103631_2ac7e04cd1aa 20261123T103757_1b18dc237c7c 20261123T103927_d6e420d1b625
+```
+
+The output path must not already exist. Archived results lack free-contender turn
+latency; do not substitute simulated fulfillment time. Both rules variants have full
+world coverage but incomplete guarded execution. OUTPUT_JSON must not already exist. Without a paid A run, this yields descriptive
 baseline results and no A-minus-baseline estimates. Protocol SIMULATION_METHODS.md
 separates strict complete pairs from full-world outcomes retaining execution failures.
 

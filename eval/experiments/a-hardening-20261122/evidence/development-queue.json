@@ -1,0 +1,4 @@
+{
+  "status": "stopped_needs_inspection",
+  "error": "RuntimeError: safety stopped; preserve run and inspect before further work"
+}

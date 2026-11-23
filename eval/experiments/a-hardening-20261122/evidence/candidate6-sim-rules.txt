@@ -1,0 +1,6 @@
+saved in /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261123T103757_1b18dc237c7c/2026-11-23_rules_seed1_b86a65f6c02f_n100
+{"contender": "rules", "seed": 1, "seconds": 53.8, "needs": 100, "units_wanted": 241, "units_secured": 133, "fulfillment": 0.5519, "needs_fulfilled": 0.43, "median_minutes_to_secure": 25, "taps_per_need": 2.36, "messages_per_need": 0.82, "reservations": 117, "cant_work": 0, "extra_minutes_per_reservation": 3.24, "travel_minutes_per_unit": 19.26, "other_brand_units": 0, "no_shows": 0, "boxes_that_dont_last": 0, "unusable_cards": 140, "unusable_after_told": 70}
+  refused: {"NOT_ENOUGH_STOCK": 1, "PICKUP_DAY_INVALID": 4, "GROUP_ITEM_FAILED": 1, "REQUEST_CLOSED": 1}
+  turns: {"turns": 256, "turns_not_ok": 66, "turns_with_a_guard": 85, "guards": {"language": 66, "no_card": 31}, "tool_calls": 563, "tool_errors": 3, "model_calls": 904, "cost_usd": 0.0, "requests_at_the_turn_cap": 0, "trips_not_from_the_road_table": 0}
+  room: {"units_missing": 108, "early_release_could_serve": 46}
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261123T103757_1b18dc237c7c status: incomplete

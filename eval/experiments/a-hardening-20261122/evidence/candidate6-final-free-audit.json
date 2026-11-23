@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "source_fingerprint_matches": true,
+  "paid_stop_armed": true,
+  "new_uncertain_not_allowlisted": true,
+  "heldout_metadata_only": {
+    "configured_path": "eval/heldout",
+    "exists": false,
+    "contents_opened": false
+  },
+  "archive_count": 21,
+  "unadjudicated_privacy_flags": [],
+  "unexpected_tar_members": [],
+  "known_microusd": 3957847,
+  "committed_microusd": 15567847,
+  "active_reservations": []
+}

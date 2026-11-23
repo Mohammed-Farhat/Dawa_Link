@@ -13,7 +13,8 @@
   "not_final_heldout_freeze": true,
   "sha256": {
     "eval/experiments/a-hardening-20261122/evidence/candidate6-full-backend-tests.txt": "9495f824a20e6caf223bd3ef51008c3c202000d175dfa437f036548f1e5b0e03",
-    "eval/experiments/a-hardening-20261122/evidence/candidate6-full-lint.txt": "9651822cb021a0a41b7c8d609858491eb40a53334b5d26edf04afdadf4b90f82",
+    "eval/experiments/a-hardening-20261122/evidence/candidate6-full-lint.txt": "9a8f26239ddac64d345b9c7520d7aedfb9bc02b160b6ebf84d7a523b566e354d",
     "eval/experiments/a-hardening-20261122/evidence/candidate6-full-types.txt": "e2aaa895ba0bf5e57df40e2897c4a13c940328ba53b9ff6f50de1e264259bf9e"
-  }
+  },
+  "evidence_note": "Lint rerun after the two type-only test corrections; stale pre-correction lint output retained separately. No runtime source changed."
 }

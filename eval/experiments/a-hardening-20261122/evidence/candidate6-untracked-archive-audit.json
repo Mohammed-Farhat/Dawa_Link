@@ -1,0 +1,142 @@
+[
+  {
+    "run": "20261122T134541_9303082e3701",
+    "text_files": 4,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T140152_4554a4bf2d84",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T141346_5f098b60717f",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T141542_4963f2f3a74d",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T141614_867b1e3b18a8",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T141905_6576ce74fe1d",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T141929_42d15db7ef5c",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T142016_246851e7079a",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T142220_8b5e802698ef",
+    "text_files": 7,
+    "privacy_flags": [
+      {
+        "file": "eval/experiments/architecture-20261118/runs/20261122T142220_8b5e802698ef/completion.json",
+        "what": "a phone number"
+      }
+    ],
+    "unexpected_archive_members": [],
+    "assistant_adjudication": "Scanner matches only the seconds.fraction part of ISO completion.ended timestamps (07.865238 or03.320018); these are not phone numbers. Original completion records unchanged.",
+    "human_reviewed": false
+  },
+  {
+    "run": "20261122T151920_7e30b3b85ee2",
+    "text_files": 5,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T185706_649d44cb0ddf",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T190243_4a27a43a3f69",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T192948_5707ce159e65",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T201634_194d38a24db9",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T202552_ed1956da4231",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261123T103601_db0bd2765cea",
+    "text_files": 2,
+    "privacy_flags": [
+      {
+        "file": "eval/experiments/architecture-20261118/runs/20261123T103601_db0bd2765cea/completion.json",
+        "what": "a phone number"
+      }
+    ],
+    "unexpected_archive_members": [],
+    "assistant_adjudication": "Scanner matches only the seconds.fraction part of ISO completion.ended timestamps (07.865238 or03.320018); these are not phone numbers. Original completion records unchanged.",
+    "human_reviewed": false
+  },
+  {
+    "run": "20261123T103631_2ac7e04cd1aa",
+    "text_files": 8,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261123T103757_1b18dc237c7c",
+    "text_files": 8,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T192655_3c3efda9076a",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261122T192807_71ceae8851d0",
+    "text_files": 7,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  },
+  {
+    "run": "20261123T103927_d6e420d1b625",
+    "text_files": 8,
+    "privacy_flags": [],
+    "unexpected_archive_members": []
+  }
+]

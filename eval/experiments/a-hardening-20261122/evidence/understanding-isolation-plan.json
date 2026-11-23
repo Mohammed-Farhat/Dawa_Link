@@ -1,0 +1,198 @@
+{
+  "protocol_amendment": "Case-isolation repair, before corrected-tail outcomes",
+  "source_candidate": "candidate4 unchanged",
+  "original_run": "20261122T142220_8b5e802698ef",
+  "original_raw_sha256": "3a88ab26a6ab2936fe4c92e114882851987460e573a73cb72e61b5d181755443",
+  "valid_original_rows": [
+    1,
+    200
+  ],
+  "contaminated_original_rows": [
+    201,
+    230
+  ],
+  "contamination": [
+    {
+      "id": "U-1025",
+      "row": 201,
+      "prior_case": "U-0001",
+      "chat": "e35deafa-61da-4591-b9ca-6be23cb33ce4"
+    },
+    {
+      "id": "U-1026",
+      "row": 202,
+      "prior_case": "U-0002",
+      "chat": "ddf7d0cc-cc16-45e0-a4d5-b840231828b0"
+    },
+    {
+      "id": "U-1027",
+      "row": 203,
+      "prior_case": "U-0003",
+      "chat": "0b907450-909e-424f-9cbe-be94f0509b39"
+    },
+    {
+      "id": "U-1028",
+      "row": 204,
+      "prior_case": "U-0004",
+      "chat": "decd2a7e-d725-4ec4-a26f-2d2868bf9891"
+    },
+    {
+      "id": "U-1029",
+      "row": 205,
+      "prior_case": "U-0005",
+      "chat": "9aea52e5-954e-4982-a229-bdd2538b0c85"
+    },
+    {
+      "id": "U-1030",
+      "row": 206,
+      "prior_case": "U-0006",
+      "chat": "8656d13f-b0cd-4883-bbd2-9f09413704de"
+    },
+    {
+      "id": "U-1031",
+      "row": 207,
+      "prior_case": "U-0007",
+      "chat": "37454fc9-388d-403f-be15-2450657257b9"
+    },
+    {
+      "id": "U-1032",
+      "row": 208,
+      "prior_case": "U-0008",
+      "chat": "86e4c094-6da7-41f5-955c-1b17146d83a6"
+    },
+    {
+      "id": "U-1033",
+      "row": 209,
+      "prior_case": "U-0009",
+      "chat": "3df5cf04-3299-4351-9737-7d193e103122"
+    },
+    {
+      "id": "U-1034",
+      "row": 210,
+      "prior_case": "U-0010",
+      "chat": "953cb6a0-f1d9-4ce4-89f1-8248eccea77a"
+    },
+    {
+      "id": "U-1035",
+      "row": 211,
+      "prior_case": "U-0011",
+      "chat": "0119e4aa-bfb1-4b94-8c43-6c718c9d9e5d"
+    },
+    {
+      "id": "U-1036",
+      "row": 212,
+      "prior_case": "U-0012",
+      "chat": "d1b73666-feb1-4619-8903-ab2e2d4332cb"
+    },
+    {
+      "id": "U-1037",
+      "row": 213,
+      "prior_case": "U-0013",
+      "chat": "c44ad55e-1804-4754-aba3-8fea7f56dc66"
+    },
+    {
+      "id": "U-1038",
+      "row": 214,
+      "prior_case": "U-0014",
+      "chat": "e0edb9ed-5065-45ba-8df7-825d4f85060b"
+    },
+    {
+      "id": "U-1039",
+      "row": 215,
+      "prior_case": "U-0015",
+      "chat": "a898bc43-da1d-4511-ad56-5daf43656286"
+    },
+    {
+      "id": "U-1040",
+      "row": 216,
+      "prior_case": "U-0016",
+      "chat": "df4dffc4-5e73-497d-a583-116df680cb27"
+    },
+    {
+      "id": "U-1041",
+      "row": 217,
+      "prior_case": "U-0017",
+      "chat": "f1832820-c62e-4052-b781-2e55ae48331e"
+    },
+    {
+      "id": "U-1042",
+      "row": 218,
+      "prior_case": "U-0018",
+      "chat": "d5263425-8517-41a0-b004-d16227f04555"
+    },
+    {
+      "id": "U-1043",
+      "row": 219,
+      "prior_case": "U-0019",
+      "chat": "eee57b1a-3d94-4ee0-b564-1ccc5c20a4ab"
+    },
+    {
+      "id": "U-1044",
+      "row": 220,
+      "prior_case": "U-0020",
+      "chat": "752f8c1d-2c65-4121-ab8c-f2779b0496db"
+    },
+    {
+      "id": "U-1045",
+      "row": 221,
+      "prior_case": "U-0021",
+      "chat": "0ef8c77a-2544-4a4e-ab17-bc1b15127c9f"
+    },
+    {
+      "id": "U-1046",
+      "row": 222,
+      "prior_case": "U-0022",
+      "chat": "87ee339e-7c51-4eda-9f18-e4f0665dff65"
+    },
+    {
+      "id": "U-1047",
+      "row": 223,
+      "prior_case": "U-0023",
+      "chat": "1ad0d4b4-fc31-4234-acc1-95b84b7c363c"
+    },
+    {
+      "id": "U-1048",
+      "row": 224,
+      "prior_case": "U-0024",
+      "chat": "d68d0b9f-2002-40bc-aa1b-e9955737c2a6"
+    },
+    {
+      "id": "U-1049",
+      "row": 225,
+      "prior_case": "U-0025",
+      "chat": "ad915a7a-6231-4ef0-9762-c3bcc1796e85"
+    },
+    {
+      "id": "U-1050",
+      "row": 226,
+      "prior_case": "U-0026",
+      "chat": "d23f5d3c-e7ba-4807-8924-e6e62caed17f"
+    },
+    {
+      "id": "U-1051",
+      "row": 227,
+      "prior_case": "U-0027",
+      "chat": "71587539-a435-4dcc-809f-bfd546a8d298"
+    },
+    {
+      "id": "U-1052",
+      "row": 228,
+      "prior_case": "U-0028",
+      "chat": "0af16f2c-222e-4681-9fd1-85f124fbe467"
+    },
+    {
+      "id": "U-1053",
+      "row": 229,
+      "prior_case": "U-0029",
+      "chat": "eb1d87ff-9903-48f8-86b2-270aa8c84969"
+    },
+    {
+      "id": "U-1054",
+      "row": 230,
+      "prior_case": "U-0030",
+      "chat": "a7274262-2c64-4db5-aaba-0ce906ae1dc1"
+    }
+  ],
+  "selection_rule": "All repeated-conversation cases, irrespective of pass/fail; no cherry-picking. Fresh identical-seed fixture; unchanged agent/scorer/model/labels. Retain original230summary and rows separately, primary coverage uses first200 plus all30fresh outcomes including failures.",
+  "remaining_paid_order": "Finish already-running15fixed conversations, then isolated30; never simultaneouspaid evaluators."
+}

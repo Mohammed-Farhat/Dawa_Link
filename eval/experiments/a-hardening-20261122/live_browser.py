@@ -60,8 +60,10 @@ class FileClock:
 
 
 def make():
+    # Reject before loading credentials, opening a database, or building the model.
+    if (HERE/'STOP_PAID').exists():raise LLMRejected('Paid work stopped')
     config=settings()
-    pin=json.loads((HERE/'candidate5-pin.json').read_text())
+    pin=json.loads((HERE/'candidate6-source-pin.json').read_text())
     if experiment.fingerprint()!=pin['source_hashes']:
         raise RuntimeError('Source differs from development candidate')
     state=json.loads(STATE.read_text());folder=HERE/state['evidence']

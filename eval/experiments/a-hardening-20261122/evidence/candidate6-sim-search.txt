@@ -1,0 +1,18 @@
+Evidence: /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/architecture-20261118/runs/20261123T103601_db0bd2765cea status: incomplete
+Traceback (most recent call last):
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/eval/experiments/a-hardening-20261122/free_sim.py", line 19, in <module>
+    main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/evals/experiment.py", line 228, in main
+    importlib.import_module(MODULES[suite]).main()
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/sim/run.py", line 257, in main
+    run = one(
+          ^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/sim/run.py", line 133, in one
+    where = database.fresh(settings, name)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/sim/database.py", line 150, in fresh
+    template = ensure_template(settings)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/backend/src/dawalink/sim/database.py", line 109, in ensure_template
+    raise FileNotFoundError(
+FileNotFoundError: No catalog file in data/moph: the simulation needs the medicines. Run dawalink.ops.fetch_moph and dawalink.ops.build_catalog first.

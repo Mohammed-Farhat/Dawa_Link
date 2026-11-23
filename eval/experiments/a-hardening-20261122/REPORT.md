@@ -52,7 +52,9 @@ passed (352 files). There were2297 test warnings; no test failure. Detailed immu
 logs/hashes: evidence/candidate6-integrated-checks.json. Targeted counts overlap and
 must not be summed. Offline replay rejected U0037's false cheapest and U1019's global
 scope claims while accepting U0008's corrected nearest comparison; original outcomes
-remain unchanged. Passing scripted tests is not live-model or independent acceptance.
+remain unchanged. Passing scripted tests is not live-model or independent acceptance. The accepted-data
+free gates also passed:200 exact planner rankings, valid dataset/catalog references,
+no privacy flags across289 saved results and unchanged133/241 rules-day baseline.
 
 ## Development coverage and review
 
@@ -82,13 +84,31 @@ Fresh candidate6 development/model-played evaluation and independent review rema
 
 ## Product outcomes
 
-The free seed1 search/rules/rules_asking runs are being recorded separately. Their
-final metrics and comparability audit will be added after terminal completion.
-The paid A100-request seed was not executed; therefore no A-minus-baseline effect or
-cross-world reliability estimate is available. No optional seed expansion or stress
-sweep was attempted. SIMULATION_METHODS.md predefines strict complete pairs and a
-separate full-world analysis retaining execution failures. Six-hour secured units are
-locks, not proof of dispensing; model assumptions are not real pharmacy behavior.
+All three free contenders finished the same seed1 world (100 requests,241 wanted
+units). Pairwise audits confirm identical initial inputs/source/arrivals and matching
+shared keyed draws; different action-dependent keys are permitted by the protocol.
+
+| Contender | Secured units | Fully served | Interactions | Failed turns | API USD |
+|---|---:|---:|---:|---:|---:|
+| Search |177/241|62/100|338|0|0|
+| Rules |133/241|43/100|318|66|0|
+| Rules asking |124/241|39/100|358|100|0|
+
+Search is strictly complete. Rules and rules_asking completed the world but their
+language-guard failures leave execution incomplete; retain them only in the predefined
+full-world analysis, separately from strict completed pairs. Simulated minutes to fully
+secure a request (median/p95, among fulfilled requests) were search0/53, rules25/49,
+and rules_asking27/65. Turn latency was not captured for these free contenders and is
+unavailable; simulated fulfillment time is not measured response latency. API cost per
+fulfilled request is0 for each free contender.
+
+Run IDs and all comparability checks: evidence/candidate6-free-baselines.json. The first
+search setup failed before creating a world (wrong working directory), is archived
+separately, and contributes no product outcomes. The paid A100-request seed was not
+executed; no A-minus-baseline effect or cross-world uncertainty interval is available.
+No optional seed expansion or stress sweep was attempted. SIMULATION_METHODS.md
+predefines the analyses. Six-hour secured units are locks, not proof of dispensing;
+model assumptions are not real pharmacy behavior.
 
 ## Spending and concrete pending matrix
 
@@ -133,8 +153,10 @@ remain prerequisites, not assistant-completed tasks.
 DEMO.md prepares clarification, proposal, approval, reservation, pickup, cancellation,
 unavailable stock and sourcing timeout on isolated synthetic accounts/infrastructure.
 All eight live-model journeys remain unverified under STOP_PAID. Older scripted UI
-results are supporting evidence only. The current browser factory still requires a
-candidate-specific update after authorization; it rejects source drift and paid stop.
+results are supporting evidence only. The browser factory now uses the candidate6
+reproduction pin and rejects STOP_PAID before loading settings, credentials or a model;
+a no-API check confirms this. Source-drift and per-call unknown-charge protections remain active.
+This preparation is not permission to launch paid work.
 
 REPRODUCE.md provides exact offline checks, free-baseline commands and restart limits.
 Do not restart the terminal candidate5 queue or use its paid harness against candidate6.

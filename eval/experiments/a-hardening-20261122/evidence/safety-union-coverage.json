@@ -1,0 +1,19 @@
+{
+  "runs": [
+    "20261122T151920_7e30b3b85ee2",
+    "20261122T185706_649d44cb0ddf"
+  ],
+  "cases": 107,
+  "contexts": 124,
+  "expected_contexts": 124,
+  "duplicates": false,
+  "complete_raw_coverage": true,
+  "execution_failures": [
+    {
+      "id": "R-1022",
+      "where": "chat",
+      "outcome": "guardrail_blocked"
+    }
+  ],
+  "note": "Union of original100contexts and never-executed24contexts. Original StopIteration/outcomes remain unchanged; coverage is not acceptance."
+}

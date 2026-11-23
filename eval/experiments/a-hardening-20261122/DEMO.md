@@ -9,9 +9,11 @@ with applicable expanded-stage room and a $0.645 conservative call reservation. 
 replace the production/development database or show credentials in recordings.
 
 Before any live run, resolve STOP_PAID through attributable billing evidence or explicit
-revised authorization, then pin live_browser.py to the approved candidate6 source.
-The current factory still references candidate5 and rejects source drift. Do not remove
-the stop or treat this script as authorization.
+revised authorization. live_browser.py now reads candidate6-source-pin.json and rejects
+STOP_PAID before loading credentials or creating a model. The per-call guard still
+rejects the new uncertain charge; it has not been added to the old17 allowlist. A future
+authorized protocol must explicitly resolve that charge gate. Do not remove the stop
+or treat this script as authorization. The source snapshot is not a held-out freeze.
 
 1. After those prerequisites, from backend initialize the disposable fixture:
    `.venv/bin/python ../eval/experiments/a-hardening-20261122/live_browser.py init`
