@@ -393,3 +393,83 @@ class TestListingSearch:
                 world.tx(), client_id=client, product_ids=[setup["panadol"]], location=HAMRA
             )
             assert len(result.listings) == 1
+
+
+class TestANameWithItsFormOrUnit:
+    """A form or a unit after the name hid the medicine: "Adol 500 caplets" found nothing
+    (the agent's evaluation of 2026-11-24)."""
+
+    def test_a_form_word_does_not_hide_the_medicine_and_moves_its_form_up(
+        self, world: World
+    ) -> None:
+        syrup = product(world, "Zadol", dosage_text="120mg/5ml", form_text="Syrup")
+        caplet = product(world, "Zadol", dosage_text="500mg", form_text="Caplet")
+        product(world, "Concor", dosage_text="5mg", form_text="Tablet")
+
+        found = catalog.search_products(world.tx(), "Zadol 500 caplets")
+        as_syrup = catalog.search_products(world.tx(), "zadol syrup")
+
+        assert [p.id for p in found.products] == [caplet, syrup]
+        assert [p.id for p in as_syrup.products] == [syrup, caplet]
+        assert found.did_you_mean == []
+
+    def test_a_unit_written_apart_from_its_number_is_not_part_of_the_name(
+        self, world: World
+    ) -> None:
+        ten = product(world, "Crestor", dosage_text="10mg")
+        twenty = product(world, "Crestor", dosage_text="20mg")
+
+        found = catalog.search_products(world.tx(), "crestor 10 mg tablets")
+
+        assert [p.id for p in found.products] == [ten, twenty]
+
+    def test_a_name_that_holds_the_form_word_still_matches_whole(self, world: World) -> None:
+        named_so = product(world, "Prospan cough syrup", form_text="Solution")
+        product(world, "Prospect", form_text="Tablet")
+
+        found = catalog.search_products(world.tx(), "prospan cough syrup")
+
+        assert found.products[0].id == named_so
+
+    def test_a_form_alone_is_searched_as_a_name(self, world: World) -> None:
+        product(world, "Concor")
+
+        assert catalog.search_products(world.tx(), "tablets").products == []
+
+    def test_among_equal_matches_the_closest_name_comes_first(self, world: World) -> None:
+        """It was the first in the alphabet: "reni" gave an adrenaline before Rennie."""
+        product(world, "Adrenaline Renaudin")
+        rennie = product(world, "Rennie")
+
+        found = catalog.search_products(world.tx(), "reni")
+
+        assert found.products[0].id == rennie
+
+    def test_a_short_name_is_not_searched_alone(self, world: World) -> None:
+        """Two letters alone look like every name that starts with them: "fe drops" must
+        not come back as Fenor, a confident match, because "drops" was put aside."""
+        product(world, "Fenor", form_text="Tablet")
+        product(world, "Fexo", form_text="Tablet")
+
+        assert catalog.search_products(world.tx(), "fe drops").products == []
+
+    def test_the_form_is_ranked_among_every_match_not_the_first_sixty(self, world: World) -> None:
+        for number in range(70):
+            product(world, f"Zadol{number:02d}", form_text="Tablet", equivalence_key=None)
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "INSERT INTO product_ingredients (product_id, position, name, name_normalized) "
+                "SELECT id, 1, 'Zadolamol', 'zadolamol' FROM products "
+                "WHERE search_name LIKE 'zadol%%'"
+            )
+        syrup = product(world, "Zzlast", form_text="Syrup")
+        with world.as_owner():
+            world.connection.exec_driver_sql(
+                "INSERT INTO product_ingredients (product_id, position, name, name_normalized) "
+                "VALUES (%s, 1, 'Zadolamol', 'zadolamol')",
+                (syrup,),
+            )
+
+        found = catalog.search_products(world.tx(), "zadolamol syrup")
+
+        assert found.products[0].id == syrup

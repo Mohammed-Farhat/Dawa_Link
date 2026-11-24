@@ -67,6 +67,26 @@ _DOES_WHAT_THE_CARD_DOES = re.compile(
     r"\breserve\b|\bbook\b|\baccept\b|\b[ei]?7jez\w*|احجز|حجز|اقبل",
     re.IGNORECASE,
 )
+# The same for the other cards with a button of their own: "Yes, start sourcing" beside
+# the [Start sourcing] card, "Cancel it" beside a [Cancel] card. Only beside a card of
+# that kind: without it, the words are an answer like any other.
+_BUTTON_OF_THE_CARD = {
+    ProposalKind.REQUEST_SUMMARY.value: re.compile(
+        r"\bstart\b|\bsourcing\b|\bball[ei]sh\w*|ابد[أا]|بل[ّ]?ش", re.IGNORECASE
+    ),
+    ProposalKind.CANCEL.value: re.compile(
+        r"\bcancel\w*|\b[ei]?l[gq]h[iy]\w*|[اأإ]لغ", re.IGNORECASE
+    ),
+}
+
+
+def _reads_like_a_button(chip: str, kinds: set[str]) -> bool:
+    """Would a tap on this quick reply look like the tap on a card that is shown?"""
+    return bool(_DOES_WHAT_THE_CARD_DOES.search(chip)) or any(
+        words.search(chip) for kind, words in _BUTTON_OF_THE_CARD.items() if kind in kinds
+    )
+
+
 # "I've passed your request to a person", "a person has been notified", "your case is with
 # the team": the reply says a person from DawaLink has the case.
 # The person is the one the case went to, right after the verb: "I sent your request to 2
@@ -167,16 +187,17 @@ def check(
       client's is open. False: a reply that says so is refused.
     """
     offered = [chip for chip in map(plain, reply.quick_replies) if chip]
+    # Cards: only stored proposals of this conversation and client, still open (INV-21).
+    known = proposals.of_conversation(tx, conversation_id, reply.proposal_ids)
     chips = offered
     if reply.proposal_ids:
-        chips = [chip for chip in offered if not _DOES_WHAT_THE_CARD_DOES.search(chip)]
+        kinds = {proposal.kind for proposal in known.values()}
+        chips = [chip for chip in offered if not _reads_like_a_button(chip, kinds)]
     cleaned = reply.model_copy(update={"text": plain(reply.text), "quick_replies": chips})
     violations: list[Violation] = []
     if not cleaned.text:
         violations.append(Violation(SCHEMA, "The reply text is empty. Write a short message."))
 
-    # Cards: only stored proposals of this conversation and client, still open (INV-21).
-    known = proposals.of_conversation(tx, conversation_id, cleaned.proposal_ids)
     usable = [
         proposal_id
         for proposal_id in cleaned.proposal_ids

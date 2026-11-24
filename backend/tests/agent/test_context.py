@@ -78,6 +78,22 @@ class TestTheFacts:
 
         assert "closed: no new watch or request now" in block(scene)
 
+    def test_at_night_an_open_request_is_still_worked_on(self, scene: Scene) -> None:
+        """R-W1, BLD-D6: a request started in time waits for its medicines after 20:00.
+        Told only "closed", the model stopped (the agent's evaluation of 2026-11-24)."""
+        scene.world.later(hours=9.5)  # 19:30
+        _, thread = scene.start_request()
+        scene.world.later(hours=1)  # 20:30
+        scene.say("any news?", thread)
+        scene.say("hello")
+
+        in_the_thread, in_the_chat = block(scene, thread), block(scene)
+
+        assert "closed for a new request or a new watch." in in_the_thread
+        assert "stays open until Wed 01:30: until then open_claim and" in in_the_thread
+        assert "closed: no new watch or request now." in in_the_chat
+        assert "open_claim" not in in_the_chat
+
     def test_only_the_last_20_messages_are_read(self, scene: Scene) -> None:
         """N-32."""
         for number in range(1, 26):

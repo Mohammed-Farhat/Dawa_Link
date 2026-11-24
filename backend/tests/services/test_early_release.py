@@ -612,3 +612,25 @@ class TestBothPathsAtOnce:
 
         assert len(town.offers()) == 2
         assert (load.orders, load.units_by_group) == (1, {KEY: 2})
+
+
+class TestTheSameNameInAnotherBoxSize:
+    def test_a_private_box_under_the_other_row_of_the_name_is_asked_for(
+        self, town: Town, world: World
+    ) -> None:
+        """R-C10, the owner's Q38: another box size of the same name is the same medicine."""
+        name = world.one(
+            "SELECT moph_name, search_name FROM products WHERE id = :p", p=town.product
+        )
+        other_size = world.make.product(
+            equivalence_key=KEY, moph_name=name.moph_name, search_name=name.search_name
+        )
+        holder = world.make.pharmacy(lat=33.897, lon=35.483)
+        box = world.make.item(
+            pharmacy_id=holder, product_id=other_size, days_left=200, qty_on_hand=4
+        )
+
+        asked = town.ask()
+
+        assert asked.pharmacies_asked == 1
+        assert town.asks()[holder].inventory_item_id == box

@@ -353,7 +353,12 @@ def _check_request_items(
         if box is None:
             continue
         wanted = catalog.allowed_product(tx, item.product_id)
-        allowed = catalog.products_in_group(tx, wanted, with_equivalents=request.alternatives_ok)
+        # Another catalog row of the same name (another box size) is the item's own
+        # medicine (Q38); another brand only when the client agreed to hear of them.
+        allowed = {
+            *catalog.same_brand(tx, wanted.id),
+            *catalog.products_in_group(tx, wanted, with_equivalents=request.alternatives_ok),
+        }
         if box.product_id not in allowed or line.qty > item.qty - item.qty_secured:
             raise ServiceError(Code.VALIDATION_ERROR, "That isn't what this request item asks for.")
 

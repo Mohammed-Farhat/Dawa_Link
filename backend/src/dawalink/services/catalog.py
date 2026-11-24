@@ -70,17 +70,62 @@ def allowed_product(tx: Tx, product_id: uuid.UUID) -> Product:
     return product
 
 
+# Words a person adds to a medicine's name that say its form, and the words the catalog's
+# form column uses for it. "Adol 500 caplets" is a search for Adol: the catalog keeps the
+# form in a column of its own, so taken as part of the name the word hid the medicine.
+_TABLET, _CAPSULE, _LIQUID = ("tablet",), ("capsule",), ("syrup", "suspension", "elixir")
+_INJECTED, _SUPPOSITORY = ("injectable", "injection"), ("suppository",)
+FORM_WORDS: Mapping[str, tuple[str, ...]] = {
+    **dict.fromkeys(("tablet", "tablets", "tab", "tabs"), _TABLET),
+    **dict.fromkeys(("caplet", "caplets"), ("caplet",)),
+    **dict.fromkeys(("capsule", "capsules", "caps"), _CAPSULE),
+    **dict.fromkeys(("pill", "pills"), ("tablet", "caplet", "capsule")),
+    **dict.fromkeys(("syrup", "sirop"), _LIQUID),
+    **dict.fromkeys(("drop", "drops"), ("drops",)),
+    **dict.fromkeys(("suppository", "suppositories", "supp"), _SUPPOSITORY),
+    **dict.fromkeys(("injection", "injections", "ampoule", "ampoules", "ampule"), _INJECTED),
+    **dict.fromkeys(("sachet", "sachets"), ("powder", "granules")),
+    **dict.fromkeys(("patch", "patches"), ("patch",)),
+    "inhaler": ("inhalation", "inhaler", "aerosol"),
+    "gel": ("gel", "emulgel"),
+    **{
+        word: (word,)
+        for word in ("suspension", "cream", "ointment", "spray", "chewable", "effervescent")
+    },
+    **{word: (word,) for word in ("solution", "lotion", "powder")},
+}
+# A unit written apart from its number ("10 mg"): it says nothing about which medicine.
+UNIT_WORDS = frozenset({"mg", "mcg", "g", "gm", "gr", "ml", "iu"})
+MIN_BARE_NAME = 4
+# The strength and the form are ranked in Python, after this cut: it must hold every
+# product of one ingredient ("paracetamol syrup"), or the syrups could be cut first.
+MAX_SCORED = 500
+
+
 def search_products(tx: Tx, query: str, *, limit: int = 8) -> ProductSearch:
     """Medicines whose name or ingredient looks like the query, best first.
 
     Spelling mistakes are tolerated ("ogmentin"). A strength in the query ("1g", "500")
     doesn't take part in the name match: it only moves the products with that strength up.
+
+    A form or a unit in the query ("caplets", "syrup", "mg") is read both ways: the name is
+    matched with it and without it, and the better match counts. So "Adol 500 caplets"
+    finds Adol, and a name that really holds the word ("... syrup") still matches whole.
+    The form then moves the products of that form up. Among equally good matches, the
+    name closest to the query as a whole comes first, not the first in the alphabet.
     """
     words = normalize(query[:MAX_QUERY_LENGTH]).split()
-    name = " ".join(word for word in words if not word[0].isdigit())
+    named = [word for word in words if not word[0].isdigit()]
     strengths = [word for word in words if word[0].isdigit()]
+    name = " ".join(named)
     if not name:
         return ProductSearch([], [])
+    forms = [FORM_WORDS[word] for word in named if word in FORM_WORDS]
+    bare = " ".join(w for w in named if w not in FORM_WORDS and w not in UNIT_WORDS)
+    if len(bare.replace(" ", "")) < MIN_BARE_NAME:
+        # Two or three letters alone look like every name that starts with them
+        # ("fe drops" is not Fenofibrate): such a name keeps its other words.
+        bare = name
 
     rows = tx.session.execute(
         text(
@@ -88,29 +133,49 @@ def search_products(tx: Tx, query: str, *, limit: int = 8) -> ProductSearch:
             SELECT p.id,
                    GREATEST(
                      word_similarity(:q, p.search_name),
-                     COALESCE((SELECT max(word_similarity(:q, pi.name_normalized))
+                     word_similarity(:b, p.search_name),
+                     COALESCE((SELECT max(GREATEST(word_similarity(:q, pi.name_normalized),
+                                                   word_similarity(:b, pi.name_normalized)))
                                FROM product_ingredients pi WHERE pi.product_id = p.id), 0)
-                   ) AS score
+                   ) AS score,
+                   similarity(:b, p.search_name) AS near
             FROM products p
             WHERE NOT p.controlled
               AND (:q <% p.search_name
+                   OR :b <% p.search_name
                    OR p.search_name % :q
+                   OR p.search_name % :b
                    OR EXISTS (SELECT 1 FROM product_ingredients pi
-                              WHERE pi.product_id = p.id AND :q <% pi.name_normalized))
-            ORDER BY score DESC, p.moph_name, p.moph_code
-            LIMIT 60
+                              WHERE pi.product_id = p.id
+                                AND (:q <% pi.name_normalized OR :b <% pi.name_normalized)))
+            ORDER BY score DESC, near DESC, p.moph_name, p.moph_code
+            LIMIT :most
             """
         ),
-        {"q": name},
+        {"q": name, "b": bare, "most": MAX_SCORED},
     ).all()
-    scores = {product_id: float(score) for product_id, score in rows}
+    scores = {product_id: float(score) for product_id, score, _ in rows}
+    near = {product_id: float(closeness) for product_id, _, closeness in rows}
     products = list(tx.session.execute(select(Product).where(Product.id.in_(scores))).scalars())
 
     def has_the_strength(product: Product) -> bool:
         said = re.sub(r"[^a-z0-9.]", "", (product.dosage_text or "").lower())
         return all(strength in said for strength in strengths)
 
-    products.sort(key=lambda p: (not has_the_strength(p), -scores[p.id], p.moph_name, p.moph_code))
+    def has_the_form(product: Product) -> bool:
+        said = set(normalize(f"{product.form_text or ''} {product.moph_name}").split())
+        return all(said.intersection(form) for form in forms)
+
+    products.sort(
+        key=lambda p: (
+            not has_the_strength(p),
+            -scores[p.id],
+            not has_the_form(p),
+            -near[p.id],
+            p.moph_name,
+            p.moph_code,
+        )
+    )
     confident = [p for p in products if scores[p.id] >= CONFIDENT]
     if confident:
         return ProductSearch([ref(p) for p in confident[:limit]], [])

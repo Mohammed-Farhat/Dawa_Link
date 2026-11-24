@@ -281,20 +281,33 @@ def rate(tx: Tx) -> Decimal | None:
 
 
 def road_times_first(
-    turn: Turn, pharmacies_of: Callable[[Tx], list[uuid.UUID]], *, between: bool = False
+    turn: Turn,
+    pharmacies_of: Callable[[Tx], list[uuid.UUID]],
+    *,
+    between: bool = False,
+    origin_of: Callable[[Tx], Location | None] | None = None,
 ) -> None:
     """Asks the routing service for the road times a tool is about to need.
 
     Three short steps, and no transaction is open while the routing service answers. If
     it fails or isn't configured, the tool simply works with straight-line estimates.
+
+    `origin_of`: where the trips start, when it isn't where this conversation's client
+    is: a watch counts from the place it was started at.
     """
     if turn.routing is None:
         return
     with unit_of_work(turn.sessions, turn.clock) as tx:
-        try:
-            origin = location_of(tx, turn)
-        except Refused:
-            return  # the tool itself will say that the location is needed
+        if origin_of is not None:
+            start = origin_of(tx)
+            if start is None:
+                return
+            origin = start
+        else:
+            try:
+                origin = location_of(tx, turn)
+            except Refused:
+                return  # the tool itself will say that the location is needed
         pharmacies = pharmacies_of(tx)
         if not pharmacies:
             return

@@ -8,7 +8,11 @@
 import pytest
 
 from dawalink.agent.guards.clinical import clinical_reasons, without_names
-from dawalink.agent.guards.output import _DOES_WHAT_THE_CARD_DOES, _SAYS_A_PERSON_HAS_IT
+from dawalink.agent.guards.output import (
+    _DOES_WHAT_THE_CARD_DOES,
+    _SAYS_A_PERSON_HAS_IT,
+    _reads_like_a_button,
+)
 
 
 class TestLogisticsIsNotAdvice:
@@ -151,3 +155,25 @@ class TestAChipThatDoesWhatTheCardDoes:
     )
     def test_an_answer_is_kept(self, chip: str) -> None:
         assert not _DOES_WHAT_THE_CARD_DOES.search(chip)
+
+    @pytest.mark.parametrize(
+        ("chip", "kind"),
+        [
+            ("Yes, start sourcing", "request_summary"),
+            ("Start the search", "request_summary"),
+            ("Ballesh", "request_summary"),
+            ("ابدأ البحث", "request_summary"),
+            ("Yes, cancel it", "cancel"),
+            ("Elghi", "cancel"),
+            ("إلغاء الطلب", "cancel"),
+        ],
+    )
+    def test_the_words_of_another_cards_button_beside_that_card(self, chip: str, kind: str) -> None:
+        """`09` FA-53, the kinds left on 2026-11-22: [Start sourcing] and [Cancel]."""
+        assert _reads_like_a_button(chip, {kind})
+        # Beside another kind of card the same words are only an answer.
+        assert not _reads_like_a_button(chip, {"other_brand"})
+
+    @pytest.mark.parametrize("chip", ["Add another medicine", "No thanks", "Keep it", "Tomorrow"])
+    def test_an_answer_beside_those_cards_is_kept(self, chip: str) -> None:
+        assert not _reads_like_a_button(chip, {"request_summary", "cancel"})

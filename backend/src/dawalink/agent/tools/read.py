@@ -219,7 +219,8 @@ class GetEquivalentsOut(Output):
 
 def get_equivalents(turn: Turn, tx: Tx, args: GetEquivalents) -> GetEquivalentsOut:
     catalog.allowed_product(tx, args.product_id)
-    others = catalog.equivalents(tx, args.product_id)
+    own = catalog.same_brand(tx, args.product_id)  # another box size isn't another brand
+    others = [other for other in catalog.equivalents(tx, args.product_id) if other.id not in own]
     note_asked(turn, tx, args.product_id)
     return GetEquivalentsOut(products=[product_out(tx, ref) for ref in others])
 
@@ -330,15 +331,13 @@ def _same_medicine(tx: Tx, product_ids: list[uuid.UUID]) -> None:
 
 
 def _the_brand(turn: Turn, tx: Tx, product_id: uuid.UUID) -> set[uuid.UUID]:
-    """The catalog rows that are "the medicine the client asked for".
+    """The catalog rows that are "the medicine the client asked for": every row of the
+    brand they named (another box size, another importer).
 
-    In a chat: every row of the brand they named (another box size, another importer).
     The Ministry lists some brands several times, and a client who names the brand means
-    any of its boxes (`09` FA-43). In a request: the one row its item names, because
-    plans, claims and the item's count are all for that row (`04` R-C10).
+    any of its boxes (`09` FA-43). The same in a chat and in a request: plans, claims and
+    asks look for the medicine under every row of its name too (`04` R-C10).
     """
-    if turn.request_id is not None:
-        return {product_id}
     return catalog.same_brand(tx, product_id)
 
 
@@ -510,16 +509,21 @@ def _lines(turn: Turn, tx: Tx, args: PlanBasket) -> list[BasketLine]:
     """The basket as the planner takes it. In a request, each medicine is tied to its item."""
     items_of_request: dict[uuid.UUID, uuid.UUID] = {}
     if turn.request_id is not None:
-        rows = tx.session.execute(
-            select(RequestItem.product_id, RequestItem.id, RequestItem.state).where(
-                RequestItem.request_id == turn.request_id
+        rows = [
+            (product_id, item_id)
+            for product_id, item_id, state in tx.session.execute(
+                select(RequestItem.product_id, RequestItem.id, RequestItem.state)
+                .where(RequestItem.request_id == turn.request_id)
+                .order_by(RequestItem.position)
             )
-        )
-        items_of_request = {
-            product_id: item_id
-            for product_id, item_id, state in rows
             if ItemState(state) not in FINAL_ITEM_STATES
-        }
+        ]
+        items_of_request = dict(rows)
+        # The model may name the medicine by any catalog row of its name (another box
+        # size): each of them stands for the item (Q38). The item's own row comes first.
+        for product_id, item_id in rows:
+            for row in catalog.same_brand(tx, product_id):
+                items_of_request.setdefault(row, item_id)
     money = rate(tx)
     return [
         BasketLine(

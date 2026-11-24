@@ -479,22 +479,29 @@ export function Conversation({
     queryFn: () => unwrap(api.GET('/api/v1/offers')),
     enabled: showsOffer,
   })
+  // A card that says a reservation ended ("Picked up", "Cancelled") arrives by polling,
+  // and so does a new offer's card.
+  const systemCards = messages.filter((message) => message.author === 'system').length
+  // How many such cards the page had when the offers were last read. A card that came
+  // since isn't in that list yet, and must not be called over for that: until the list
+  // is read again it is "not known". An ordinary re-read every few seconds keeps what
+  // was known, or an ended offer's card said "held for you until…" again at each one.
+  const [offersRead, setOffersRead] = useState({ at: 0, cards: 0 })
+  if (openOffers.dataUpdatedAt !== offersRead.at) {
+    setOffersRead({ at: openOffers.dataUpdatedAt, cards: systemCards })
+  }
   const offers: OffersKnown | null = page.data
     ? {
-        // Not known while it is read again: a card that just arrived isn't in the list
-        // yet, and must not be called over for that.
         open:
-          openOffers.data && !openOffers.isFetching
+          openOffers.data && offersRead.cards === systemCards
             ? new Set(openOffers.data.items.map((offer) => offer.id))
             : null,
         now: page.data.server_now,
         here: Boolean(thread),
       }
     : null
-  // A card that says a reservation ended ("Picked up", "Cancelled") arrives by polling:
-  // the list is asked again, so its "Reserved" card stops offering the counter. An offer
-  // accepted, declined or over is told by a card too.
-  const systemCards = messages.filter((message) => message.author === 'system').length
+  // When such a card arrives the lists are asked again, so a "Reserved" card stops
+  // offering the counter. An offer accepted, declined or over is told by a card too.
   const seenSystemCards = useRef(systemCards)
   useEffect(() => {
     if (systemCards === seenSystemCards.current) return

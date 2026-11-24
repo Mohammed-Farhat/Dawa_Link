@@ -61,6 +61,7 @@ class AuditAction(StrEnum):
     # Requests, watches and early release (SM-7, SM-8).
     CLAIM_CREATE = "claim.create"
     CLAIM_STATE = "claim.state"
+    CLAIM_DAYS_OF_USE = "claim.days_of_use"
     REQUEST_CREATE = "request.create"
     REQUEST_CHANGE_CONSTRAINTS = "request.change_constraints"
     REQUEST_CLOSE = "request.close"

@@ -1081,6 +1081,7 @@
           "client.deleted",
           "claim.create",
           "claim.state",
+          "claim.days_of_use",
           "request.create",
           "request.change_constraints",
           "request.close",

@@ -42,6 +42,30 @@ def require_request_hours(tx: Tx) -> None:
         )
 
 
+def lengthen_watch(
+    tx: Tx, claim_id: uuid.UUID, days_of_use: int, *, actor: Actor = Actor.CLIENT
+) -> Claim:
+    """A running watch whose client now needs the medicine for more days: it waits for a
+    box that lasts that long (R-F1). Never shortened: a box that lasts longer serves a
+    shorter need too, and a tool's default of one day must not undo what the client said.
+    """
+    claim = needs.lock_claim(tx, claim_id)
+    if days_of_use > claim.days_of_use:
+        before = claim.days_of_use
+        claim.days_of_use = days_of_use
+        audit.record(
+            tx,
+            actor,
+            "claim.days_of_use",
+            "claim",
+            claim.id,
+            actor_id=claim.client_id,
+            before={"days_of_use": before},
+            after={"days_of_use": days_of_use},
+        )
+    return claim
+
+
 def create_watch(
     tx: Tx,
     *,
@@ -74,7 +98,11 @@ def create_watch(
         Claim.state.in_(LIVE),
     )
     existing = tx.session.execute(
-        select(Claim.id).where(*live, Claim.product_id == product_id)
+        # A watch on another box size of the same name is a watch on this medicine (Q38).
+        select(Claim.id)
+        .where(*live, Claim.product_id.in_(catalog.same_brand(tx, product.id)))
+        .order_by(Claim.created_at, Claim.id)
+        .limit(1)
     ).scalar()
     if existing is not None:
         raise ServiceError(

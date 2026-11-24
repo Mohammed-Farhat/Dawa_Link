@@ -1,0 +1,170 @@
+{
+  "lang": "arabic",
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "client_model": "claude-haiku-5-5",
+  "judge_model": null,
+  "part": "dev",
+  "prompt_version": "v1.14",
+  "scenarios": 260,
+  "played": 260,
+  "harness_errors": [],
+  "passed": 237,
+  "passed_by_kind": {
+    "adversarial": "32 of 32",
+    "ambiguous": "14 of 14",
+    "edge": "66 of 76",
+    "long_horizon": "18 of 18",
+    "normal": "41 of 50",
+    "past_failure": "38 of 42",
+    "tool_failure": "28 of 28"
+  },
+  "passed_by_family": {
+    "fail": "22 of 22",
+    "find": "33 of 36",
+    "memory": "18 of 20",
+    "names": "4 of 6",
+    "orders": "22 of 24",
+    "past": "25 of 26",
+    "request": "22 of 28",
+    "safety": "28 of 28",
+    "team": "19 of 20",
+    "wait": "24 of 28",
+    "where": "20 of 22"
+  },
+  "passed_by_prescription": {
+    "both": "41 of 48",
+    "needed": "95 of 104",
+    "none": "24 of 24",
+    "not_needed": "77 of 84"
+  },
+  "checks": {
+    "level": {
+      "component": {
+        "ok": 263,
+        "of": 273,
+        "share": 0.963
+      },
+      "end_to_end": {
+        "ok": 631,
+        "of": 638,
+        "share": 0.989
+      },
+      "step": {
+        "ok": 801,
+        "of": 826,
+        "share": 0.97
+      },
+      "trajectory": {
+        "ok": 145,
+        "of": 149,
+        "share": 0.973
+      }
+    },
+    "family": {
+      "efficiency": {
+        "ok": 2,
+        "of": 4,
+        "share": 0.5
+      },
+      "memory": {
+        "ok": 52,
+        "of": 54,
+        "share": 0.963
+      },
+      "output_quality": {
+        "ok": 161,
+        "of": 168,
+        "share": 0.958
+      },
+      "planning": {
+        "ok": 191,
+        "of": 194,
+        "share": 0.985
+      },
+      "reliability": {
+        "ok": 97,
+        "of": 97,
+        "share": 1.0
+      },
+      "safety": {
+        "ok": 319,
+        "of": 321,
+        "share": 0.994
+      },
+      "task_success": {
+        "ok": 546,
+        "of": 561,
+        "share": 0.973
+      },
+      "tool_use": {
+        "ok": 472,
+        "of": 487,
+        "share": 0.969
+      }
+    }
+  },
+  "auto_checks": {
+    "level": {
+      "step": {
+        "ok": 1650,
+        "of": 1760,
+        "share": 0.938
+      },
+      "trajectory": {
+        "ok": 516,
+        "of": 520,
+        "share": 0.992
+      }
+    },
+    "family": {
+      "efficiency": {
+        "ok": 178,
+        "of": 260,
+        "share": 0.685
+      },
+      "output_quality": {
+        "ok": 765,
+        "of": 778,
+        "share": 0.983
+      },
+      "planning": {
+        "ok": 260,
+        "of": 260,
+        "share": 1.0
+      },
+      "reliability": {
+        "ok": 232,
+        "of": 232,
+        "share": 1.0
+      },
+      "safety": {
+        "ok": 260,
+        "of": 260,
+        "share": 1.0
+      },
+      "tool_use": {
+        "ok": 471,
+        "of": 490,
+        "share": 0.961
+      }
+    }
+  },
+  "judge": {
+    "scenarios": 0,
+    "accepted": 0,
+    "mean_scores": {}
+  },
+  "agent_turn_seconds": {
+    "n": 462,
+    "median": 9.06,
+    "p95": 15.03,
+    "max": 24.17
+  },
+  "model_calls_per_turn": 3.34,
+  "tool_calls": 1269,
+  "tool_errors": 41,
+  "cost_usd": 0.9142,
+  "agent_cost_usd": 0.9111,
+  "cost_per_passed_scenario_usd": 0.0039
+}

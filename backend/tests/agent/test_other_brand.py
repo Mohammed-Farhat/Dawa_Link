@@ -312,18 +312,36 @@ class TestNoReservationOfAnotherBrand:
         assert by_product == {str(other_maker): False, str(clavox): True}
         assert "error_code" not in reserve_card(scene, box)
 
-    def test_in_a_request_the_item_names_one_catalog_row(
+    def test_in_a_request_the_other_row_of_the_name_serves_the_item(
         self, scene: Scene, clavox: uuid.UUID
     ) -> None:
-        """A request's plans, claims and count are for the row its item names: the
-        brand's other row isn't searched there, so nothing is offered and then refused."""
+        """A request's item names one catalog row, and the brand's other row is the same
+        medicine there too (Q38): found, planned, and reserved for the item. Until
+        2026-11-24 a request looked for the item's own row only, and said "none listed"
+        with the other box size on a shelf. Another brand still gets no reserve card."""
         bigger_box = same_name_as_augmentin(scene)
-        scene.stock(bigger_box)
+        box = scene.stock(bigger_box)
+        other_brand = scene.stock(clavox)
         _, thread = scene.start_request(RequestLine(scene.augmentin))
 
+        brands = scene.tool("get_equivalents", thread, product_id=scene.augmentin)
         found = scene.tool("find_options", thread, product_ids=[scene.augmentin])
+        plans = scene.tool("plan_basket", thread, items=[{"product_id": str(bigger_box)}])
 
-        assert found["options"] == []
+        assert [(o["listing_id"], o["is_alternative"]) for o in found["options"]] == [
+            (str(box), False)
+        ]
+        # Another box size is not listed among the other brands; another name is.
+        assert [b["id"] for b in brands["products"]] == [str(clavox)]
+        (pick,) = plans["plans"][0]["groups"][0]["items"]
+        assert pick["listing_id"] == str(box)
+        card = reserve_card(scene, box, thread)
+        assert "error_code" not in card
+        assert not any(line.startswith("Brand:") for line in card["preview"]["lines"])
+        assert reserve_card(scene, other_brand, thread)["error_code"] in (
+            "ASK_PHARMACIST_FIRST",
+            "VALIDATION_ERROR",
+        )
 
     def test_searching_the_brand_by_itself_later_does_not_make_it_the_clients_medicine(
         self, scene: Scene, clavox: uuid.UUID

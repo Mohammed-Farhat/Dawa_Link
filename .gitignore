@@ -44,3 +44,12 @@ nohup.out
 # Evaluation: a targeted re-check of a few cases stays on the laptop. Full runs are
 # committed with their scores and traces (decision log BLD-D19).
 eval/results/*_part/
+
+# Trial runs of the scenario suite (a few scenarios, to check the harness): on the laptop only
+eval/results/*_smoke/
+eval/results/*_dev*/
+eval/results/*_rev*/
+
+# Review and evaluation reports that list weaknesses: the repository is public, they stay
+# on the laptop (decision log BLD-D46)
+local_reports/

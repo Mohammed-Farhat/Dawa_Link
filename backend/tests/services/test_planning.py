@@ -123,3 +123,29 @@ class TestMorePharmaciesThanThePlannerWeighs:
         asked = planning.pharmacies_to_weigh(world.tx(), lines=[BasketLine(concor)], location=HAMRA)
 
         assert set(asked) == set(row[:2])
+
+
+class TestTheSameNameInAnotherBoxSize:
+    def test_the_other_box_size_is_planned_and_another_brand_is_not(self, world: World) -> None:
+        """R-C10, the owner's Q38: a plan for the box of 100 takes the box of 30 that a
+        pharmacy has. It came back as "none listed"."""
+        key = "aspirin=100mg | tablet | B01AC06"
+        same = {"equivalence_key": key, "moph_name": "ZASPICOT", "search_name": "zaspicot"}
+        box_of_100, box_of_30 = world.make.product(**same), world.make.product(**same)
+        other_brand = world.make.product(equivalence_key=key)
+        client, pharmacy = world.make.client(), street(world, 1)[0]
+        on_the_shelf = world.make.item(pharmacy_id=pharmacy, product_id=box_of_30)
+
+        found = planning.plan(
+            world.tx(), client_id=client, lines=[BasketLine(box_of_100)], location=HAMRA
+        )
+
+        (pick,) = found.trips[0].stops[0].picks
+        assert (pick.product_id, pick.listing_id) == (box_of_100, on_the_shelf)
+        assert found.unplannable == []
+
+        world.make.item(pharmacy_id=pharmacy, product_id=other_brand, days_left=20)  # cheaper
+        again = planning.plan(
+            world.tx(), client_id=client, lines=[BasketLine(box_of_100)], location=HAMRA
+        )
+        assert [p.listing_id for p in again.trips[0].stops[0].picks] == [on_the_shelf]

@@ -61,7 +61,9 @@ export function RequestPage() {
     retry: false,
   })
 
-  if (found.isError) {
+  // Only when the request was never read: a single failed re-read keeps the page as it
+  // was (it is asked again every few seconds), instead of calling the request not found.
+  if (found.isError && !found.data) {
     return (
       <Screen plain narrow>
         <Banner tone="red" alert>

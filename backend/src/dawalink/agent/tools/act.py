@@ -23,6 +23,7 @@ from dawalink.agent.tools.base import (
     Turn,
     location_of,
     rate,
+    road_times_first,
 )
 from dawalink.agent.tools.propose import ASSISTANT, SOURCING
 from dawalink.agent.tools.read import BOTH, Days, Qty
@@ -49,6 +50,8 @@ class Watching(Output):
     watch_id: uuid.UUID
     ends_display: str
     already_watching: bool = False
+    # For a watch that was already running: the days of use it now waits for.
+    days_of_use: int | None = None
 
 
 def create_watch(turn: Turn, tx: Tx, args: CreateWatch) -> Watching:
@@ -68,9 +71,16 @@ def create_watch(turn: Turn, tx: Tx, args: CreateWatch) -> Watching:
         if error.code is not Code.WATCH_EXISTS:
             raise
         # Asked twice (a retried turn, or the client asking again): the watch is there.
-        existing = tx.session.get_one(Claim, error.details["watch_id"])
+        # If the client now needs the medicine for longer, the watch waits for a box that
+        # lasts that long: it was offering one that lasts the days first said (R-F1).
+        existing = claims.lengthen_watch(
+            tx, error.details["watch_id"], args.days_of_use, actor=Actor.AGENT
+        )
         return Watching(
-            watch_id=existing.id, ends_display=display.when(existing.ends_at), already_watching=True
+            watch_id=existing.id,
+            ends_display=display.when(existing.ends_at),
+            already_watching=True,
+            days_of_use=existing.days_of_use,
         )
     return Watching(watch_id=claim.id, ends_display=display.when(claim.ends_at))
 
@@ -197,6 +207,23 @@ NOBODY_ASKED = (
     "could be asked right now. Never say that you asked. The watch keeps running; you may "
     "ask again later in its 6 hours, because pharmacies open and close."
 )
+
+
+def _prepare_request_early_release(turn: Turn, args: RequestEarlyRelease) -> None:
+    """The road times to the pharmacies that keep such a box, from where the claim counts:
+    whom to ask is decided on minutes by car, and nothing asked for these trips before."""
+
+    def mine(tx: Tx) -> bool:
+        claim = tx.session.get(Claim, args.claim_id)
+        return claim is not None and claim.client_id == turn.client_id
+
+    road_times_first(
+        turn,
+        lambda tx: early_release.pharmacies_to_reach(tx, args.claim_id)[1] if mine(tx) else [],
+        origin_of=lambda tx: (
+            early_release.pharmacies_to_reach(tx, args.claim_id)[0] if mine(tx) else None
+        ),
+    )
 
 
 def request_early_release(turn: Turn, tx: Tx, args: RequestEarlyRelease) -> Asked:
@@ -328,6 +355,7 @@ TOOLS = (
         request_early_release,
         BOTH,
         progress="Asking pharmacies…",
+        prepare=_prepare_request_early_release,
     ),
     Tool(
         "schedule_followup",

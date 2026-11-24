@@ -77,13 +77,16 @@ def _best_box(tx: Tx, claim: Claim, boxes: list[Box], skipped: set[uuid.UUID]) -
     location = location_of(tx, claim)
     if location is None:
         return None
+    # The medicine the claim is for, under every catalog row that carries its name: another
+    # box size is the same medicine (Q38). Never another brand: only a pharmacist can say
+    # it suits the client (R-C10).
+    the_medicine = catalog.same_brand(tx, claim.product_id)
     usable = [
         box
         for box in boxes
         if box.qty_available >= 1
         and box.item_id not in skipped
-        # Never another brand: only a pharmacist can say it suits the client (R-C10).
-        and box.product_id == claim.product_id
+        and box.product_id in the_medicine
         and (claim.max_price_lbp is None or box.price_lbp <= claim.max_price_lbp)
         and box.choice(claim.days_of_use).days
     ]

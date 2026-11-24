@@ -240,9 +240,9 @@ def _judge(sim: Sim, tx: Tx, order: Order, need: Need) -> Decision:
         ),
         None,
     )
-    brands = [order.product_id]
-    if asked is not None and asked.product_id != order.product_id:
-        brands.append(asked.product_id)
+    # The medicine itself is every catalog row of its name, as the services have it (Q38).
+    own = catalog.same_brand(tx, asked.product_id) if asked is not None else {order.product_id}
+    brands = sorted(own | {order.product_id}, key=str)
     found = search.search_listings(
         tx,
         client_id=client.id,
@@ -279,7 +279,7 @@ def _judge(sim: Sim, tx: Tx, order: Order, need: Need) -> Decision:
         works=sim.works_for(need, order.pharmacy_id, chosen, day),
         minutes=chosen.minutes_for(client),
         best_minutes=min(working) if working else None,
-        other_brand=asked is not None and asked.product_id != order.product_id,
+        other_brand=asked is not None and order.product_id not in own,
     )
 
 

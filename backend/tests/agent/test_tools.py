@@ -658,6 +658,26 @@ class TestInARequest:
         assert scene.world.one("SELECT count(*) AS n FROM early_release_asks").n == 1
         assert "Hamra" not in str(asked)
 
+    def test_whom_to_ask_is_decided_on_road_times(self, scene: Scene) -> None:
+        """R-RT3, N-23: a pharmacy 15 km away in a straight line is 42 minutes by the
+        estimate, outside the 30 minutes, and 12 minutes by road. It keeps the medicine
+        off its listings, so no search asked for its road time: the ask must."""
+        request, thread = scene.start_request(RequestLine(scene.augmentin))
+        far_by_the_estimate = scene.world.make.pharmacy(lat=33.896 + 0.135, lon=35.483)
+        scene.stock(pharmacy_id=far_by_the_estimate, days_left=200)
+        item = scene.world.one("SELECT id FROM request_items WHERE request_id = :r", r=request).id
+        claim = scene.tool("open_claim", thread, request_item_id=item)
+        before = scene.routing.calls
+
+        asked = scene.tool("request_early_release", thread, claim_id=claim["claim_id"])
+
+        assert asked["asked"] == 1
+        assert scene.routing.calls > before
+        asked_for = {
+            pharmacy for _, destinations, _ in scene.routing.asked for pharmacy in destinations
+        }
+        assert far_by_the_estimate in asked_for
+
     def test_nobody_to_ask(self, scene: Scene) -> None:
         request, thread = scene.start_request(RequestLine(scene.augmentin))
         item = scene.world.one("SELECT id FROM request_items WHERE request_id = :r", r=request).id
@@ -801,7 +821,24 @@ class TestActingInAChat:
             2,
             7,
         )
-        assert again == made | {"already_watching": True}
+        assert again == made | {"already_watching": True, "days_of_use": 7}
+
+    def test_a_running_watch_takes_the_longer_need_and_never_a_shorter_one(
+        self, scene: Scene
+    ) -> None:
+        """R-F1: the client first said nothing about the days (1), then "for 5 days". The
+        watch that was running offered a box that lasts 1 day (seen on the owner's own chat,
+        2026-11-23). A later call with the tool's default of 1 day shortens nothing."""
+        scene.tool("create_watch", product_id=scene.augmentin)
+
+        longer = scene.tool("create_watch", product_id=scene.augmentin, days_of_use=5)
+        default_again = scene.tool("create_watch", product_id=scene.augmentin)
+
+        claim = scene.world.one("SELECT * FROM claims")
+        assert (longer["already_watching"], longer["days_of_use"]) == (True, 5)
+        assert default_again["days_of_use"] == 5
+        assert claim.days_of_use == 5
+        assert scene.world.audit_actions(claim.id) == ["claim.create", "claim.days_of_use"]
 
     def test_no_watch_at_night(self, scene: Scene) -> None:
         scene.world.later(hours=12)

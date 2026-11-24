@@ -932,3 +932,32 @@ class TestChangingConstraints:
         world.settle(tx)
 
         assert case.thread(request_id) == [("event", "request_submitted")]
+
+
+class TestTheSameNameInAnotherBoxSize:
+    def test_the_other_box_size_serves_the_item_without_asking_about_other_brands(
+        self, case: Case, world: World
+    ) -> None:
+        """R-C10, the owner's Q38: the request names the box of 100, a pharmacy has the
+        box of 30 of the same name. The tap on the plan's card reserves it."""
+        key = "aspirin=100mg | tablet | B01AC06"
+        same = {"equivalence_key": key, "moph_name": "ZASPICOT", "search_name": "zaspicot"}
+        box_of_100, box_of_30 = world.make.product(**same), world.make.product(**same)
+        request_id = case.start(RequestLine(box_of_100))
+
+        case.reserve_card(request_id, (1, case.stock(box_of_30), 1))
+
+        item = case.items(request_id)[0]
+        assert (item.state, item.qty_secured) == ("SECURED", 1)
+        secured_matches_orders(world)
+
+    def test_a_request_holds_a_medicine_once_whatever_its_box_size(
+        self, case: Case, world: World
+    ) -> None:
+        key = "aspirin=100mg | tablet | B01AC06"
+        same = {"equivalence_key": key, "moph_name": "ZASPICOT", "search_name": "zaspicot"}
+        box_of_100, box_of_30 = world.make.product(**same), world.make.product(**same)
+
+        twice = refusal(lambda: case.start(RequestLine(box_of_100), RequestLine(box_of_30)))
+
+        assert twice.code is Code.VALIDATION_ERROR

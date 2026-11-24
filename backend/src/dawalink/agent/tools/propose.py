@@ -127,11 +127,19 @@ def _item_of_request(turn: Turn, tx: Tx, product_id: uuid.UUID) -> uuid.UUID | N
         return None
     request = tx.session.get_one(SourcingRequest, turn.request_id)
     product = catalog.allowed_product(tx, product_id)
-    for item in requests.items_of(tx, request.id):
-        if ItemState(item.state) in FINAL_ITEM_STATES:
-            continue
+    looked_for = [
+        item
+        for item in requests.items_of(tx, request.id)
+        if ItemState(item.state) not in FINAL_ITEM_STATES
+    ]
+    # The item that names this very row first, then one it can serve.
+    for item in sorted(looked_for, key=lambda item: item.product_id != product.id):
         wanted = catalog.allowed_product(tx, item.product_id)
-        allowed = catalog.products_in_group(tx, wanted, with_equivalents=request.alternatives_ok)
+        # Another catalog row of the same name is the item's own medicine (Q38).
+        allowed = {
+            *catalog.same_brand(tx, wanted.id),
+            *catalog.products_in_group(tx, wanted, with_equivalents=request.alternatives_ok),
+        }
         if product.id in allowed:
             return item.id
     raise ServiceError(
@@ -164,9 +172,11 @@ def _another_brand(turn: Turn, tx: Tx, product_id: uuid.UUID, item_id: uuid.UUID
     In a request the item says what was asked. In a chat it is the first product of that
     medicine that was searched (`note_asked`): code can't read the client's words, so a
     brand the agent searched first, before the client's own, is not caught here.
+    Another catalog row of the same name (another box size) is never another brand (Q38).
     """
     if item_id is not None:
-        return tx.session.get_one(RequestItem, item_id).product_id != product_id
+        asked = tx.session.get_one(RequestItem, item_id).product_id
+        return product_id not in catalog.same_brand(tx, asked)
     return is_another_brand_in_chat(turn, tx, product_id)
 
 
@@ -304,14 +314,15 @@ def show_other_brand(turn: Turn, tx: Tx, args: ShowOtherBrand) -> Proposed:
     box = boxes[0]
     asked = catalog.allowed_product(tx, args.instead_of_product_id)
     same_medicine = catalog.products_in_group(tx, asked, with_equivalents=True)
-    if box.product_id == asked.id or box.product_id not in same_medicine:
+    its_own_rows = catalog.same_brand(tx, asked.id)  # another box size is not another brand
+    if box.product_id in its_own_rows or box.product_id not in same_medicine:
         raise Refused(
             ToolError.NOT_SAME_MEDICINE,
             "This box isn't another brand of that medicine. Other brands come only from "
             "get_equivalents; the medicine itself is proposed with propose_reservation.",
         )
     if turn.request_id is not None and not any(
-        item.product_id == asked.id and ItemState(item.state) not in FINAL_ITEM_STATES
+        item.product_id in its_own_rows and ItemState(item.state) not in FINAL_ITEM_STATES
         for item in requests.items_of(tx, turn.request_id)
     ):
         raise ServiceError(
@@ -568,8 +579,13 @@ def prepare_request_summary(turn: Turn, tx: Tx, args: PrepareRequestSummary) -> 
     on_screen: list[tuple[str, str]] = []
     stored = []
     notice = False
+    named: set[uuid.UUID] = set()
     for item in args.items:
         product = catalog.allowed_product(tx, item.product_id)
+        # Two catalog rows of one name (two box sizes) are one medicine (Q38): one item.
+        if product.id in named:
+            raise ServiceError(Code.VALIDATION_ERROR, "Each medicine appears once in a request.")
+        named |= catalog.same_brand(tx, product.id)
         notice = notice or product.prescription_required
         limit = display.in_lbp(item.max_price, money)
         days = f"for {item.days_of_use} day" + ("" if item.days_of_use == 1 else "s")

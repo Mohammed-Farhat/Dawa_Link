@@ -106,20 +106,29 @@ def _boxes_by_line(
     """The visible boxes of each asked medicine itself, and the medicines that only
     pharmacies outside `districts` have.
 
-    Never another brand: a plan's card reserves everything with one tap, and only a
-    pharmacist can say another brand suits the client (R-C10).
+    The medicine itself is every catalog row that carries its name: the Ministry lists a
+    box of 30 and a box of 100 apart, and both are what the client asked for (Q38). Never
+    another brand: a plan's card reserves everything with one tap, and only a pharmacist
+    can say another brand suits the client (R-C10).
 
     `districts`: only the pharmacies of the areas the client asked to look in, by district
     name (the owner, 2026-11-23). A medicine with boxes elsewhere and none there is
     reported apart, so the client is told "not in these areas", not "not listed".
     """
-    boxes = visible_boxes(tx, product_ids=[line.product_id for line in lines])
-    everywhere = {box.product_id for box in boxes}
+    rows = {line.product_id: catalog.same_brand(tx, line.product_id) for line in lines}
+    boxes = visible_boxes(
+        tx, product_ids=sorted({row for same in rows.values() for row in same}, key=str)
+    )
+    everywhere = {
+        line.product_id
+        for line in lines
+        if any(box.product_id in rows[line.product_id] for box in boxes)
+    }
     if districts is not None:
         district_of = pharmacies.district_names(tx, sorted({box.pharmacy_id for box in boxes}))
         boxes = [box for box in boxes if district_of.get(box.pharmacy_id) in districts]
     by_line = {
-        line.product_id: [box for box in boxes if box.product_id == line.product_id]
+        line.product_id: [box for box in boxes if box.product_id in rows[line.product_id]]
         for line in lines
     }
     only_elsewhere = tuple(

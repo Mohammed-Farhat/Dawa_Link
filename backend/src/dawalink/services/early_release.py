@@ -35,12 +35,13 @@ from dawalink.domain.early_release import (
 from dawalink.domain.expiry import Zone, days_left, fits, zone_of
 from dawalink.domain.inventory import ListingControl, is_held_back
 from dawalink.domain.numbers import (
+    AUTOMATIC_REACH_CAR_MIN,
     EARLY_RELEASE_DECLINE_MEMORY,
     EARLY_RELEASE_MAX_DAYS,
     MAX_OPEN_EARLY_RELEASE_REQUESTS,
     SAME_PRODUCT_EARLY_RELEASE_WAIT,
 )
-from dawalink.domain.opening_hours import is_open
+from dawalink.domain.opening_hours import WeeklyHours, is_open
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.pickup import pharmacy_pickup_days
 from dawalink.domain.pricing import release_suggested_price_lbp
@@ -61,6 +62,7 @@ from dawalink.services.context import Tx
 from dawalink.services.errors import Code, ServiceError
 from dawalink.services.events import Decision
 from dawalink.services.notify import Template, notify
+from dawalink.services.travel import Location
 
 # The reasons a pharmacy can give. Codes only: nothing a pharmacy types reaches the agent (R-AG8).
 DECLINE_REASONS = frozenset({"keeping_it", "no_longer_in_stock", "price", "other"})
@@ -111,7 +113,62 @@ def _candidates(
     location = matching.location_of(tx, claim)
     if location is None:
         return [], {}
-    wanted = [product.id]  # never another brand (R-C10)
+    wanted, rows, hours = _held_boxes(tx, claim, product)
+    pharmacy_ids = list({pharmacy.id for _, pharmacy in rows})
+    travels = travel.travel_to(tx, location, pharmacy_ids)
+    start_of_today = at_beirut(tx.today, time.min)
+
+    candidates: list[AskCandidate] = []
+    by_candidate: dict[tuple[str, object], InventoryItem] = {}
+    for item, pharmacy in rows:
+        asks_today = tx.session.execute(
+            select(func.count())
+            .select_from(EarlyReleaseAsk)
+            .where(
+                EarlyReleaseAsk.pharmacy_id == pharmacy.id,
+                EarlyReleaseAsk.created_at >= start_of_today,
+            )
+        ).scalar_one()
+        declined_at = tx.session.execute(
+            select(func.max(EarlyReleaseAsk.answered_at)).where(
+                EarlyReleaseAsk.pharmacy_id == pharmacy.id,
+                EarlyReleaseAsk.product_id.in_(wanted),  # the medicine, any row
+                EarlyReleaseAsk.state == "DECLINED",
+                EarlyReleaseAsk.answered_at > tx.now - EARLY_RELEASE_DECLINE_MEMORY,
+            )
+        ).scalar()
+        marks = tx.session.execute(
+            select(func.count())
+            .select_from(Order)
+            .where(
+                Order.pharmacy_id == pharmacy.id,
+                Order.state == "NOT_AVAILABLE",
+                Order.closed_at > tx.now - timedelta(days=30),
+            )
+        ).scalar_one()
+        candidate = AskCandidate(
+            pharmacy_id=str(pharmacy.id),
+            car_min=travels[pharmacy.id].car_min,
+            expiry_date=item.expiry_date,
+            not_available_marks_30d=marks,
+            open_now=is_open(hours[pharmacy.id], tx.now),
+            asks_today=asks_today,
+            declined_this_product_at=declined_at,
+        )
+        candidates.append(candidate)
+        by_candidate.setdefault((candidate.pharmacy_id, candidate.expiry_date), item)
+    return candidates, by_candidate
+
+
+def _held_boxes(
+    tx: Tx, claim: Claim, product: Product
+) -> tuple[list[uuid.UUID], list[tuple[InventoryItem, Pharmacy]], dict[uuid.UUID, WeeklyHours]]:
+    """The boxes of the claim's medicine that a pharmacy keeps off its listings and that
+    last the client's days, wherever the pharmacy is: `(the catalog rows looked for, the
+    boxes with their pharmacies, those pharmacies' hours)`."""
+    # Every catalog row that carries the medicine's name (another box size is the same
+    # medicine, Q38); never another brand (R-C10).
+    wanted = sorted(catalog.same_brand(tx, product.id), key=str)
     found = tx.session.execute(
         select(InventoryItem, Pharmacy)
         .join(Pharmacy, Pharmacy.id == InventoryItem.pharmacy_id)
@@ -140,50 +197,34 @@ def _candidates(
         if not any(fits(item.expiry_date, day, claim.days_of_use) for day in pickup_days):
             continue
         rows.append((item, pharmacy))
-    pharmacy_ids = list({pharmacy.id for _, pharmacy in rows})
-    travels = travel.travel_to(tx, location, pharmacy_ids)
-    start_of_today = at_beirut(tx.today, time.min)
+    return wanted, rows, hours
 
-    candidates: list[AskCandidate] = []
-    by_candidate: dict[tuple[str, object], InventoryItem] = {}
-    for item, pharmacy in rows:
-        asks_today = tx.session.execute(
-            select(func.count())
-            .select_from(EarlyReleaseAsk)
-            .where(
-                EarlyReleaseAsk.pharmacy_id == pharmacy.id,
-                EarlyReleaseAsk.created_at >= start_of_today,
-            )
-        ).scalar_one()
-        declined_at = tx.session.execute(
-            select(func.max(EarlyReleaseAsk.answered_at)).where(
-                EarlyReleaseAsk.pharmacy_id == pharmacy.id,
-                EarlyReleaseAsk.product_id == item.product_id,
-                EarlyReleaseAsk.state == "DECLINED",
-                EarlyReleaseAsk.answered_at > tx.now - EARLY_RELEASE_DECLINE_MEMORY,
-            )
-        ).scalar()
-        marks = tx.session.execute(
-            select(func.count())
-            .select_from(Order)
-            .where(
-                Order.pharmacy_id == pharmacy.id,
-                Order.state == "NOT_AVAILABLE",
-                Order.closed_at > tx.now - timedelta(days=30),
-            )
-        ).scalar_one()
-        candidate = AskCandidate(
-            pharmacy_id=str(pharmacy.id),
-            car_min=travels[pharmacy.id].car_min,
-            expiry_date=item.expiry_date,
-            not_available_marks_30d=marks,
-            open_now=is_open(hours[pharmacy.id], tx.now),
-            asks_today=asks_today,
-            declined_this_product_at=declined_at,
-        )
-        candidates.append(candidate)
-        by_candidate.setdefault((candidate.pharmacy_id, candidate.expiry_date), item)
-    return candidates, by_candidate
+
+def pharmacies_to_reach(tx: Tx, claim_id: uuid.UUID) -> tuple[Location | None, list[uuid.UUID]]:
+    """Where a claim counts from, and the pharmacies whose trip must be known before
+    anyone is asked for it: those that keep such a box and may be within reach.
+
+    Whom to ask is decided on minutes by car (N-23, R-RT3). These pharmacies don't list
+    the medicine, so no search has asked for their road times: without them the choice
+    was made on the straight-line estimate, and a pharmacy 20 minutes away by road could
+    be left out. A pharmacy more than twice the reach away by that estimate is not asked
+    about: no road makes it half as far.
+    """
+    claim = tx.session.get(Claim, claim_id)
+    if claim is None:
+        return None, []
+    location = matching.location_of(tx, claim)
+    product = tx.session.get(Product, claim.product_id)
+    if location is None or product is None or product.controlled:
+        return location, []
+    _, rows, _ = _held_boxes(tx, claim, product)
+    holding = sorted({pharmacy.id for _, pharmacy in rows}, key=str)
+    estimate = travel.travel_to(tx, location, holding)
+    return location, [
+        pharmacy_id
+        for pharmacy_id in holding
+        if estimate[pharmacy_id].car_min <= 2 * AUTOMATIC_REACH_CAR_MIN
+    ]
 
 
 def request_early_release(
@@ -240,7 +281,7 @@ def request_early_release(
     last_failed = tx.session.execute(
         select(func.max(EarlyReleaseRequest.closed_at)).where(
             EarlyReleaseRequest.client_id == claim.client_id,
-            EarlyReleaseRequest.product_id == claim.product_id,
+            EarlyReleaseRequest.product_id.in_(catalog.same_brand(tx, claim.product_id)),
             EarlyReleaseRequest.state == "UNFULFILLED",
         )
     ).scalar()

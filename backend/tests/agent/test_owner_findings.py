@@ -239,6 +239,31 @@ class TestAChipBesideACard:
         assert checked.reply.quick_replies == ["Show me other options", "No thanks"]
         assert checked.ok
 
+    def test_start_sourcing_is_left_out_beside_its_card(self, scene: Scene) -> None:
+        """`09` FA-53: "Yes, start sourcing" beside the [Start sourcing] card would only
+        send the words; the client would think the request had started."""
+        made = scene.tool(
+            "prepare_request_summary",
+            items=[{"product_id": str(scene.augmentin)}, {"product_id": str(scene.concor)}],
+            alternatives_ok=False,
+        )
+        turn = scene.tool_turn()
+
+        checked = output_guard.check(
+            scene.world.tx(),
+            Reply(
+                text="Shall I look for both?",
+                proposal_ids=[uuid.UUID(made["proposal_id"])],
+                quick_replies=["Yes, start sourcing", "Add another medicine", "No thanks"],
+            ),
+            conversation_id=scene.chat,
+            client_id=scene.client,
+            run_id=turn.run_id,
+            client_text="I need Augmentin and Concor",
+        )
+
+        assert checked.reply.quick_replies == ["Add another medicine", "No thanks"]
+
     def test_without_a_card_a_chip_is_only_an_answer(self, scene: Scene) -> None:
         checked = output_guard.check(
             scene.world.tx(),

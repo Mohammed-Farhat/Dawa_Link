@@ -522,3 +522,46 @@ class TestWhereOffersAreAnnounced:
         assert (message.kind, message.cards[0]["template"]) == ("card", "offer")
         pending = world.one("SELECT pending_turn_at FROM conversations WHERE id = :c", c=chat)
         assert pending.pending_turn_at is None
+
+
+class TestTheSameNameInAnotherBoxSize:
+    """R-C10, the owner's Q38: "same name same medicine". The Ministry lists a box of 30
+    and a box of 100 on two rows; a client waiting for one is offered the other."""
+
+    @staticmethod
+    def two_sizes(world: World) -> tuple[uuid.UUID, uuid.UUID]:
+        same = {"equivalence_key": KEY, "moph_name": "ZAMADOL", "search_name": "zamadol"}
+        return world.make.product(**same), world.make.product(**same)
+
+    def test_a_box_under_the_other_row_is_offered_to_the_watch(
+        self, market: Market, world: World
+    ) -> None:
+        box_of_30, box_of_100 = self.two_sizes(world)
+        claim = market.watch(product_id=box_of_30)
+
+        box = market.stock(product_id=box_of_100)
+
+        assert market.sweep() == 1
+        (offer,) = market.offers(claim)
+        assert (offer.inventory_item_id, offer.product_id) == (box, box_of_100)
+
+    def test_another_brand_is_still_never_offered(self, market: Market, world: World) -> None:
+        box_of_30, _ = self.two_sizes(world)
+        claim = market.watch(product_id=box_of_30)
+
+        market.stock(product_id=market.other_brand)
+
+        assert market.sweep() == 0
+        assert market.offers(claim) == []
+
+    def test_a_second_watch_on_the_other_row_is_the_same_watch(
+        self, market: Market, world: World
+    ) -> None:
+        box_of_30, box_of_100 = self.two_sizes(world)
+        client = world.make.client()
+        first = market.watch(client, product_id=box_of_30)
+
+        again = refusal(lambda: market.watch(client, product_id=box_of_100))
+
+        assert again.code is Code.WATCH_EXISTS
+        assert again.details["watch_id"] == first

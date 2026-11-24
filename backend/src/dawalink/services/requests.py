@@ -142,8 +142,13 @@ def create_request(
         raise ServiceError(Code.VALIDATION_ERROR, "A request has 1 to 5 medicines.")
     if len({line.product_id for line in lines}) != len(lines):
         raise ServiceError(Code.VALIDATION_ERROR, "Each medicine appears once in a request.")
+    named: set[uuid.UUID] = set()
     for line in lines:
         catalog.allowed_product(tx, line.product_id)
+        # Two catalog rows of one name (two box sizes) are one medicine (Q38): one item.
+        if line.product_id in named:
+            raise ServiceError(Code.VALIDATION_ERROR, "Each medicine appears once in a request.")
+        named |= catalog.same_brand(tx, line.product_id)
         if not 1 <= line.qty <= MAX_UNITS_PER_GROUP or line.days_of_use < 1:
             raise ServiceError(Code.VALIDATION_ERROR, "Quantity is 1 to 3; days of use start at 1.")
         if line.max_price_lbp is not None and line.max_price_lbp < 0:

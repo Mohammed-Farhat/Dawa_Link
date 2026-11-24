@@ -1571,6 +1571,7 @@ export const strings = {
         'client.deleted': 'deleted their account',
         'claim.create': 'started waiting for a medicine',
         'claim.state': 'changed a wait for a medicine',
+        'claim.days_of_use': 'made a wait for a medicine cover more days of use',
         'request.create': 'started a sourcing request',
         'request.change_constraints': 'changed whether a request may take other brands',
         'request.close': 'closed a request',

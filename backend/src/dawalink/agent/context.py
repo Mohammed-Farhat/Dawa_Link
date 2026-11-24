@@ -412,6 +412,26 @@ def _language_line(client_text: str | None, noted: str | None) -> str:
     return "The language of the client's message can't be told: answer in English."
 
 
+def _hours_line(tx: Tx, request: SourcingRequest | None) -> str:
+    """Whether new searches can start now (R-T3), as the model is told.
+
+    Outside request hours a chat starts no watch and no request. A request that is still
+    open is another matter: it was started in time, and the agent may go on waiting for
+    its medicines and asking pharmacies until it ends (R-W1, BLD-D6). Told only "closed",
+    the model stopped working on a request at 20:00.
+    """
+    hours = f"Request hours ({REQUEST_HOURS_START:%H:%M}-{REQUEST_HOURS_END:%H:%M}): "
+    if in_request_hours(tx.now):
+        return hours + "open."
+    if request is not None and request.state == "OPEN" and request.ends_at > tx.now:
+        return hours + (
+            "closed for a new request or a new watch. This request was started in time and "
+            f"stays open until {display.when(request.ends_at)}: until then open_claim and "
+            "request_early_release still work for its medicines, so keep working on it."
+        )
+    return hours + "closed: no new watch or request now."
+
+
 def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loaded | None:
     """Everything a turn reads. None when there is nothing for a turn to answer."""
     conversation = tx.session.get_one(Conversation, conversation_id)
@@ -467,13 +487,14 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         .where(EarlyReleaseRequest.client_id == client_id, EarlyReleaseRequest.state == "OPEN")
     ).scalar_one()
 
+    request_id = conversation.request_id
+    request = tx.session.get_one(SourcingRequest, request_id) if request_id is not None else None
     now = beirut(tx.now)
     days = upcoming_days(tx.now)
     block: list[str] = [
         "## Now",
         f"{display.day(now.date())} {now.year}, {now:%H:%M} (Beirut time).",
-        f"Request hours ({REQUEST_HOURS_START:%H:%M}-{REQUEST_HOURS_END:%H:%M}): "
-        + ("open." if in_request_hours(tx.now) else "closed: no new watch or request now."),
+        _hours_line(tx, request),
         "Upcoming days (copy a pickup_day from here, never work out a date): "
         + ", ".join(
             f"{display.day(day)} = {day.isoformat()}" + (" (today)" if index == 0 else "")
@@ -500,9 +521,7 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         "## What you remember (case state)",
         json.dumps(state.for_model(case), ensure_ascii=False),
     ]
-    request_id = conversation.request_id
-    if request_id is not None:
-        request = tx.session.get_one(SourcingRequest, request_id)
+    if request is not None:
         block += [
             "",
             "## This request",

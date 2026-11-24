@@ -44,7 +44,7 @@ Everything that must be exact is plain code: stock, reservations, prices, deadli
 | 06 | [API contracts](06_api.md) | Every endpoint: schemas, auth, errors, rate limits; SSE and polling; proposals; interfaces between components; the API as built (§12) | ✅ v1.23 |
 | 07 | [Agent specification](07_agent.md) | The agent's decisions, modes, turn graph, 19 tools + reply, prompts, memory, guardrails, limits, observability; the agent as built (prompts v1.14) | ✅ v1.18 |
 | 08 | [Evaluation plan](08_evaluation.md) | Questions, datasets, suites E1–E7 (understanding, 3-contender simulation, ablations, safety, models, constraints, conversations with a played client), targets, statistics, regular checks | ✅ v1.12 |
-| 09 | [Failure Matrix](09_failure_matrix.md) | 212 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.30 (living) |
+| 09 | [Failure Matrix](09_failure_matrix.md) | 216 failure modes in 6 groups: detection, behavior, what the user sees, test, severity (living) | ✅ v1.32 (living) |
 | 10 | [Threat model](10_threat_model.md) | Assets, attackers, trust boundaries, 72 threats with mitigations, tests and residual risk, OWASP LLM Top 10, 29 accepted risks | ✅ v1.19 (living) |
 | 11 | [UI design](11_ui_design.md) | Visual language, layout per portal, components, the assistant's screen, states, accessibility, low-end phones, frontend structure; mockups on the v2 design canvas | ✅ v1.13 |
 | 12 | [Infrastructure and deployment](12_infrastructure.md) | How we work, local setup, AWS by hand in Ireland, two CloudFronts, login across two sites, secrets, the setup checklist, releases, cost | ✅ v2.8 |

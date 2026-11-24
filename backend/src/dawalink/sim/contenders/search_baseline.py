@@ -18,7 +18,7 @@ from sqlalchemy import select
 from dawalink.db.models import Order
 from dawalink.domain.orders import OrderSource
 from dawalink.domain.vocabulary import ClaimSource
-from dawalink.services import claims, orders, search
+from dawalink.services import catalog, claims, orders, search
 from dawalink.services.context import Tx
 from dawalink.services.orders import ReserveLine
 from dawalink.sim import client
@@ -132,9 +132,15 @@ class SearchBaseline:
     def _search_once_more(self, sim: Sim, need: Need, gone: Order) -> None:
         if sim.now > sim.window_ends(need):
             return
-        line = next(
-            (line for line in need.lines if line.product_id == gone.product_id),
-            None,
-        )
+        with sim.tx() as tx:
+            # A watch is offered any catalog row of the medicine's name (Q38).
+            line = next(
+                (
+                    line
+                    for line in need.lines
+                    if gone.product_id in catalog.same_brand(tx, line.product_id)
+                ),
+                None,
+            )
         if line is not None:
             self._seek(sim, need, line, gone.qty_requested, watch_if_missing=False)

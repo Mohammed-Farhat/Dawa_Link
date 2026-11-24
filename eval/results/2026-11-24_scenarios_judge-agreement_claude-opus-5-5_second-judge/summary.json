@@ -1,0 +1,190 @@
+{
+  "second_judge": "claude-opus-5-5",
+  "effort": "low",
+  "from": [
+    "2026-11-24_scenarios_english_claude-haiku-5-5_prompt-v1.14",
+    "2026-11-24_scenarios_arabizi_claude-haiku-5-5_prompt-v1.14",
+    "2026-11-24_scenarios_arabic_claude-haiku-5-5_prompt-v1.14"
+  ],
+  "cost_usd": 1.624504,
+  "all": {
+    "n": 49,
+    "no_verdict": 0,
+    "accepted_first": 35,
+    "accepted_second": 34,
+    "same_accepted": 42,
+    "same_accepted_share": 0.857,
+    "criteria": {
+      "goal": {
+        "equal": 0.673,
+        "within_one": 0.98,
+        "mean_first": 4.31,
+        "mean_second": 4.41,
+        "mean_gap": 0.1
+      },
+      "faithful": {
+        "equal": 0.347,
+        "within_one": 0.918,
+        "mean_first": 3.76,
+        "mean_second": 4.16,
+        "mean_gap": 0.41
+      },
+      "follows_rules": {
+        "equal": 0.51,
+        "within_one": 0.918,
+        "mean_first": 3.96,
+        "mean_second": 4.35,
+        "mean_gap": 0.39
+      },
+      "language": {
+        "equal": 0.735,
+        "within_one": 1.0,
+        "mean_first": 3.61,
+        "mean_second": 3.47,
+        "mean_gap": -0.14
+      },
+      "path": {
+        "equal": 0.571,
+        "within_one": 0.939,
+        "mean_first": 4.22,
+        "mean_second": 4.45,
+        "mean_gap": 0.22
+      }
+    }
+  },
+  "arabic": {
+    "n": 17,
+    "no_verdict": 0,
+    "accepted_first": 14,
+    "accepted_second": 11,
+    "same_accepted": 14,
+    "same_accepted_share": 0.824,
+    "criteria": {
+      "goal": {
+        "equal": 0.647,
+        "within_one": 1.0,
+        "mean_first": 4.35,
+        "mean_second": 4.47,
+        "mean_gap": 0.12
+      },
+      "faithful": {
+        "equal": 0.471,
+        "within_one": 0.882,
+        "mean_first": 3.94,
+        "mean_second": 4.24,
+        "mean_gap": 0.29
+      },
+      "follows_rules": {
+        "equal": 0.471,
+        "within_one": 0.941,
+        "mean_first": 4.12,
+        "mean_second": 4.35,
+        "mean_gap": 0.24
+      },
+      "language": {
+        "equal": 0.647,
+        "within_one": 1.0,
+        "mean_first": 3.76,
+        "mean_second": 3.53,
+        "mean_gap": -0.24
+      },
+      "path": {
+        "equal": 0.588,
+        "within_one": 0.941,
+        "mean_first": 4.24,
+        "mean_second": 4.35,
+        "mean_gap": 0.12
+      }
+    }
+  },
+  "arabizi": {
+    "n": 16,
+    "no_verdict": 0,
+    "accepted_first": 7,
+    "accepted_second": 9,
+    "same_accepted": 12,
+    "same_accepted_share": 0.75,
+    "criteria": {
+      "goal": {
+        "equal": 0.625,
+        "within_one": 0.938,
+        "mean_first": 3.81,
+        "mean_second": 4,
+        "mean_gap": 0.19
+      },
+      "faithful": {
+        "equal": 0.188,
+        "within_one": 0.938,
+        "mean_first": 3.06,
+        "mean_second": 3.56,
+        "mean_gap": 0.5
+      },
+      "follows_rules": {
+        "equal": 0.375,
+        "within_one": 0.812,
+        "mean_first": 3.38,
+        "mean_second": 4.12,
+        "mean_gap": 0.75
+      },
+      "language": {
+        "equal": 0.688,
+        "within_one": 1.0,
+        "mean_first": 3,
+        "mean_second": 2.69,
+        "mean_gap": -0.31
+      },
+      "path": {
+        "equal": 0.5,
+        "within_one": 0.875,
+        "mean_first": 3.81,
+        "mean_second": 4.25,
+        "mean_gap": 0.44
+      }
+    }
+  },
+  "english": {
+    "n": 16,
+    "no_verdict": 0,
+    "accepted_first": 14,
+    "accepted_second": 14,
+    "same_accepted": 16,
+    "same_accepted_share": 1.0,
+    "criteria": {
+      "goal": {
+        "equal": 0.75,
+        "within_one": 1.0,
+        "mean_first": 4.75,
+        "mean_second": 4.75,
+        "mean_gap": 0
+      },
+      "faithful": {
+        "equal": 0.375,
+        "within_one": 0.938,
+        "mean_first": 4.25,
+        "mean_second": 4.69,
+        "mean_gap": 0.44
+      },
+      "follows_rules": {
+        "equal": 0.688,
+        "within_one": 1.0,
+        "mean_first": 4.38,
+        "mean_second": 4.56,
+        "mean_gap": 0.19
+      },
+      "language": {
+        "equal": 0.875,
+        "within_one": 1.0,
+        "mean_first": 4.06,
+        "mean_second": 4.19,
+        "mean_gap": 0.12
+      },
+      "path": {
+        "equal": 0.625,
+        "within_one": 1.0,
+        "mean_first": 4.62,
+        "mean_second": 4.75,
+        "mean_gap": 0.12
+      }
+    }
+  }
+}
