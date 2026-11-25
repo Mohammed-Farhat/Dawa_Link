@@ -1,0 +1,26 @@
+admin-approval-success-phone /admin/pharmacies/8ebd2ff4-88f7-4fbc-81ce-bcdb163032e6 overflow 0 axe []
+admin-approval-success-desktop /admin/pharmacies/8ebd2ff4-88f7-4fbc-81ce-bcdb163032e6 overflow 0 axe []
+Admin approval completed without nonexistent-checkbox assumption OK
+inventory-add-validation-phone /pharmacy/inventory overflow 0 axe []
+inventory-add-validation-desktop /pharmacy/inventory overflow 0 axe []
+inventory-add-success-phone /pharmacy/inventory overflow 0 axe []
+inventory-add-success-desktop /pharmacy/inventory overflow 0 axe []
+Add synthetic inventory batch OK
+inventory-csv-invalid-phone /pharmacy/inventory overflow 0 axe []
+inventory-csv-invalid-desktop /pharmacy/inventory overflow 0 axe []
+CSV invalid file recovery OK
+narrow-pharmacy-320 /pharmacy/inventory overflow 0 axe []
+narrow-admin-320 /admin/catalog overflow 0 axe []
+narrow-client-320 /me overflow 0 axe []
+short-viewport-search /search overflow 0 axe []
+Narrow phones and short viewport stress OK
+demo-clock-advanced-phone /admin/clock overflow 0 axe []
+demo-clock-advanced-desktop /admin/clock overflow 0 axe []
+Supported demo clock advances to request hours OK
+Live watch create and cancel BLOCKED locator.click: Timeout 7000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /Notify me/ })[22m
+
+account-deleted-success-phone /welcome overflow 0 axe []
+account-deleted-success-desktop /welcome overflow 0 axe []
+Synthetic client deletion success OK

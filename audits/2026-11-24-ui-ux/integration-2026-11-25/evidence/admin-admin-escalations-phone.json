@@ -1,0 +1,22 @@
+{
+  "url": "/admin/escalations",
+  "title": "Escalations · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nEscalations\nA client who needs a person: they asked the assistant for one, or they say a missed pickup was counted by mistake.\nTo answer\nClosed\nNobody is waiting for an answer.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Escalations"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

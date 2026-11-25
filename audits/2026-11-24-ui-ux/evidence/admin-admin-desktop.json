@@ -1,0 +1,32 @@
+{
+  "url": "/admin",
+  "title": "Pharmacies · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nPharmacies\nWaiting\nApproved\nRejected\nSuspended\nName or licence number\nNo registration is waiting.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Pharmacies"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-rezhuvomc",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

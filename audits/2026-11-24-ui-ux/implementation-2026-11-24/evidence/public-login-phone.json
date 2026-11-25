@@ -1,0 +1,45 @@
+{
+  "url": "/login",
+  "title": "Welcome back · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nWelcome back\nEmail\nPassword\nForgot your password?\nLog in\nCreate a free account",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "Welcome back"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "email",
+      "name": "",
+      "id": "mantine-esjn0smkm",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "username"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-ludkbzkt4",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

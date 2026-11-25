@@ -1,0 +1,327 @@
+{
+  "url": "/pharmacy/inventory?page=2",
+  "title": "Inventory · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nInventory\nUpdate from a file\nDownload the template and open it in Excel.\nOne row per batch: the medicine, its batch, its expiry and how many packs you have.\nWrite the medicine's name as the Ministry's price list writes it, with the same letters and numbers. Capitals don't matter, and a sign such as %, - or . counts as a space. When one name has several strengths, add the strength (2.5mg is not 25mg).\nIn Excel: File, Save As, and choose CSV. Then choose that file here.\nWrite the expiry as on the box, the month and the year: 03/2027 or 2027-03. Excel rewrites a full date in its own way.\nThe file is your whole stock: a box that is not in it is set to 0. Reserved packs are always kept.\nLeave the code column empty, unless a row comes back with \"several medicines have this name\": it then lists the code of each pack, and you write yours. A box of such a medicine is only changed by a row with its code, or by hand.\nDownload the template\nChoose a CSV file\nAdd one box\nMedicine\n\nType the name, then choose it.\n\nBatch\nExpiry date\nAs printed on the box: the month and the year. The box counts until the last day of that month.\nExpiry month\n01 · January\n02 · February\n03 · March\n04 · April\n05 · May\n06 · June\n07 · July\n08 · August\n09 · September\n10 · October\n11 · November\n12 · December\nExpiry year\n2026\n2027\n2028\n2029\n2030\n2031\nHow many packs\nAdd to my stock\nYour stock\nPrivate: only you see this list. Which boxes clients see follows your rule in Settings, never earlier than 6 months before their expiry.\nFind a medicine or a batch\nAll\nWithin 6 months\nMay be asked for\nPrivate\nExpired\nSoonest expiry first\nBy medicine\nMedicine\tBatch\tExpires\tIn stock\tReserved\tStatus\nTREMFYA · 100mg/ml\tB61081\t16 Feb 2027 · 84 days left\t\n\t0\tListed\nCITOXAL · 10mg\tB52624\t18 Feb 2027 · 86 days left\t\n\t0\tListed\nCORONOPINE · 8mg/5mg\tB80119\t25 Feb 2027 · 93 days left\t\n\t0\tListed\nDIAFLOZIN PLUS · 10/1000mg extended release\tB63054\t4 Mar 2027 · 100 days left\t\n\t0\tListed\nAPO-DASATINIB · 50mg\tB28985\t16 Mar 2027 · 112 days left\t\n\t0\tListed\nFLUORESCEIN SODIUM USP IV · 10%\tB57962\t18 Mar 2027 · 114 days left\t\n\t0\tListed\nSTERIFINE 5 · 5mg\tB89374\t20 Mar 2027 · 116 days left\t\n\t0\tListed\nCETIMED · 10mg\tB35191\t27 Mar 2027 · 123 days left\t\n\t0\tListed\nJADENU · 360mg\tB53864\t28 Mar 2027 · 124 days left\t\n\t0\tListed\nSEROXAT · 20mg\tB81901\t28 Mar 2027 · 124 days left\t\n\t0\tListed\nLOWZID XR · 60mg\tB85303\t30 Mar 2027 · 126 days left\t\n\t0\tListed\nMUREX · 100mg/5ml\tB27907\t1 Apr 2027 · 128 days left\t\n\t0\tListed\nNORMOPRIL · 5mg\tB70302\t4 Apr 2027 · 131 days left\t\n\t0\tListed\nDIANEAL PD4 CYCLER 1.36% GLUCOSE · 1.36%\tB98302\t7 Apr 2027 · 134 days left\t\n\t0\tListed\nHAWAI 60 · 60mg\tB43779\t8 Apr 2027 · 135 days left\t\n\t0\tListed\nAPO-PROPRANOLOL · 10mg\tB68313\t10 Apr 2027 · 137 days left\t\n\t0\tListed\nDOLONIL · 75mg/3ml\tB58799\t10 Apr 2027 · 137 days left\t\n\t0\tListed\nCASPOFUNGINE STRAGEN · 50mg\tB83922\t19 Apr 2027 · 146 days left\t\n\t0\tListed\nMETRONIDAZOLE BIOGARAN · 500mg\tB58679\t23 Apr 2027 · 150 days left\t\n\t0\tListed\nCURCARD · 4mg\tB74478\t25 Apr 2027 · 152 days left\t\n\t0\tListed\nIRBESARTAN ARROW · 150mg\tB34925\t27 Apr 2027 · 154 days left\t\n\t0\tListed\nJUSLINE N · 100IU/ml\tB72021\t4 May 2027 · 161 days left\t\n\t0\tListed\nPEDITRACE\tB45705\t4 May 2027 · 161 days left\t\n\t0\tListed\nBUDESONIDE ARROW · 0.5mg/2ml\tB85483\t21 May 2027 · 178 days left\t\n\t0\tListed\nDEPREVIX HELLAS · 75mg\tB31930\t16 Jun 2027 · 204 days left\t\n\t0\tMay be asked for\nPrevious\n1\n2\n3\nNext\n\nPage 2 of 3 · 60 in all",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Inventory"
+    },
+    {
+      "level": "H2",
+      "text": "Update from a file"
+    },
+    {
+      "level": "H2",
+      "text": "Add one box"
+    },
+    {
+      "level": "H2",
+      "text": "Your stock"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "file",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-s5t86uxrx",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-gr69fee38",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-bpq31sgk6",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-3y4z5lml5",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-stsbpp0n8",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-mixvjfuco",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of TREMFYA, batch B61081",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CITOXAL, batch B52624",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CORONOPINE, batch B80119",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DIAFLOZIN PLUS, batch B63054",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of APO-DASATINIB, batch B28985",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of FLUORESCEIN SODIUM USP IV, batch B57962",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of STERIFINE 5, batch B89374",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CETIMED, batch B35191",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of JADENU, batch B53864",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of SEROXAT, batch B81901",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of LOWZID XR, batch B85303",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of MUREX, batch B27907",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of NORMOPRIL, batch B70302",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DIANEAL PD4 CYCLER 1.36% GLUCOSE, batch B98302",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of HAWAI 60, batch B43779",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of APO-PROPRANOLOL, batch B68313",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DOLONIL, batch B58799",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CASPOFUNGINE STRAGEN, batch B83922",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of METRONIDAZOLE BIOGARAN, batch B58679",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CURCARD, batch B74478",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of IRBESARTAN ARROW, batch B34925",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of JUSLINE N, batch B72021",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of PEDITRACE, batch B45705",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of BUDESONIDE ARROW, batch B85483",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DEPREVIX HELLAS, batch B31930",
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 1,
+      "h": 1
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

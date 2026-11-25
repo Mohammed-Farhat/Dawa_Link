@@ -1,0 +1,26 @@
+{
+  "url": "/check-email",
+  "title": "Check your email · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nYour medicine, for less. Today.\n\nPharmacies near you sell boxes that expire soon, at up to 60% off.\n\n1\nSearch or ask\n2\nReserve in one tap\n3\nPick up and pay\nCheck your email\n\nWe sent a link to pharmacy@audit.dawalink.test. Open it to confirm your email, then log in.\n\nNo email after a few minutes? Check your spam folder, or log in and press \"Send the link again\".\n\nGo to log in",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "Check your email"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

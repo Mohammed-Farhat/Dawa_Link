@@ -1,0 +1,46 @@
+{
+  "url": "/admin/health",
+  "title": "Health · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nHealth\nLast 24 hours\n7 days\n30 days\nNo alert right now.\nThe assistant\nTurns\n0\nTime per turn (half of them · 95%)\nno data · no data\nFailed turns\n0 (no data)\nAnswered with a fixed text\n0\nTurns where a guard fired\n0\nTool calls · tool errors\n0 · 0\nTokens read · written\n0 · 0\nCost\n$0.00\nModel\nno data\nPrompt version\nno data\nThe assistant's limits\nLimit per client\n100 messages and 3,000,000 tokens a day\nClients who reached a daily limit today\n0 by tokens · 0 by messages\n\nEach client has their own limit. At either one, the assistant is off for that client until midnight (Beirut time); search and reserving still work.\n\nBudget for everyone (a setting of this deployment)\nThis month\n$0.00 of $20.00\nToday (10% of the month's)\n$0.00 of $2.00\n\nOne budget for all the clients together. When the day's share is used, the assistant is off for everyone until midnight; when the month's is used, until the next month. Search and reserving still work. It is changed in the deployment's settings, not here.\n\nRequests\nClosed\n0\nFulfilled within the 6 hours\nno data\nRe-plans per request\nno data\nPharmacies asked · accepted\n0 · 0\nThe assistant's cost per fulfilled request\nno data\nReservations\nReserved\n0\nPicked up\nno data\nNot available at the pharmacy\nno data\nMissed pickups\nno data\nPacks saved from expiring\n0\nSystem\nWorker\non time\nAssistant turns waiting\n0\nTurns that failed 4 times\n0\nEmails not sent\n0",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Health"
+    },
+    {
+      "level": "H2",
+      "text": "The assistant"
+    },
+    {
+      "level": "H2",
+      "text": "The assistant's limits"
+    },
+    {
+      "level": "H2",
+      "text": "Budget for everyone (a setting of this deployment)"
+    },
+    {
+      "level": "H2",
+      "text": "Requests"
+    },
+    {
+      "level": "H2",
+      "text": "Reservations"
+    },
+    {
+      "level": "H2",
+      "text": "System"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

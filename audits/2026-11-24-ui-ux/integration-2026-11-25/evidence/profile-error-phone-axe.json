@@ -1,0 +1,31 @@
+{
+  "violations": [],
+  "incomplete": [],
+  "passes": [
+    "aria-allowed-role",
+    "aria-deprecated-role",
+    "aria-hidden-body",
+    "aria-required-attr",
+    "aria-roles",
+    "button-name",
+    "bypass",
+    "color-contrast",
+    "document-title",
+    "empty-heading",
+    "heading-order",
+    "html-has-lang",
+    "html-lang-valid",
+    "landmark-main-is-top-level",
+    "landmark-no-duplicate-main",
+    "landmark-one-main",
+    "landmark-unique",
+    "link-name",
+    "meta-viewport-large",
+    "meta-viewport",
+    "nested-interactive",
+    "page-has-heading-one",
+    "region",
+    "skip-link",
+    "target-size"
+  ]
+}

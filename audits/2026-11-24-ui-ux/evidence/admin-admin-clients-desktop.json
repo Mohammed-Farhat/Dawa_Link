@@ -1,0 +1,56 @@
+{
+  "url": "/admin/clients",
+  "title": "Clients · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nClients\nEach client by an ID, with what they have going. A name, an email or a phone is shown only when you ask for it on the client's page, and each look is written to the audit log.\nAccount\nAll\nActive\nPaused\nSuspended\nDeleted\nShow\nEveryone\nWith a reservation\nPicked up an order\nWith an open request\nNeeds a look\nOrder or request number\n\nFor example R-7K3Q2F: it finds the client it belongs to.\n\nClient 287d06ca\nActive\nBeirut · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days\nClient 81f631d4\nActive\nSidon · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days\nClient 81f76d1c\nActive\nBaabda · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days\nClient a013ac6e\nActive\nTripoli · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days\nClient b8db0672\nActive\nBeirut · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days\nClient f8cda88b\nActive\nMatn · 0 open reservations · 0 picked up · 0 open requests · 0 missed pickups in 30 days",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Clients"
+    },
+    {
+      "level": "H2",
+      "text": "Client 287d06ca"
+    },
+    {
+      "level": "H2",
+      "text": "Client 81f631d4"
+    },
+    {
+      "level": "H2",
+      "text": "Client 81f76d1c"
+    },
+    {
+      "level": "H2",
+      "text": "Client a013ac6e"
+    },
+    {
+      "level": "H2",
+      "text": "Client b8db0672"
+    },
+    {
+      "level": "H2",
+      "text": "Client f8cda88b"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-tifz5dnl4",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

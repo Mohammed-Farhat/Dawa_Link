@@ -1,0 +1,22 @@
+{
+  "url": "/pharmacy/notifications",
+  "title": "Notifications · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nNotifications\nMark all as read\nNew reservation R-6PDP4U: put the box aside\nNew\nOrder number: R-6PDP4U\nMedicine: DOSTINEX\nPacks: 1\nPrice per pack: 651,000 LBP (about $7.3)\nPharmacy: Beirut Pharmacy A (demo)\nPick up by: Wed 25 Nov, 20:00\nTue 24 Nov 23:07\nNew reservation R-SYNFCS: put the box aside\nNew\nOrder number: R-SYNFCS\nMedicine: ABILIFY MAINTENA\nPacks: 1\nPrice per pack: 11,796,000 LBP (about $131.8)\nPharmacy: Beirut Pharmacy A (demo)\nPick up by: Wed 25 Nov, 20:00\nTue 24 Nov 23:07\nReservation R-RXYNRP was cancelled: put the box back\nNew\nOrder number: R-RXYNRP\nMedicine: ABILIFY MAINTENA\nPacks: 1\nPrice per pack: 11,796,000 LBP (about $131.8)\nPharmacy: Beirut Pharmacy A (demo)\nTue 24 Nov 23:07\nNew reservation R-RXYNRP: put the box aside\nNew\nOrder number: R-RXYNRP\nMedicine: ABILIFY MAINTENA\nPacks: 1\nPrice per pack: 11,796,000 LBP (about $131.8)\nPharmacy: Beirut Pharmacy A (demo)\nPick up by: Wed 25 Nov, 20:00\nTue 24 Nov 23:07",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Notifications"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

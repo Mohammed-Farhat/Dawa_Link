@@ -1,0 +1,22 @@
+{
+  "url": "/status",
+  "title": "DawaLink is being built · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\n\nDawaLink\n\nDawaLink is being built\n\nThis page shows whether the parts of the system can reach each other.\n\nWebsite\n\nRunning\n\nAPI\n\nVersion dev\n\nRunning\n\nDatabase\n\nRunning\nEverything is running.\nCheck again",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "DawaLink is being built"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

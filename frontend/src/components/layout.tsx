@@ -150,11 +150,13 @@ function AccountMenu({ name, onLogOut }: { name: string; onLogOut: () => void })
  * The frame of the client's portal on a computer: the top bar, and the page under it.
  * A page that is a conversation fills what is left of the window.
  */
-export function Shell({ children }: { children: ReactNode }) {
+export function Shell({ children, responsive = false }: { children: ReactNode; responsive?: boolean }) {
+  const wide = useWide()
+  const framed = !responsive || wide
   return (
-    <div className="wide">
-      <TopBar />
-      <div className="wide__body">{children}</div>
+    <div className={framed ? 'wide' : undefined}>
+      {framed && <TopBar />}
+      <div className={framed ? 'wide__body' : undefined}>{children}</div>
     </div>
   )
 }
@@ -182,21 +184,17 @@ export function Screen({
   narrow?: boolean
 }) {
   const wide = useWide()
-  if (!wide) {
-    return (
-      <>
-        <main className={plain ? 'screen screen--plain' : 'screen'} id="main">
-          {children}
-        </main>
-        {!plain && <NavBar />}
-      </>
-    )
-  }
+  // Keep the same ancestors and main element at every width: replacing a fragment
+  // with Shell remounted forms and silently discarded their drafts at 992 px.
   return (
-    <Shell>
-      <main className={narrow ? 'page page--narrow' : 'page'} id="main">
+    <Shell responsive>
+      <main
+        className={wide ? (narrow ? 'page page--narrow' : 'page') : (plain ? 'screen screen--plain' : 'screen')}
+        id="main"
+      >
         {children}
       </main>
+      {!wide && !plain && <NavBar />}
     </Shell>
   )
 }

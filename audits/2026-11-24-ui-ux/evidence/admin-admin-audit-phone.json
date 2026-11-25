@@ -1,0 +1,124 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 20:12\tThe system\tcreated an admin account, from the command line\tOnly this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-81wvhe7kt",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-kjj6x1i39",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [
+    {
+      "tag": "TABLE",
+      "cls": "stock-table",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 20:12\tThe system\tcreated an admin",
+      "left": 40,
+      "right": 986.5625
+    },
+    {
+      "tag": "THEAD",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\n",
+      "left": 40,
+      "right": 986.5625
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason",
+      "left": 40,
+      "right": 986.5625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "What happened",
+      "left": 266.5625,
+      "right": 506.5625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "About",
+      "left": 506.5625,
+      "right": 746.5625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Reason",
+      "left": 746.5625,
+      "right": 986.5625
+    },
+    {
+      "tag": "TBODY",
+      "cls": "",
+      "text": "Tue 24 Nov 20:12\tThe system\tcreated an admin account, from the command line\tOnly",
+      "left": 40,
+      "right": 986.5625
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Tue 24 Nov 20:12\tThe system\tcreated an admin account, from the command line\tOnly",
+      "left": 40,
+      "right": 986.5625
+    },
+    {
+      "tag": "TH",
+      "cls": "audit-cell",
+      "text": "created an admin account, from the command line",
+      "left": 266.5625,
+      "right": 506.5625
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "Only this",
+      "left": 506.5625,
+      "right": 746.5625
+    },
+    {
+      "tag": "BUTTON",
+      "cls": "text-button audit-id",
+      "text": "Only this",
+      "left": 506.5625,
+      "right": 592.78125
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "",
+      "left": 746.5625,
+      "right": 986.5625
+    }
+  ],
+  "violations": []
+}

@@ -1,0 +1,48 @@
+{
+  "url": "/pharmacy",
+  "title": "At the counter · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nAt the counter\nType the number the client shows you.\nOrder number\nFind\nR-646NBU\nHand over by tomorrow 20:00\nABILIFY MAINTENA × 1\nBatch B86153 · expires 30 Nov 2026 · 11,796,000 each · total 11,796,000 LBP\nCheck the prescription\nPicked up\nNot available\nAsks from DawaLink\nWhen a client nearby needs a medicine you keep unlisted, DawaLink asks you here, while you are open. You also get an email.\nDue today\nNothing to hand over today.\nFor the next days\nNEW · put aside\nR-646NBU\nABILIFY MAINTENA × 1\nby Tomorrow 20:00\nToday in numbers\nNew reservations\n1\nDue today\n0\nPacks reserved\n1\nPacks listed\n302",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "At the counter"
+    },
+    {
+      "level": "H2",
+      "text": "Asks from DawaLink"
+    },
+    {
+      "level": "H2",
+      "text": "Due today"
+    },
+    {
+      "level": "H2",
+      "text": "For the next days"
+    },
+    {
+      "level": "H2",
+      "text": "Today in numbers"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "order-number",
+      "label": null,
+      "placeholder": "R-",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

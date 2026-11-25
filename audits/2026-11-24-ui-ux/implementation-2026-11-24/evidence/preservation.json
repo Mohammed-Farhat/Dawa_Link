@@ -1,0 +1,27 @@
+{
+  "branch": "fix/ui-ux-audit",
+  "head": "840a7394d9930cebfcc2e2fae8b0f87d9c0ef04d",
+  "preserved_files_checked": 2588,
+  "changed_preserved_files": [],
+  "handoff_sha256": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13",
+  "implementation_source_files": [
+    "docs/11_ui_design.md",
+    "frontend/src/app/global.css",
+    "frontend/src/components/layout.tsx",
+    "frontend/src/features/client/AccountPages.test.tsx",
+    "frontend/src/features/client/WhereYouLive.tsx",
+    "frontend/src/features/client/assistant/AssistantPage.tsx",
+    "frontend/src/features/client/requests/RequestPage.test.tsx",
+    "frontend/src/features/client/requests/RequestPage.tsx",
+    "frontend/src/features/client/search/SearchPage.test.tsx",
+    "frontend/src/features/client/search/SearchPage.tsx",
+    "frontend/src/features/pharmacy/InventoryPage.tsx",
+    "frontend/src/features/pharmacy/PharmacyPortal.test.tsx",
+    "frontend/src/features/pharmacy/PharmacyPortal.tsx",
+    "frontend/src/features/pharmacy/ReservationCard.tsx",
+    "frontend/src/strings/en.ts",
+    "frontend/src/app/ResponsiveState.test.tsx"
+  ],
+  "unrelated_evaluation_work_unchanged": true,
+  "committed_pushed_merged_deployed": false
+}

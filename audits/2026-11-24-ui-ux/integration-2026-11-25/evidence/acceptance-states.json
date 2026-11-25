@@ -1,0 +1,136 @@
+[
+  {
+    "name": "profile-retry",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "GET /api/v1/pharmacy/dashboard",
+      "GET /api/v1/pharmacy/early-release-asks",
+      "GET /api/v1/pharmacy/early-release-asks"
+    ]
+  },
+  {
+    "name": "responsive-profile",
+    "role": "client",
+    "url": "/me",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/districts",
+      "GET /api/v1/places",
+      "GET /api/v1/notifications/unread-count",
+      "GET /api/v1/places",
+      "GET /api/v1/notifications/unread-count"
+    ]
+  },
+  {
+    "name": "responsive-assistant",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/chats",
+      "GET /api/v1/conversations/chats"
+    ]
+  },
+  {
+    "name": "responsive-request-confirmation",
+    "role": "client",
+    "url": "/requests/99999999-9999-4999-8999-999999999999",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/requests/99999999-9999-4999-8999-999999999999",
+      "GET /api/v1/offers",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages"
+    ]
+  },
+  {
+    "name": "pharmacy-pending",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/districts"
+    ]
+  },
+  {
+    "name": "pharmacy-rejected",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/districts"
+    ]
+  },
+  {
+    "name": "pharmacy-suspended",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "GET /api/v1/pharmacy/dashboard"
+    ]
+  },
+  {
+    "name": "request-detail",
+    "role": "client",
+    "url": "/requests/99999999-9999-4999-8999-999999999999",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/requests/99999999-9999-4999-8999-999999999999",
+      "GET /api/v1/offers",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages"
+    ]
+  },
+  {
+    "name": "escalation-detail",
+    "role": "admin",
+    "url": "/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "assistant-support",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/chats"
+    ]
+  }
+]

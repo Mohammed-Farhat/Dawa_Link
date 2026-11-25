@@ -1,0 +1,9 @@
+{"effect": "no agent turn runs; search still works", "event": "assistant_not_configured", "level": "warning", "timestamp": "2026-11-25T16:43:50.429968Z"}
+{"event": "Started server process [64329]", "level": "info", "timestamp": "2026-11-25T16:43:50.430221Z"}
+{"event": "Waiting for application startup.", "level": "info", "timestamp": "2026-11-25T16:43:50.430253Z"}
+{"event": "Application startup complete.", "level": "info", "timestamp": "2026-11-25T16:43:50.430866Z"}
+{"event": "Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)", "level": "info", "timestamp": "2026-11-25T16:43:50.432000Z"}
+{"event": "Shutting down", "level": "info", "timestamp": "2026-11-25T16:51:26.190538Z"}
+{"event": "Waiting for application shutdown.", "level": "info", "timestamp": "2026-11-25T16:51:26.292705Z"}
+{"event": "Application shutdown complete.", "level": "info", "timestamp": "2026-11-25T16:51:26.295563Z"}
+{"event": "Finished server process [64329]", "level": "info", "timestamp": "2026-11-25T16:51:26.295711Z"}

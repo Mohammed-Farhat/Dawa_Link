@@ -1,0 +1,124 @@
+[
+  {
+    "name": "I01 confirmation cancel error success 390",
+    "status": "passed",
+    "detail": {
+      "cancelRequests": 0,
+      "errorRequests": 1,
+      "successRequests": 1,
+      "focus": {
+        "tag": "H1",
+        "text": "Reservations"
+      }
+    }
+  },
+  {
+    "name": "I01 confirmation cancel error success 1440",
+    "status": "passed",
+    "detail": {
+      "cancelRequests": 0,
+      "errorRequests": 1,
+      "successRequests": 1,
+      "focus": {
+        "tag": "H1",
+        "text": "Reservations"
+      }
+    }
+  },
+  {
+    "name": "V01 inventory task links and narrow layouts",
+    "status": "passed",
+    "detail": {
+      "states": [
+        {
+          "width": 320,
+          "focused": true,
+          "top": 100,
+          "scrollWidth": 320,
+          "viewport": 320
+        },
+        {
+          "width": 390,
+          "focused": true,
+          "top": 99.625,
+          "scrollWidth": 390,
+          "viewport": 390
+        },
+        {
+          "width": 1440,
+          "focused": true,
+          "top": 187.90625,
+          "scrollWidth": 1440,
+          "viewport": 1440
+        }
+      ],
+      "tableKeyboardScroll": true
+    }
+  },
+  {
+    "name": "Responsive breakpoint and narrow search layout sweep",
+    "status": "passed",
+    "detail": [
+      {
+        "width": 320,
+        "scrollWidth": 320,
+        "mainCount": 1
+      },
+      {
+        "width": 479,
+        "scrollWidth": 479,
+        "mainCount": 1
+      },
+      {
+        "width": 480,
+        "scrollWidth": 480,
+        "mainCount": 1
+      },
+      {
+        "width": 481,
+        "scrollWidth": 481,
+        "mainCount": 1
+      },
+      {
+        "width": 599,
+        "scrollWidth": 599,
+        "mainCount": 1
+      },
+      {
+        "width": 600,
+        "scrollWidth": 600,
+        "mainCount": 1
+      },
+      {
+        "width": 601,
+        "scrollWidth": 601,
+        "mainCount": 1
+      },
+      {
+        "width": 991,
+        "scrollWidth": 991,
+        "mainCount": 1
+      },
+      {
+        "width": 992,
+        "scrollWidth": 992,
+        "mainCount": 1
+      },
+      {
+        "width": 993,
+        "scrollWidth": 993,
+        "mainCount": 1
+      },
+      {
+        "width": 1279,
+        "scrollWidth": 1279,
+        "mainCount": 1
+      },
+      {
+        "width": 1280,
+        "scrollWidth": 1280,
+        "mainCount": 1
+      }
+    ]
+  }
+]

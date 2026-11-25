@@ -1,0 +1,129 @@
+{
+  "url": "/me",
+  "title": "Profile and settings · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nProfile and settings\nYour details\nFirst name\nMiddle name (optional)\nLast name\nDate of birth\nPhone (optional)\n\nOnly DawaLink's team can see it, for support. Pharmacies never do.\n\nSave\nWhere you live\nWhere you live\nSearches start around it when you don't share your location.\nOn the map\nBy area\nTravel times are counted from this place. We keep it rounded to about 100 m, and never send it to the assistant or to a pharmacy.\nUse my location\nPick on the map\nSave\nYour account\nRami Haddad\nclient01@demo.dawalink.test\nMissed pickups\nNone in the last 30 days.\n\nA reservation you don't pick up by the pharmacy's closing time on its day is a missed pickup: the box went back on the shelf for nobody. After 2 in 30 days, reserving is paused for 7 days. Cancelling before the deadline never counts.\n\nThe assistant\nTell me about other brands of the same medicine\nThe assistant then shows them with \"ask the pharmacist first\". It never reserves one for you.\nNotifications\n4 new\nPassword\nCurrent password\nNew password\n\nYour other devices are logged out.\nA password needs: At least 10 characters (missing), A capital letter (A to Z) (missing), A small letter (a to z) (missing), A number (missing), A symbol, like ! ? @ # - (missing).\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nChange my password\nLog out\nDelete my account\nDelete my account…\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Profile and settings"
+    },
+    {
+      "level": "H2",
+      "text": "Your details"
+    },
+    {
+      "level": "H2",
+      "text": "Where you live"
+    },
+    {
+      "level": "H2",
+      "text": "Your account"
+    },
+    {
+      "level": "H2",
+      "text": "Missed pickups"
+    },
+    {
+      "level": "H2",
+      "text": "The assistant"
+    },
+    {
+      "level": "H2",
+      "text": "Password"
+    },
+    {
+      "level": "H2",
+      "text": "Delete my account"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-gw50vtq6f",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "given-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-1semsvbji",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "additional-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-tpmon0pof",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "family-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "date",
+      "name": "",
+      "id": "mantine-3v3b615qy",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "bday"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-olx5hxopf",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-2spmlf9cl",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-i9bijwb28",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "new-password"
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 13,
+      "h": 13
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

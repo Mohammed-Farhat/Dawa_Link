@@ -1,0 +1,28 @@
+{
+  "node": "24.22.3",
+  "test_files": 40,
+  "checks": [
+    {
+      "command": "npm run test -- --reporter=json --outputFile=../audits/2026-11-24-ui-ux/integration-2026-11-25/evidence/full-tests.json",
+      "exit_code": 0,
+      "passed_tests": 533,
+      "failed_tests": 0
+    },
+    {
+      "command": "npm run lint",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "VITE_API_URL=http://localhost:8001 npm run build",
+      "exit_code": 0
+    }
+  ],
+  "dependency_installation": false,
+  "dependency_manifests_changed": false,
+  "production_build_browser_target": "http://localhost:5174",
+  "isolated_api": "http://localhost:8001"
+}

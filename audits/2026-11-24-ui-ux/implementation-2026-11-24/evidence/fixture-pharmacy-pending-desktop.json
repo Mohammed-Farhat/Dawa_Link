@@ -1,0 +1,220 @@
+{
+  "url": "/pharmacy",
+  "title": "Your pharmacy · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nHamra Pharmacy\nWaiting for approval\nLog out\nYour registration is being checked. You will get an email when it is approved; then you can add your stock here.\nYour pharmacy\nPharmacy name\n\nAs on your sign. Clients see it.\n\nLicence number\nPhone\n\nA Lebanese number, for example 01 234 567. Clients may call it.\n\nAddress\nDistrict\nBeirut\nMatn\nWhere is your pharmacy?\nTap the map to put the pin on your pharmacy. You can drag it. Our team checks it against your address.\n+\n−\n© OpenStreetMap contributors\nPut the pin at the centre of the map\nThe pin is set.\nOpening hours\nMonday\nto\nto\nRemove\nTuesday\nto\n+ reopens later\nWednesday\nClosed\nThursday\nClosed\nFriday\nClosed\nSaturday\nClosed\nSunday\nClosed\nFor a pharmacy open until midnight, close at 00:00.\nHow long do you keep a reservation?\n1 day\n2 days\n3 days\nA client chooses a pickup day within this time. Not picked up: back to your stock.\nSave",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Your pharmacy"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-2u7gdu8yw",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "organization"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-wk1d0u1sy",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-w72hsk4gm",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-ls1s72x3r",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "street-address"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-gigzwzl2d",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Monday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: opens again at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: closes again at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Tuesday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Tuesday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Tuesday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Wednesday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Thursday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Friday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Saturday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Sunday",
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "Open on Monday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Tuesday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Wednesday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Thursday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Friday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Saturday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Sunday",
+      "w": 20,
+      "h": 20
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

@@ -1,0 +1,13 @@
+const {run,data}=require('./fixtures.cjs');const {fs,path,ROOT,launch,BASE,capture}=require('./capture.cjs');const {R,A,P,req,ph}=data;
+const NOW=R.CONFIG.server_now,none={items:[],next_cursor:null,total:0,server_now:NOW};const WATCH={id:'aaaaaaaa-7777-4777-8777-aaaaaaaaaaaa',product:R.RESERVATION.product,qty:1,qty_missing:1,days_of_use:1,max_price:{lbp:900000,usd_approx:10.06},state:'ACTIVE',district:'Beirut',ends_at:'2026-11-16T14:00:00Z',created_at:NOW};
+(async()=>{const b=await launch();
+await run(b,'pharmacy-unavailable-dialog-verified','pharmacy','/pharmacy/reservations',{},async p=>await p.getByRole('button',{name:'Not available',exact:true}).first().click());
+await run(b,'watch-active','client','/medicines',{'GET /api/v1/watches':{...none,items:[WATCH]}});
+await run(b,'watch-empty-search-form','client','/search?product='+R.RESERVATION.product.id,{'GET /api/v1/catalog/products':{items:[R.RESERVATION.product],did_you_mean:[]},'POST /api/v1/listings/search':{product:R.RESERVATION.product,...none,total_found:0,left_out_by_pickup_day:0,no_match:null,location:{source:'profile',label:'Beirut'},upcoming_days:['2026-11-16','2026-11-17']}},async p=>{await p.getByRole('button',{name:'Notify me',exact:true}).click();});
+await run(b,'request-cancel-dialog','client','/requests/'+req.REQUEST_ID,{},async p=>{await p.getByRole('button',{name:'Cancel this request',exact:true}).click();});
+await run(b,'pharmacy-stock-error','pharmacy','/pharmacy/inventory',{'GET /api/v1/pharmacy/inventory':{__status:503,body:{error:{code:'SERVICE_UNAVAILABLE',message:'Synthetic outage'}}}});
+await run(b,'pharmacy-stock-loading','pharmacy','/pharmacy/inventory',{'GET /api/v1/pharmacy/inventory':{...none,items:[]}});
+await run(b,'assistant-failed-send','client','/assistant',{['POST /api/v1/conversations/'+R.CHAT_ID+'/messages']:{__status:503,body:{error:{code:'SERVICE_UNAVAILABLE',message:'Synthetic outage'}}}},async p=>{await p.getByRole('textbox').fill('Synthetic request');await p.getByRole('button',{name:'Send',exact:true}).click();});
+await run(b,'admin-escalation-reply','admin','/admin/escalations/'+A.ESCALATION_ID,{['POST /api/v1/admin/escalations/'+A.ESCALATION_ID+'/reply']:{...A.ESCALATION_DETAIL,escalation:{...A.ESCALATION,last_replied_at:NOW,hold_ends_at:'2026-11-16T09:00:00Z'}}},async p=>{await p.locator('#team-reply').fill('Synthetic support reply. Please check with your pharmacist.');await p.locator('#team-reply').locator('..').getByRole('button').click();});
+await run(b,'long-pharmacy-name','pharmacy','/pharmacy/settings',{'GET /api/v1/pharmacy/me':{...P.PROFILE,name:'Synthetic Pharmacy With A Long Name For Responsive Layout Inspection'}});
+await b.close();})().catch(e=>{console.error(e);process.exit(1)});

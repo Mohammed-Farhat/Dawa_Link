@@ -1,0 +1,12 @@
+{
+  "pull_request": "https://github.com/Mohammed-Farhat/Dawa_Link/pull/3",
+  "number": 3,
+  "base_branch": "main",
+  "head_branch": "fix/ui-ux-main-integration",
+  "tested_base": "7da2b0a8c194eafeceeb44dc404536a5043ed9a0",
+  "ui_cherry_pick": "8bcb2ac",
+  "validation_commit": "3e44787",
+  "original_branch_unchanged": true,
+  "merged": false,
+  "deployed": false
+}

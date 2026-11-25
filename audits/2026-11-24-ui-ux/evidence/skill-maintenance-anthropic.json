@@ -1,0 +1,84 @@
+[
+  {
+    "sha": "b9e19e6f44773509fbdd7001d77ff41a49a486c1",
+    "node_id": "C_kwDOP0wfhtoAKGI5ZTE5ZTZmNDQ3NzM1MDlmYmRkNzAwMWQ3N2ZmNDFhNDlhNDg2YzE",
+    "commit": {
+      "author": {
+        "name": "Lance Martin",
+        "email": "122662504+rlancemartin@users.noreply.github.com",
+        "date": "2026-04-20T21:38:16Z"
+      },
+      "committer": {
+        "name": "GitHub",
+        "email": "noreply@github.com",
+        "date": "2026-04-20T21:38:16Z"
+      },
+      "message": "Fill in Apache 2.0 copyright notice in claude-api LICENSE.txt (#990)\n\nReplace the [yyyy] [name of copyright owner] placeholder with the\nactual copyright holder so the license attribution is explicit.",
+      "tree": {
+        "sha": "32dc975ab2c0f96aa0f69e471cafcf1474f72718",
+        "url": "https://api.github.com/repos/anthropics/skills/git/trees/32dc975ab2c0f96aa0f69e471cafcf1474f72718"
+      },
+      "url": "https://api.github.com/repos/anthropics/skills/git/commits/b9e19e6f44773509fbdd7001d77ff41a49a486c1",
+      "comment_count": 1,
+      "verification": {
+        "verified": true,
+        "reason": "valid",
+        "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJp5pzICRC1aQ7uu5UhlAAAT8EQAEySq67mZBk4UecqXpDXUnDO\nzauByY8O7fCVNC9a1fLu4bQU2Lr1FBwn+KsfVyYLdUbolnuyMEAn3q9Z6RjAx129\nWTG7T6bSniKGHZnlfRTw3IruGW2p5mXHxYlnMIMH7JJZc/DwrL5g9O9uc2/cHqCW\ns1UqC4pAgprVDW65SgnC/bPuCJUTp627XBEKzirYYg+/CnX60d+v1ybj37sSZlh0\nnOhiK4W69jFLTG2AKQ/ooyRyQBA+EDW3jToIN3oiEqgQbnvbj7xf+gdW6R4prwsH\nBuHoOO4ZW6MszpfjOe3QZkJnMzxC9Qfuot85uh8zRfsXdNWsNioWWPJO0BudOomn\nLcc9po5jmMmh3potaVq9DA6x6TmI/9t9EAyBrfT1ST1/QaFR6SRNDLNfYwq1E/u+\nlNrYQs0IyoCBqRYj7i5yl0BNvElm5YSDwOkn56b0gLpKFARq6mV58nu943vUWiBn\nbXtBr8lKZLJpaBaABMXaDUTkGkjB03jbZ4swPntV4T4FJXQZD42vZSmX8Uk3U9TO\n+OOWUjgjh3t0QrlMw5V9M66s8Y4WdxiEsjFZtqw/SEW4tzzIc3CxIa+HIsk7iVWr\njxf9m9NuA1ZiDD67opdC15OgIWQvqwMdDFCq/SjuqWvOpz356HCA3iAYlz2MYn1H\nAf5abdS6EVsfSKuK2vjl\n=+xbx\n-----END PGP SIGNATURE-----\n",
+        "payload": "tree 32dc975ab2c0f96aa0f69e471cafcf1474f72718\nparent 2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c\nauthor Lance Martin <122662504+rlancemartin@users.noreply.github.com> 1776721096 -0700\ncommitter GitHub <noreply@github.com> 1776721096 -0700\n\nFill in Apache 2.0 copyright notice in claude-api LICENSE.txt (#990)\n\nReplace the [yyyy] [name of copyright owner] placeholder with the\nactual copyright holder so the license attribution is explicit.",
+        "verified_at": "2026-04-20T21:38:17Z"
+      }
+    },
+    "url": "https://api.github.com/repos/anthropics/skills/commits/b9e19e6f44773509fbdd7001d77ff41a49a486c1",
+    "html_url": "https://github.com/anthropics/skills/commit/b9e19e6f44773509fbdd7001d77ff41a49a486c1",
+    "comments_url": "https://api.github.com/repos/anthropics/skills/commits/b9e19e6f44773509fbdd7001d77ff41a49a486c1/comments",
+    "author": {
+      "login": "rlancemartin",
+      "id": 122662504,
+      "node_id": "U_kgDOB0-uaA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/122662504?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/rlancemartin",
+      "html_url": "https://github.com/rlancemartin",
+      "followers_url": "https://api.github.com/users/rlancemartin/followers",
+      "following_url": "https://api.github.com/users/rlancemartin/following{/other_user}",
+      "gists_url": "https://api.github.com/users/rlancemartin/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/rlancemartin/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/rlancemartin/subscriptions",
+      "organizations_url": "https://api.github.com/users/rlancemartin/orgs",
+      "repos_url": "https://api.github.com/users/rlancemartin/repos",
+      "events_url": "https://api.github.com/users/rlancemartin/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/rlancemartin/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "web-flow",
+      "id": 19864447,
+      "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/web-flow",
+      "html_url": "https://github.com/web-flow",
+      "followers_url": "https://api.github.com/users/web-flow/followers",
+      "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+      "organizations_url": "https://api.github.com/users/web-flow/orgs",
+      "repos_url": "https://api.github.com/users/web-flow/repos",
+      "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/web-flow/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c",
+        "url": "https://api.github.com/repos/anthropics/skills/commits/2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c",
+        "html_url": "https://github.com/anthropics/skills/commit/2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c"
+      }
+    ]
+  }
+]

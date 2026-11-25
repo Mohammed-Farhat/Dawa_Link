@@ -132,21 +132,14 @@ export function AssistantPage() {
       }
     />
   )
-  if (wide) {
-    return (
-      <Shell>
-        <aside className="wide__chats" aria-label={s.chats}>
-          {list}
-        </aside>
-        <div className="wide__chat">{conversation}</div>
-      </Shell>
-    )
-  }
   return (
     <>
-      {conversation}
-      <Modal opened={listOpen} onClose={() => setListOpen(false)} title={s.chats} centered radius="xl">
-        {list}
+      <Shell responsive>
+        {wide && <aside className="wide__chats" aria-label={s.chats}>{list}</aside>}
+        <div className={wide ? 'wide__chat' : undefined}>{conversation}</div>
+      </Shell>
+      <Modal opened={!wide && listOpen} onClose={() => setListOpen(false)} title={s.chats} centered radius="xl">
+        {!wide && list}
       </Modal>
     </>
   )

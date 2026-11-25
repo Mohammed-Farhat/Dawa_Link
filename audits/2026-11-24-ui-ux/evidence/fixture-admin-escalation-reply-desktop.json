@@ -1,0 +1,55 @@
+{
+  "url": "/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+  "title": "What the client needs · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nBack to the list\nEmergency claim\nNew · Request Q-6BN2RA · opened Mon 16 Nov 09:40\nClient 11111111 (open the client's page)\nWhat the client needs\n\nClient says the need is urgent; Glucophage 850 still missing.\n\nNobody can change who gets stock first, here or anywhere. For an emergency: point to a doctor or to emergency services, and help as a person.\nThe chat\nThe client's and the assistant's messages hold no personal details. A reply from our team is shown as it was typed.\nClient\nI need it today, call me on [phone].\nAssistant\nI asked a person from DawaLink to help you.\n[card: reserve]\nSent. The client was notified.\nWrite to the client\nWrite to the client\nThe client reads it in the chat exactly as you write it, signed \"DawaLink team\". Give a phone number only when the situation needs one. 500 characters left\nThe client's messages in this chat come to you, not to the assistant. The assistant answers again when you close the case, or at Mon 16 Nov 11:00.\nSend\nNote (optional)\n\nWhat was done, for the team. The client does not see it.\n\nClose this case",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "What the client needs"
+    },
+    {
+      "level": "H2",
+      "text": "The chat"
+    },
+    {
+      "level": "H2",
+      "text": "Write to the client"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "TEXTAREA",
+      "type": "textarea",
+      "name": "",
+      "id": "team-reply",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-7x1hekwjg",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "open the client's page",
+      "w": 158.1875,
+      "h": 19
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

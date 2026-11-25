@@ -1,0 +1,23 @@
+{
+  "captures": 190,
+  "axe_scans": 180,
+  "route_smoke_records": 62,
+  "route_templates": 31,
+  "document_overflow": 0,
+  "wcag_tagged_violations": [],
+  "best_practice_violation_scan_counts": {
+    "landmark-no-duplicate-banner": 8,
+    "landmark-unique": 8
+  },
+  "incomplete_scan_counts": {
+    "color-contrast": 35,
+    "label-content-name-mismatch": 16
+  },
+  "manually_inspected": [
+    "profile-error-phone",
+    "watch-draft-preserved-desktop",
+    "pickup-confirmation-390",
+    "inventory-task-320"
+  ],
+  "scope": "Chrome production-preview captures, viewport emulation; no native mobile or screen-reader conformance claim."
+}

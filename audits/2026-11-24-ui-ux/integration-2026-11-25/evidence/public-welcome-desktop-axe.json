@@ -1,0 +1,29 @@
+{
+  "violations": [],
+  "incomplete": [],
+  "passes": [
+    "aria-hidden-body",
+    "aria-hidden-focus",
+    "avoid-inline-spacing",
+    "bypass",
+    "color-contrast",
+    "document-title",
+    "empty-heading",
+    "heading-order",
+    "html-has-lang",
+    "html-lang-valid",
+    "landmark-main-is-top-level",
+    "landmark-no-duplicate-main",
+    "landmark-one-main",
+    "landmark-unique",
+    "link-name",
+    "list",
+    "listitem",
+    "meta-viewport-large",
+    "meta-viewport",
+    "page-has-heading-one",
+    "region",
+    "skip-link",
+    "target-size"
+  ]
+}

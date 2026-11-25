@@ -1,0 +1,50 @@
+{
+  "audit_services_stopped": true,
+  "no_listeners_on_audit_ports": [
+    5174,
+    8001,
+    8026,
+    1026
+  ],
+  "disposable_database_dropped_and_absence_verified": "dawalink_ui_implementation_20261124",
+  "disposable_mailbox_removed": true,
+  "temporary_environment_admin_and_launch_files_removed": [
+    "/tmp/dawalink-ui-implementation-env.json",
+    "/tmp/dawalink-ui-implementation-admin.json",
+    "/tmp/dawalink-ui-implementation-setup.py",
+    "/tmp/dawalink-ui-implementation-run.py"
+  ],
+  "original_compose_services": [
+    {
+      "Service": "api",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "7fa75f48da4e"
+    },
+    {
+      "Service": "mailpit",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "ce08911128dd"
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "99f609241c74"
+    },
+    {
+      "Service": "web",
+      "State": "running",
+      "Health": "",
+      "ID": "46466c5517b3"
+    },
+    {
+      "Service": "worker",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "7aa635467df4"
+    }
+  ],
+  "known_environment_secret_scan_hits": []
+}

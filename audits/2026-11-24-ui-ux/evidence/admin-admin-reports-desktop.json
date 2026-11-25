@@ -1,0 +1,22 @@
+{
+  "url": "/admin/reports",
+  "title": "Reported answers · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nReported answers\nReplies of the assistant that a client marked with a thumbs-down. \"Real problem\" keeps the reply as a case to test the assistant against.\nTo review\nReal problems\nNot a problem\nNo answer to review.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Reported answers"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

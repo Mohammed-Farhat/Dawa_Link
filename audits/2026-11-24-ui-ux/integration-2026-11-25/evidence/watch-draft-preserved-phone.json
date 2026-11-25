@@ -1,0 +1,41 @@
+{
+  "url": "/search?product=02b84e7f-c1e6-45d3-b7ba-b33cfca94ad9",
+  "title": "APO-AZITHROMYCIN Z · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\n\nNo pharmacy to show for APO-AZITHROMYCIN Z\n\nMedicine name\n← All results for \"APO-AZITHROMYCIN Z\"\nAPO-AZITHROMYCIN Z\n250mg · Tablet · 6\nPrescription needed\nFilters\nBest match · Beirut, your home area\nNo discounted stock for APO-AZITHROMYCIN Z right now.\nThe assistant keeps looking for 6 hours, and can ask pharmacies for stock that is not listed yet.\nAsk DawaLink to find it\nWe'll tell you if it appears in the next 6 hours. If a pharmacy lists it, the first person who asked gets it held for 2 hours.\nThe most you would pay for a pack, in LBP (optional)\nNotify me for 6 hours\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "APO-AZITHROMYCIN Z"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "search",
+      "name": "",
+      "id": "medicine-name",
+      "label": null,
+      "placeholder": "Search a medicine in stock",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "watch-max-price",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

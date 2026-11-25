@@ -1,0 +1,96 @@
+{
+  "url": "/admin/pharmacies/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+  "title": "Hamra Pharmacy · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nBack to the list\nHamra Pharmacy\nWaiting\nWhat the pharmacy typed\nPharmacy name\nHamra Pharmacy\nLicence number\nPH1234\nPhone\n+9611234567\nLogin email\nowner@hamra.example.com\nAddress\n12 Hamra Street, Beirut\nPickup time\n1 day\nOpening hours\nMonday: 08:00 to 13:00, 16:00 to 21:00\nTuesday: closed\nWednesday: closed\nThursday: closed\nFriday: closed\nSaturday: closed\nSunday: closed\nWhere it is\nCheck that the pin is on the address. Drag it to correct it, then save the change below with a reason.\n+\n−\n© OpenStreetMap contributors\nPut the pin at the centre of the map\nCorrect its details\nOnly what you change is saved. After approval a pharmacy changes its hours, its pickup time, its phone, its address and its pin itself; its name and its licence are changed only here.\nPharmacy name\nLicence number\nPhone\nAddress\nDistrict\nBeirut\nMatn\nReason\n\nA few words, kept in the audit log. No names or phone numbers.\n\nSave the changes\nChecks\nIts email address is confirmed.\nNo other pharmacy has this licence number or this phone number.\nNo other pharmacy is registered at this address.\nNobody has checked the pin yet: approving says that you did.\nThe assistant shows this name to clients: it must be the real name on the sign.\nDecide\nApprove\nAsk for more information\nReject",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Hamra Pharmacy"
+    },
+    {
+      "level": "H2",
+      "text": "What the pharmacy typed"
+    },
+    {
+      "level": "H2",
+      "text": "Where it is"
+    },
+    {
+      "level": "H2",
+      "text": "Correct its details"
+    },
+    {
+      "level": "H2",
+      "text": "Checks"
+    },
+    {
+      "level": "H2",
+      "text": "Decide"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-owh8s29cr",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-4lmpvdut8",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-bz8960dt9",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-9an6hmp16",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-blvq7y13w",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-pxpcw80ja",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

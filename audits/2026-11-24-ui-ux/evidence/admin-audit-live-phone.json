@@ -1,0 +1,211 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 20:19\tSynthetic Audit Pharmacy\tconfirmed its email and waits for approval\tSynthetic Audit Pharmacy · Only this\t\nTue 24 Nov 20:19\tSynthetic Audit Pharmacy\tregistered as a pharmacy (email not confirmed yet)\tSynthetic Audit Pharmacy · Only this\t\nTue 24 Nov 20:19\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom paused to follows its rule\n\n\tBeirut Pharmacy A (demo) · Only this\t\nTue 24 Nov 20:19\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom follows its rule to paused\n\n\tBeirut Pharmacy A (demo) · Only this\t\nTue 24 Nov 20:19\tBeirut Pharmacy A (demo)\tmarked a reservation not available\n\nFrom reserved to not available\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 20:19\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 20:19\tBeirut Pharmacy A (demo)\thanded over a reservation at the counter\n\nFrom reserved to picked up\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 20:19\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 20:15\tA client 287d06ca\tcancelled a reservation\n\nFrom reserved to cancelled by the client\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 20:15\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 20:15\tA client ebe675d8\treset their password with an email link\n\nChanged: password\n\n\tClient ebe675d8 · Only this\t\nTue 24 Nov 20:15\tA client ebe675d8\tconfirmed their email\n\nFrom email not confirmed to active\n\n\tClient ebe675d8 · Only this\t\nTue 24 Nov 20:15\tA client ebe675d8\tsigned up\tClient ebe675d8 · Only this\t\nTue 24 Nov 20:12\tThe system\tcreated an admin account, from the command line\tOnly this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-6x4v390qf",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-w07cqiqle",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client ebe675d8",
+      "w": 116.03125,
+      "h": 19
+    },
+    {
+      "text": "Client ebe675d8",
+      "w": 116.03125,
+      "h": 19
+    },
+    {
+      "text": "Client ebe675d8",
+      "w": 116.03125,
+      "h": 19
+    }
+  ],
+  "overflow": [
+    {
+      "tag": "TABLE",
+      "cls": "stock-table",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 20:19\tSynthetic Audit Pharmacy\tco",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "THEAD",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\n",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "What happened",
+      "left": 374.640625,
+      "right": 614.640625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "About",
+      "left": 614.640625,
+      "right": 854.640625
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Reason",
+      "left": 854.640625,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TBODY",
+      "cls": "",
+      "text": "Tue 24 Nov 20:19\tSynthetic Audit Pharmacy\tconfirmed its email and waits for appr",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Tue 24 Nov 20:19\tSynthetic Audit Pharmacy\tconfirmed its email and waits for appr",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TH",
+      "cls": "audit-cell",
+      "text": "confirmed its email and waits for approval",
+      "left": 374.640625,
+      "right": 614.640625
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "Synthetic Audit Pharmacy · Only this",
+      "left": 614.640625,
+      "right": 854.640625
+    },
+    {
+      "tag": "A",
+      "cls": "",
+      "text": "Synthetic Audit Pharmacy",
+      "left": 614.640625,
+      "right": 801.171875
+    },
+    {
+      "tag": "BUTTON",
+      "cls": "text-button audit-id",
+      "text": "Only this",
+      "left": 614.640625,
+      "right": 700.859375
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "",
+      "left": 854.640625,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Tue 24 Nov 20:19\tSynthetic Audit Pharmacy\tregistered as a pharmacy (email not co",
+      "left": 40,
+      "right": 1094.640625
+    },
+    {
+      "tag": "TH",
+      "cls": "audit-cell",
+      "text": "registered as a pharmacy (email not confirmed yet)",
+      "left": 374.640625,
+      "right": 614.640625
+    }
+  ],
+  "violations": []
+}

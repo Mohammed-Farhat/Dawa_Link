@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Admin approval completed without nonexistent-checkbox assumption",
+    "status": "exercised",
+    "detail": {
+      "text": "is saved. After approval a pharmacy changes its hours, its pickup time, its phone, its address and its pin itself; its name and its licence are changed only here.\nPharmacy name\nLicence number\nPhone\nAddress\nDistrict\nAkkar\nAley\nBaabda\nBaalbek\nBatroun\nBeirut\nBint Jbeil\nBsharri\nChouf\nHasbaya\nHermel\nJbeil\nJezzine\nKeserwan\nKoura\nMarjeyoun\nMatn\nMiniyeh-Danniyeh\nNabatieh\nRashaya\nSidon\nTripoli\nTyre\nWest Beqaa\nZahle\nZgharta\nReason\n\nA few words, kept in the audit log. No names or phone numbers.\n\nSave the changes\nChecks\nIts email address is confirmed.\nNo other pharmacy has this licence number or this phone number.\nNo other pharmacy is registered at this address.\nAn admin has checked the pin.\nThe assistant shows this name to clients: it must be the real name on the sign.\nSuspend this pharmacy\nIts medicines stop showing to clients at once, and the offers on its boxes are cancelled. What clients already reserved there is kept: the pharmacy can still hand it over.\nWhy (the pharmacy reads this)\nSuspend"
+    }
+  },
+  {
+    "name": "Add synthetic inventory batch",
+    "status": "exercised",
+    "detail": {
+      "success": true
+    }
+  },
+  {
+    "name": "CSV invalid file recovery",
+    "status": "exercised",
+    "detail": {
+      "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nInventory\nUpdate from a file\nDownload the template and open it in Excel.\nOne row per batch: the medicine, its batch, its expiry and how many packs you have.\nWrite the medicine's name as the Ministry's price list writes it, with the same letters and numbers. Capitals don't matter, and a sign such as %, - or . counts as a space. When one name has several strengths, add the strength (2.5mg is not 25mg).\nIn Excel: File, Save As, and choose CSV. Then choose that file here.\nWrite the expiry as on the box, the month and the year: 03/2027 or 2027-03. Excel rewrites a full date in its own way.\nThe file is your whole stock: a box that is not in it is set to 0. Reserved packs are always kept.\nLeave the code column empty, unless a row comes back with \"several medicines have this name\": it then lists the code of each pack, and you write yours. A box of such a medicine is only changed by a row with its code, or by hand.\nDownload the template\nChoose a CSV file\nThis file can't be used: the columns must be: product, strength, batch, expiry, quantity, and code if you use it.\nAdd one box\nMedicine\n\nType the name, then choose it.\n\nBatch\nExpiry date\nAs printed on the box: the month and the year. The box counts until the last day of that month.\nExpiry month\n01 · January\n02 · February\n03 · March\n04 · April\n05 · May\n06 · June\n07 · July\n08 · August\n09 · September\n10 · October\n11 · November\n12 · December\nExpiry year\n2026\n2027\n2028\n2029\n2030\n2031\nHow many packs\nAdd to my stock\nYour stock\nPrivate: only you see this list. Which boxes clients see follows your rule in Settings, never earlier than 6 months before their expiry.\nFind a medicine or a batch\nAll\nWithin 6 months\nMay be asked for\nPrivate\nExpired\nSoonest expiry first\nBy medicine\nMedicine\tBatch\tExpires\tIn stock\tReserved\tStatus\nDOSTINEX · 0.5mg\tB29148\t28 Nov 2026 · 4 days left\t\n\t0\tListed\nABILIFY MAINTENA · 400mg\tB86153\t30 Nov 2026 · 6 days left\t\n\t0\tListed\nSINGULAIR · 10mg\tB20911\t30 Nov 2026 · 6 days left\t\n\t0"
+    }
+  },
+  {
+    "name": "Narrow phones and short viewport stress",
+    "status": "exercised",
+    "detail": "Desktop viewport simulation; not a native keyboard test."
+  },
+  {
+    "name": "Supported demo clock advances to request hours",
+    "status": "exercised",
+    "detail": {
+      "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nDemo clock\nMoves the app's time forward to show what happens later: an offer expiring, the one-hour-left check, a missed pickup. Logins are not affected. A move can't be undone. Every move is in the audit log.\nThe app's time: Wed 25 Nov 08:22\n720 minutes ahead of the real time.\n+30 min\n+2 h\n+6 h\n+1 day\nThe clock moved."
+    }
+  },
+  {
+    "name": "Live watch create and cancel",
+    "status": "blocked",
+    "reason": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Notify me/ })\u001b[22m\n"
+  },
+  {
+    "name": "Synthetic client deletion success",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/welcome",
+      "tokenCleared": true
+    }
+  }
+]

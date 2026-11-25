@@ -1,0 +1,256 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nThu 26 Nov 18:48\tSynthetic Audit Admin\tapproved a pharmacy\n\nFrom waiting to approved\n\n\tThe pharmacy · Only this\t\nThu 26 Nov 18:48\tSynthetic Audit Pharmacy\tconfirmed its email and waits for approval\tSynthetic Audit Pharmacy · Only this\t\nThu 26 Nov 18:48\tSynthetic Audit Pharmacy\tregistered as a pharmacy (email not confirmed yet)\tSynthetic Audit Pharmacy · Only this\t\nThu 26 Nov 18:48\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom paused to follows its rule\n\n\tBeirut Pharmacy A (demo) · Only this\t\nThu 26 Nov 18:48\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom follows its rule to paused\n\n\tBeirut Pharmacy A (demo) · Only this\t\nThu 26 Nov 18:48\tBeirut Pharmacy A (demo)\tmarked a reservation not available\n\nFrom reserved to not available\n\n\tClient 287d06ca · Only this\t\nThu 26 Nov 18:48\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nThu 26 Nov 18:48\tBeirut Pharmacy A (demo)\thanded over a reservation at the counter\n\nFrom reserved to picked up\n\n\tClient 287d06ca · Only this\t\nThu 26 Nov 18:48\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nThu 26 Nov 18:48\tA client 287d06ca\tcancelled a reservation\n\nFrom reserved to cancelled by the client\n\n\tClient 287d06ca · Only this\t\nThu 26 Nov 18:48\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nThu 26 Nov 18:47\tA client 2c098be8\treset their password with an email link\n\nChanged: password\n\n\tClient 2c098be8 · Only this\t\nThu 26 Nov 18:47\tA client 2c098be8\tconfirmed their email\n\nFrom email not confirmed to active\n\n\tClient 2c098be8 · Only this\t\nThu 26 Nov 18:47\tA client 2c098be8\tsigned up\tClient 2c098be8 · Only this\t\nThu 26 Nov 18:46\tA client 287d06ca\tstopped a wait for a medicine\tClient 287d06ca · Only this\t\nThu 26 Nov 18:46\tA client 287d06ca\tstarted waiting for a medicine\n\na watch\n\n\tClient 287d06ca · Only this\t\nThu 26 Nov 12:46\tSynthetic Audit Admin\tmoved the demo clock forward\n\nChanged: the app's time\n\n\tDemo clock\tMoved from the demo clock screen\nThu 26 Nov 12:45\tA client 287d06ca\tstopped a wait for a medicine\tClient 287d06ca · Only this\t\nThu 26 Nov 12:45\tA client 287d06ca\tstarted waiting for a medicine\n\na watch\n\n\tClient 287d06ca · Only this\t\nThu 26 Nov 06:44\tSynthetic Audit Admin\tmoved the demo clock forward\n\nChanged: the app's time\n\n\tDemo clock\tMoved from the demo clock screen\nThu 26 Nov 00:44\tSynthetic Audit Admin\tmoved the demo clock forward\n\nChanged: the app's time\n\n\tDemo clock\tMoved from the demo clock screen\nWed 25 Nov 18:44\tSynthetic Audit Admin\tmoved the demo clock forward\n\nChanged: the app's time\n\n\tDemo clock\tMoved from the demo clock screen\nWed 25 Nov 18:43\tThe system\tcreated an admin account, from the command line\tOnly this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-wj0q0a80a",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-vthsjfrzy",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "The pharmacy",
+      "w": 101.34375,
+      "h": 19
+    },
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 2c098be8",
+      "w": 115.03125,
+      "h": 19
+    },
+    {
+      "text": "Client 2c098be8",
+      "w": 115.03125,
+      "h": 19
+    },
+    {
+      "text": "Client 2c098be8",
+      "w": 115.03125,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Demo clock",
+      "w": 84.671875,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Demo clock",
+      "w": 84.671875,
+      "h": 19
+    },
+    {
+      "text": "Demo clock",
+      "w": 84.671875,
+      "h": 19
+    },
+    {
+      "text": "Demo clock",
+      "w": 84.671875,
+      "h": 19
+    }
+  ],
+  "overflow": [
+    {
+      "tag": "TABLE",
+      "cls": "stock-table",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\nThu 26 Nov 18:48\tSynthetic Audit Admin\tappro",
+      "left": 40,
+      "right": 1103.453125
+    },
+    {
+      "tag": "THEAD",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\n",
+      "left": 40,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason",
+      "left": 40,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "What happened",
+      "left": 383.453125,
+      "right": 623.453125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "About",
+      "left": 623.453125,
+      "right": 863.453125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Reason",
+      "left": 863.453125,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TBODY",
+      "cls": "",
+      "text": "Thu 26 Nov 18:48\tSynthetic Audit Admin\tapproved a pharmacy\n\nFrom waiting to appr",
+      "left": 40,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Thu 26 Nov 18:48\tSynthetic Audit Admin\tapproved a pharmacy\n\nFrom waiting to appr",
+      "left": 40,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TH",
+      "cls": "audit-cell",
+      "text": "approved a pharmacy\n\nFrom waiting to approved",
+      "left": 383.453125,
+      "right": 623.453125
+    },
+    {
+      "tag": "P",
+      "cls": "audit-change hint",
+      "text": "From waiting to approved",
+      "left": 383.453125,
+      "right": 611.453125
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "The pharmacy · Only this",
+      "left": 623.453125,
+      "right": 863.453125
+    },
+    {
+      "tag": "A",
+      "cls": "",
+      "text": "The pharmacy",
+      "left": 623.453125,
+      "right": 724.796875
+    },
+    {
+      "tag": "BUTTON",
+      "cls": "text-button audit-id",
+      "text": "Only this",
+      "left": 736.625,
+      "right": 822.84375
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "",
+      "left": 863.453125,
+      "right": 1103.453125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Thu 26 Nov 18:48\tSynthetic Audit Pharmacy\tconfirmed its email and waits for appr",
+      "left": 40,
+      "right": 1103.453125
+    }
+  ],
+  "violations": []
+}

@@ -1,0 +1,26 @@
+{
+  "url": "/verify-email",
+  "title": "DawaLink · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nYour medicine, for less. Today.\n\nPharmacies near you sell boxes that expire soon, at up to 60% off.\n\n1\nSearch or ask\n2\nReserve in one tap\n3\nPick up and pay\nDawaLink\nYour email is confirmed. Log in to continue.\nLog in",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "DawaLink"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

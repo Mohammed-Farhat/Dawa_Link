@@ -1,0 +1,22 @@
+{
+  "url": "/notifications",
+  "title": "Notifications · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nNotifications\nNothing yet. What happens to your reservations and requests is listed here.\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Notifications"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

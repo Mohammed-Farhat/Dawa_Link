@@ -1,0 +1,10 @@
+{
+  "patterns": [
+    "private-key",
+    "provider-key",
+    "database-password-url",
+    "unredacted-token-url"
+  ],
+  "matches": [],
+  "scope": "New integration text artifacts; synthetic fixture passwords are intentionally non-secret test values."
+}

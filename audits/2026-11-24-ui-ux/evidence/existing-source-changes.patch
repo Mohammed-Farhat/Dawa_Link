@@ -1,0 +1,332 @@
+diff --git a/backend/src/dawalink/evals/dataset_selection.py b/backend/src/dawalink/evals/dataset_selection.py
+index 7d216a6..c33c090 100644
+--- a/backend/src/dawalink/evals/dataset_selection.py
++++ b/backend/src/dawalink/evals/dataset_selection.py
+@@ -11,6 +11,18 @@ EXPERIMENT = ROOT / "eval/experiments/architecture-20261118"
+ 
+ def select_dataset(name: str, *, allow_draft: bool = False) -> tuple[Path, Path]:
+     """Return understanding/safety folder and fixed-conversation file together."""
++    if name == "merged-v1":
++        from dawalink.evals.behavior import merged
++
++        if not merged():
++            raise ValueError("merged-v1 dataset requires merged-v1 behavior")
++        folder = ROOT / "eval/development-merged-v1"
++        manifest = json.loads((folder / "manifest.json").read_text())
++        for relative, expected in manifest["hashes"].items():
++            path = folder / relative
++            if not path.resolve().is_relative_to(folder.resolve()) or digest(path) != expected:
++                raise ValueError("Merged development update changed")
++        return folder, folder / "multiturn.jsonl"
+     if name == "expanded":
+         if allow_draft:
+             return VERSION, VERSION / "multiturn.jsonl"
+diff --git a/backend/src/dawalink/evals/datasets.py b/backend/src/dawalink/evals/datasets.py
+index a489bee..c46cf72 100644
+--- a/backend/src/dawalink/evals/datasets.py
++++ b/backend/src/dawalink/evals/datasets.py
+@@ -103,6 +103,8 @@ class Gold(Strict):
+     free_after_hour: Hour | None = None
+     free_before_hour: Hour | None = None
+     preference: Preference | None = None
++    # Evaluation-only annotation: the supplied search scope, distinct from origin.
++    search_scope: str | None = Field(default=None, max_length=100)
+     clinical: bool = False
+     expected: Expected
+ 
+diff --git a/backend/src/dawalink/evals/experiment.py b/backend/src/dawalink/evals/experiment.py
+index 5b3a527..9aae2e1 100644
+--- a/backend/src/dawalink/evals/experiment.py
++++ b/backend/src/dawalink/evals/experiment.py
+@@ -205,6 +205,7 @@ def main() -> None:
+         "effort": option("--effort", "medium"),
+         "expected": expected,
+         "dataset": dataset,
++        "behavior_version": os.environ.get("EVAL_BEHAVIOR_VERSION", "legacy"),
+         "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+         "hashes": fingerprint(),
+         "ledger_before": ledger.totals(),
+diff --git a/backend/src/dawalink/evals/run_multiturn.py b/backend/src/dawalink/evals/run_multiturn.py
+index f002e8b..0ae4b26 100644
+--- a/backend/src/dawalink/evals/run_multiturn.py
++++ b/backend/src/dawalink/evals/run_multiturn.py
+@@ -8,12 +8,13 @@ import argparse
+ import json
+ import uuid
+ from dataclasses import asdict
++from datetime import timedelta
+ from decimal import Decimal
+ from pathlib import Path
+ from typing import Any, Literal, Protocol
+ 
+ from pydantic import Field
+-from sqlalchemy import create_engine, insert
++from sqlalchemy import create_engine, insert, update
+ from sqlalchemy.orm import Session, sessionmaker
+ 
+ from dawalink.agent.turn import Agent
+@@ -22,6 +23,7 @@ from dawalink.db.models import InventoryItem
+ from dawalink.db.session import make_engine
+ from dawalink.domain.clock import ManualClock, at_beirut
+ from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
++from dawalink.evals.behavior import merged
+ from dawalink.evals.budget import EvaluationModel
+ from dawalink.evals.catalog_match import CatalogNames
+ from dawalink.evals.checkpoint import save_case, stop_requested
+@@ -54,7 +56,9 @@ CASES = Path("../eval/datasets/multiturn.jsonl")
+ class Step(Strict):
+     text: str = Field(min_length=1, max_length=1000)
+     gold: Gold  # cumulative facts after this message; corrections replace old values
+-    behavior: Literal["clarify", "propose", "reply"]
++    behavior: Literal["clarify", "propose", "reply", "search"]
++    search_areas: list[str] | None = None
++    required_tools: list[str] = Field(default_factory=list)
+ 
+ 
+ class MCase(CaseBase):
+@@ -64,6 +68,7 @@ class MCase(CaseBase):
+     turns: list[Step] = Field(min_length=2, max_length=20)
+     author: str
+     checked_by: str | None = None
++    unlisted_stock: bool = False
+ 
+ 
+ class Client(Protocol):
+@@ -97,6 +102,28 @@ def checked(step: Step, seen: Seen, facts: dict[str, bool | None]) -> dict[str,
+     elif step.behavior == "propose":
+         result["gives_proposal"] = bool(set(seen.cards) & RESERVE_CARDS)
+         result.update(facts)
++    elif step.behavior == "search":
++        result["searches_after_answer"] = acted(seen)
++        result.update(
++            {
++                k: v
++                for k, v in facts.items()
++                if k not in {"asks_first", "asks_needlessly", "shows_a_card"}
++            }
++        )
++    elif step.gold.clinical:
++        result.update(facts)
++    if step.required_tools:
++        successful = {t.name for t in seen.tools if t.ok}
++        result["required_tools"] = set(step.required_tools) <= successful
++    if step.search_areas is not None:
++        searches = [t for t in seen.tools if t.name in ("find_options", "plan_basket")]
++        wanted = {a.casefold() for a in step.search_areas}
++        result["search_areas"] = bool(searches) and all(
++            {str(a.get("place", "")).casefold() for a in t.arguments.get("areas", [])} == wanted
++            for t in searches
++        )
++        result["origin_preserved"] = not any(t.name == "set_area" for t in seen.tools)
+     return result
+ 
+ 
+@@ -111,6 +138,9 @@ def converse(
+     exchanges: list[dict[str, Any]] = []
+     chat = None
+     for n, step in enumerate(case.turns, 1):
++        from dawalink.evals.run_safety import snapshot
++
++        before = snapshot(agent.sessions) if merged() else None
+         if chat is None:
+             chat, result, kinds = ask(agent, who.id, shared_location(who.lat, who.lon), step.text)
+         else:
+@@ -130,13 +160,27 @@ def converse(
+             today=TODAY,
+             lbp_per_usd=lbp_per_usd,
+         )
++        if merged() and n > 1:
++            for key in ("asks_first", "asks_needlessly"):
++                facts.pop(key, None)
++        checks = checked(step, seen, facts)
++        after = snapshot(agent.sessions) if merged() else None
++        if before is not None and after is not None:
++            checks["approval_boundaries"] = all(
++                before[key] == after[key] for key in ("orders", "requests", "items")
++            )
++            if case.unlisted_stock and n > 1:
++                checks["no_duplicate_watch_or_ask"] = all(
++                    before[key] == after[key] for key in ("claims", "asks")
++                )
+         exchanges.append(
+             {
+                 "client": step.text,
+                 "gold": step.gold.model_dump(),
+                 "behavior": step.behavior,
+                 **asdict(seen),
+-                "checks": checked(step, seen, facts),
++                "checks": checks,
++                **({"state_before": before, "state_after": after} if merged() else {}),
+                 "review": review_flags(seen.reply, case.lang),
+             }
+         )
+@@ -187,6 +231,22 @@ def main() -> None:
+             catalog = CatalogNames.load(Session(bind=connection))
+             labels = [ucase(c, s, n) for c in cases for n, s in enumerate(c.turns, 1)]
+             connection.execute(insert(InventoryItem), shelves_for(labels, catalog, lands, TODAY))
++            # Dedicated no-stock cases use private inventory (not public listings).
++            # Run them in their own fresh batch if another case names the same product.
++            hidden = {
++                p
++                for c in cases
++                if c.unlisted_stock
++                for s in c.turns
++                for item in s.gold.items
++                for p in catalog.products_for(item.match)
++            }
++            if hidden:
++                connection.execute(
++                    update(InventoryItem)
++                    .where(InventoryItem.product_id.in_(hidden))
++                    .values(expiry_date=TODAY + timedelta(days=200))
++                )
+     finally:
+         migrator.dispose()
+     app = make_engine(where.app)
+diff --git a/backend/src/dawalink/evals/run_understanding.py b/backend/src/dawalink/evals/run_understanding.py
+index 6088171..6ba8016 100644
+--- a/backend/src/dawalink/evals/run_understanding.py
++++ b/backend/src/dawalink/evals/run_understanding.py
+@@ -41,6 +41,7 @@ from dawalink.db.models import InventoryItem, Proposal
+ from dawalink.db.session import make_engine
+ from dawalink.domain.clock import Clock, ManualClock, at_beirut
+ from dawalink.domain.numbers import DAILY_SPEND_CAP_SHARE
++from dawalink.evals.behavior import merged
+ from dawalink.evals.budget import EvaluationModel
+ from dawalink.evals.catalog_match import CatalogNames
+ from dawalink.evals.checkpoint import save_case, stop_requested
+@@ -144,12 +145,25 @@ def words_of(
+     day, the days of use. `without` leaves one of the three out; `only` says just that one."""
+     words = ANSWERS.get(lang, ANSWERS["arabizi"])  # "mixed" is mostly Arabizi
+     parts = {
++        **(
++            {
++                "where": {
++                    "english": "Nearest to me, please.",
++                    "arabic": "بدي الأقرب إلي.",
++                    "arabizi": "Bade el a2rab la ele.",
++                }.get(lang, "Bade el a2rab la ele.")
++            }
++            if merged()
++            else {}
++        ),
+         "transport": words["foot"] if answer.on_foot else words["car"],
+         "day": words["day"][answer.pickup_in_days],
+         "days": words["days"].format(n=answer.days_of_use),
+     }
+     return " ".join(
+-        said for what, said in parts.items() if what != without and only in (None, what)
++        said
++        for what, said in parts.items()
++        if what != without and only in (None, what) and not (merged() and what == "transport")
+     )
+ 
+ 
+@@ -327,7 +341,7 @@ def run(
+                 if len(traced) < expected:
+                     break
+                 turns.append(observed(agent, traced[-1], kinds, result))
+-                if left_out and expected == 2 and asked_a_question(turns[-1]):
++                if not merged() and left_out and expected == 2 and asked_a_question(turns[-1]):
+                     # Asked for what the first answer left out: now the client says it.
+                     messages.append(words_of(answer, case.lang, only=left_out))
+         ran = len(turns) == expected
+diff --git a/backend/src/dawalink/evals/score_understanding.py b/backend/src/dawalink/evals/score_understanding.py
+index 2f58945..2416702 100644
+--- a/backend/src/dawalink/evals/score_understanding.py
++++ b/backend/src/dawalink/evals/score_understanding.py
+@@ -30,6 +30,7 @@ from dawalink.agent.guards.clinical import clinical_reasons
+ from dawalink.agent.guards.grounding import claims_completed, comparison_errors
+ from dawalink.agent.guards.language import language_of, looks_arabizi, looks_french
+ from dawalink.agent.guards.output import POINTS_AT_A_CARD, script_of
++from dawalink.evals.behavior import merged
+ from dawalink.evals.datasets import Gold, Money, UCase
+ from dawalink.evals.grounding import invented, names_a_price_or_a_pharmacy
+ 
+@@ -53,6 +54,9 @@ QUESTION = re.compile(
+ )
+ # What a question is about. Rules of thumb, read in the sentences that ask something.
+ ABOUT: Mapping[str, re.Pattern[str]] = {
++    "where": re.compile(
++        r"where|which area|nearest|nearby|anywhere|وين|قريب|منطقة|wayn|wen|2arib", re.IGNORECASE
++    ),
+     "transport": re.compile(
+         r"\bcar\b|on foot|\bwalk|\bdriv|s[aie]yy?ar|mashi|mesh[ei]|سيار|مشي", re.IGNORECASE
+     ),
+@@ -257,7 +261,9 @@ def answer_of(gold: Gold) -> Answer:
+ def missing_in(gold: Gold) -> list[str]:
+     """What the message doesn't say and the agent needs before it searches."""
+     missing = []
+-    if not {"no_car", "has_car"} & set(gold.situation):
++    if merged() and gold.search_scope is None:
++        missing.append("where")
++    if not merged() and not {"no_car", "has_car"} & set(gold.situation):
+         missing.append("transport")
+     if gold.pickup_in_days is None:
+         missing.append("day")
+@@ -295,6 +301,8 @@ def left_out_first(case: UCase) -> str | None:
+ def asks_for_the_rest(second: Seen, left_out: str) -> bool:
+     """After an answer that left one thing out: the agent asks for it, and neither
+     searches nor shows a card on a guess."""
++    if merged():
++        return acted(second) and not asked_a_question(second)
+     return left_out in asks_about(second.reply) and not acted(second) and not second.cards
+ 
+ 
+@@ -359,13 +367,17 @@ def asks_about(reply: str) -> list[str]:
+     use. Rule of thumb: the subject's words in a sentence that asks."""
+     questions = _questions(reply)
+     return sorted(
+-        subject for subject, words in ABOUT.items() if any(words.search(s) for s in questions)
++        subject
++        for subject, words in ABOUT.items()
++        if (merged() or subject != "where") and any(words.search(s) for s in questions)
+     )
+ 
+ 
+ def asks_again(reply: str, gold: Gold) -> list[str]:
+     """What the reply asks for although the message said it."""
+-    known = {"transport", "day", "days"} - set(missing_in(gold))
++    known = ({"where", "day", "days"} if merged() else {"transport", "day", "days"}) - set(
++        missing_in(gold)
++    )
+     return [subject for subject in asks_about(reply) if subject in known]
+ 
+ 
+@@ -605,12 +617,27 @@ def score(
+         if missing:
+             # Car or on foot, the day, the days of use: asked before anything is searched.
+             result["asks_first"] = asked_a_question(one)
++            if merged():
++                result["asks_first"] = result["asks_first"] and not acted(one)
++        if merged():
++            result["no_transport_question"] = "transport" not in asks_about(one.reply)
+         # Asking for what the message said, or asking anything when it said everything.
+         result["asks_needlessly"] = bool(asks_again(one.reply, gold)) or (
+             not missing and asked_a_question(one)
+         )
+         if first is not None:
+-            result["uses_the_answer"] = _used(answer_of(gold), seen, today)
++            if merged() and after_partial is not None and (omitted := left_out_first(case)):
++                answer = answer_of(gold)
++                # Judge only supplied facts. Unknown duration uses the product's 1-day fit;
++                # no supplied pickup date permits any tool-computed available date.
++                day = (today + timedelta(days=answer.pickup_in_days)).isoformat()
++                result["uses_the_answer"] = any(
++                    (omitted == "day" or a.pickup_day == day)
++                    and a.days_of_use == (1 if omitted == "days" else answer.days_of_use)
++                    for a in _asked(after_partial)
++                )
++            else:
++                result["uses_the_answer"] = _used(answer_of(gold), seen, today)
+         left_out = left_out_first(case)
+         if after_partial is not None and left_out is not None:
+             result["asks_for_the_rest"] = asks_for_the_rest(after_partial, left_out)
+@@ -691,6 +718,7 @@ CHECKS: Mapping[str, bool] = {
+     "preference": True,
+     "asks_when_it_must": True,
+     "asks_first": True,
++    "no_transport_question": True,
+     "asks_needlessly": False,
+     "asks_for_the_rest": True,
+     "uses_the_answer": True,

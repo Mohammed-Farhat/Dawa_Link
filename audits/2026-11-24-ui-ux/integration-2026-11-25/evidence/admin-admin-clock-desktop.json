@@ -1,0 +1,22 @@
+{
+  "url": "/admin/clock",
+  "title": "Demo clock · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nDemo clock\nMoves the app's time forward to show what happens later: an offer expiring, the one-hour-left check, a missed pickup. Logins are not affected. A move can't be undone. Every move is in the audit log.\nThe app's time: Thu 26 Nov 18:50\n1440 minutes ahead of the real time.\n+30 min\n+2 h\n+6 h\n+1 day",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Demo clock"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

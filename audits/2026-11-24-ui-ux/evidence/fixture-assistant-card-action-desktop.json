@@ -1,0 +1,40 @@
+{
+  "url": "/assistant",
+  "title": "Ask DawaLink · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nNour\nYour chats\nEarlier chats are kept for 30 days.\nD\nAsk DawaLink\nFinds medicine. You confirm. No medical advice.\nNew chat\nYou're chatting with an AI assistant, not a pharmacist.\nBeirut, your home area\n\nYou:\nI need Augmentin\n\nDawaLink assistant:\nHere is an option.\n\nAUGMENTIN 1G at Hamra Pharmacy\nPharmacy\nHamra Pharmacy, Beirut\nAt the counter\n600,000 LBP (about $6.70)\nPrescription needed: bring it to the pharmacy.\nReserved\nReserved: R-7K3Q2F\nShow this number at the counter.\nShow at the counter\nMessage",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your chats"
+    },
+    {
+      "level": "H1",
+      "text": "Ask DawaLink"
+    },
+    {
+      "level": "H2",
+      "text": "AUGMENTIN 1G at Hamra Pharmacy"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "chat-message",
+      "label": null,
+      "placeholder": "Write in any language…",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

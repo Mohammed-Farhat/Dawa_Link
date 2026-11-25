@@ -1,0 +1,12 @@
+{
+  "head": "840a7394d9930cebfcc2e2fae8b0f87d9c0ef04d",
+  "tracked_diff_byte_identical": true,
+  "preexisting_status_entries_preserved": true,
+  "new_status_entries": [],
+  "handoff_sha256_before": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13",
+  "handoff_sha256_after": "0a3e0a09e2e04c1307aa3645d78e044b2ec3954bddb8f5cadc2dc3483b7aff13",
+  "handoff_identical": true,
+  "application_code_changes_by_audit": false,
+  "commit_push_merge_deploy": false,
+  "status_baseline_note": "Audit folder was created before initial Git status capture. Git groups all audit artifacts under audits/; no claim of per-file baseline hashes for other untracked directories."
+}
