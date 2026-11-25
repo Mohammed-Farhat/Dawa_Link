@@ -1,6 +1,6 @@
 # UI/UX fixes integrated with main — 25 November 2026
 
-The seven audit fixes are verified against main at **`7da2b0a`** on **`fix/ui-ux-main-integration`**, in a separate worktree at `/private/tmp/dawalink-ui-ux-main-integration`. They are ready for PR review. **Nothing was merged or deployed.**
+The seven audit fixes are verified against main at **`7da2b0a`** on **`fix/ui-ux-main-integration`**, in a separate worktree at `/private/tmp/dawalink-ui-ux-main-integration`. They are ready for review in [PR #3](https://github.com/Mohammed-Farhat/Dawa_Link/pull/3). **Nothing was merged or deployed.**
 
 Only source commit `b836ac66a46542570faecb879f7708dc631f68d3` was cherry-picked, producing `8bcb2ac`. No other commits from `test/agent-evaluation` were imported. Backend application code, schema, agent behavior and evaluation artifacts are identical to this main base. The original `fix/ui-ux-audit` branch remains at `b836ac6`, with its pre-existing uncommitted work preserved.
 
