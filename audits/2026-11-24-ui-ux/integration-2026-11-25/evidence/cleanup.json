@@ -1,0 +1,15 @@
+{
+  "stopped_pids": {
+    "api": 64329,
+    "worker": 64330,
+    "web": 65200
+  },
+  "removed_containers": [
+    "dawalink-ui-integration-postgres",
+    "dawalink-ui-integration-mail"
+  ],
+  "removed_disposable_database_and_anonymous_volume": true,
+  "remaining_running_containers": [],
+  "original_stack_was_not_started_or_modified": true,
+  "temporary_credentials_removed": true
+}

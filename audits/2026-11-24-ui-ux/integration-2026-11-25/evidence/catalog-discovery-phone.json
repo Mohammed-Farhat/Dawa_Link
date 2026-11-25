@@ -1,0 +1,44 @@
+{
+  "url": "/search",
+  "title": "Search · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nSearch\n\n2 medicines in stock for \"APO-AZITHROMYCIN Z\"\n\nMedicine name\nFilters\nBest match · Beirut, your home area\nFind the exact medicine\n\nChoose its strength and pack to check availability and ask to be notified if it appears.\n\nAPO-AZITHROMYCIN Z · 250mg · Tablet · 6 · Code 5981\nAZOMYCIN · 200mg/5ml · Powder for suspension + solvent · 15ml · Code 1362\nAZOMYCIN · 250mg · Capsule · 6 · Code 1363\nAZOMYCIN · 200mg/5ml · Powder for suspension · 30ml · Code 5590\nZITHROMAX · 250mg · Capsule · 6 · Code 6947\nZITHROMAX · 300mg/7.5ml · Powder for suspension · 22.5ml · Code 7136\nAZICIN 500 BENTA\n500mg · Tablet, film coated · 3\nFound by what it contains\nPrescription needed\nBeirut Pharmacy A (demo) · Beirut\nabout 0.4 km · open until 20:00\nexpires 11 Feb 2027 · 2 left\n344,000 LBP\nabout $3.8\nSave 229,373\nBaabda Pharmacy B (demo) · Baabda\nabout 10.2 km · open until 22:00\nexpires 7 Feb 2027 · 5+ left\n344,000 LBP\nabout $3.8\nSave 229,373\nSidon Pharmacy B (demo) · Sidon\nabout 52.2 km · open until 22:00\nexpires 9 Dec 2026 · 5+ left\n229,000 LBP\nabout $2.6\nSave 344,373\nZOMAX\n250mg · Capsule · 6\nFound by what it contains\nPrescription needed\nBeirut Pharmacy E (demo) · Beirut\nabout 1.8 km · open until 20:00\nexpires 7 Jan 2027 · 5 left\n216,000 LBP\nabout $2.4\nSave 144,150\nMatn Pharmacy A (demo) · Matn\nabout 8.9 km · open until 22:00\nexpires 19 Dec 2026 · 5+ left\n144,000 LBP\nabout $1.6\nSave 216,150\nTripoli Pharmacy A (demo) · Tripoli\nabout 95.6 km · open until 24:00\nexpires 28 Jan 2027 · 5+ left\n216,000 LBP\nabout $2.4\nSave 144,150\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Search"
+    },
+    {
+      "level": "H2",
+      "text": "Find the exact medicine"
+    },
+    {
+      "level": "H2",
+      "text": "AZICIN 500 BENTA"
+    },
+    {
+      "level": "H2",
+      "text": "ZOMAX"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "search",
+      "name": "",
+      "id": "medicine-name",
+      "label": null,
+      "placeholder": "Search a medicine in stock",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

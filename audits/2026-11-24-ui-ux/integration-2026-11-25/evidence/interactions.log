@@ -1,0 +1,30 @@
+pickup-confirmation-390 /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+pickup-error-390 /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+pickup-completed-390 /pharmacy/reservations overflow 0 axe []
+I01 confirmation cancel error success 390 PASS
+fixture-pickup-confirmation-390-phone /pharmacy/reservations overflow 0 axe []
+fixture-pickup-confirmation-390-desktop /pharmacy/reservations overflow 0 axe []
+pickup-confirmation-1440 /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+pickup-error-1440 /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+pickup-completed-1440 /pharmacy/reservations overflow 0 axe []
+I01 confirmation cancel error success 1440 PASS
+fixture-pickup-confirmation-1440-phone /pharmacy/reservations overflow 0 axe []
+fixture-pickup-confirmation-1440-desktop /pharmacy/reservations overflow 0 axe []
+inventory-task-320 /pharmacy/inventory overflow 0 axe []
+inventory-task-390 /pharmacy/inventory overflow 0 axe []
+inventory-task-1440 /pharmacy/inventory overflow 0 axe []
+V01 inventory task links and narrow layouts PASS
+search-breakpoint-320 /search overflow 0 axe []
+search-breakpoint-479 /search overflow 0 axe undefined
+search-breakpoint-480 /search overflow 0 axe undefined
+search-breakpoint-481 /search overflow 0 axe undefined
+search-breakpoint-599 /search overflow 0 axe undefined
+search-breakpoint-600 /search overflow 0 axe undefined
+search-breakpoint-601 /search overflow 0 axe undefined
+search-breakpoint-991 /search overflow 0 axe undefined
+search-breakpoint-992 /search overflow 0 axe []
+search-breakpoint-993 /search overflow 0 axe undefined
+search-breakpoint-1279 /search overflow 0 axe undefined
+search-breakpoint-1280 /search overflow 0 axe undefined
+profile-narrow-320 /me overflow 0 axe []
+Responsive breakpoint and narrow search layout sweep PASS

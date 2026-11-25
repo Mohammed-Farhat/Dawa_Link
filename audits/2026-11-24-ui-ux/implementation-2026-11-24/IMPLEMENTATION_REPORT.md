@@ -1,5 +1,7 @@
 # DawaLink UI/UX implementation — 24 November 2026
 
+> Main integration — 25 November 2026: this report retains the original branch’s historical results. The fixes were separately cherry-picked onto main at `7da2b0a`; see the [integration report](../integration-2026-11-25/IMPLEMENTATION_REPORT.md) for current-source verification and merge boundaries. The original `fix/ui-ux-audit` branch is unchanged.
+
 All seven findings from the [original audit](../REPORT.md) are implemented on **`fix/ui-ux-audit`**. The two audited release blockers, F-01 and F-02, pass their regression checks. Changes are uncommitted and ready for review; nothing was pushed, merged or deployed.
 
 **Validation:** 535 frontend tests passed; lint, type checking and the production build passed. All 37 page templates were rendered at 390×844 and 1440×900, with narrow/breakpoint checks. The evidence includes 192 captured states and 182 axe scans; repeated states are not separate workflow passes. There were no WCAG-tagged automated violations or captured document overflow. Manual screen-reader/native mobile limitations remain.

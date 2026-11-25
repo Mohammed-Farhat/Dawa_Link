@@ -1,0 +1,44 @@
+{
+  "url": "/pharmacy",
+  "title": "At the counter · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · open until 20:00\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nAt the counter\nType the number the client shows you.\nOrder number\nFind\nR-D7WHBU\nMarked not available\nDOSTINEX × 1\nBatch B29148 · expires 29 Nov 2026 · 651,000 each · total 651,000 LBP\nR-D7WHBU is marked not available. The client is told.\nAsks from DawaLink\nWhen a client nearby needs a medicine you keep unlisted, DawaLink asks you here, while you are open. You also get an email.\nDue today\nNothing to hand over today.\nToday in numbers\nNew reservations\n0\nDue today\n0\nPacks reserved\n0\nPacks listed\n301",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "At the counter"
+    },
+    {
+      "level": "H2",
+      "text": "Asks from DawaLink"
+    },
+    {
+      "level": "H2",
+      "text": "Due today"
+    },
+    {
+      "level": "H2",
+      "text": "Today in numbers"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "order-number",
+      "label": null,
+      "placeholder": "R-",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

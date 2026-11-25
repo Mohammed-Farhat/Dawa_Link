@@ -1,0 +1,11 @@
+const {fs,path,ROOT,BASE,launch,capture,login}=require('./capture.cjs');const cp=require('child_process');
+(async()=>{const b=await launch();const rows=[];
+for(const [role,routes] of Object.entries({public:['/welcome','/signup','/login','/forgot-password','/reset-password','/check-email','/verify-email','/pharmacy/signup','/admin/login','/status','/unknown-page'],client:['/','/search','/assistant','/medicines','/me','/notifications'],pharmacy:['/pharmacy','/pharmacy/reservations','/pharmacy/inventory','/pharmacy/listings','/pharmacy/settings','/pharmacy/notifications'],admin:['/admin','/admin/escalations','/admin/reports','/admin/clients','/admin/health','/admin/catalog','/admin/audit','/admin/clock']})){
+ const ctx=await b.newContext({viewport:{width:1440,height:900}});const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
+ // No third-party requests, including maps, leave the audit browser.
+ await ctx.route('**/*',route=>{const u=new URL(route.request().url());return ['localhost','127.0.0.1'].includes(u.hostname)?route.continue():route.abort();});
+ if(role==='client')await login(p,'client01@demo.dawalink.test');if(role==='pharmacy')await login(p,'pharmacy01@demo.dawalink.test');if(role==='admin'){let code=cp.execFileSync('backend/.venv/bin/python',['-c',"import json,pyotp;print(pyotp.TOTP(json.load(open('/private/tmp/dawalink-ui-integration-admin.json'))['key']).now())"]).toString().trim();await login(p,'admin@audit.dawalink.test',code);}
+ console.log('ROLE',role,'at',p.url());
+ for(const route of routes){for(const [view,size] of Object.entries({phone:{width:390,height:844},desktop:{width:1440,height:900}})){await p.setViewportSize(size);await p.goto(BASE+route);await p.waitForTimeout(550);let name=role+'-'+(route==='/'?'home':route.split('/').filter(Boolean).join('-'))+'-'+view;let r=await capture(p,name);rows.push({role,route,view,evidence:name,actual:r.url,overflow:r.scrollWidth-r.viewport.width,violations:r.violations});fs.writeFileSync(path.join(ROOT,'evidence/page-matrix.json'),JSON.stringify(rows,null,2));}}
+ fs.writeFileSync(path.join(ROOT,'evidence',role+'-browser-errors.json'),JSON.stringify(errors,null,2));await ctx.close();}
+await b.close();})().catch(e=>{console.error(e);process.exit(1)});

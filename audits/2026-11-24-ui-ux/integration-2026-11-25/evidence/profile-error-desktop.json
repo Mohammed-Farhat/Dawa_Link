@@ -1,0 +1,22 @@
+{
+  "url": "/pharmacy",
+  "title": "Your pharmacy could not load · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nYour pharmacy could not load\nDawaLink is temporarily unavailable. Please try again.\nTry again\nLog out",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Your pharmacy could not load"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

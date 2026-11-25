@@ -1,0 +1,22 @@
+{
+  "url": "/pharmacy/reservations",
+  "title": "Reservations · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · open until 20:00\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nReservations\nTo hand over\nBefore\nNo reservation is waiting.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Reservations"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

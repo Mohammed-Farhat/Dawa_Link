@@ -1,0 +1,36 @@
+{
+  "url": "/admin",
+  "title": "Pharmacies · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nPharmacies\nWaiting\nApproved\nRejected\nSuspended\nName or licence number\nSynthetic Audit Pharmacy\nWaiting\nBeirut · Licence AUDIT-20261124\nWaiting since Wed 25 Nov 18:48",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Pharmacies"
+    },
+    {
+      "level": "H2",
+      "text": "Synthetic Audit Pharmacy"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-fair4wdbt",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

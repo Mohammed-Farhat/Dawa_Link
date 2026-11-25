@@ -1,0 +1,162 @@
+{
+  "url": "/me",
+  "title": "Profile and settings · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nNour\nProfile and settings\nYour details\nFirst name\nMiddle name (optional)\nLast name\nDate of birth\nPhone (optional)\n\nOnly DawaLink's team can see it, for support. Pharmacies never do.\n\nSave\nWhere you live\nWhere you live\nSearches start around it when you don't share your location.\nOn the map\nBy area\nGovernorate\nChoose…\nBeirut\nMount Lebanon\nDistrict\nChoose…\nBeirut\nTown (optional)\nWhole district\nSave\nYour account\nNour Khoury\nnour@example.com\nMissed pickups\nNone in the last 30 days.\n\nA reservation you don't pick up by the pharmacy's closing time on its day is a missed pickup: the box went back on the shelf for nobody. After 2 in 30 days, reserving is paused for 7 days. Cancelling before the deadline never counts.\n\nThe assistant\nTell me about other brands of the same medicine\nThe assistant then shows them with \"ask the pharmacist first\". It never reserves one for you.\nNotifications\nPassword\nCurrent password\nNew password\n\nYour other devices are logged out.\nA password needs: At least 10 characters (missing), A capital letter (A to Z) (missing), A small letter (a to z) (missing), A number (missing), A symbol, like ! ? @ # - (missing).\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nChange my password\nLog out\nDelete my account\n\nIf you delete your account:\n\nYour reservations are cancelled, and your requests and \"Notify me\" alerts end.\nYour name, email, phone, date of birth, saved place and last searches are erased now.\nYour chats and notifications are erased within a few minutes.\nPast reservations stay in the pharmacies' records, without your name.\nYou are logged out on every device.\n\nThis can't be undone.\n\nYour password\n\nType it to confirm it is you.\n\nDelete my account\nKeep my account",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Profile and settings"
+    },
+    {
+      "level": "H2",
+      "text": "Your details"
+    },
+    {
+      "level": "H2",
+      "text": "Where you live"
+    },
+    {
+      "level": "H2",
+      "text": "Your account"
+    },
+    {
+      "level": "H2",
+      "text": "Missed pickups"
+    },
+    {
+      "level": "H2",
+      "text": "The assistant"
+    },
+    {
+      "level": "H2",
+      "text": "Password"
+    },
+    {
+      "level": "H2",
+      "text": "Delete my account"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-ue8t1wl0x",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "given-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-ivmf5xr7m",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "additional-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-vkzpqvsj9",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "family-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "date",
+      "name": "",
+      "id": "mantine-ngawo750v",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "bday"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-lylvc309k",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-jzbpujm3u",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-d1ba3v4me",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-tsgehu75k",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-egppe6n2l",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-4kq94kca0",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "new-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-uuum4bllw",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 13,
+      "h": 13
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

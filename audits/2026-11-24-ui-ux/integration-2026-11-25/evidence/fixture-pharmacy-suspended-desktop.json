@@ -1,0 +1,40 @@
+{
+  "url": "/pharmacy",
+  "title": "At the counter · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nHamra Pharmacy\nSuspended\nToday\nReservations\nNotifications\nSettings\nLog out\nYour pharmacy is suspended: your listings are hidden. You can still hand over the reservations you hold.\nAt the counter\nType the number the client shows you.\nOrder number\nFind\nDue today\nNEW · put aside\nR-7K3Q2F\nAUGMENTIN 1G × 2 · prescription\nby 21:00\nToday in numbers\nNew reservations\n1\nDue today\n1\nPacks reserved\n2\nPacks listed\n40",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "At the counter"
+    },
+    {
+      "level": "H2",
+      "text": "Due today"
+    },
+    {
+      "level": "H2",
+      "text": "Today in numbers"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "order-number",
+      "label": null,
+      "placeholder": "R-",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

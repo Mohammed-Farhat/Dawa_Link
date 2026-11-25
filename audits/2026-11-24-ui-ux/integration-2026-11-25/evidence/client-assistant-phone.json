@@ -1,0 +1,32 @@
+{
+  "url": "/assistant",
+  "title": "Ask DawaLink · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nAsk DawaLink\nNew chat\nYou're chatting with an AI assistant, not a pharmacist.\nBeirut, your home area\nTell me which medicine you need. I find where it is, and you reserve.\nI need Panadol\nbaddi concor 5\nبدّي أوغمنتين\nMessage",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Ask DawaLink"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "chat-message",
+      "label": null,
+      "placeholder": "Write in any language…",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

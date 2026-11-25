@@ -1,0 +1,45 @@
+{
+  "url": "/login",
+  "title": "Welcome back · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nYour medicine, for less. Today.\n\nPharmacies near you sell boxes that expire soon, at up to 60% off.\n\n1\nSearch or ask\n2\nReserve in one tap\n3\nPick up and pay\nWelcome back\nEmail\nPassword\nForgot your password?\nLog in\nCreate a free account",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "Welcome back"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "email",
+      "name": "",
+      "id": "mantine-s5pi572o8",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "username"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-oeonjpop9",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

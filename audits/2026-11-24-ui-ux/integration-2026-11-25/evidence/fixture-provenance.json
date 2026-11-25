@@ -1,0 +1,10 @@
+{
+  "sources": [
+    "frontend/src/test/render.tsx",
+    "frontend/src/test/admin.ts",
+    "frontend/src/test/pharmacy.ts",
+    "frontend/src/features/client/requests/RequestPage.test.tsx",
+    "frontend/src/features/pharmacy/PharmacyPortal.test.tsx"
+  ],
+  "mode": "Browser API interception using existing synthetic fixtures. UI behavior only; not live-model or backend integration evidence."
+}
