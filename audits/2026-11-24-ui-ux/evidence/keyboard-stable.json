@@ -1,0 +1,172 @@
+{
+  "skip": {
+    "text": "Skip to content",
+    "rect": {
+      "x": 12,
+      "y": 12,
+      "width": 165.453125,
+      "height": 50.34375,
+      "top": 12,
+      "right": 177.453125,
+      "bottom": 62.34375,
+      "left": 12
+    },
+    "outline": "rgb(11, 122, 75) solid 2px"
+  },
+  "skipTarget": "MAIN",
+  "passwordButtonLabels": [
+    {
+      "label": "Toggle password visibility",
+      "type": "button"
+    }
+  ],
+  "menu": {
+    "focus": "Notifications",
+    "role": "menuitem"
+  },
+  "menuEscape": "menu",
+  "modalTabCycle": [
+    {
+      "tag": "BUTTON",
+      "label": "One pack more",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "7 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "12 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "30 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Other",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Not sure",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Today",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Tomorrow",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Reserve 1 pack",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Close",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "One pack more",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "7 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "12 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "30 days",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Other",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Not sure",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Today",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Tomorrow",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Reserve 1 pack",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "Close",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "One pack more",
+      "withinDialog": true
+    },
+    {
+      "tag": "BUTTON",
+      "label": "7 days",
+      "withinDialog": true
+    }
+  ],
+  "modalDOM": {
+    "dialogs": [
+      {
+        "modal": "true",
+        "label": "mantine-go55vl2wc-title"
+      }
+    ],
+    "headers": [
+      {
+        "cls": "topbar",
+        "withinDialog": false,
+        "inertAncestor": false,
+        "hiddenAncestor": false
+      },
+      {
+        "cls": "m_b5489c3c m_d0e2b9cd mantine-Modal-header",
+        "withinDialog": true,
+        "inertAncestor": false,
+        "hiddenAncestor": false
+      }
+    ]
+  },
+  "escapeClosed": true,
+  "tableBefore": {
+    "tabIndex": 0,
+    "scrollLeft": 0,
+    "scrollWidth": 623,
+    "clientWidth": 310
+  },
+  "tableAfter": {
+    "scrollLeft": 40
+  }
+}

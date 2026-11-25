@@ -1,0 +1,36 @@
+[
+  {
+    "name": "assistant-card-action",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "POST /api/v1/proposals/66666666-6666-4666-8666-666666666666/execute",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/reservations",
+      "GET /api/v1/conversations/chats",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/reservations"
+    ]
+  },
+  {
+    "name": "arabic-mixed-long-chat",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/chats",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages"
+    ]
+  }
+]

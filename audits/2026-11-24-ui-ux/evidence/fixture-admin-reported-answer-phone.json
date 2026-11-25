@@ -1,0 +1,22 @@
+{
+  "url": "/admin/reports",
+  "title": "Reported answers · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nReported answers\nReplies of the assistant that a client marked with a thumbs-down. \"Real problem\" keeps the reply as a case to test the assistant against.\nTo review\nReal problems\nNot a problem\nIt could be unsafe\nMon 16 Nov 09:50\nThe client's comment: It told me how much to take.\nThe client wrote\nHow much Panadol can I take?\nThe assistant answered\nTake two tablets a day.\nReal problem\nNot a problem",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Reported answers"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

@@ -1,0 +1,99 @@
+{
+  "url": "/signup",
+  "title": "Create your account · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nYour medicine, for less. Today.\n\nPharmacies near you sell boxes that expire soon, at up to 60% off.\n\n1\nSearch or ask\n2\nReserve in one tap\n3\nPick up and pay\nCreate your account\nFirst name\n\nPlease write this name, with letters only.\n\nMiddle name (optional)\nLast name\n\nPlease write this name, with letters only.\n\nDate of birth\n\nPlease choose your date of birth: a day in the past.\n\nPhone (optional)\nEmail\n\nPlease write a valid email address.\n\nPassword\n\nA password needs: At least 10 characters (missing), A capital letter (A to Z) (missing), A small letter (a to z) (missing), A number (missing), A symbol, like ! ? @ # - (missing).\n\nA password needs at least 10 characters, with a capital letter, a small letter, a number and a symbol.\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nWhere you live\nSearches start around it when you don't share your location.\nOn the map\nBy area\nTravel times are counted from this place. We keep it rounded to about 100 m, and never send it to the assistant or to a pharmacy.\nUse my location\nPick on the map\nUse your location or pick your place on the map, or choose \"By area\" and your district.\n\nDawaLink shows where a medicine is available and reserves it for you. It gives no medical advice: your pharmacist or doctor does. We keep your name, date of birth, email, phone, where you live (an area, or a place on the map) and your last searches to run your account, and never share them with a pharmacy. The assistant never gets your name, email, phone, date of birth or your place on the map: it gets the name of your home area, what you write to it, your settings, and the state of your account and of your reservations, requests and \"Notify me\" alerts on DawaLink.\n\nI have read and accept the privacy notice above\n\nPlease accept the privacy notice to continue.\n\nCheck the 7 fields marked in red above.\n\nCreate account\nI already have an account",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "Create your account"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-ee2d9tavb",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "given-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-bpkfqeu64",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "additional-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-xecji8euf",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "family-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "date",
+      "name": "",
+      "id": "mantine-xebkufy5f",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "bday"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-zwvbk7rik",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "INPUT",
+      "type": "email",
+      "name": "",
+      "id": "mantine-6ccurtyf7",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "email"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-2tkvke6o0",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "new-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "mantine-wzdif5nn3",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

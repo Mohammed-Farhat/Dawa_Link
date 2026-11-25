@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Schemas } from '../../../api/client'
 import { AppRoutes } from '../../../app/App'
@@ -267,4 +267,27 @@ describe('Where a request starts and shows', () => {
     )
     expect(await screen.findByRole('button', { name: strings.offers.accept })).toBeInTheDocument()
   })
+})
+
+
+it('keeps request cancellation open across the desktop breakpoint (F-02)', async () => {
+  let wide = false
+  const listeners = new Set<(event: MediaQueryListEvent) => void>()
+  const media = vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    matches: query === '(min-width: 992px)' && wide, media: query, onchange: null,
+    addEventListener: (_event: string, callback: (event: MediaQueryListEvent) => void) => { listeners.add(callback) },
+    removeEventListener: (_event: string, callback: (event: MediaQueryListEvent) => void) => { listeners.delete(callback) },
+    addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+  }) as MediaQueryList)
+  try {
+    const api = requestApi()
+    renderApp(<AppRoutes />, { path: `/requests/${REQUEST_ID}` })
+    await userEvent.click(await screen.findByRole('button', { name: r.cancel }))
+    const dialog = await screen.findByRole('dialog')
+    for (const next of [true, false]) {
+      act(() => { wide = next; listeners.forEach((listener) => listener({ matches: wide } as MediaQueryListEvent)) })
+      expect(screen.getByRole('dialog')).toBe(dialog)
+      expect(api.sent('POST', `/api/v1/requests/${REQUEST_ID}/cancel`)).toHaveLength(0)
+    }
+  } finally { media.mockRestore() }
 })

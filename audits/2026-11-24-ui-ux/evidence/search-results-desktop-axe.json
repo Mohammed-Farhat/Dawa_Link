@@ -1,0 +1,177 @@
+{
+  "violations": [
+    {
+      "id": "landmark-unique",
+      "impact": "moderate",
+      "tags": [
+        "cat.semantics",
+        "best-practice"
+      ],
+      "description": "Ensure landmarks are unique",
+      "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/landmark-unique?application=axeAPI",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "landmark-is-unique",
+              "data": {
+                "role": "region",
+                "accessibleText": "apo-allopurinol"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"medicine-group\" aria-label=\"APO-ALLOPURINOL\">",
+                  "target": [
+                    ".medicine-group[aria-label=\"APO-ALLOPURINOL\"]:nth-child(17)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "moderate",
+          "html": "<section class=\"medicine-group\" aria-label=\"APO-ALLOPURINOL\">",
+          "target": [
+            ".medicine-group[aria-label=\"APO-ALLOPURINOL\"]:nth-child(16)"
+          ],
+          "failureSummary": "Fix any of the following:\n  The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+        },
+        {
+          "any": [
+            {
+              "id": "landmark-is-unique",
+              "data": {
+                "role": "region",
+                "accessibleText": "apo-atorvastatin"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"medicine-group\" aria-label=\"APO-ATORVASTATIN\">",
+                  "target": [
+                    ".medicine-group[aria-label=\"APO-ATORVASTATIN\"]:nth-child(20)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "moderate",
+          "html": "<section class=\"medicine-group\" aria-label=\"APO-ATORVASTATIN\">",
+          "target": [
+            ".medicine-group[aria-label=\"APO-ATORVASTATIN\"]:nth-child(19)"
+          ],
+          "failureSummary": "Fix any of the following:\n  The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+        },
+        {
+          "any": [
+            {
+              "id": "landmark-is-unique",
+              "data": {
+                "role": "region",
+                "accessibleText": "apo-dasatinib"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"medicine-group\" aria-label=\"APO-DASATINIB\">",
+                  "target": [
+                    ".medicine-group[aria-label=\"APO-DASATINIB\"]:nth-child(22)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "moderate",
+          "html": "<section class=\"medicine-group\" aria-label=\"APO-DASATINIB\">",
+          "target": [
+            ".medicine-group[aria-label=\"APO-DASATINIB\"]:nth-child(21)"
+          ],
+          "failureSummary": "Fix any of the following:\n  The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+        },
+        {
+          "any": [
+            {
+              "id": "landmark-is-unique",
+              "data": {
+                "role": "region",
+                "accessibleText": "atorvastatine arrow generiques"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<section class=\"medicine-group\" aria-label=\"ATORVASTATINE ARROW GENERIQUES\">",
+                  "target": [
+                    ".medicine-group[aria-label=\"ATORVASTATINE ARROW GENERIQUES\"]:nth-child(30)"
+                  ]
+                }
+              ],
+              "impact": "moderate",
+              "message": "The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "moderate",
+          "html": "<section class=\"medicine-group\" aria-label=\"ATORVASTATINE ARROW GENERIQUES\">",
+          "target": [
+            ".medicine-group[aria-label=\"ATORVASTATINE ARROW GENERIQUES\"]:nth-child(29)"
+          ],
+          "failureSummary": "Fix any of the following:\n  The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+        }
+      ]
+    }
+  ],
+  "incomplete": [],
+  "passes": [
+    "aria-allowed-attr",
+    "aria-allowed-role",
+    "aria-conditional-attr",
+    "aria-deprecated-role",
+    "aria-hidden-body",
+    "aria-hidden-focus",
+    "aria-prohibited-attr",
+    "aria-required-attr",
+    "aria-roles",
+    "aria-valid-attr-value",
+    "aria-valid-attr",
+    "autocomplete-valid",
+    "avoid-inline-spacing",
+    "button-name",
+    "bypass",
+    "color-contrast",
+    "document-title",
+    "duplicate-id-aria",
+    "empty-heading",
+    "form-field-multiple-labels",
+    "heading-order",
+    "html-has-lang",
+    "html-lang-valid",
+    "label-content-name-mismatch",
+    "label-title-only",
+    "label",
+    "landmark-banner-is-top-level",
+    "landmark-main-is-top-level",
+    "landmark-no-duplicate-banner",
+    "landmark-no-duplicate-main",
+    "landmark-one-main",
+    "landmark-unique",
+    "link-name",
+    "meta-viewport-large",
+    "meta-viewport",
+    "nested-interactive",
+    "page-has-heading-one",
+    "region",
+    "select-name",
+    "skip-link",
+    "target-size"
+  ]
+}

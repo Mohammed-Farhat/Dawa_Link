@@ -1,0 +1,22 @@
+{
+  "url": "/unknown-page",
+  "title": "This page doesn't exist · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nThis page doesn't exist\nGo to the home page",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "This page doesn't exist"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

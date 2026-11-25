@@ -1,0 +1,37 @@
+{
+  "url": "/pharmacy/reservations",
+  "title": "Reservations · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nHamra Pharmacy\nApproved · open until 21:00\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nReservations\nTo hand over\nBefore\nR-7K3Q2F\nHand over by today 21:00\nAUGMENTIN 1G × 2\nBatch A123 · expires 15 Jan 2027 · 600,000 each · total 1,200,000 LBP\nCheck the prescription\nPicked up\nNot available\nConfirm handover\n\nHand over 2 × AUGMENTIN 1G for order R-7K3Q2F? Only confirm after checking the order and giving the packs to the client.\n\nConfirm picked up\nCancel",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Reservations"
+    },
+    {
+      "level": "H2",
+      "text": "Confirm handover"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": [
+    {
+      "id": "landmark-no-duplicate-banner",
+      "impact": "moderate",
+      "nodes": 1
+    },
+    {
+      "id": "landmark-unique",
+      "impact": "moderate",
+      "nodes": 1
+    }
+  ]
+}

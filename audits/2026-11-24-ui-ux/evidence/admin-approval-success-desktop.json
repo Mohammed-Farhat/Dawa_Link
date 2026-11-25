@@ -1,0 +1,105 @@
+{
+  "url": "/admin/pharmacies/8ebd2ff4-88f7-4fbc-81ce-bcdb163032e6",
+  "title": "Synthetic Audit Pharmacy · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nBack to the list\nSynthetic Audit Pharmacy\nApproved\nApproved. The pharmacy was told, and can now add its stock.\nWhat the pharmacy typed\nPharmacy name\nSynthetic Audit Pharmacy\nLicence number\nAUDIT-20261124\nPhone\n+9611234567\nLogin email\npharmacy@audit.dawalink.test\nAddress\nSynthetic Audit Street, Beirut, Beirut\nPickup time\n1 day\nHow it is doing\nBoxes clients can see now\n0\nLast change to its stock\nnever\nMarked not available\nno reservation ended at its counter in the last 30 days\nOpening hours\nMonday: 08:00 to 20:00\nTuesday: 08:00 to 20:00\nWednesday: 08:00 to 20:00\nThursday: 08:00 to 20:00\nFriday: 08:00 to 20:00\nSaturday: 08:00 to 20:00\nSunday: closed\nWhere it is\nCheck that the pin is on the address. Drag it to correct it, then save the change below with a reason.\n+\n−\n© OpenStreetMap contributors\nPut the pin at the centre of the map\nCorrect its details\nOnly what you change is saved. After approval a pharmacy changes its hours, its pickup time, its phone, its address and its pin itself; its name and its licence are changed only here.\nPharmacy name\nLicence number\nPhone\nAddress\nDistrict\nAkkar\nAley\nBaabda\nBaalbek\nBatroun\nBeirut\nBint Jbeil\nBsharri\nChouf\nHasbaya\nHermel\nJbeil\nJezzine\nKeserwan\nKoura\nMarjeyoun\nMatn\nMiniyeh-Danniyeh\nNabatieh\nRashaya\nSidon\nTripoli\nTyre\nWest Beqaa\nZahle\nZgharta\nReason\n\nA few words, kept in the audit log. No names or phone numbers.\n\nSave the changes\nChecks\nIts email address is confirmed.\nNo other pharmacy has this licence number or this phone number.\nNo other pharmacy is registered at this address.\nAn admin has checked the pin.\nThe assistant shows this name to clients: it must be the real name on the sign.\nSuspend this pharmacy\nIts medicines stop showing to clients at once, and the offers on its boxes are cancelled. What clients already reserved there is kept: the pharmacy can still hand it over.\nWhy (the pharmacy reads this)\nSuspend",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Synthetic Audit Pharmacy"
+    },
+    {
+      "level": "H2",
+      "text": "What the pharmacy typed"
+    },
+    {
+      "level": "H2",
+      "text": "Where it is"
+    },
+    {
+      "level": "H2",
+      "text": "Correct its details"
+    },
+    {
+      "level": "H2",
+      "text": "Checks"
+    },
+    {
+      "level": "H2",
+      "text": "Suspend this pharmacy"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-b7rl8qllp",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-nfdj8jdfx",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-k8hedykhl",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-5pd1eubgj",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-b7k1xxfjs",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-dqb4goezl",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "TEXTAREA",
+      "type": "textarea",
+      "name": "",
+      "id": "suspension-reason",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

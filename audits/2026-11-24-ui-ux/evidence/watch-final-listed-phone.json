@@ -1,0 +1,22 @@
+{
+  "url": "/medicines",
+  "title": "My medicines · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nMy medicines\nActive\nHistory\nAPO-AZITHROMYCIN Z × 1\nWatching\nWatching until today 14:24, around Beirut · up to 900,000 LBP\nStop watching\nNothing reserved right now.\nSearch a medicine\nAsk DawaLink\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "My medicines"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

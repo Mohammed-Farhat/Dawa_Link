@@ -1,0 +1,21 @@
+{
+  "devices" : {
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4" : [
+
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-2" : [
+      {
+        "dataPath" : "\/Users\/ajkanaan\/Library\/Developer\/CoreSimulator\/Devices\/F04FD19A-BADF-4EF1-A8B8-BDBE49A066B7\/data",
+        "dataPathSize" : 3534856192,
+        "logPath" : "\/Users\/ajkanaan\/Library\/Logs\/CoreSimulator\/F04FD19A-BADF-4EF1-A8B8-BDBE49A066B7",
+        "udid" : "F04FD19A-BADF-4EF1-A8B8-BDBE49A066B7",
+        "lastUsedAt" : "2026-11-24T18:26:34Z",
+        "isAvailable" : true,
+        "logPathSize" : 372736,
+        "deviceTypeIdentifier" : "com.apple.CoreSimulator.SimDeviceType.iPhone-17e",
+        "state" : "Booted",
+        "name" : "iPhone 17e"
+      }
+    ]
+  }
+}

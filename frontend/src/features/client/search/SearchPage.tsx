@@ -260,7 +260,7 @@ function ByName({
   onChoose: (productId: string) => void
 }) {
   const navigate = useNavigate()
-  const { body, key } = useChoiceBody()
+  const { body, key, choices } = useChoiceBody()
   const wide = useWide()
   const result = useQuery({
     queryKey: ['by-name', typed, ...key],
@@ -288,6 +288,8 @@ function ByName({
   if (!result.data) return <Placeholder height={84} />
 
   const found = result.data
+  const needsExactProduct = found.groups.length === 0 || found.closest || found.groups.every((group) => group.by_ingredient)
+  const filtersActive = choices.openNow || choices.maxPriceLbp !== null
   const ask = () => navigate('/assistant', { state: { draft: s.askDraft(typed) } })
   const suggestions = found.did_you_mean.length > 0 && (
     <div className="chips" role="group" aria-label={s.didYouMean}>
@@ -322,8 +324,15 @@ function ByName({
             </button>
           </div>
         )}
+        {fresh && needsExactProduct && !filtersActive && (
+          <CatalogMatches typed={typed} onChoose={onChoose} />
+        )}
         {found.groups.map((group) => (
-          <section key={group.product.id} className="medicine-group" aria-label={group.product.name}>
+          <section key={group.product.id} className="medicine-group" aria-label={
+            found.groups.filter((other) => productWords(other.product) === productWords(group.product)).length > 1
+              ? `${productWords(group.product)} · ${s.productCode(group.product.code)}`
+              : productWords(group.product)
+          }>
             <div className="medicine-group__head">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <h2 className="medicine-group__name">{group.product.name}</h2>
@@ -483,6 +492,43 @@ function Filters({ location, children }: { location: Where; children?: ReactNode
           })
         }
       />
+    </section>
+  )
+}
+
+/** Display enough detail to select the medicine, never guess from its brand alone. */
+function productWords(product: Schemas['ProductSummary']) {
+  return [product.name, product.strength, product.form, product.pack].filter(Boolean).join(' · ')
+}
+
+/** Catalog lookup is separate from stock search: its IDs reach the existing manual
+ * watch flow, without creating a sourcing request or invoking the assistant. */
+function CatalogMatches({ typed, onChoose }: { typed: string; onChoose: (id: string) => void }) {
+  const wanted = typed.trim()
+  const enabled = wanted.length >= 2 && !ARABIC_LETTER.test(wanted)
+  const found = useQuery({
+    queryKey: ['search-catalog', wanted],
+    queryFn: ({ signal }) => unwrap(api.GET('/api/v1/catalog/products', {
+      params: { query: { q: wanted, limit: 6 } }, signal,
+    })),
+    enabled,
+    retry: false,
+  })
+  if (!enabled) return null
+  return (
+    <section className="panel stack" aria-label={s.catalogTitle}>
+      <h2 className="section-title">{s.catalogTitle}</h2>
+      <p className="soft">{s.catalogHint}</p>
+      {found.isPending && <p role="status">{strings.common.loading}</p>}
+      {found.isError && <Banner tone="red" alert action={
+        <button type="button" className="text-button" onClick={() => void found.refetch()}>{strings.common.tryAgain}</button>
+      }>{s.catalogFailed}</Banner>}
+      {found.data?.items.length === 0 && <p>{s.catalogEmpty}</p>}
+      {found.data?.items.map((product) => (
+        <button key={product.id} type="button" className="text-button" onClick={() => onChoose(product.id)}>
+          {productWords(product)} · {s.productCode(product.code)}
+        </button>
+      ))}
     </section>
   )
 }

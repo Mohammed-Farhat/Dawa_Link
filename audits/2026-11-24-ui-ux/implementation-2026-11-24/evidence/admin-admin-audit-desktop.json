@@ -1,0 +1,110 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 23:08\tSynthetic Audit Admin\tapproved a pharmacy\n\nFrom waiting to approved\n\n\tThe pharmacy · Only this\t\nTue 24 Nov 23:08\tSynthetic Audit Pharmacy\tconfirmed its email and waits for approval\tSynthetic Audit Pharmacy · Only this\t\nTue 24 Nov 23:07\tSynthetic Audit Pharmacy\tregistered as a pharmacy (email not confirmed yet)\tSynthetic Audit Pharmacy · Only this\t\nTue 24 Nov 23:07\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom paused to follows its rule\n\n\tBeirut Pharmacy A (demo) · Only this\t\nTue 24 Nov 23:07\tBeirut Pharmacy A (demo)\tchanged a box of its stock\n\nFrom follows its rule to paused\n\n\tBeirut Pharmacy A (demo) · Only this\t\nTue 24 Nov 23:07\tBeirut Pharmacy A (demo)\tmarked a reservation not available\n\nFrom reserved to not available\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tBeirut Pharmacy A (demo)\thanded over a reservation at the counter\n\nFrom reserved to picked up\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tA client 287d06ca\tcancelled a reservation\n\nFrom reserved to cancelled by the client\n\n\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tA client 287d06ca\treserved a medicine\tClient 287d06ca · Only this\t\nTue 24 Nov 23:07\tA client 2b131024\treset their password with an email link\n\nChanged: password\n\n\tClient 2b131024 · Only this\t\nTue 24 Nov 23:07\tA client 2b131024\tconfirmed their email\n\nFrom email not confirmed to active\n\n\tClient 2b131024 · Only this\t\nTue 24 Nov 23:07\tA client 2b131024\tsigned up\tClient 2b131024 · Only this\t\nTue 24 Nov 23:06\tThe system\tcreated an admin account, from the command line\tOnly this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-s163gc4sc",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-rso89529o",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "The pharmacy",
+      "w": 101.34375,
+      "h": 19
+    },
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Synthetic Audit Pharmacy",
+      "w": 186.53125,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Beirut Pharmacy A (demo)",
+      "w": 189.546875,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 287d06ca",
+      "w": 113.84375,
+      "h": 19
+    },
+    {
+      "text": "Client 2b131024",
+      "w": 112.734375,
+      "h": 19
+    },
+    {
+      "text": "Client 2b131024",
+      "w": 112.734375,
+      "h": 19
+    },
+    {
+      "text": "Client 2b131024",
+      "w": 112.734375,
+      "h": 19
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

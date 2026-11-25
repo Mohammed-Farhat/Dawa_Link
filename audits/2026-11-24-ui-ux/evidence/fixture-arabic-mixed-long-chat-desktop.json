@@ -1,0 +1,36 @@
+{
+  "url": "/assistant",
+  "title": "Ask DawaLink · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nNour\nYour chats\nEarlier chats are kept for 30 days.\nD\nAsk DawaLink\nFinds medicine. You confirm. No medical advice.\nNew chat\nYou're chatting with an AI assistant, not a pharmacist.\nBeirut, your home area\n\nYou:\nبدي دواء من بيروت — Synthetic العربية English 123\n\nDawaLink assistant:\nأي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. أي عيار تحتاج؟ هذا نص تجريبي طويل لفحص التفاف السطور واتجاه الكتابة. \n\nOr answer with one tap:\nعيار ٥٠٠\nاسأل الصيدلي\nMessage",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your chats"
+    },
+    {
+      "level": "H1",
+      "text": "Ask DawaLink"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "chat-message",
+      "label": null,
+      "placeholder": "Write in any language…",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

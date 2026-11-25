@@ -1,0 +1,53 @@
+{
+  "audit_frontend_api_worker_stopped": true,
+  "audit_ports_no_listeners": [
+    5174,
+    8001,
+    8026,
+    1026
+  ],
+  "isolated_database": "dawalink_ui_audit_20261124",
+  "isolated_database_dropped_and_absence_verified": true,
+  "isolated_mailpit_removed": true,
+  "temporary_credentials_and_launch_files_removed": [
+    "/tmp/dawalink-ui-audit-env.json",
+    "/tmp/dawalink-ui-audit-admin.json",
+    "/tmp/dawalink-ui-audit-setup.py",
+    "/tmp/dawalink-ui-audit-run.py",
+    "/tmp/dawalink-ui-audit-admin.py"
+  ],
+  "original_compose_services": [
+    {
+      "Service": "api",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "7fa75f48da4e"
+    },
+    {
+      "Service": "mailpit",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "ce08911128dd"
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "99f609241c74"
+    },
+    {
+      "Service": "web",
+      "State": "running",
+      "Health": "",
+      "ID": "46466c5517b3"
+    },
+    {
+      "Service": "worker",
+      "State": "running",
+      "Health": "healthy",
+      "ID": "7aa635467df4"
+    }
+  ],
+  "simulator_restored_to_shutdown": true,
+  "persistent_changes": "Only dated audit artifacts and selected web-design-guidelines skill installation."
+}

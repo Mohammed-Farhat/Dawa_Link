@@ -1,0 +1,80 @@
+{
+  "url": "/pharmacy",
+  "title": "At the counter · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nHamra Pharmacy\nApproved · open until 21:00\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nAt the counter\nType the number the client shows you.\nOrder number\nFind\nAsks from DawaLink\nYOUR ANSWER IS NEEDED · 1 H 42 MIN LEFT\nA client nearby needs 2 × CONCOR 5MG today\nYou hold 5 that are not listed yet · batch X9 · expires 3 Jun 2027\nRelease\n1 pack\n2 packs\nPrice each (LBP)\nSuggested 600,000 (25% off) · public price 800,000. The price is yours to set.\nYou offer 2 packs at 600,000 LBP each (25% off).\nAccept and offer it\nDecline\nAnswered lately\n2 × CONCOR 5MG · ASKED · Mon 16 Nov 11:42\nDue today\nNEW · put aside\nR-7K3Q2F\nAUGMENTIN 1G × 2 · prescription\nby 21:00\nToday in numbers\nNew reservations\n1\nDue today\n1\nPacks reserved\n2\nPacks listed\n40",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "At the counter"
+    },
+    {
+      "level": "H2",
+      "text": "Asks from DawaLink"
+    },
+    {
+      "level": "H3",
+      "text": "A client nearby needs 2 × CONCOR 5MG today"
+    },
+    {
+      "level": "H3",
+      "text": "Answered lately"
+    },
+    {
+      "level": "H2",
+      "text": "Due today"
+    },
+    {
+      "level": "H2",
+      "text": "Today in numbers"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "order-number",
+      "label": null,
+      "placeholder": "R-",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-f6h99l1bl",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-sv1danoul",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 27,
+      "h": 22
+    },
+    {
+      "text": null,
+      "w": 27,
+      "h": 22
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

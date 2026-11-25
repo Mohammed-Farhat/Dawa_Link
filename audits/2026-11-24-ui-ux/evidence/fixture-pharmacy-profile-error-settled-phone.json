@@ -1,0 +1,23 @@
+{
+  "url": "/pharmacy",
+  "title": "DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\n\nLoading…",
+  "headings": [],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": [
+    {
+      "id": "page-has-heading-one",
+      "impact": "moderate",
+      "nodes": 1
+    }
+  ]
+}

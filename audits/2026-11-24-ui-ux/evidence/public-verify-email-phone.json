@@ -1,0 +1,26 @@
+{
+  "url": "/verify-email",
+  "title": "DawaLink · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nDawaLink\nThis link is no longer valid. If your email is already confirmed, just log in. If not, log in and press \"Send the link again\".\nLog in",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your medicine, for less. Today."
+    },
+    {
+      "level": "H1",
+      "text": "DawaLink"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

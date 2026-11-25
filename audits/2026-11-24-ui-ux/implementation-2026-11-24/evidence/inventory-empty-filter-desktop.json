@@ -1,0 +1,102 @@
+{
+  "url": "/pharmacy/inventory",
+  "title": "Inventory · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nInventory\nFind stock\nAdd one box\nImport CSV\nUpdate from a file\nDownload the template and open it in Excel.\nOne row per batch: the medicine, its batch, its expiry and how many packs you have.\nWrite the medicine's name as the Ministry's price list writes it, with the same letters and numbers. Capitals don't matter, and a sign such as %, - or . counts as a space. When one name has several strengths, add the strength (2.5mg is not 25mg).\nIn Excel: File, Save As, and choose CSV. Then choose that file here.\nWrite the expiry as on the box, the month and the year: 03/2027 or 2027-03. Excel rewrites a full date in its own way.\nThe file is your whole stock: a box that is not in it is set to 0. Reserved packs are always kept.\nLeave the code column empty, unless a row comes back with \"several medicines have this name\": it then lists the code of each pack, and you write yours. A box of such a medicine is only changed by a row with its code, or by hand.\nDownload the template\nChoose a CSV file\nAdd one box\nMedicine\n\nType the name, then choose it.\n\nBatch\nExpiry date\nAs printed on the box: the month and the year. The box counts until the last day of that month.\nExpiry month\n01 · January\n02 · February\n03 · March\n04 · April\n05 · May\n06 · June\n07 · July\n08 · August\n09 · September\n10 · October\n11 · November\n12 · December\nExpiry year\n2026\n2027\n2028\n2029\n2030\n2031\nHow many packs\nAdd to my stock\nYour stock\nPrivate: only you see this list. Which boxes clients see follows your rule in Settings, never earlier than 6 months before their expiry.\nFind a medicine or a batch\nAll\nWithin 6 months\nMay be asked for\nPrivate\nExpired\nSoonest expiry first\nBy medicine\nNothing matches.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Inventory"
+    },
+    {
+      "level": "H2",
+      "text": "Update from a file"
+    },
+    {
+      "level": "H2",
+      "text": "Add one box"
+    },
+    {
+      "level": "H2",
+      "text": "Your stock"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "file",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-u00ie0xas",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-eng000kyh",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-4gbmt6zya",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-d7tp8xxl1",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-t2jkfv7rn",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-f7mlmiqqf",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 1,
+      "h": 1
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

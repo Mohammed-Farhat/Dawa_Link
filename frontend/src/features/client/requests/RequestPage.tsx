@@ -107,10 +107,9 @@ export function RequestPage() {
       }}
     />
   )
-  if (!wide) return thread
   return (
-    <Shell>
-      <div className="wide__chat">{thread}</div>
+    <Shell responsive>
+      <div className={wide ? 'wide__chat' : undefined}>{thread}</div>
     </Shell>
   )
 }

@@ -1,0 +1,22 @@
+{
+  "profile991": "Unsaved Synthetic Name",
+  "profile992": "Rami",
+  "delete-phone": {
+    "loggedIn": true,
+    "text": "g), A symbol, like ! ? @ # - (missing).\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nChange my password\nLog out\nDelete my account\n\nIf you delete your account:\n\nYour reservations are cancelled, and your requests and \"Notify me\" alerts end.\nYour name, email, phone, date of birth, saved place and last searches are erased now.\nYour chats and notifications are erased within a few minutes.\nPast reservations stay in the pharmacies' records, without your name.\nYou are logged out on every device.\n\nThis can't be undone.\n\nYour password\n\nType it to confirm it is you.\n\nThe password is wrong.\n\nCheck the field marked in red above.\n\nDelete my account\nKeep my account\nHome\nSearch\nMedicines\nAsk\nMe"
+  },
+  "delete-desktop": {
+    "loggedIn": true,
+    "text": ") (missing), A number (missing), A symbol, like ! ? @ # - (missing).\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nChange my password\nLog out\nDelete my account\n\nIf you delete your account:\n\nYour reservations are cancelled, and your requests and \"Notify me\" alerts end.\nYour name, email, phone, date of birth, saved place and last searches are erased now.\nYour chats and notifications are erased within a few minutes.\nPast reservations stay in the pharmacies' records, without your name.\nYou are logged out on every device.\n\nThis can't be undone.\n\nYour password\n\nType it to confirm it is you.\n\nThe password is wrong.\n\nCheck the field marked in red above.\n\nDelete my account\nKeep my account"
+  },
+  "searchAutoFocus": "",
+  "arabic": {
+    "dir": "auto",
+    "lang": "ar"
+  },
+  "radioArrow": {
+    "before": "false",
+    "after": "false",
+    "focus": "On the map"
+  }
+}

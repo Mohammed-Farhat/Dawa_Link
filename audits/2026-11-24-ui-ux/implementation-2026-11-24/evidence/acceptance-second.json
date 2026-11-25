@@ -1,0 +1,137 @@
+[
+  {
+    "name": "F01 settled error and keyboard retry",
+    "status": "passed",
+    "detail": {
+      "failedReads": 4,
+      "recovered": true
+    }
+  },
+  {
+    "name": "F02 profile and deletion drafts survive resize",
+    "status": "passed",
+    "detail": {
+      "observations": [
+        {
+          "width": 991,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        },
+        {
+          "width": 992,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        },
+        {
+          "width": 991,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        },
+        {
+          "width": 390,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        },
+        {
+          "width": 1440,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        },
+        {
+          "width": 390,
+          "name": "Unsaved Synthetic Name",
+          "draft": "Unsent-Synthetic-2026!",
+          "focused": true,
+          "mainCount": 1
+        }
+      ],
+      "mutationCount": 0
+    }
+  },
+  {
+    "name": "F02 assistant draft survives resize",
+    "status": "passed",
+    "detail": {
+      "draftPreserved": true,
+      "mutations": 0
+    }
+  },
+  {
+    "name": "F02 request cancellation stays open",
+    "status": "passed",
+    "detail": {
+      "dialogPreserved": true,
+      "mutations": 0
+    }
+  },
+  {
+    "name": "A01 populated search has distinct region names",
+    "status": "passed",
+    "detail": {
+      "names": [
+        "ABILIFY MAINTENA · 400mg · Injectable powder for suspension, prolonged release+solvent · 1Vial of powder +1Vial of 2ml solvent",
+        "ABIRATERONE ACETATE SPC · 250mg · Tablet, film coated · 120",
+        "ABRILADA · 40mg · Injectable solution · 2prefilled pens 0.8ml + 2alcohol pads",
+        "AIRTAL 100MG 20 · 100mg · Tablet, film coated · 20",
+        "ALFOCIN · 10mg · Tablet, extended release · 30",
+        "AMARYL · 4mg · Tablet · 30",
+        "AMIKACIN-ORBUCELL · 500mg · Injectable solution · 10Vials x 2ml",
+        "AMLOCARD · 5mg · Tablet · 30",
+        "AMLODIPINE ARROW · 10mg · Capsule · 30",
+        "AMLODIPRESS · 5mg · Tablet · 30",
+        "AMLOPHAR · 5mg · Capsule · 30",
+        "AMOXICLAV-ORBUCELL · 875/125mg · Tablet · 14",
+        "AMOXIDREX · 500mg · Capsule · 1000",
+        "ANDARAN PLUS · 300mg/12.5mg · Tablet, film coated · 28",
+        "APIXEL · 5mg · Tablet, film coated · 60",
+        "APO-ALLOPURINOL · 100mg · Tablet · 100",
+        "APO-ALLOPURINOL · 300mg · Tablet · 100",
+        "APO-ATENOL · 50mg · Tablet · 30",
+        "APO-ATORVASTATIN · 20mg · Tablet · 30",
+        "APO-ATORVASTATIN · 40mg · Tablet · 30",
+        "APO-DASATINIB · 50mg · Tablet · 30",
+        "APO-DASATINIB · 20mg · Tablet · 30",
+        "APO-ERLOTINIB · 100mg · Tablet · 30",
+        "APO-PROPRANOLOL · 10mg · Tablet, scored · 100",
+        "APO-ROSUVASTATIN · 10mg · Tablet · 30",
+        "AROPEM · 1g · Injectable powder for solution · 24Vial",
+        "ATHERO ROS · 20mg · Tablet, film coated · 30",
+        "ATORVA TAD · 40mg · Tablet, film coated · 30",
+        "ATORVASTATINE ARROW GENERIQUES · 10mg · Tablet, coated · 30",
+        "ATORVASTATINE ARROW GENERIQUES · 20mg · Tablet, coated · 30",
+        "ATROPINE · 1mg/ml · Injectable solution · 10 x 1ml",
+        "AUGMENTIN · 1g · Tablet · 14",
+        "AVALOX · 400mg · Tablet, film coated · 7",
+        "AVIXAN · 2.5mg · Tablet, film coated · 60",
+        "AXONE · 1g · Injectable powder for solution · 10",
+        "AZICIN 500 BENTA · 500mg · Tablet, film coated · 3",
+        "BUDESONIDE ARROW · 0.5mg/2ml · Inhalation suspension for nebuliser · Récipient unidose x20",
+        "DESLORATADINE ARROW · 0.5mg/ml · Solution · 150ml",
+        "DONEPEZIL ARROW · 10mg · Tablet, film coated · 28",
+        "DUTASTERIDE/TAMSULOSINE ARROW · 0.5mg/0.4mg · Capsule · 30"
+      ]
+    }
+  },
+  {
+    "name": "I02 location arrows wrap without requests",
+    "status": "passed",
+    "detail": {
+      "mutations": 0
+    }
+  },
+  {
+    "name": "F03 live ordinary search watch create list stop and resize",
+    "status": "failed",
+    "error": "locator.waitFor: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('region', { name: 'Find the exact medicine', exact: true }) to be visible\u001b[22m\n"
+  }
+]

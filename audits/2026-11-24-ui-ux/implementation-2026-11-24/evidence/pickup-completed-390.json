@@ -1,0 +1,22 @@
+{
+  "url": "/pharmacy/reservations",
+  "title": "Reservations · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nHamra Pharmacy\nApproved · open until 21:00\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nReservations\nTo hand over\nBefore\nR-7K3Q2F is handed over.\nNo reservation is waiting.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Reservations"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

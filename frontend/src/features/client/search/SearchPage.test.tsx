@@ -100,7 +100,7 @@ describe('Searching without the assistant', () => {
     // Typing is enough: the boxes in stock show at once, under the medicine's own name.
     await user.type(await screen.findByLabelText(s.label), 'augmentin')
 
-    const group = await screen.findByRole('region', { name: PRODUCT.name })
+    const group = await screen.findByRole('region', { name: [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ') })
     const row = within(group).getByRole('link', { name: /Hamra Pharmacy/ })
     expect(row).toHaveAttribute('href', `/listings/${LISTING_ID}`)
     expect(row).toHaveTextContent('600,000 LBP')
@@ -146,7 +146,7 @@ describe('Searching without the assistant', () => {
 
     await userEvent.type(await screen.findByLabelText(s.label), 'a')
 
-    expect(await screen.findByRole('region', { name: PRODUCT.name })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ') })).toBeInTheDocument()
     expect(api.sent('POST', '/api/v1/listings/search-by-name').at(-1)?.body).toMatchObject({ q: 'a' })
   })
 
@@ -171,7 +171,7 @@ describe('Searching without the assistant', () => {
     const user = userEvent.setup()
 
     await user.type(await screen.findByLabelText(s.label), 'augmentin')
-    await screen.findByRole('region', { name: PRODUCT.name })
+    await screen.findByRole('region', { name: [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ') })
     expect(api.sent('POST', '/api/v1/me/searches')).toEqual([])
 
     await user.click(screen.getByRole('link', { name: /Hamra Pharmacy/ }))
@@ -186,7 +186,7 @@ describe('Searching without the assistant', () => {
     const user = userEvent.setup()
 
     await user.type(await screen.findByLabelText(s.label), 'augmentin')
-    await screen.findByRole('region', { name: PRODUCT.name })
+    await screen.findByRole('region', { name: [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ') })
 
     const fold = screen.getByRole('button', { name: new RegExp(s.filters) })
     expect(fold).toHaveAttribute('aria-expanded', 'false')
@@ -208,7 +208,7 @@ describe('Searching without the assistant', () => {
     await user.click(screen.getByRole('link', { name: strings.common.back }))
 
     expect(await screen.findByLabelText(s.label)).toHaveValue('augmentin')
-    expect(await screen.findByRole('region', { name: PRODUCT.name })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ') })).toBeInTheDocument()
   })
 
   it('says when a name is only the closest one, and offers the others', async () => {
@@ -755,4 +755,92 @@ describe('What the client chose is always safe to send', () => {
     // What is not a number is left as it is.
     expect(tidy({ sort: 'cheapest', openNow: true })).toEqual({ sort: 'cheapest', openNow: true })
   })
+})
+
+describe('Manual no-stock catalog selection (F-03 / A-01)', () => {
+  it('selects the exact variant and opens the existing manual watch form', async () => {
+    const second = { ...PRODUCT, id: '88888888-8888-4888-8888-888888888888', strength: '500mg', code: 98765 }
+    const api = searchApi({
+      'POST /api/v1/listings/search-by-name': byName({ groups: [] }),
+      'GET /api/v1/catalog/products': { items: [PRODUCT, second], did_you_mean: [] },
+      'POST /api/v1/listings/search': result([], { product: second }),
+    })
+    renderApp(<AppRoutes />, { path: '/search' })
+    const user = userEvent.setup()
+    await user.type(await screen.findByLabelText(s.label), 'augmentin')
+    const matches = await screen.findByRole('region', { name: s.catalogTitle })
+    await user.click(await within(matches).findByRole('button', { name: new RegExp(`500mg.*${second.code}`) }))
+    const watch = await screen.findByRole('button', { name: s.notify.button })
+    await user.click(watch)
+    expect(await screen.findByLabelText(s.notify.maxPrice)).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/listings/search').at(-1)?.body).toMatchObject({ product_id: second.id })
+    expect(api.sent('POST', '/api/v1/watches')).toHaveLength(0)
+  })
+
+  it('recovers a failed catalog lookup and displays the no-match state', async () => {
+    let recovered = false
+    searchApi({
+      'POST /api/v1/listings/search-by-name': byName({ groups: [] }),
+      'GET /api/v1/catalog/products': () => recovered ? { items: [], did_you_mean: [] } : refusal(503, 'SERVICE_UNAVAILABLE'),
+    })
+    renderApp(<AppRoutes />, { path: '/search' })
+    await userEvent.type(await screen.findByLabelText(s.label), 'unknown')
+    const region = await screen.findByRole('region', { name: s.catalogTitle })
+    expect(await within(region).findByRole('alert')).toHaveTextContent(s.catalogFailed)
+    recovered = true
+    await userEvent.click(within(region).getByRole('button', { name: strings.common.tryAgain }))
+    expect(await within(region).findByText(s.catalogEmpty)).toBeInTheDocument()
+  })
+
+  it('distinguishes identical names and details by catalog code', async () => {
+    const second = { ...PRODUCT, id: '88888888-8888-4888-8888-888888888888', code: 98765 }
+    searchApi({ 'POST /api/v1/listings/search-by-name': byName({ groups: [
+      { product: PRODUCT, items: [LISTING], total_found: 1 },
+      { product: second, items: [{ ...LISTING, id: 'other' }], total_found: 1 },
+    ] }) })
+    renderApp(<AppRoutes />, { path: '/search' })
+    await userEvent.type(await screen.findByLabelText(s.label), 'augmentin')
+    const name = [PRODUCT.name, PRODUCT.strength, PRODUCT.form, PRODUCT.pack].filter(Boolean).join(' · ')
+    expect(await screen.findByRole('region', { name: `${name} · ${s.productCode(PRODUCT.code)}` })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: `${name} · ${s.productCode(second.code)}` })).toBeInTheDocument()
+  })
+})
+
+
+it('keeps exact catalog selection available when only ingredient alternatives are stocked', async () => {
+  searchApi({
+    'POST /api/v1/listings/search-by-name': byName({ groups: [{ product: { ...PRODUCT, name: 'Another brand' }, by_ingredient: true, items: [LISTING], total_found: 1 }] }),
+    'GET /api/v1/catalog/products': { items: [PRODUCT], did_you_mean: [] },
+  })
+  renderApp(<AppRoutes />, { path: '/search' })
+  await userEvent.type(await screen.findByLabelText(s.label), 'augmentin')
+  expect(await screen.findByRole('region', { name: s.catalogTitle })).toBeInTheDocument()
+})
+
+it('ignores a late catalog response for a name the client has replaced', async () => {
+  let firstArrives: (value: unknown) => void = () => {}
+  let firstAsked = false
+  const newer = { ...PRODUCT, id: '88888888-8888-4888-8888-888888888888', name: 'CONCOR', code: 98765 }
+  searchApi({
+    'POST /api/v1/listings/search-by-name': byName({ groups: [] }),
+    'GET /api/v1/catalog/products': (call: { path: string }) => {
+      const q = new URL('http://api.test' + call.path).searchParams.get('q')
+      if (q === 'augmentin') {
+        firstAsked = true
+        return new Promise((resolve) => { firstArrives = resolve })
+      }
+      return { items: [newer], did_you_mean: [] }
+    },
+  })
+  renderApp(<AppRoutes />, { path: '/search' })
+  const user = userEvent.setup()
+  const search = await screen.findByLabelText(s.label)
+  await user.type(search, 'augmentin')
+  await waitFor(() => expect(firstAsked).toBe(true))
+  await user.clear(search)
+  await user.type(search, 'concor')
+  const selected = await screen.findByRole('button', { name: new RegExp(`CONCOR.*${newer.code}`) })
+  firstArrives({ items: [PRODUCT], did_you_mean: [] })
+  await waitFor(() => expect(selected).toBeInTheDocument())
+  expect(screen.queryByRole('button', { name: new RegExp(`${PRODUCT.name}.*${PRODUCT.code}`) })).toBeNull()
 })

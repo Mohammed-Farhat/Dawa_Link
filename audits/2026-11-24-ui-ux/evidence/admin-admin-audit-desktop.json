@@ -1,0 +1,39 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nTue 24 Nov 20:12\tThe system\tcreated an admin account, from the command line\tOnly this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-tjn83b12w",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-srsievs71",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

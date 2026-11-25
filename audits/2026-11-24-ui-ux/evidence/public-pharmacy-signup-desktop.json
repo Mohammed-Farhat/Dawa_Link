@@ -1,0 +1,309 @@
+{
+  "url": "/pharmacy/signup",
+  "title": "Join DawaLink as a pharmacy · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nJoin DawaLink as a pharmacy\n\nList the boxes that expire soon, at a discount. Clients reserve them and pay at your counter.\n\nAfter you confirm your email, our team checks your licence and your pin. You get an email when your pharmacy is approved; then you can list your boxes.\n\nYour account\nEmail\nPassword\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nYour pharmacy\nPharmacy name\n\nAs on your sign. Clients see it.\n\nLicence number\nPhone\n\nA Lebanese number, for example 01 234 567. Clients may call it.\n\nAddress\nDistrict\nAkkar\nAley\nBaabda\nBaalbek\nBatroun\nBeirut\nBint Jbeil\nBsharri\nChouf\nHasbaya\nHermel\nJbeil\nJezzine\nKeserwan\nKoura\nMarjeyoun\nMatn\nMiniyeh-Danniyeh\nNabatieh\nRashaya\nSidon\nTripoli\nTyre\nWest Beqaa\nZahle\nZgharta\nWhere is your pharmacy?\nTap the map to put the pin on your pharmacy. You can drag it. Our team checks it against your address.\n+\n−\n© OpenStreetMap contributors\nPut the pin at the centre of the map\nOpening hours\nMonday\nto\n+ reopens later\nTuesday\nto\n+ reopens later\nWednesday\nto\n+ reopens later\nThursday\nto\n+ reopens later\nFriday\nto\n+ reopens later\nSaturday\nto\n+ reopens later\nSunday\nClosed\nFor a pharmacy open until midnight, close at 00:00.\nHow long do you keep a reservation?\n1 day\n2 days\n3 days\nA client chooses a pickup day within this time. Not picked up: back to your stock.\n\nSealed, in-date packs only. Never above the public price. Keep your quantities up to date, and check your reservations every day.\n\nI agree to these terms\nRegister my pharmacy\nI already have an account",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Join DawaLink as a pharmacy"
+    },
+    {
+      "level": "H2",
+      "text": "Your account"
+    },
+    {
+      "level": "H2",
+      "text": "Your pharmacy"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "email",
+      "name": "",
+      "id": "mantine-8y8ltm2m3",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "email"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-172ty9gxk",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "new-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-1pvy5osho",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "organization"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-y75yppfvp",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-er67tgsem",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-aeozayci1",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "street-address"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-gbtgp0gbi",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Monday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Monday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Tuesday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Tuesday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Tuesday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Wednesday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Wednesday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Wednesday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Thursday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Thursday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Thursday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Friday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Friday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Friday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Saturday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Saturday: opens at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "time",
+      "name": "",
+      "id": "",
+      "label": "Saturday: closes at",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": "Open on Sunday",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "mantine-6da7vv7qe",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "Open on Monday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Tuesday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Wednesday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Thursday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Friday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Saturday",
+      "w": 20,
+      "h": 20
+    },
+    {
+      "text": "Open on Sunday",
+      "w": 20,
+      "h": 20
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

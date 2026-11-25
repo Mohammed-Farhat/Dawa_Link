@@ -1,0 +1,42 @@
+{
+  "url": "/admin/clients/11111111-1111-4111-8111-111111111111",
+  "title": "Client 11111111 · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nBack to the list\nClient 11111111\nPaused\nBeirut · 1 open reservation · 3 picked up · 1 open request · 2 missed pickups in 30 days\nReservations paused until Fri 20 Nov 10:00\nSays they collected it\nThe client says they collected this at the counter, but the pharmacy never pressed [Picked up], so it was counted as a missed pickup. Call the pharmacy. If the client did collect it, clear it: it stops counting against them.\nR-7K3Q2F\nsaid so Mon 16 Nov 09:00\nAUGMENTIN 1G · Hamra Pharmacy\nClear this missed pickup\nReservations\nThe last 30, newest first.\nR-2WAITS\nTo pick up\nCONCOR 5MG · Hamra Pharmacy\n1 pack · pick up by Mon 16 Nov 20:00\nR-3TAKEN\nPicked up\nPANADOL 500MG · Hamra Pharmacy\n2 packs · Sat 14 Nov 12:00\nR-7K3Q2F\nMissed pickup\nAUGMENTIN 1G · Hamra Pharmacy\n1 pack · Sun 15 Nov 21:00\nRequests\nA request is \"find these medicines for me\": the assistant searches for 6 hours. The last 10, the open ones first.\nQ-6BN2RA\nSearching until Mon 16 Nov 15:00\n1 of 2 medicines reserved · started Mon 16 Nov 09:00\nActions\nLift the pause\nSuspend this client\nThey are logged out at once. Their open reservations, offers, requests and watches are cancelled, and the flags about them are closed.\nContact details\nFor support only. Each look is written to the audit log; 30 an hour at most.\nShow the name, email and phone",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Client 11111111"
+    },
+    {
+      "level": "H2",
+      "text": "Says they collected it"
+    },
+    {
+      "level": "H2",
+      "text": "Reservations"
+    },
+    {
+      "level": "H2",
+      "text": "Requests"
+    },
+    {
+      "level": "H2",
+      "text": "Actions"
+    },
+    {
+      "level": "H2",
+      "text": "Contact details"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

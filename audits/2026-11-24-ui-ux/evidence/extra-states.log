@@ -1,0 +1,20 @@
+fixture-pharmacy-unavailable-dialog-verified-phone /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+fixture-pharmacy-unavailable-dialog-verified-desktop /pharmacy/reservations overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+fixture-watch-active-phone /medicines overflow 0 axe []
+fixture-watch-active-desktop /medicines overflow 0 axe []
+BLOCKED watch-empty-search-form locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: 'Notify me', exact: true })[22m
+
+fixture-request-cancel-dialog-phone /requests/99999999-9999-4999-8999-999999999999 overflow 0 axe []
+fixture-request-cancel-dialog-desktop /requests/99999999-9999-4999-8999-999999999999 overflow 0 axe []
+fixture-pharmacy-stock-error-phone /pharmacy/inventory overflow 0 axe []
+fixture-pharmacy-stock-error-desktop /pharmacy/inventory overflow 0 axe []
+fixture-pharmacy-stock-loading-phone /pharmacy/inventory overflow 0 axe []
+fixture-pharmacy-stock-loading-desktop /pharmacy/inventory overflow 0 axe []
+fixture-assistant-failed-send-phone /assistant overflow 0 axe []
+fixture-assistant-failed-send-desktop /assistant overflow 0 axe []
+fixture-admin-escalation-reply-phone /admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb overflow 0 axe []
+fixture-admin-escalation-reply-desktop /admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb overflow 0 axe []
+fixture-long-pharmacy-name-phone /pharmacy/settings overflow 0 axe []
+fixture-long-pharmacy-name-desktop /pharmacy/settings overflow 0 axe []

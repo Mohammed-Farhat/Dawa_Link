@@ -1,0 +1,22 @@
+{
+  "url": "/pharmacy/notifications",
+  "title": "Notifications · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nNotifications\nNothing yet. What happens to your reservations and requests is listed here.",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Notifications"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

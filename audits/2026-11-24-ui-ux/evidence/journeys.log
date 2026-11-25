@@ -1,0 +1,101 @@
+signup-validation-phone /signup overflow 0 axe []
+signup-validation-desktop /signup overflow 0 axe []
+Registration validation and focus OK {
+  focus: '<input class="m_8fb7ebe7 mantine-Input-input mantine-TextInput-input" data-variant="default" autocomplete="given-name" maxlength="40" id="mantine-52htc0frs" value="" data-error="true" aria-invalid="true" aria-describedby="mantine-52htc0frs-error" sty'
+}
+signup-success-phone /check-email overflow 0 axe []
+signup-success-desktop /check-email overflow 0 axe []
+Client registration with synthetic data OK { url: 'http://localhost:5174/check-email' }
+email-verified-phone /verify-email overflow 0 axe []
+email-verified-desktop /verify-email overflow 0 axe []
+Email confirmation from captured local mail OK { url: 'http://localhost:5174/verify-email' }
+logout-phone /login overflow 0 axe []
+logout-desktop /login overflow 0 axe []
+Synthetic account login and logout OK { url: 'http://localhost:5174/login', tokenCleared: true }
+RESET BUTTONS [ 'Send me a link' ]
+password-reset-sent-phone /forgot-password overflow 0 axe []
+password-reset-sent-desktop /forgot-password overflow 0 axe []
+password-reset-valid-phone /reset-password overflow 0 axe []
+password-reset-valid-desktop /reset-password overflow 0 axe []
+RESET LABELS [ { type: 'password', id: 'mantine-u8p6jnbdo' } ]
+password-reset-done-phone /reset-password overflow 0 axe []
+password-reset-done-desktop /reset-password overflow 0 axe []
+Password reset request captured locally OK { url: 'http://localhost:5174/reset-password' }
+search-results-phone /search overflow 0 axe [{"id":"landmark-unique","impact":"moderate","nodes":4}]
+search-results-desktop /search overflow 0 axe [{"id":"landmark-unique","impact":"moderate","nodes":4}]
+SEARCH LINKS [
+  {
+    href: '/listings/61223189-35f3-4e4a-ac92-04b40306a258',
+    text: 'B\n' +
+      'Beirut Pharmacy A (demo) · Beirut\n' +
+      'about 0.4 km · closed now\n' +
+      'expires 30 Nov 2026 · 5+ left\n' +
+      '11,796,000 LBP\n' +
+      'about $131.8\n' +
+      'Save 17,695,998'
+  },
+  {
+    href: '/listings/c50e5194-49c3-448b-b881-5f185f34fd6c',
+    text: 'M\n' +
+      'Matn Pharmacy A (demo) · Matn\n' +
+      'about 8.9 km · open until 22:00\n' +
+      'expires 13 Mar 2027 · 5+ left\n' +
+      '55,311,000 LBP\n' +
+      'about $618.0\n' +
+      'Save 18,437,373'
+  },
+  {
+    href: '/listings/e1e669e5-c055-4921-a35b-8f49823483a8',
+    text: 'T\n' +
+      'Tripoli Pharmacy A (demo) · Tripoli\n' +
+      'about 95.6 km · open until 24:00\n' +
+      'expires 11 Feb 2027 · 5+ left\n' +
+      '44,249,000 LBP\n' +
+      'about $494.4\n' +
+      'Save 29,499,373'
+  }
+]
+Search live seeded catalog OK { offers: 67 }
+listing-detail-phone /listings/61223189-35f3-4e4a-ac92-04b40306a258 overflow 0 axe []
+listing-detail-desktop /listings/61223189-35f3-4e4a-ac92-04b40306a258 overflow 0 axe []
+reservation-confirmation-phone /listings/61223189-35f3-4e4a-ac92-04b40306a258 overflow 0 axe []
+reservation-confirmation-desktop /listings/61223189-35f3-4e4a-ac92-04b40306a258 overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+Offer detail and reservation sheet OK {
+  focus: '<button type="button" class="round-button round-button--grey" aria-label="One pack more">+</button>',
+  dialog: true
+}
+RESERVE BUTTONS []
+ticket-reserved-phone /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+ticket-reserved-desktop /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+Reserve and ticket display OK {
+  url: 'http://localhost:5174/reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871'
+}
+ticket-cancel-confirmation-phone /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+ticket-cancel-confirmation-desktop /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+CANCEL BUTTONS [ '', 'Yes, cancel it', 'Keep it' ]
+ticket-cancelled-phone /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+ticket-cancelled-desktop /reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871 overflow 0 axe []
+Cancel reservation with confirmation OK {
+  text: 'Skip to content\n' +
+    'Cancelled\n' +
+    'Cancelled by you\n' +
+    'ORDER NUMBER\n' +
+    'R-WMDUMP\n' +
+    'ABILIFY MAINTENA × 1\n' +
+    'Total\n' +
+    '11,796,000 LBP\n' +
+    'about $131.8\n' +
+    'Pharmacy\n' +
+    'Beirut Pharmacy A (demo)\n' +
+    '1 Demo Street, Beirut, Beirut\n' +
+    'Box expires 30 Nov 2026\n' +
+    'Directions\n' +
+    '(opens in a new tab)\n' +
+    'Call'
+}
+account-delete-confirmation-phone /me overflow 0 axe []
+account-delete-confirmation-desktop /me overflow 0 axe []
+Profile deletion confirmation and wrong-password recovery BLOCKED locator.click: Timeout 6500ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: 'Delete my account', exact: true })[22m
+

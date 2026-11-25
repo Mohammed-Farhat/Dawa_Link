@@ -87,6 +87,15 @@ export function WhereYouLive({
             type="button"
             role="radio"
             aria-checked={value.mode === mode}
+            tabIndex={value.mode === mode ? 0 : -1}
+            onKeyDown={(event) => {
+              if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
+              event.preventDefault()
+              const next = mode === 'map' ? 'area' : 'map'
+              onChange({ ...value, mode: next })
+              const radios = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+              radios?.[next === 'map' ? 0 : 1]?.focus()
+            }}
             className="tabs__tab"
             onClick={() => onChange({ ...value, mode })}
           >

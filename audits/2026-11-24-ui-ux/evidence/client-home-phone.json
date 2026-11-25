@@ -1,0 +1,22 @@
+{
+  "url": "/",
+  "title": "Your medicines today · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nGood evening, Rami\nYour medicines today\nNothing is waiting for you.\nWhat you reserve, what a pharmacy offers you and what DawaLink looks for will be here.\nSearch a medicine\nAsk DawaLink\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Your medicines today"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

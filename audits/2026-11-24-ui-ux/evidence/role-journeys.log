@@ -1,0 +1,76 @@
+pickup-ready-phone /pharmacy overflow 0 axe []
+pickup-ready-desktop /pharmacy overflow 0 axe []
+pickup-done-phone /pharmacy overflow 0 axe []
+pickup-done-desktop /pharmacy overflow 0 axe []
+Live pharmacy pickup OK
+unavailable-confirm-phone /pharmacy overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+unavailable-confirm-desktop /pharmacy overflow 0 axe [{"id":"landmark-no-duplicate-banner","impact":"moderate","nodes":1},{"id":"landmark-unique","impact":"moderate","nodes":1}]
+unavailable-done-phone /pharmacy overflow 0 axe []
+unavailable-done-desktop /pharmacy overflow 0 axe []
+ticket-unavailable-phone /reservations/0df68b3b-2975-4fe0-97af-f2b971a6e97b overflow 0 axe []
+ticket-unavailable-desktop /reservations/0df68b3b-2975-4fe0-97af-f2b971a6e97b overflow 0 axe []
+Live unavailable-stock handling OK
+listing-paused-phone /pharmacy/listings overflow 0 axe []
+listing-paused-desktop /pharmacy/listings overflow 0 axe []
+LISTING BTNS [
+  'Log out',      'Soonest expiry first', 'By medicine',
+  'Set my price', 'Resume',               'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Set my price',
+  'Pause',        'Set my price',         'Pause',
+  'Set my price', 'Pause',                'Previous',
+  '1',            '2',                    'Next'
+]
+listing-resumed-phone /pharmacy/listings overflow 0 axe []
+listing-resumed-desktop /pharmacy/listings overflow 0 axe []
+Live pharmacy listings pause and resume OK
+inventory-page-two-phone /pharmacy/inventory?page=2 overflow 0 axe []
+inventory-page-two-desktop /pharmacy/inventory?page=2 overflow 0 axe []
+inventory-empty-filter-phone /pharmacy/inventory overflow 0 axe []
+inventory-empty-filter-desktop /pharmacy/inventory overflow 0 axe []
+Live inventory pagination and empty filter OK
+pharmacy-registration-sent-phone /check-email overflow 0 axe []
+pharmacy-registration-sent-desktop /check-email overflow 0 axe []
+Pharmacy registration with local map control OK
+pharmacy-pending-live-phone /pharmacy overflow 0 axe []
+pharmacy-pending-live-desktop /pharmacy overflow 0 axe []
+Pharmacy email confirmation and pending portal OK
+admin-totp-login-phone /admin overflow 0 axe []
+admin-totp-login-desktop /admin overflow 0 axe []
+Admin two-factor login OK
+admin-pharmacy-pending-live-phone /admin/pharmacies/8ebd2ff4-88f7-4fbc-81ce-bcdb163032e6 overflow 0 axe []
+admin-pharmacy-pending-live-desktop /admin/pharmacies/8ebd2ff4-88f7-4fbc-81ce-bcdb163032e6 overflow 0 axe []
+APPROVAL BTNS [
+  'Log out',
+  '+',
+  '−',
+  'Put the pin at the centre of the map',
+  'Save the changes',
+  'Approve',
+  'Ask for more information',
+  'Reject'
+]
+Live admin pharmacy approval BLOCKED locator.check: Timeout 6500ms exceeded.
+Call log:
+[2m  - waiting for getByRole('checkbox', { name: /pin|checked/i })[22m
+
+admin-client-live-phone /admin/clients/287d06ca-6f4c-469a-8b22-d3081c8eaee9 overflow 0 axe []
+admin-client-live-desktop /admin/clients/287d06ca-6f4c-469a-8b22-d3081c8eaee9 overflow 0 axe []
+admin-audit-live-phone /admin/audit overflow 0 axe []
+admin-audit-live-desktop /admin/audit overflow 0 axe []
+Live admin client detail and audit navigation OK
+notifications-populated-live-phone /notifications overflow 0 axe []
+notifications-populated-live-desktop /notifications overflow 0 axe []
+Live notifications after stock unavailable OK

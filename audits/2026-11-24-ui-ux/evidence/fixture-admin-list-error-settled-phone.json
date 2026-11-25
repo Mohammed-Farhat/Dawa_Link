@@ -1,0 +1,32 @@
+{
+  "url": "/admin",
+  "title": "Pharmacies · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nPharmacies\nWaiting\nApproved\nRejected\nSuspended\nName or licence number\nWe couldn't load this list. DawaLink is temporarily unavailable. Please try again.\nTry again",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Pharmacies"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-8umjbsz7x",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

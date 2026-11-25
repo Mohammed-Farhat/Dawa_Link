@@ -1,0 +1,5 @@
+
+> dawalink-web@0.0.0 test
+> vitest run src/features/client/search/SearchPage.test.tsx src/features/client/requests/RequestPage.test.tsx --reporter=json --outputFile=../audits/2026-11-24-ui-ux/implementation-2026-11-24/evidence/final-search-request-tests.json
+
+JSON report written to /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/audits/2026-11-24-ui-ux/implementation-2026-11-24/evidence/final-search-request-tests.json

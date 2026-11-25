@@ -1,0 +1,4 @@
+fixture-pharmacy-profile-error-settled-phone /pharmacy overflow 0 axe [{"id":"page-has-heading-one","impact":"moderate","nodes":1}]
+fixture-pharmacy-profile-error-settled-desktop /pharmacy overflow 0 axe [{"id":"page-has-heading-one","impact":"moderate","nodes":1}]
+fixture-admin-list-error-settled-phone /admin overflow 0 axe []
+fixture-admin-list-error-settled-desktop /admin overflow 0 axe []

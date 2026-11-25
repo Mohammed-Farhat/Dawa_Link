@@ -1,0 +1,126 @@
+[
+  {
+    "name": "pharmacy-unavailable-dialog-verified",
+    "role": "pharmacy",
+    "url": "/pharmacy/reservations",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations"
+    ]
+  },
+  {
+    "name": "watch-active",
+    "role": "client",
+    "url": "/medicines",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/watches",
+      "GET /api/v1/reservations",
+      "GET /api/v1/watches"
+    ]
+  },
+  {
+    "name": "watch-empty-search-form",
+    "role": "client",
+    "url": "/search?product=33333333-3333-4333-8333-333333333333",
+    "status": "blocked",
+    "reason": "locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Notify me', exact: true })\u001b[22m\n",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "POST /api/v1/listings/search",
+      "GET /api/v1/me/searches",
+      "GET /api/v1/districts",
+      "GET /api/v1/me/searches",
+      "GET /api/v1/me/searches"
+    ]
+  },
+  {
+    "name": "request-cancel-dialog",
+    "role": "client",
+    "url": "/requests/99999999-9999-4999-8999-999999999999",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/requests/99999999-9999-4999-8999-999999999999",
+      "GET /api/v1/offers",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages",
+      "GET /api/v1/offers",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages"
+    ]
+  },
+  {
+    "name": "pharmacy-stock-error",
+    "role": "pharmacy",
+    "url": "/pharmacy/inventory",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/inventory/uploads/waiting",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/inventory",
+      "GET /api/v1/pharmacy/inventory/uploads/waiting",
+      "GET /api/v1/pharmacy/inventory"
+    ]
+  },
+  {
+    "name": "pharmacy-stock-loading",
+    "role": "pharmacy",
+    "url": "/pharmacy/inventory",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/inventory/uploads/waiting",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/inventory",
+      "GET /api/v1/pharmacy/inventory/uploads/waiting"
+    ]
+  },
+  {
+    "name": "assistant-failed-send",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "POST /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/chats",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages"
+    ]
+  },
+  {
+    "name": "admin-escalation-reply",
+    "role": "admin",
+    "url": "/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+      "GET /api/v1/admin/overview",
+      "POST /api/v1/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb/reply",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "long-pharmacy-name",
+    "role": "pharmacy",
+    "url": "/pharmacy/settings",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/districts"
+    ]
+  }
+]

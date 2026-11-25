@@ -1,0 +1,29 @@
+[
+  {
+    "name": "pharmacy-profile-error-settled",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me"
+    ]
+  },
+  {
+    "name": "admin-list-error-settled",
+    "role": "admin",
+    "url": "/admin",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/pharmacies",
+      "GET /api/v1/admin/overview",
+      "GET /api/v1/admin/pharmacies",
+      "GET /api/v1/admin/pharmacies",
+      "GET /api/v1/admin/pharmacies"
+    ]
+  }
+]

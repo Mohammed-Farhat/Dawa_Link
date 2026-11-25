@@ -1,0 +1,22 @@
+{
+  "url": "/reservations/22222222-2222-4222-8222-222222222222",
+  "title": "Missed pickup · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nMissed pickup\nMissed pickup: it wasn't picked up in time\nORDER NUMBER\nR-7K3Q2F\nAUGMENTIN 1G × 1\nTotal\n600,000 LBP\nabout $6.7\nPharmacy\nHamra Pharmacy\n12 Hamra Street, Beirut\nBox expires 15 Jan 2027\nDirections\n(opens in a new tab)\nCall\nDid you collect it? The pharmacy may have forgotten to mark it.\nI picked it up",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Missed pickup"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

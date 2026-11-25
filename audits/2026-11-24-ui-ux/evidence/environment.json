@@ -1,0 +1,22 @@
+{
+  "full_sweep_browser": "Chrome 158.0.8127.37 on macOS via existing bundled Playwright",
+  "phone": [
+    390,
+    844
+  ],
+  "desktop": [
+    1440,
+    900
+  ],
+  "narrow_width": 320,
+  "paid_provider": "none",
+  "external_keys_removed": true,
+  "database": "dawalink_ui_audit_20261124",
+  "website": "http://localhost:5174",
+  "api": "http://localhost:8001",
+  "mailpit": "http://localhost:8026",
+  "smtp": "127.0.0.1:1026",
+  "existing_stack_untouched": "Existing :5173/:8000 containers have anthropic configured; no browser test targeted them.",
+  "mobile_attempt": "Installed iOS 27.2 runtime/device metadata; Simulator.app missing from configured Xcode Developer directory, openurl Safari timed out. Device shutdown restored. Android AVD exists but not exercised; no functioning native mobile browser was tested.",
+  "model_constraint": "No runtime model-switch tool was available; GPT-6.1 Sol Medium was requested but selection could not be verified."
+}

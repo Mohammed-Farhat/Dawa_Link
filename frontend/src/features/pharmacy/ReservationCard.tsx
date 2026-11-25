@@ -1,6 +1,6 @@
 import { Modal } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { api, ApiFailure, type Schemas, unwrap } from '../../api/client'
 import { CheckIcon, PrescriptionIcon } from '../../components/icons'
@@ -18,8 +18,8 @@ type Reservation = Schemas['PharmacyReservation']
  * One reservation as the pharmacist sees it (PS-4): the order number, the product, the
  * batch to take from the shelf, the price to ask for. **Nothing about the client.**
  *
- * [Picked up] is one tap. [Not available] asks which packs first, because it takes them
- * out of the stock. What the server answered is kept by the page (`notice`): a card that
+ * [Picked up] confirms the order before finalizing. [Not available] asks which packs
+ * first, because it takes them out of the stock. What the server answered is kept by the page (`notice`): a card that
  * was handed over leaves the list of those to hand over, and the answer stays.
  */
 export function ReservationCard({
@@ -33,11 +33,17 @@ export function ReservationCard({
 }) {
   const queryClient = useQueryClient()
   const [asking, setAsking] = useState(false)
+  const [confirmingPickup, setConfirmingPickup] = useState(false)
+  const card = useRef<HTMLElement>(null)
+  const inFlight = useRef(false)
+  const pickedUp = useRef(false)
   const [units, setUnits] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
   const waiting = reservation.state === 'RESERVED'
 
   async function act(action: 'picked-up' | 'not-available') {
+    if (inFlight.current || (action === 'picked-up' && pickedUp.current)) return
+    inFlight.current = true
     setSending(true)
     onNotice(null)
     try {
@@ -47,6 +53,8 @@ export function ReservationCard({
             params: { path: { reservation_id: reservation.id } },
           }),
         )
+        pickedUp.current = true
+        setConfirmingPickup(false)
         onNotice({ key: reservation.id, tone: 'green', text: s.pickedUpDone(reservation.ref) })
       } else {
         await unwrap(
@@ -67,6 +75,15 @@ export function ReservationCard({
       // Whatever happened, show the reservation as the server has it now.
       await queryClient.invalidateQueries({ queryKey: ['pharmacy'] })
       setSending(false)
+      inFlight.current = false
+      // Refetch can remove this card. Do not leave keyboard focus on a removed action.
+      if (action === 'picked-up') requestAnimationFrame(() => {
+        const target = card.current?.isConnected ? card.current : document.querySelector<HTMLElement>('main h1')
+        if (target && !document.querySelector('[role="dialog"]')) {
+          target.tabIndex = -1
+          target.focus()
+        }
+      })
     }
   }
 
@@ -77,7 +94,7 @@ export function ReservationCard({
   )
   return (
     // Focusable from code: a number found at the counter moves the focus here.
-    <article className="counter-card" aria-label={s.reservation(reservation.ref)} tabIndex={-1}>
+    <article ref={card} className="counter-card" aria-label={s.reservation(reservation.ref)} tabIndex={-1}>
       <div className="counter-card__facts">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span className="order-ref" style={{ fontSize: 22, letterSpacing: 2 }}>
@@ -104,7 +121,7 @@ export function ReservationCard({
             {s.checkPrescription}
           </span>
         )}
-        {!asking && said}
+        {!asking && !confirmingPickup && said}
       </div>
 
       {waiting && (
@@ -113,7 +130,7 @@ export function ReservationCard({
             type="button"
             className="pill-button pill-button--green pill-button--tall"
             disabled={sending}
-            onClick={() => void act('picked-up')}
+            onClick={() => { onNotice(null); setConfirmingPickup(true) }}
           >
             <CheckIcon />
             {s.pickedUp}
@@ -132,6 +149,29 @@ export function ReservationCard({
           </button>
         </div>
       )}
+
+      <Modal
+        opened={confirmingPickup}
+        onClose={() => { if (!sending) setConfirmingPickup(false) }}
+        title={s.pickupTitle}
+        centered radius="xl"
+        closeOnEscape={!sending} closeOnClickOutside={!sending}
+        withCloseButton={!sending}
+        onExitTransitionEnd={() => {
+          if (card.current?.isConnected) card.current.focus()
+        }}
+      >
+        <div className="stack">
+          <p>{s.pickupBody(reservation.ref, reservation.product.name, reservation.qty)}</p>
+          {confirmingPickup && said}
+          <button type="button" className="pill-button pill-button--green" disabled={sending} onClick={() => void act('picked-up')}>
+            {sending ? strings.common.loading : s.confirmPickup}
+          </button>
+          <button type="button" className="pill-button pill-button--grey" disabled={sending} onClick={() => setConfirmingPickup(false)} data-autofocus>
+            {strings.common.cancel}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         opened={asking}
