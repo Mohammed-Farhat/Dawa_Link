@@ -1,0 +1,32 @@
+{
+  "url": "/search?product=e635f5cc-695c-4015-98b9-dda750ec384d",
+  "title": "CHILDREN'S PANADOL 5-12 YEARS · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\n\n2 pharmacies have CHILDREN'S PANADOL 5-12 YEARS\n\nMedicine name\nCHILDREN'S PANADOL 5-12 YEARS\nElixir · 100ml\nPrescription needed\nFilters\nBest match · Beirut, your home area\n2 pharmacies\nB\nBaabda Pharmacy B (demo) · Baabda\nabout 10.2 km · open until 22:00\nexpires 2 Jan 2027 · 5+ left\n213,000 LBP\nabout $2.4\nSave 143,118\nS\nSidon Pharmacy A (demo) · Sidon\nabout 54.2 km · open until 13:00\nexpires 13 Feb 2027 · 2 left\n213,000 LBP\nabout $2.4\nSave 143,118\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "CHILDREN'S PANADOL 5-12 YEARS"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "search",
+      "name": "",
+      "id": "medicine-name",
+      "label": null,
+      "placeholder": "Search a medicine in stock",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

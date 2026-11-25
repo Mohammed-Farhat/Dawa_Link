@@ -1,0 +1,560 @@
+[
+  {
+    "role": "public",
+    "route": "/welcome",
+    "view": "phone",
+    "evidence": "public-welcome-phone",
+    "actual": "/welcome",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/welcome",
+    "view": "desktop",
+    "evidence": "public-welcome-desktop",
+    "actual": "/welcome",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/signup",
+    "view": "phone",
+    "evidence": "public-signup-phone",
+    "actual": "/signup",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/signup",
+    "view": "desktop",
+    "evidence": "public-signup-desktop",
+    "actual": "/signup",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/login",
+    "view": "phone",
+    "evidence": "public-login-phone",
+    "actual": "/login",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/login",
+    "view": "desktop",
+    "evidence": "public-login-desktop",
+    "actual": "/login",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/forgot-password",
+    "view": "phone",
+    "evidence": "public-forgot-password-phone",
+    "actual": "/forgot-password",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/forgot-password",
+    "view": "desktop",
+    "evidence": "public-forgot-password-desktop",
+    "actual": "/forgot-password",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/reset-password",
+    "view": "phone",
+    "evidence": "public-reset-password-phone",
+    "actual": "/reset-password",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/reset-password",
+    "view": "desktop",
+    "evidence": "public-reset-password-desktop",
+    "actual": "/reset-password",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/check-email",
+    "view": "phone",
+    "evidence": "public-check-email-phone",
+    "actual": "/check-email",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/check-email",
+    "view": "desktop",
+    "evidence": "public-check-email-desktop",
+    "actual": "/check-email",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/verify-email",
+    "view": "phone",
+    "evidence": "public-verify-email-phone",
+    "actual": "/verify-email",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/verify-email",
+    "view": "desktop",
+    "evidence": "public-verify-email-desktop",
+    "actual": "/verify-email",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/pharmacy/signup",
+    "view": "phone",
+    "evidence": "public-pharmacy-signup-phone",
+    "actual": "/pharmacy/signup",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/pharmacy/signup",
+    "view": "desktop",
+    "evidence": "public-pharmacy-signup-desktop",
+    "actual": "/pharmacy/signup",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/admin/login",
+    "view": "phone",
+    "evidence": "public-admin-login-phone",
+    "actual": "/admin/login",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/admin/login",
+    "view": "desktop",
+    "evidence": "public-admin-login-desktop",
+    "actual": "/admin/login",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/status",
+    "view": "phone",
+    "evidence": "public-status-phone",
+    "actual": "/status",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/status",
+    "view": "desktop",
+    "evidence": "public-status-desktop",
+    "actual": "/status",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/unknown-page",
+    "view": "phone",
+    "evidence": "public-unknown-page-phone",
+    "actual": "/unknown-page",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "public",
+    "route": "/unknown-page",
+    "view": "desktop",
+    "evidence": "public-unknown-page-desktop",
+    "actual": "/unknown-page",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/",
+    "view": "phone",
+    "evidence": "client-home-phone",
+    "actual": "/",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/",
+    "view": "desktop",
+    "evidence": "client-home-desktop",
+    "actual": "/",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/search",
+    "view": "phone",
+    "evidence": "client-search-phone",
+    "actual": "/search",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/search",
+    "view": "desktop",
+    "evidence": "client-search-desktop",
+    "actual": "/search",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/assistant",
+    "view": "phone",
+    "evidence": "client-assistant-phone",
+    "actual": "/assistant",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/assistant",
+    "view": "desktop",
+    "evidence": "client-assistant-desktop",
+    "actual": "/assistant",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/medicines",
+    "view": "phone",
+    "evidence": "client-medicines-phone",
+    "actual": "/medicines",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/medicines",
+    "view": "desktop",
+    "evidence": "client-medicines-desktop",
+    "actual": "/medicines",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/me",
+    "view": "phone",
+    "evidence": "client-me-phone",
+    "actual": "/me",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/me",
+    "view": "desktop",
+    "evidence": "client-me-desktop",
+    "actual": "/me",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/notifications",
+    "view": "phone",
+    "evidence": "client-notifications-phone",
+    "actual": "/notifications",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "client",
+    "route": "/notifications",
+    "view": "desktop",
+    "evidence": "client-notifications-desktop",
+    "actual": "/notifications",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-phone",
+    "actual": "/pharmacy",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-desktop",
+    "actual": "/pharmacy",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/reservations",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-reservations-phone",
+    "actual": "/pharmacy/reservations",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/reservations",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-reservations-desktop",
+    "actual": "/pharmacy/reservations",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/inventory",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-inventory-phone",
+    "actual": "/pharmacy/inventory",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/inventory",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-inventory-desktop",
+    "actual": "/pharmacy/inventory",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/listings",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-listings-phone",
+    "actual": "/pharmacy/listings",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/listings",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-listings-desktop",
+    "actual": "/pharmacy/listings",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/settings",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-settings-phone",
+    "actual": "/pharmacy/settings",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/settings",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-settings-desktop",
+    "actual": "/pharmacy/settings",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/notifications",
+    "view": "phone",
+    "evidence": "pharmacy-pharmacy-notifications-phone",
+    "actual": "/pharmacy/notifications",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "pharmacy",
+    "route": "/pharmacy/notifications",
+    "view": "desktop",
+    "evidence": "pharmacy-pharmacy-notifications-desktop",
+    "actual": "/pharmacy/notifications",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin",
+    "view": "phone",
+    "evidence": "admin-admin-phone",
+    "actual": "/admin",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin",
+    "view": "desktop",
+    "evidence": "admin-admin-desktop",
+    "actual": "/admin",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/escalations",
+    "view": "phone",
+    "evidence": "admin-admin-escalations-phone",
+    "actual": "/admin/escalations",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/escalations",
+    "view": "desktop",
+    "evidence": "admin-admin-escalations-desktop",
+    "actual": "/admin/escalations",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/reports",
+    "view": "phone",
+    "evidence": "admin-admin-reports-phone",
+    "actual": "/admin/reports",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/reports",
+    "view": "desktop",
+    "evidence": "admin-admin-reports-desktop",
+    "actual": "/admin/reports",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/clients",
+    "view": "phone",
+    "evidence": "admin-admin-clients-phone",
+    "actual": "/admin/clients",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/clients",
+    "view": "desktop",
+    "evidence": "admin-admin-clients-desktop",
+    "actual": "/admin/clients",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/health",
+    "view": "phone",
+    "evidence": "admin-admin-health-phone",
+    "actual": "/admin/health",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/health",
+    "view": "desktop",
+    "evidence": "admin-admin-health-desktop",
+    "actual": "/admin/health",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/catalog",
+    "view": "phone",
+    "evidence": "admin-admin-catalog-phone",
+    "actual": "/admin/catalog",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/catalog",
+    "view": "desktop",
+    "evidence": "admin-admin-catalog-desktop",
+    "actual": "/admin/catalog",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/audit",
+    "view": "phone",
+    "evidence": "admin-admin-audit-phone",
+    "actual": "/admin/audit",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/audit",
+    "view": "desktop",
+    "evidence": "admin-admin-audit-desktop",
+    "actual": "/admin/audit",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/clock",
+    "view": "phone",
+    "evidence": "admin-admin-clock-phone",
+    "actual": "/admin/clock",
+    "overflow": 0,
+    "violations": []
+  },
+  {
+    "role": "admin",
+    "route": "/admin/clock",
+    "view": "desktop",
+    "evidence": "admin-admin-clock-desktop",
+    "actual": "/admin/clock",
+    "overflow": 0,
+    "violations": []
+  }
+]

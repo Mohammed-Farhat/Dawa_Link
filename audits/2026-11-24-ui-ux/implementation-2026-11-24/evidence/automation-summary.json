@@ -1,0 +1,15 @@
+{
+  "rendered_captures": 192,
+  "axe_scans": 182,
+  "best_practice_warning_scan_counts": {
+    "landmark-no-duplicate-banner": 8,
+    "landmark-unique": 8
+  },
+  "wcag_tagged_violations": [],
+  "incomplete_scan_counts": {
+    "color-contrast": 37,
+    "label-content-name-mismatch": 16
+  },
+  "document_overflow_captures": [],
+  "scope": "Repeated captured states, not unique workflow/conformance passes. Screen-reader/native mobile limitations remain."
+}

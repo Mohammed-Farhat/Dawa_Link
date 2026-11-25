@@ -1,0 +1,144 @@
+{
+  "url": "/admin/audit",
+  "title": "Audit log · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies (1)\nEscalations (2)\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nAudit log\nWho did what, newest first. Nothing here can be edited or deleted. A change names the fields that changed, never what they hold.\nKind of action\nAll\nPharmacies\nStock\nReservations and offers\nClients\nRequests and watches\nEscalations\nReported answers\nFlags\nLogins, passwords and contact views\nDemo clock\nWho\nAnyone\nAdmin\nPharmacy\nClient\nAssistant\nSystem\nWhen\tWho\tWhat happened\tAbout\tReason\nMon 16 Nov 09:55\tRania Admin\tapproved a pharmacy\n\nFrom waiting to approved\n\n\tThe pharmacy · Only this\t",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Audit log"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-36p198ngm",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-3gok1ibeg",
+      "label": null,
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": "The pharmacy",
+      "w": 101.34375,
+      "h": 19
+    }
+  ],
+  "overflow": [
+    {
+      "tag": "TABLE",
+      "cls": "stock-table",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\nMon 16 Nov 09:55\tRania Admin\tapproved a phar",
+      "left": 40,
+      "right": 1000.953125
+    },
+    {
+      "tag": "THEAD",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason\n",
+      "left": 40,
+      "right": 1000.953125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "When\tWho\tWhat happened\tAbout\tReason",
+      "left": 40,
+      "right": 1000.953125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "What happened",
+      "left": 280.953125,
+      "right": 520.953125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "About",
+      "left": 520.953125,
+      "right": 760.953125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Reason",
+      "left": 760.953125,
+      "right": 1000.953125
+    },
+    {
+      "tag": "TBODY",
+      "cls": "",
+      "text": "Mon 16 Nov 09:55\tRania Admin\tapproved a pharmacy\n\nFrom waiting to approved\n\n\tThe",
+      "left": 40,
+      "right": 1000.953125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Mon 16 Nov 09:55\tRania Admin\tapproved a pharmacy\n\nFrom waiting to approved\n\n\tThe",
+      "left": 40,
+      "right": 1000.953125
+    },
+    {
+      "tag": "TH",
+      "cls": "audit-cell",
+      "text": "approved a pharmacy\n\nFrom waiting to approved",
+      "left": 280.953125,
+      "right": 520.953125
+    },
+    {
+      "tag": "P",
+      "cls": "audit-change hint",
+      "text": "From waiting to approved",
+      "left": 280.953125,
+      "right": 508.953125
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "The pharmacy · Only this",
+      "left": 520.953125,
+      "right": 760.953125
+    },
+    {
+      "tag": "A",
+      "cls": "",
+      "text": "The pharmacy",
+      "left": 520.953125,
+      "right": 622.296875
+    },
+    {
+      "tag": "BUTTON",
+      "cls": "text-button audit-id",
+      "text": "Only this",
+      "left": 634.125,
+      "right": 720.34375
+    },
+    {
+      "tag": "TD",
+      "cls": "audit-cell",
+      "text": "",
+      "left": 760.953125,
+      "right": 1000.953125
+    }
+  ],
+  "violations": []
+}

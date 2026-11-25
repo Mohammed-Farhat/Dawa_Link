@@ -375,6 +375,11 @@ export const strings = {
     markAll: 'Mark all as read',
   },
   search: {
+    catalogTitle: 'Find the exact medicine',
+    catalogHint: 'Choose its strength and pack to check availability and ask to be notified if it appears.',
+    catalogEmpty: 'No catalog match. Check the name or ask DawaLink for help.',
+    catalogFailed: 'The medicine list could not load. Try again.',
+    productCode: (code: number) => `Code ${code}`,
     title: 'Find a medicine',
     maxPrice: 'Max price (LBP)',
     // One language in the sheet: "notify me" (docs/11 §8, B#38). My medicines keeps
@@ -634,6 +639,14 @@ export const strings = {
     deleteKeep: 'Keep my account',
   },
   pharmacy: {
+    inventoryTasks: 'Inventory tasks',
+    findStock: 'Find stock',
+    importStock: 'Import CSV',
+    pickupTitle: 'Confirm handover',
+    pickupBody: (ref: string, medicine: string, qty: number) => `Hand over ${qty} × ${medicine} for order ${ref}? Only confirm after checking the order and giving the packs to the client.`,
+    confirmPickup: 'Confirm picked up',
+    profileFailed: 'Your pharmacy could not load',
+    profileRefreshFailed: 'Your pharmacy details could not refresh. Try again to check for changes.',
     nav: 'Pharmacy',
     today: 'Today',
     reservations: 'Reservations',

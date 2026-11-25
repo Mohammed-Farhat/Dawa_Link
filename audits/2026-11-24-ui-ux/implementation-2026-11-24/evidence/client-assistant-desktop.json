@@ -1,0 +1,36 @@
+{
+  "url": "/assistant",
+  "title": "Ask DawaLink · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nRami\nYour chats\nNew chat\nCurrent\nEarlier chats are kept for 30 days.\nD\nAsk DawaLink\nFinds medicine. You confirm. No medical advice.\nNew chat\nYou're chatting with an AI assistant, not a pharmacist.\nBeirut, your home area\nNew requests and \"Notify me\" start again at 08:00. Search and reserving work now.\nTell me which medicine you need. I find where it is, and you reserve.\nI need Panadol\nbaddi concor 5\nبدّي أوغمنتين\nMessage",
+  "headings": [
+    {
+      "level": "H2",
+      "text": "Your chats"
+    },
+    {
+      "level": "H1",
+      "text": "Ask DawaLink"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "chat-message",
+      "label": null,
+      "placeholder": "Write in any language…",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

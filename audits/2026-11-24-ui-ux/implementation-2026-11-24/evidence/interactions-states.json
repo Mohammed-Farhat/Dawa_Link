@@ -1,0 +1,36 @@
+[
+  {
+    "name": "pickup-confirmation-390",
+    "role": "pharmacy",
+    "url": "/pharmacy/reservations",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "POST /api/v1/pharmacy/reservations/22222222-2222-4222-8222-222222222222/picked-up",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "POST /api/v1/pharmacy/reservations/22222222-2222-4222-8222-222222222222/picked-up",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations"
+    ]
+  },
+  {
+    "name": "pickup-confirmation-1440",
+    "role": "pharmacy",
+    "url": "/pharmacy/reservations",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "POST /api/v1/pharmacy/reservations/22222222-2222-4222-8222-222222222222/picked-up",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "POST /api/v1/pharmacy/reservations/22222222-2222-4222-8222-222222222222/picked-up",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations"
+    ]
+  }
+]

@@ -19,6 +19,8 @@
 
 ---
 
+Implementation update — 24 November 2026 (UI/UX audit): pharmacy pickup now asks for an order-specific confirmation before the existing handover action. Empty name search offers exact catalog selection leading to the existing manual Notify me flow; sourcing requests still start in chat. Responsive client frames preserve drafts across the desktop breakpoint. Inventory has direct task links to stock, add-box and CSV sections. Earlier dated decisions remain historical context.
+
 ## In short
 
 - **Search first, not chat first.** Search is its own entry in the menu, on a phone and on a computer, next to the assistant's. The client's home shows what needs them now (BLD-D42; it opened with a search box until then).
@@ -174,7 +176,7 @@ Each is drawn on the v2 canvas. Screens that aren't drawn reuse these components
 | Request tracker | CS-16 | A ring "2 of 3 reserved" + time left → each medicine with a 3-step bar → the offer (amber) with [Accept and reserve] → what DawaLink did. [Cancel request] lives in the ⋯ menu. |
 | My medicines | CS-10, CS-11, CS-16 | Active / History → one card per medicine: Ready (Show ticket) · Offer waiting (See the offer) · Watching (Stop) |
 | Me | CS-13 | Account → **where you live: "On the map" (with [Use my location]) or "By area"**, one of the two shown at a time (BLD-D42) → tell me about other brands, notifications, how pickup works, password → missed pickups 0 of 2 → log out. *(Later: the text-size setting.)* |
-| Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → due today → the early-release ask → today in numbers. *(Later: Undo on [Picked up].)* |
+| Pharmacy · Today | PS-3, PS-4, PS-9 | Pill tabs → **the counter box** → the found reservation with [Picked up] and [Not available ▾] → due today → the early-release ask → today in numbers. [Picked up] opens an order-specific confirmation before final handover. |
 | Pharmacy · Inventory | PS-6 | 4 steps → summary tiles (ready, need fixing, new, set to 0) → "1 reserved box kept" → rows to fix with "Did you mean…?" → [Discard] [Apply 1,191 rows] |
 | Admin · Overview | AS-2, AS-10 | Navy bar → needs-attention tiles → the agent's 7 days (fulfilled, safety violations, turn time, cost per fulfilled request) with a daily chart → escalations |
 | Foundations v2 | none | Colors and meanings, the font in English and Arabic, buttons, chips, statuses, principles |

@@ -1,0 +1,50 @@
+{
+  "url": "/admin/login",
+  "title": "Admin log in · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nAdmin log in\nEmail\nPassword\nCode from your authenticator app\nLog in",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Admin log in"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "email",
+      "name": "",
+      "id": "mantine-b4x6l4q6z",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "username"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-v7r08c421",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-udmpz5xxt",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "one-time-code"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

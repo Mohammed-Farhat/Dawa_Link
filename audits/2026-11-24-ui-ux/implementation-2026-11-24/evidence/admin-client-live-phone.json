@@ -1,0 +1,38 @@
+{
+  "url": "/admin/clients/287d06ca-6f4c-469a-8b22-d3081c8eaee9",
+  "title": "Client 287d06ca · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink admin\nPharmacies\nEscalations\nReported answers\nClients\nHealth\nCatalog\nAudit log\nDemo clock\nLog out\nBack to the list\nClient 287d06ca\nActive\nBeirut · 0 open reservations · 1 picked up · 0 open requests · 0 missed pickups in 30 days\nReservations\nThe last 30, newest first.\nR-6PDP4U\nNot available at the pharmacy\nDOSTINEX · Beirut Pharmacy A (demo)\n1 pack · Tue 24 Nov 23:07\nR-SYNFCS\nPicked up\nABILIFY MAINTENA · Beirut Pharmacy A (demo)\n1 pack · Tue 24 Nov 23:07\nR-RXYNRP\nCancelled by the client\nABILIFY MAINTENA · Beirut Pharmacy A (demo)\n1 pack · Tue 24 Nov 23:07\nRequests\nA request is \"find these medicines for me\": the assistant searches for 6 hours. The last 10, the open ones first.\nNo request yet.\nActions\nSuspend this client\nThey are logged out at once. Their open reservations, offers, requests and watches are cancelled, and the flags about them are closed.\nContact details\nFor support only. Each look is written to the audit log; 30 an hour at most.\nShow the name, email and phone",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Client 287d06ca"
+    },
+    {
+      "level": "H2",
+      "text": "Reservations"
+    },
+    {
+      "level": "H2",
+      "text": "Requests"
+    },
+    {
+      "level": "H2",
+      "text": "Actions"
+    },
+    {
+      "level": "H2",
+      "text": "Contact details"
+    }
+  ],
+  "inputs": [],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

@@ -2625,3 +2625,6 @@ form.search-pill:focus-within {
     display: none;
   }
 }
+
+/* Inventory task anchors clear the sticky portal bar and keep keyboard focus visible. */
+#stock, #stock-file, #add-box { scroll-margin-top: 100px; }

@@ -1,0 +1,29 @@
+ M backend/src/dawalink/evals/dataset_selection.py
+ M backend/src/dawalink/evals/datasets.py
+ M backend/src/dawalink/evals/experiment.py
+ M backend/src/dawalink/evals/run_multiturn.py
+ M backend/src/dawalink/evals/run_understanding.py
+ M backend/src/dawalink/evals/score_understanding.py
+ M docs/11_ui_design.md
+ M frontend/src/app/global.css
+ M frontend/src/components/layout.tsx
+ M frontend/src/features/client/AccountPages.test.tsx
+ M frontend/src/features/client/WhereYouLive.tsx
+ M frontend/src/features/client/assistant/AssistantPage.tsx
+ M frontend/src/features/client/requests/RequestPage.test.tsx
+ M frontend/src/features/client/requests/RequestPage.tsx
+ M frontend/src/features/client/search/SearchPage.test.tsx
+ M frontend/src/features/client/search/SearchPage.tsx
+ M frontend/src/features/pharmacy/InventoryPage.tsx
+ M frontend/src/features/pharmacy/PharmacyPortal.test.tsx
+ M frontend/src/features/pharmacy/PharmacyPortal.tsx
+ M frontend/src/features/pharmacy/ReservationCard.tsx
+ M frontend/src/strings/en.ts
+?? DawaLink_Roadmap_and_Database_Handoff.md
+?? audits/
+?? backend/src/dawalink/evals/behavior.py
+?? backend/tests/agent/test_merged_watch_recovery.py
+?? backend/tests/unit/evals/test_merged_behavior.py
+?? eval/development-merged-v1/
+?? eval/experiments/merged-a-20261123/
+?? frontend/src/app/ResponsiveState.test.tsx

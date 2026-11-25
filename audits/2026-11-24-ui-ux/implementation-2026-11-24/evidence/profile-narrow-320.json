@@ -1,0 +1,153 @@
+{
+  "url": "/me",
+  "title": "Profile and settings · DawaLink",
+  "viewport": {
+    "width": 320,
+    "height": 844
+  },
+  "scrollWidth": 320,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nProfile and settings\nYour details\nFirst name\nMiddle name (optional)\nLast name\nDate of birth\nPhone (optional)\n\nOnly DawaLink's team can see it, for support. Pharmacies never do.\n\nSave\nWhere you live\nWhere you live\nSearches start around it when you don't share your location.\nOn the map\nBy area\nGovernorate\nChoose…\nAkkar\nBaalbek-Hermel\nBeirut\nBeqaa\nKeserwan-Jbeil\nMount Lebanon\nNabatieh\nNorth\nSouth\nDistrict\nChoose…\nBeirut\nTown (optional)\nWhole district\nAchrafieh\nAdlieh\nAicha Bakkar\nAin El Tineh\nAin el Mreisseh\nAl Eamiliyeh\nAl Hikmat\nAl-Lija\nAmerican University\nBab Idriss\nBadaro\nBarbir\nBashura\nBasta\nBasta Faouka\nBurj Abi Haidar\nClemenceau\nCola\nDar Al Fatwa\nDowntown\nFurn El Hayek\nGeitawi\nGemmayzeh\nHamra\nJanbulat\nJisr\nKarantina\nKarm El Zeitoun\nKhodr\nMajidiyeh\nMalaab\nManara\nMar Elias\nMar Mikhael\nMar Mitr\nMar Nicolas\nMathaf\nMazraa\nMedawar\nMina al-Husn\nMonot\nMousaitbeh\nNasrah\nOrthodox Hospital\nPark\nPatriarcat\nPort\nQantari\nQoreitem\nRamlet el Baida\nRaouche\nRas Beirut\nRas el Nabaa\nRmeil\nSaifi\nSalim Slam\nSanayeh\nSassine\nSerail\nSioufi\nSnoubra\nSodeco\nTallet el Khayat\nTariq el Jdideh\nTel Druze\nUnesco\nVerdun\nWadi Abu Jamil\nWata El Moussaitbeh\nYesouiyeh\nZarif\nZqaq Al Blat\nSave\nYour account\nRami Haddad\nclient01@demo.dawalink.test\nMissed pickups\nNone in the last 30 days.\n\nA reservation you don't pick up by the pharmacy's closing time on its day is a missed pickup: the box went back on the shelf for nobody. After 2 in 30 days, reserving is paused for 7 days. Cancelling before the deadline never counts.\n\nThe assistant\nTell me about other brands of the same medicine\nThe assistant then shows them with \"ask the pharmacist first\". It never reserves one for you.\nNotifications\n4 new\nPassword\nCurrent password\nNew password\n\nYour other devices are logged out.\nA password needs: At least 10 characters (missing), A capital letter (A to Z) (missing), A small letter (a to z) (missing), A number (missing), A symbol, like ! ? @ # - (missing).\n\nAt least 10 characters\n(missing)\nA capital letter (A to Z)\n(missing)\nA small letter (a to z)\n(missing)\nA number\n(missing)\nA symbol, like ! ? @ # -\n(missing)\nChange my password\nLog out\nDelete my account\nDelete my account…\nHome\nSearch\nMedicines\nAsk\nMe",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Profile and settings"
+    },
+    {
+      "level": "H2",
+      "text": "Your details"
+    },
+    {
+      "level": "H2",
+      "text": "Where you live"
+    },
+    {
+      "level": "H2",
+      "text": "Your account"
+    },
+    {
+      "level": "H2",
+      "text": "Missed pickups"
+    },
+    {
+      "level": "H2",
+      "text": "The assistant"
+    },
+    {
+      "level": "H2",
+      "text": "Password"
+    },
+    {
+      "level": "H2",
+      "text": "Delete my account"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-gcq0nkv7b",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "given-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-3m8sul08v",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "additional-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-48h7xs9kq",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "family-name"
+    },
+    {
+      "tag": "INPUT",
+      "type": "date",
+      "name": "",
+      "id": "mantine-fktl9wt38",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "bday"
+    },
+    {
+      "tag": "INPUT",
+      "type": "tel",
+      "name": "",
+      "id": "mantine-5lfzeoawj",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "tel"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-6xqs7rgep",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-aa92tswcp",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-vphihicts",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "checkbox",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-jbblxdkaa",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "current-password"
+    },
+    {
+      "tag": "INPUT",
+      "type": "password",
+      "name": "",
+      "id": "mantine-tgs2psvn5",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "new-password"
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 13,
+      "h": 13
+    }
+  ],
+  "overflow": [],
+  "violations": []
+}

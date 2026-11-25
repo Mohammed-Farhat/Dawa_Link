@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { useQueryClient } from '@tanstack/react-query'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
@@ -196,7 +197,7 @@ describe("The pharmacy's Today", () => {
     expect(await accessibilityProblems(container)).toEqual([])
   })
 
-  it('finds a reservation by its number and hands it over in one tap', async () => {
+  it('finds a reservation by its number and hands it over after confirming', async () => {
     const api = pharmacyApi({
       [`POST /api/v1/pharmacy/reservations/${HELD.id}/picked-up`]: { ...HELD, state: 'PICKED_UP' },
     })
@@ -209,6 +210,7 @@ describe("The pharmacy's Today", () => {
     expect(within(card).getByText(s.checkPrescription)).toBeInTheDocument()
     expect(within(card).getByText(/Batch A123/)).toBeInTheDocument()
     await user.click(within(card).getByRole('button', { name: s.pickedUp }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: s.confirmPickup }))
 
     await waitFor(() => expect(api.sent('POST', '/api/v1/pharmacy/reservations')).toHaveLength(1))
     // The number is sent as it reads on the client's ticket.
@@ -314,6 +316,7 @@ describe("The pharmacy's Today", () => {
 
     const card = await screen.findByRole('article', { name: s.reservation('R-7K3Q2F') })
     await user.click(within(card).getByRole('button', { name: s.pickedUp }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: s.confirmPickup }))
 
     await waitFor(() =>
       expect(screen.queryByRole('article', { name: s.reservation('R-7K3Q2F') })).not.toBeInTheDocument(),
@@ -522,4 +525,98 @@ describe('Who sees the portal', () => {
     expect(await screen.findByRole('heading', { name: strings.home.title })).toBeInTheDocument()
     expect(api.sent('GET', '/api/v1/pharmacy')).toEqual([])
   })
+})
+
+describe('Pharmacy profile recovery (F-01)', () => {
+  it.each(['503', 'network'])('recovers from %s without logging the pharmacist out', async (failure) => {
+    let recovered = false
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/me': () => {
+        if (recovered) return PROFILE
+        if (failure === 'network') throw new TypeError('Failed to fetch')
+        return refusal(503, 'SERVICE_UNAVAILABLE')
+      },
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    expect(await screen.findByRole('heading', { name: s.profileFailed })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: s.logOut })).toBeInTheDocument()
+    recovered = true
+    await userEvent.click(screen.getByRole('button', { name: strings.common.tryAgain }))
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(api.sent('POST', '/api/v1/auth/logout')).toHaveLength(0)
+  })
+
+  it('allows logout when the profile cannot load', async () => {
+    const api = pharmacyApi({
+      'GET /api/v1/pharmacy/me': refusal(503, 'SERVICE_UNAVAILABLE'),
+      'POST /api/v1/auth/logout': answer(204),
+    })
+    renderApp(<AppRoutes />, { path: '/pharmacy' })
+    await screen.findByRole('heading', { name: s.profileFailed })
+    await userEvent.click(screen.getByRole('button', { name: s.logOut }))
+    await waitFor(() => expect(api.sent('POST', '/api/v1/auth/logout')).toHaveLength(1))
+    expect(await screen.findByRole('heading', { name: strings.login.title })).toBeInTheDocument()
+  })
+})
+
+describe('Pickup confirmation (I-01)', () => {
+  it('sends nothing on open, cancel or Escape, then sends once on confirm', async () => {
+    const api = pharmacyApi({ [`POST /api/v1/pharmacy/reservations/${HELD.id}/picked-up`]: { ...HELD, state: 'PICKED_UP' } })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations' })
+    const user = userEvent.setup()
+    const card = await screen.findByRole('article', { name: s.reservation(HELD.ref) })
+    const open = within(card).getByRole('button', { name: s.pickedUp })
+    await user.click(open)
+    let dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent(HELD.ref)
+    expect(dialog).toHaveTextContent(HELD.product.name)
+    expect(api.sent('POST', '/api/v1/pharmacy/reservations')).toHaveLength(0)
+    await user.click(within(dialog).getByRole('button', { name: strings.common.cancel }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(open)
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(api.sent('POST', '/api/v1/pharmacy/reservations')).toHaveLength(0)
+    await user.click(open)
+    dialog = await screen.findByRole('dialog')
+    await user.dblClick(within(dialog).getByRole('button', { name: s.confirmPickup }))
+    await waitFor(() => expect(api.sent('POST', '/api/v1/pharmacy/reservations')).toHaveLength(1))
+  })
+
+  it('shows a recoverable error inside the pickup dialog', async () => {
+    const api = pharmacyApi({ [`POST /api/v1/pharmacy/reservations/${HELD.id}/picked-up`]: refusal(503, 'SERVICE_UNAVAILABLE') })
+    renderApp(<AppRoutes />, { path: '/pharmacy/reservations' })
+    const user = userEvent.setup()
+    const card = await screen.findByRole('article', { name: s.reservation(HELD.ref) })
+    await user.click(within(card).getByRole('button', { name: s.pickedUp }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: s.confirmPickup }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(strings.errors.SERVICE_UNAVAILABLE)
+    expect(api.sent('POST', '/api/v1/pharmacy/reservations')).toHaveLength(1)
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: s.confirmPickup })).toBeEnabled())
+  })
+})
+
+
+it.each(['SERVICE_UNAVAILABLE', 'FORBIDDEN'])('handles cached profile refresh failure %s safely', async (code) => {
+  let failed = false
+  let refresh: () => Promise<void> = async () => {}
+  function RefreshProbe() {
+    const query = useQueryClient()
+    refresh = () => query.invalidateQueries({ queryKey: ['pharmacy', 'me'] })
+    return null
+  }
+  pharmacyApi({ 'GET /api/v1/pharmacy/me': () => failed ? refusal(code === 'FORBIDDEN' ? 403 : 503, code) : PROFILE })
+  renderApp(<><RefreshProbe /><AppRoutes /></>, { path: '/pharmacy' })
+  await screen.findByRole('heading', { level: 1, name: s.counter })
+  failed = true
+  await act(async () => { await refresh() })
+  if (code === 'FORBIDDEN') {
+    expect(await screen.findByRole('heading', { name: s.profileFailed })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: s.counter })).toBeNull()
+  } else {
+    expect(await screen.findByText(s.profileRefreshFailed)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: s.counter })).toBeInTheDocument()
+  }
 })

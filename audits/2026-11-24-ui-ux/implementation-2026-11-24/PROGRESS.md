@@ -1,0 +1,10 @@
+# Implementation completed — 24 November 2026
+
+- Branch: fix/ui-ux-audit; HEAD 840a7394d9930cebfcc2e2fae8b0f87d9c0ef04d. All changes uncommitted; no push, merge, PR or deployment.
+- All seven findings implemented: pharmacy recovery, stable client/assistant/request frames, exact-product manual watch discovery, distinct region names, pickup confirmation, radio keyboard behavior and inventory task links.
+- Verification: 535 frontend tests pass; lint/typecheck/build pass. Browser acceptance and interaction records pass, all 37 templates rendered at phone/desktop sizes, narrow/breakpoint checks recorded. 192 capture records, 182 axe scans, no captured document overflow or WCAG-tagged violation. Automated results are not accessibility certification.
+- Deliverables: IMPLEMENTATION_REPORT.md, COVERAGE.md, EVIDENCE_INDEX.md; new screenshots and raw evidence. Original audit remains unchanged. Initial/second/third acceptance attempts are retained and superseded by canonical acceptance.json/interactions.json; report explains probe mistakes and fixes discovered.
+- Limits: native mobile/keyboard and screen readers unverified; incomplete contrast/name checks and modal virtual-cursor semantics remain follow-ups. Assistant/support fixtures are not live-model integration tests. Remaining original coverage boundaries are explicit in COVERAGE.md.
+- Preservation: 2,588 pre-existing evaluation/backend-test/handoff hashes unchanged. No backend application/architecture/schema/accounting changes or dependency installations. Paid stop/budget artifacts unchanged.
+- Cleanup complete: temporary frontend/API/worker stopped, isolated mailbox removed, disposable implementation database dropped and absence verified; temporary credentials/scripts removed. Original five Compose services remain running. No resumable isolated environment remains.
+- Next step: user/code review. Do not commit/push/merge/deploy without further instruction; merging to main specifically requires explicit user authorization.

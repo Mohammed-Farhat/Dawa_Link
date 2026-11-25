@@ -1,0 +1,433 @@
+{
+  "url": "/pharmacy/inventory",
+  "title": "Inventory · DawaLink",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "scrollWidth": 390,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nBeirut Pharmacy A (demo)\nApproved · closed now\nToday\nReservations\nInventory\nListings\nNotifications\nSettings\nLog out\nInventory\nUpdate from a file\nDownload the template and open it in Excel.\nOne row per batch: the medicine, its batch, its expiry and how many packs you have.\nWrite the medicine's name as the Ministry's price list writes it, with the same letters and numbers. Capitals don't matter, and a sign such as %, - or . counts as a space. When one name has several strengths, add the strength (2.5mg is not 25mg).\nIn Excel: File, Save As, and choose CSV. Then choose that file here.\nWrite the expiry as on the box, the month and the year: 03/2027 or 2027-03. Excel rewrites a full date in its own way.\nThe file is your whole stock: a box that is not in it is set to 0. Reserved packs are always kept.\nLeave the code column empty, unless a row comes back with \"several medicines have this name\": it then lists the code of each pack, and you write yours. A box of such a medicine is only changed by a row with its code, or by hand.\nDownload the template\nChoose a CSV file\nAdd one box\nMedicine\n\nType the name, then choose it.\n\nChoose the medicine from the list.\n\nBatch\n\nEnter the batch, as printed on the box.\n\nExpiry date\nAs printed on the box: the month and the year. The box counts until the last day of that month.\nExpiry month\n01 · January\n02 · February\n03 · March\n04 · April\n05 · May\n06 · June\n07 · July\n08 · August\n09 · September\n10 · October\n11 · November\n12 · December\nExpiry year\n2026\n2027\n2028\n2029\n2030\n2031\nChoose the month and the year of the expiry.\nHow many packs\n\nEnter how many packs (1 or more).\n\nCheck the 4 fields marked in red above.\n\nAdd to my stock\nYour stock\nPrivate: only you see this list. Which boxes clients see follows your rule in Settings, never earlier than 6 months before their expiry.\nFind a medicine or a batch\nAll\nWithin 6 months\nMay be asked for\nPrivate\nExpired\nSoonest expiry first\nBy medicine\nMedicine\tBatch\tExpires\tIn stock\tReserved\tStatus\nDOSTINEX · 0.5mg\tB29148\t28 Nov 2026 · 4 days left\t\n\t0\tListed\nABILIFY MAINTENA · 400mg\tB86153\t30 Nov 2026 · 6 days left\t\n\t0\tListed\nSINGULAIR · 10mg\tB20911\t30 Nov 2026 · 6 days left\t\n\t0\tListed\nIRINOTECAN THYMOORGAN · 40mg/2ml\tB17869\t3 Dec 2026 · 9 days left\t\n\t0\tListed\nLACTATED RINGER'S\tB88250\t4 Dec 2026 · 10 days left\t\n\t0\tListed\nAPO-ROSUVASTATIN · 10mg\tB42631\t9 Dec 2026 · 15 days left\t\n\t0\tListed\nTICANASE · 12g/Bottle\tB82789\t10 Dec 2026 · 16 days left\t\n\t0\tListed\nDIAPHAGE · 850mg\tB96956\t12 Dec 2026 · 18 days left\t\n\t0\tListed\nORLISTAT · 120mg\tB67464\t20 Dec 2026 · 26 days left\t\n\t0\tListed\nXEVANEER · 300mg\tB99959\t21 Dec 2026 · 27 days left\t\n\t0\tListed\nXOLAMOL\tB15539\t24 Dec 2026 · 30 days left\t\n\t0\tListed\nFIXIM · 400mg\tB26569\t2 Jan 2027 · 39 days left\t\n\t0\tListed\nIFENEC · 150mg\tB56665\t3 Jan 2027 · 40 days left\t\n\t0\tListed\nCONSORT · 60mg\tB44787\t7 Jan 2027 · 44 days left\t\n\t0\tListed\nJOSWE ATORVAST 20 · 20mg\tB20494\t7 Jan 2027 · 44 days left\t\n\t0\tListed\nRETACNYL - 0.05 % · 0.05%\tB95591\t12 Jan 2027 · 49 days left\t\n\t0\tListed\nEPLERENONE ARROW · 25mg\tB38467\t15 Jan 2027 · 52 days left\t\n\t0\tListed\nEXEMESTANE BGR · 25mg\tB27865\t16 Jan 2027 · 53 days left\t\n\t0\tListed\nDROMEZON · 4mg/5ml\tB46735\t19 Jan 2027 · 56 days left\t\n\t0\tListed\nLINK · 20mg\tB57943\t20 Jan 2027 · 57 days left\t\n\t0\tListed\nDOXORUBICINA PHARMINICIO · 10mg/5ml (2mg/ml)\tB29601\t24 Jan 2027 · 61 days left\t\n\t0\tListed\nSODIUM CHLORIDE · 0.9%\tB41399\t27 Jan 2027 · 64 days left\t\n\t0\tListed\nTYRA · 5mg\tB92660\t27 Jan 2027 · 64 days left\t\n\t0\tListed\nAPO-ATORVASTATIN · 20mg\tB33204\t31 Jan 2027 · 68 days left\t\n\t0\tListed\nAZICIN 500 BENTA · 500mg\tB70402\t10 Feb 2027 · 78 days left\t\n\t0\tListed\nPrevious\nNext\n\nPage 1 of 3 · 60 in all",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Inventory"
+    },
+    {
+      "level": "H2",
+      "text": "Update from a file"
+    },
+    {
+      "level": "H2",
+      "text": "Add one box"
+    },
+    {
+      "level": "H2",
+      "text": "Your stock"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "file",
+      "name": "",
+      "id": "",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-6brmv7tm8",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-0jhlzxtsc",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": "off"
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-7dow4xapb",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "SELECT",
+      "type": "select-one",
+      "name": "",
+      "id": "mantine-rcgq0khfh",
+      "label": null,
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-7jkn7rtdl",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "mantine-ka3l8784o",
+      "label": null,
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DOSTINEX, batch B29148",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of ABILIFY MAINTENA, batch B86153",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of SINGULAIR, batch B20911",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of IRINOTECAN THYMOORGAN, batch B17869",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of LACTATED RINGER'S, batch B88250",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of APO-ROSUVASTATIN, batch B42631",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of TICANASE, batch B82789",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DIAPHAGE, batch B96956",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of ORLISTAT, batch B67464",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of XEVANEER, batch B99959",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of XOLAMOL, batch B15539",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of FIXIM, batch B26569",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of IFENEC, batch B56665",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of CONSORT, batch B44787",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of JOSWE ATORVAST 20, batch B20494",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of RETACNYL - 0.05 %, batch B95591",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of EPLERENONE ARROW, batch B38467",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of EXEMESTANE BGR, batch B27865",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DROMEZON, batch B46735",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of LINK, batch B57943",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of DOXORUBICINA PHARMINICIO, batch B29601",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of SODIUM CHLORIDE, batch B41399",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of TYRA, batch B92660",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of APO-ATORVASTATIN, batch B33204",
+      "placeholder": "",
+      "autocomplete": ""
+    },
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "label": "Packs of AZICIN 500 BENTA, batch B70402",
+      "placeholder": "",
+      "autocomplete": ""
+    }
+  ],
+  "smallTargets": [
+    {
+      "text": null,
+      "w": 1,
+      "h": 1
+    }
+  ],
+  "overflow": [
+    {
+      "tag": "TABLE",
+      "cls": "stock-table stock-table--pinned",
+      "text": "Medicine\tBatch\tExpires\tIn stock\tReserved\tStatus\nDOSTINEX · 0.5mg\tB29148\t28 Nov 2",
+      "left": 40,
+      "right": 662.953125
+    },
+    {
+      "tag": "THEAD",
+      "cls": "",
+      "text": "Medicine\tBatch\tExpires\tIn stock\tReserved\tStatus\n",
+      "left": 40,
+      "right": 662.953125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "Medicine\tBatch\tExpires\tIn stock\tReserved\tStatus",
+      "left": 40,
+      "right": 662.953125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Expires",
+      "left": 244.03125,
+      "right": 431.78125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "In stock",
+      "left": 431.78125,
+      "right": 519.78125
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Reserved",
+      "left": 519.78125,
+      "right": 591.609375
+    },
+    {
+      "tag": "TH",
+      "cls": "",
+      "text": "Status",
+      "left": 591.609375,
+      "right": 662.953125
+    },
+    {
+      "tag": "TBODY",
+      "cls": "",
+      "text": "DOSTINEX · 0.5mg\tB29148\t28 Nov 2026 · 4 days left\t\n\t0\tListed\nABILIFY MAINTENA · ",
+      "left": 40,
+      "right": 662.953125
+    },
+    {
+      "tag": "TR",
+      "cls": "",
+      "text": "DOSTINEX · 0.5mg\tB29148\t28 Nov 2026 · 4 days left\t\n\t0\tListed",
+      "left": 40,
+      "right": 662.953125
+    },
+    {
+      "tag": "TD",
+      "cls": "",
+      "text": "28 Nov 2026 · 4 days left",
+      "left": 244.03125,
+      "right": 431.78125
+    },
+    {
+      "tag": "SPAN",
+      "cls": "hint",
+      "text": " · 4 days left",
+      "left": 332.734375,
+      "right": 413.6875
+    },
+    {
+      "tag": "TD",
+      "cls": "",
+      "text": "",
+      "left": 431.78125,
+      "right": 519.78125
+    },
+    {
+      "tag": "FORM",
+      "cls": "",
+      "text": "",
+      "left": 431.78125,
+      "right": 507.78125
+    },
+    {
+      "tag": "INPUT",
+      "cls": "quantity-input",
+      "text": "",
+      "left": 431.78125,
+      "right": 507.78125
+    },
+    {
+      "tag": "TD",
+      "cls": "",
+      "text": "0",
+      "left": 519.78125,
+      "right": 591.609375
+    }
+  ],
+  "violations": []
+}

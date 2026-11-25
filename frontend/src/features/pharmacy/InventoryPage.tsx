@@ -44,13 +44,22 @@ function codeOf(error: unknown): string {
 
 /**
  * PS-6: the pharmacy's whole stock. Private: only the pharmacy sees it. The two ways to
- * change it, a file and one box by hand, come first: under a table of 50 rows a box
- * typed by hand was about 60 keyboard stops away.
+ * change it keep their direct task links and come first: under a table of 50 rows,
+ * adding a box by hand was about 60 keyboard stops away.
  */
 export function InventoryPage() {
   return (
     <main className="portal__main">
       <h1 className="page-title">{strings.pharmacy.inventory}</h1>
+      <nav className="chips" aria-label={strings.pharmacy.inventoryTasks}>
+        {[
+          ['stock', strings.pharmacy.findStock],
+          ['add-box', s.add.title],
+          ['stock-file', strings.pharmacy.importStock],
+        ].map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="chip" onClick={() => document.getElementById(id)?.focus()}>{label}</a>
+        ))}
+      </nav>
       <StockFile />
       <AddBox />
       <StockTable />
@@ -94,7 +103,7 @@ function StockFile() {
 
   return (
     <section className="panel" aria-labelledby="stock-file">
-      <h2 id="stock-file" className="panel__title">
+      <h2 id="stock-file" tabIndex={-1} className="panel__title">
         {u.title}
       </h2>
       <ol className="plain-steps">
@@ -271,7 +280,7 @@ function StockTable() {
   return (
     <section ref={top} className="panel" aria-labelledby="stock">
       <div>
-        <h2 id="stock" className="panel__title">
+        <h2 id="stock" tabIndex={-1} className="panel__title">
           {s.title}
         </h2>
         <span className="hint">{s.private}</span>
@@ -563,7 +572,7 @@ function AddBox() {
 
   return (
     <section className="panel" aria-labelledby="add-box">
-      <h2 id="add-box" className="panel__title">
+      <h2 id="add-box" tabIndex={-1} className="panel__title">
         {a.title}
       </h2>
       <form className="form" onSubmit={submit} noValidate>

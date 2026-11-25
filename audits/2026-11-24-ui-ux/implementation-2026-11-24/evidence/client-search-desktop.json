@@ -1,0 +1,32 @@
+{
+  "url": "/search",
+  "title": "Search · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nRami\nSearch\n\nMedicine name\nYour last searches\nClear\nDOSTINEX\nABILIFY",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Search"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "search",
+      "name": "",
+      "id": "medicine-name",
+      "label": null,
+      "placeholder": "Search a medicine in stock",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": []
+}

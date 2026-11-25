@@ -51,9 +51,23 @@ const ORDER_NUMBER_MAX = 20
  */
 export default function PharmacyPortal() {
   const profile = usePharmacy()
+  const { logout } = useSession()
+  const forbidden = profile.error instanceof ApiFailure && profile.error.code === 'FORBIDDEN'
+  if ((!profile.data && profile.isError) || forbidden) {
+    return (
+      <main className="screen screen--plain" id="main">
+        <h1 className="page-title">{s.profileFailed}</h1>
+        <Banner tone="red" alert>{errorMessage(profile.error instanceof ApiFailure ? profile.error.code : 'INTERNAL_ERROR')}</Banner>
+        <button type="button" className="pill-button" disabled={profile.isFetching} onClick={() => void profile.refetch()}>
+          {profile.isFetching ? strings.common.loading : strings.common.tryAgain}
+        </button>
+        <button type="button" className="text-button" onClick={() => void logout()}>{s.logOut}</button>
+      </main>
+    )
+  }
   if (!profile.data) {
     return (
-      <main className="screen screen--plain">
+      <main className="screen screen--plain" id="main">
         <p className="soft">{strings.common.loading}</p>
       </main>
     )
@@ -66,6 +80,7 @@ export default function PharmacyPortal() {
     <div className="portal">
       <Bar pharmacy={pharmacy} works={works} approved={approved} />
       <div className="portal__body">
+        {profile.isError && <Banner tone="amber" action={<button type="button" className="text-button" disabled={profile.isFetching} onClick={() => void profile.refetch()}>{strings.common.tryAgain}</button>}>{s.profileRefreshFailed}</Banner>}
         {/* Until the email is confirmed, the registration hasn't reached our team (R-AU7). */}
         {!pharmacy.email_verified && <UnverifiedBanner text={s.confirmEmail} />}
         {pharmacy.status === 'PENDING' && pharmacy.email_verified && (

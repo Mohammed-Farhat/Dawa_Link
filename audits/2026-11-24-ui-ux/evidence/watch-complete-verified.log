@@ -1,0 +1,12 @@
+watch-no-stock-live-phone /search?product=3d2b48f0-8903-4011-aaf8-7bbf54a1ba12 overflow 0 axe []
+watch-no-stock-live-desktop /search?product=3d2b48f0-8903-4011-aaf8-7bbf54a1ba12 overflow 0 axe []
+watch-form-live-phone /search?product=3d2b48f0-8903-4011-aaf8-7bbf54a1ba12 overflow 0 axe []
+watch-form-live-desktop /search?product=3d2b48f0-8903-4011-aaf8-7bbf54a1ba12 overflow 0 axe []
+locator.fill: Timeout 7000ms exceeded.
+Call log:
+[2m  - waiting for getByLabel(/most you would pay/)[22m
+
+    at /Users/ajkanaan/Documents/AUB/EECE 503P - Agentic Systems/Project/dawalink-agentic-systems-project/audits/2026-11-24-ui-ux/watch-complete.cjs:2:1349 {
+  log: [ '  - waiting for getByLabel(/most you would pay/)' ],
+  name: 'TimeoutError'
+}

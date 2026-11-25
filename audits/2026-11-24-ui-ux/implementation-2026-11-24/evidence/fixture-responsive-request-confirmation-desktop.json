@@ -1,0 +1,55 @@
+{
+  "url": "/requests/99999999-9999-4999-8999-999999999999",
+  "title": "Request Q-4HX9TM · DawaLink",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scrollWidth": 1440,
+  "lang": "en",
+  "dir": "",
+  "text": "Skip to content\nD\nDawaLink\nHome\nSearch\nMy medicines\nAsk DawaLink\nNour\nD\nRequest Q-4HX9TM\n4 h 25 min left\nYou're chatting with an AI assistant, not a pharmacist.\n1 of 2 reserved\nQ-4HX9TM\nDawaLink keeps looking until Today 14:25\nAUGMENTIN 1G × 1\nReserved\nSearching\nFound\nReserved\nReservation R-7K3Q2F · Hamra Pharmacy\nCONCOR 5MG × 1\nAn offer is waiting for you: see it below\nSearching\nFound\nReserved\nAsked 2 pharmacies for stock that is not listed yet\nCancel this request\nHeld for you until Today 12:00\nCONCOR 5MG × 1\nA pharmacy released it for you · Hamra Pharmacy, Beirut\nAt the counter\n600,000 LBP\nabout $6.7\nSave 200,000\nExpires 3 Jun 2027: make sure that's enough.\nWhen will you pick it up?\nToday\nTomorrow\nAccept and reserve\nNo thanks\nWhat DawaLink is doing\n\nYou:\nI need Augmentin\n\nDawaLink assistant:\nWhich strength do you need?\n\nDawaLink assistant:\nHere is an available option.\n\nRecommended for you\nAUGMENTIN 1G at Hamra Pharmacy\nPharmacy\nHamra Pharmacy, Beirut\nAt the counter\n600,000 LBP (about $6.70)\nPrescription needed: bring it to the pharmacy.\nReserve\n\nDawaLink:\nA person from DawaLink is helping you.\n\nYou are writing to the DawaLink team. The assistant answers again when they close the case.\nMessage\nCancel this request?\n\nDawaLink stops searching. What is already reserved stays reserved.\n\nYes, cancel the request\nKeep looking",
+  "headings": [
+    {
+      "level": "H1",
+      "text": "Request Q-4HX9TM"
+    },
+    {
+      "level": "H2",
+      "text": "CONCOR 5MG × 1"
+    },
+    {
+      "level": "H2",
+      "text": "AUGMENTIN 1G at Hamra Pharmacy"
+    },
+    {
+      "level": "H2",
+      "text": "Cancel this request?"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "chat-message",
+      "label": null,
+      "placeholder": "Write in any language…",
+      "autocomplete": "off"
+    }
+  ],
+  "smallTargets": [],
+  "overflow": [],
+  "violations": [
+    {
+      "id": "landmark-no-duplicate-banner",
+      "impact": "moderate",
+      "nodes": 1
+    },
+    {
+      "id": "landmark-unique",
+      "impact": "moderate",
+      "nodes": 1
+    }
+  ]
+}

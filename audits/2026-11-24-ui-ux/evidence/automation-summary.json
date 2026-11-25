@@ -1,0 +1,16 @@
+{
+  "axe_scans": 223,
+  "rendered_capture_metadata": 235,
+  "violation_scan_counts": {
+    "page-has-heading-one": 4,
+    "landmark-no-duplicate-banner": 7,
+    "landmark-unique": 9
+  },
+  "wcag_tagged_violations": [],
+  "incomplete_scan_counts": {
+    "color-contrast": 47,
+    "label-content-name-mismatch": 22
+  },
+  "captures_with_document_overflow": [],
+  "caveat": "Scan counts are repeated states, not unique defects or conformance. Incomplete rules and assistive technology/native mobile require manual verification."
+}

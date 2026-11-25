@@ -1,0 +1,187 @@
+[
+  {
+    "name": "assistant-clarification-card-team",
+    "role": "client",
+    "url": "/assistant",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/conversations/active-chat",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages",
+      "GET /api/v1/conversations/chats",
+      "GET /api/v1/conversations/55555555-5555-4555-8555-555555555555/messages"
+    ]
+  },
+  {
+    "name": "request-active-offer",
+    "role": "client",
+    "url": "/requests/99999999-9999-4999-8999-999999999999",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/requests/99999999-9999-4999-8999-999999999999",
+      "GET /api/v1/offers",
+      "GET /api/v1/districts",
+      "GET /api/v1/config/public",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages",
+      "GET /api/v1/offers",
+      "GET /api/v1/conversations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/messages"
+    ]
+  },
+  {
+    "name": "ticket-missed",
+    "role": "client",
+    "url": "/reservations/22222222-2222-4222-8222-222222222222",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/reservations/22222222-2222-4222-8222-222222222222"
+    ]
+  },
+  {
+    "name": "pharmacy-pending",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/districts"
+    ]
+  },
+  {
+    "name": "pharmacy-rejected",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/districts"
+    ]
+  },
+  {
+    "name": "pharmacy-suspended",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "GET /api/v1/pharmacy/dashboard"
+    ]
+  },
+  {
+    "name": "pharmacy-counter",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "GET /api/v1/pharmacy/dashboard",
+      "GET /api/v1/pharmacy/early-release-asks",
+      "GET /api/v1/pharmacy/early-release-asks"
+    ]
+  },
+  {
+    "name": "pharmacy-unavailable-dialog",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "blocked",
+    "reason": "locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Not available/i }).first()\u001b[22m\n",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/reservations",
+      "GET /api/v1/pharmacy/dashboard",
+      "GET /api/v1/pharmacy/early-release-asks",
+      "GET /api/v1/pharmacy/early-release-asks"
+    ]
+  },
+  {
+    "name": "admin-pending-detail",
+    "role": "admin",
+    "url": "/admin/pharmacies/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/pharmacies/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+      "GET /api/v1/admin/overview",
+      "GET /api/v1/districts"
+    ]
+  },
+  {
+    "name": "admin-client-detail",
+    "role": "admin",
+    "url": "/admin/clients/11111111-1111-4111-8111-111111111111",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/clients/11111111-1111-4111-8111-111111111111",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "admin-escalation-detail",
+    "role": "admin",
+    "url": "/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/escalations/bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "admin-reported-answer",
+    "role": "admin",
+    "url": "/admin/reports",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/answer-reports",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "admin-audit-populated",
+    "role": "admin",
+    "url": "/admin/audit",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/audit",
+      "GET /api/v1/admin/overview"
+    ]
+  },
+  {
+    "name": "pharmacy-profile-error",
+    "role": "pharmacy",
+    "url": "/pharmacy",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me",
+      "GET /api/v1/pharmacy/me"
+    ]
+  },
+  {
+    "name": "admin-list-error",
+    "role": "admin",
+    "url": "/admin",
+    "status": "rendered",
+    "calls": [
+      "GET /api/v1/auth/me",
+      "GET /api/v1/admin/pharmacies",
+      "GET /api/v1/admin/overview",
+      "GET /api/v1/admin/pharmacies"
+    ]
+  }
+]

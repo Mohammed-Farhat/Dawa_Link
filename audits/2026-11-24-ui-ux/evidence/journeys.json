@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Registration validation and focus",
+    "status": "exercised",
+    "detail": {
+      "focus": "<input class=\"m_8fb7ebe7 mantine-Input-input mantine-TextInput-input\" data-variant=\"default\" autocomplete=\"given-name\" maxlength=\"40\" id=\"mantine-52htc0frs\" value=\"\" data-error=\"true\" aria-invalid=\"true\" aria-describedby=\"mantine-52htc0frs-error\" sty"
+    }
+  },
+  {
+    "name": "Client registration with synthetic data",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/check-email"
+    }
+  },
+  {
+    "name": "Email confirmation from captured local mail",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/verify-email"
+    }
+  },
+  {
+    "name": "Synthetic account login and logout",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/login",
+      "tokenCleared": true
+    }
+  },
+  {
+    "name": "Password reset request captured locally",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/reset-password"
+    }
+  },
+  {
+    "name": "Search live seeded catalog",
+    "status": "exercised",
+    "detail": {
+      "offers": 67
+    }
+  },
+  {
+    "name": "Offer detail and reservation sheet",
+    "status": "exercised",
+    "detail": {
+      "focus": "<button type=\"button\" class=\"round-button round-button--grey\" aria-label=\"One pack more\">+</button>",
+      "dialog": true
+    }
+  },
+  {
+    "name": "Reserve and ticket display",
+    "status": "exercised",
+    "detail": {
+      "url": "http://localhost:5174/reservations/9b87cf4c-d9fb-4a2e-9a9c-116eaef1d871"
+    }
+  },
+  {
+    "name": "Cancel reservation with confirmation",
+    "status": "exercised",
+    "detail": {
+      "text": "Skip to content\nCancelled\nCancelled by you\nORDER NUMBER\nR-WMDUMP\nABILIFY MAINTENA × 1\nTotal\n11,796,000 LBP\nabout $131.8\nPharmacy\nBeirut Pharmacy A (demo)\n1 Demo Street, Beirut, Beirut\nBox expires 30 Nov 2026\nDirections\n(opens in a new tab)\nCall"
+    }
+  },
+  {
+    "name": "Profile deletion confirmation and wrong-password recovery",
+    "status": "blocked",
+    "reason": "locator.click: Timeout 6500ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Delete my account', exact: true })\u001b[22m\n"
+  }
+]

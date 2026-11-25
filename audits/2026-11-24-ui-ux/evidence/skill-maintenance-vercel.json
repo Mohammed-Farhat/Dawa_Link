@@ -1,0 +1,84 @@
+[
+  {
+    "sha": "53b6e3ddf96b3fa83af97b1783ed805b582ad3a7",
+    "node_id": "C_kwDOQlAGiNoAKDUzYjZlM2RkZjk2YjNmYTgzYWY5N2IxNzgzZWQ4MDViNTgyYWQzYTc",
+    "commit": {
+      "author": {
+        "name": "Arshita Jaryal",
+        "email": "186042954+jaryalarshita@users.noreply.github.com",
+        "date": "2026-10-29T11:56:22Z"
+      },
+      "committer": {
+        "name": "Arshita Jaryal",
+        "email": "186042954+jaryalarshita@users.noreply.github.com",
+        "date": "2026-11-09T15:58:21Z"
+      },
+      "message": "docs(web-design-guidelines): expand guideline update steps",
+      "tree": {
+        "sha": "77010fc5aba378d5e2d9b07e6c00385b112b5dad",
+        "url": "https://api.github.com/repos/vercel-labs/agent-skills/git/trees/77010fc5aba378d5e2d9b07e6c00385b112b5dad"
+      },
+      "url": "https://api.github.com/repos/vercel-labs/agent-skills/git/commits/53b6e3ddf96b3fa83af97b1783ed805b582ad3a7",
+      "comment_count": 0,
+      "verification": {
+        "verified": true,
+        "reason": "valid",
+        "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgVTr7OqnMtFTwiEFX8SrcmwvXS8\nUiHylBVEFnMuCFHY0AAAADZ2l0AAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5\nAAAAQNnpC4yRmiUGh1lz4b+hangPPolREuCkqbk9D9/pCVSIsbaztb0sK3btTJduxOJfV/\nO5jESGoDkRJ+1fHV+l6AY=\n-----END SSH SIGNATURE-----",
+        "payload": "tree 77010fc5aba378d5e2d9b07e6c00385b112b5dad\nparent 840f3b003550f8f4c7cd51626641438782157a47\nauthor Arshita Jaryal <186042954+jaryalarshita@users.noreply.github.com> 1793274982 +0530\ncommitter Arshita Jaryal <186042954+jaryalarshita@users.noreply.github.com> 1794239901 +0530\n\ndocs(web-design-guidelines): expand guideline update steps\n",
+        "verified_at": "2026-11-09T15:58:42Z"
+      }
+    },
+    "url": "https://api.github.com/repos/vercel-labs/agent-skills/commits/53b6e3ddf96b3fa83af97b1783ed805b582ad3a7",
+    "html_url": "https://github.com/vercel-labs/agent-skills/commit/53b6e3ddf96b3fa83af97b1783ed805b582ad3a7",
+    "comments_url": "https://api.github.com/repos/vercel-labs/agent-skills/commits/53b6e3ddf96b3fa83af97b1783ed805b582ad3a7/comments",
+    "author": {
+      "login": "jaryalarshita",
+      "id": 186042954,
+      "node_id": "U_kgDOCxbKSg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/186042954?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jaryalarshita",
+      "html_url": "https://github.com/jaryalarshita",
+      "followers_url": "https://api.github.com/users/jaryalarshita/followers",
+      "following_url": "https://api.github.com/users/jaryalarshita/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jaryalarshita/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jaryalarshita/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jaryalarshita/subscriptions",
+      "organizations_url": "https://api.github.com/users/jaryalarshita/orgs",
+      "repos_url": "https://api.github.com/users/jaryalarshita/repos",
+      "events_url": "https://api.github.com/users/jaryalarshita/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jaryalarshita/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jaryalarshita",
+      "id": 186042954,
+      "node_id": "U_kgDOCxbKSg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/186042954?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jaryalarshita",
+      "html_url": "https://github.com/jaryalarshita",
+      "followers_url": "https://api.github.com/users/jaryalarshita/followers",
+      "following_url": "https://api.github.com/users/jaryalarshita/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jaryalarshita/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jaryalarshita/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jaryalarshita/subscriptions",
+      "organizations_url": "https://api.github.com/users/jaryalarshita/orgs",
+      "repos_url": "https://api.github.com/users/jaryalarshita/repos",
+      "events_url": "https://api.github.com/users/jaryalarshita/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jaryalarshita/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "840f3b003550f8f4c7cd51626641438782157a47",
+        "url": "https://api.github.com/repos/vercel-labs/agent-skills/commits/840f3b003550f8f4c7cd51626641438782157a47",
+        "html_url": "https://github.com/vercel-labs/agent-skills/commit/840f3b003550f8f4c7cd51626641438782157a47"
+      }
+    ]
+  }
+]
