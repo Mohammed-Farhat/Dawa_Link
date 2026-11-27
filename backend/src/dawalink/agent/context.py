@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 
 from dawalink.agent import display, language, state
+from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.redact import Identity, redact
 from dawalink.agent.state import CaseState
 from dawalink.agent.tools.base import rate
@@ -443,6 +444,10 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     trigger, client_text = _trigger(messages, followup, case.read_up_to, to_team)
     if trigger is None:
         return None
+    requested_day = explicit_pickup_day(client_text or "", tx.today)
+    if requested_day is not None:
+        case.client_pickup_day = requested_day
+        case.pickup_day = requested_day
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
     case.open_proposal_ids = [
         proposal_id
