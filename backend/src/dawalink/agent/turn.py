@@ -35,7 +35,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as upsert
 from sqlalchemy.orm import Session, sessionmaker
 
-from dawalink.agent import context, language, limits, state
+from dawalink.agent import context, language, limits, scope, state
 from dawalink.agent.context import Loaded
 from dawalink.agent.guards import output as output_guard
 from dawalink.agent.guards.injection import looks_like_injection
@@ -931,6 +931,9 @@ def _save(graph_state: _State) -> _State:
                     quick_replies=list(reply.quick_replies),
                     agent_run_id=work.run_id,
                 )
+                if noted.search_scope.kind == "unanswered" and scope.asks_scope(reply.text):
+                    noted.scope_question_seq = message.seq
+                    conversation.case_state = state.dump(state.tidy(noted, tx.today))
                 _finish_run(tx, work, work.outcome)
                 _flag_guardrail(tx, work)
                 _warn_about_spending(tx, work)

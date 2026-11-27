@@ -350,6 +350,8 @@ def _with_the_brands_other_rows(
 
 
 def _prepare_find_options(turn: Turn, args: FindOptions) -> None:
+    _apply_scope(turn, args)
+
     def pharmacies(tx: Tx) -> list[uuid.UUID]:
         products = _with_the_brands_other_rows(turn, tx, args.product_ids)
         return sorted({box.pharmacy_id for box in visible_boxes(tx, product_ids=products)})
@@ -358,6 +360,7 @@ def _prepare_find_options(turn: Turn, args: FindOptions) -> None:
 
 
 def find_options(turn: Turn, tx: Tx, args: FindOptions) -> FindOptionsOut:
+    _apply_scope(turn, args)
     _same_medicine(tx, args.product_ids)
     districts = districts_of(tx, args.areas)
     asked = args.product_ids[0]
@@ -460,6 +463,28 @@ class PlanBasket(Arguments):
     areas: Areas = None
 
 
+def _apply_scope(turn: Turn, args: FindOptions | PlanBasket) -> None:
+    """Gate before even routing preparation, and enforce the latest saved area choice."""
+    scope = turn.state.search_scope
+    if scope.kind == "unanswered" or (scope.kind == "areas" and not scope.areas):
+        raise Refused(
+            ToolError.SEARCH_SCOPE_REQUIRED,
+            "Ask where the client wants the pharmacy: nearest, a named area, or anywhere. "
+            "Do not search availability or plan yet. Catalog lookups are allowed. "
+            "After the client's answer, including 'I don't know', search without asking again.",
+        )
+    args.areas = (
+        [AreaIn.model_validate(area.model_dump()) for area in scope.areas]
+        if scope.kind == "areas"
+        else None
+    )
+    if scope.kind == "nearest":
+        if isinstance(args, FindOptions) and args.sort == "best":
+            args.sort = "nearest"
+        if isinstance(args, PlanBasket) and args.preference is None:
+            args.preference = "nearest"
+
+
 class PlanItemOut(Output):
     product_id: uuid.UUID
     product: str
@@ -541,6 +566,8 @@ def _prepare_plan_basket(turn: Turn, args: PlanBasket) -> None:
     """The road times a plan needs. With more pharmacies than the planner weighs (N-48),
     the trips from the client to all of them come first: the nearest are chosen by road."""
 
+    _apply_scope(turn, args)
+
     def everyone(tx: Tx) -> list[uuid.UUID]:
         return planning.pharmacies_stocking(
             tx,
@@ -574,6 +601,7 @@ def _plan_id(turn: Turn, position: int) -> str:
 
 
 def plan_basket(turn: Turn, tx: Tx, args: PlanBasket) -> PlanBasketOut:
+    _apply_scope(turn, args)
     found = planning.plan(
         tx,
         client_id=turn.client_id,

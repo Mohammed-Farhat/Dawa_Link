@@ -15,7 +15,7 @@ import pytest
 from dawalink.agent.chat import post_client_message
 from dawalink.agent.guards.redact import Identity, redact
 from dawalink.agent.llm.scripted import ScriptedModel, Step
-from dawalink.agent.state import CaseState
+from dawalink.agent.state import CaseState, SearchScope
 from dawalink.agent.tools import Turn, for_mode, run_tool
 from dawalink.agent.tracing import Tracer
 from dawalink.agent.turn import Agent, RunsIn, TurnResult, run_turn
@@ -107,7 +107,9 @@ class Scene:
                 run_id=run_id,
                 mode=AgentMode.SOURCING if row.kind == "request" else AgentMode.ASSISTANT,
                 request_id=row.request_id,
-                state=CaseState(),
+                # Low-level tool tests start after the client's scope answer. Real
+                # agent turns still load unanswered scope from the conversation.
+                state=CaseState(search_scope=SearchScope(kind="anywhere")),
                 routing=self.routing,
                 clean=lambda text: (
                     redact(
