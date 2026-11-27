@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 import dawalink.agent.tools as tools_package
 from dawalink.agent.tools import ALL, REPLY_SPEC, for_mode
-from dawalink.agent.tools.act import NOBODY_ASKED
+from dawalink.agent.tools.act import NOBODY_ASKED, REQUEST_REUSED
 from dawalink.domain.vocabulary import AgentMode
 from dawalink.services.requests import RequestLine
 from tests.agent.conftest import Scene
@@ -653,8 +653,21 @@ class TestInARequest:
 
         assert claim["claim_id"] == again["claim_id"]
         assert claim["ends_display"] == "Tue 16:00"
-        assert asked == {"ok": True, "asked": 1, "answers_by_display": "Tue 12:00"}
-        assert asked_again == asked
+        assert asked == {
+            "ok": True,
+            "asked": 1,
+            "newly_asked": 1,
+            "already_asked": 0,
+            "answers_by_display": "Tue 12:00",
+        }
+        assert asked_again == {
+            "ok": True,
+            "asked": 1,
+            "newly_asked": 0,
+            "already_asked": 1,
+            "answers_by_display": "Tue 12:00",
+            "note": REQUEST_REUSED,
+        }
         assert scene.world.one("SELECT count(*) AS n FROM early_release_asks").n == 1
         assert "Hamra" not in str(asked)
 
@@ -686,7 +699,14 @@ class TestInARequest:
         asked = scene.tool("request_early_release", thread, claim_id=claim["claim_id"])
 
         # Nobody was asked, and the tool says so in words the reply can't twist into "I asked".
-        assert asked == {"ok": True, "asked": 0, "reason": "no_candidates", "note": NOBODY_ASKED}
+        assert asked == {
+            "ok": True,
+            "asked": 0,
+            "newly_asked": 0,
+            "already_asked": 0,
+            "reason": "no_candidates",
+            "note": NOBODY_ASKED,
+        }
 
     def test_the_agent_cant_ask_past_the_limits_and_is_told_so(self, scene: Scene) -> None:
         """FS-14, R-E3, R-E5: a pharmacy that had its ten asks today is left alone, and a
@@ -707,6 +727,8 @@ class TestInARequest:
         assert pharmacy_is_full == {
             "ok": True,
             "asked": 0,
+            "newly_asked": 0,
+            "already_asked": 0,
             "reason": "no_candidates",
             "note": NOBODY_ASKED,
         }

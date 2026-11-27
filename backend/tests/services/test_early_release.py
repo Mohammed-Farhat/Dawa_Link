@@ -125,6 +125,7 @@ class TestAsking:
         asked = town.ask()
 
         assert asked.pharmacies_asked == 3
+        assert (asked.newly_asked, asked.already_asked) == (3, 0)
         assert set(town.asks()) == set(nearest)
         assert far not in town.asks()
         ask = town.asks()[nearest[0]]
@@ -153,11 +154,31 @@ class TestAsking:
 
         asked = town.ask()
 
-        assert set(vars(asked)) == {"request_id", "pharmacies_asked"}
+        assert set(vars(asked)) == {
+            "request_id",
+            "pharmacies_asked",
+            "newly_asked",
+            "already_asked",
+        }
         assert (
             world.all("SELECT 1 FROM chat_messages WHERE conversation_id = :c", c=town.chat) == []
         )
         assert world.notifications(town.client) == []
+
+    def test_replays_report_existing_contacts_without_notifying_again(
+        self, town: Town, world: World
+    ) -> None:
+        pharmacies = [town.pharmacy_holding(metres_away=m) for m in (300, 600, 900)]
+        first = town.ask("turn-1")
+        for key in ("turn-1", "turn-2", "turn-3"):
+            repeated = town.ask(key)
+            assert repeated.request_id == first.request_id
+            assert repeated.pharmacies_asked == 3
+            assert (repeated.newly_asked, repeated.already_asked) == (0, 3)
+        assert len(town.asks()) == 3
+        assert world.one("SELECT count(*) AS n FROM early_release_requests").n == 1
+        for pharmacy in pharmacies:
+            assert world.notifications(town.owners[pharmacy]) == ["PN-7"]
 
     def test_a_pharmacy_never_learns_who_the_client_is(self, town: Town, world: World) -> None:
         """INV-9."""
@@ -309,7 +330,11 @@ class TestAsking:
 
         first, retried, other_key = town.ask("turn-1"), town.ask("turn-1"), town.ask("turn-2")
 
-        assert first == retried == other_key
+        assert first.request_id == retried.request_id == other_key.request_id
+        assert first.pharmacies_asked == retried.pharmacies_asked == other_key.pharmacies_asked == 1
+        assert (first.newly_asked, first.already_asked) == (1, 0)
+        assert (retried.newly_asked, retried.already_asked) == (0, 1)
+        assert retried == other_key
         assert len(town.asks()) == 1
 
     def test_a_client_has_five_open_requests_at_most(self, town: Town, world: World) -> None:
