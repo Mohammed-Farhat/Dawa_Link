@@ -9,8 +9,10 @@ import re
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 
 from dawalink.agent.guards.clinical import clinical_reasons, without_names
+from dawalink.agent.guards.pickup import explicit_pickup_day
 from dawalink.agent.guards.redact import has_personal_details
 from dawalink.agent.language import looks_arabizi
 from dawalink.agent.tools import ALL, Reply
@@ -177,6 +179,7 @@ def check(
     client_language: str | None = None,
     product_names: Iterable[str] = (),
     a_person_has_it: bool = True,
+    client_pickup_day: date | None = None,
 ) -> Checked:
     """The reply with links removed, and everything that is wrong with it.
 
@@ -228,6 +231,21 @@ def check(
                 "may stay next to them.",
             )
         )
+
+    pickup_day = explicit_pickup_day(client_text or "", tx.today) or client_pickup_day
+    for proposal_id in usable:
+        proposal = known[proposal_id]
+        if proposal.kind not in (ProposalKind.RESERVE.value, ProposalKind.RESERVE_GROUP.value):
+            continue
+        if pickup_day is not None and proposal.payload.get("pickup_day") != pickup_day.isoformat():
+            violations.append(
+                Violation(
+                    "pickup_day",
+                    f"The client explicitly requested pickup on {pickup_day}. "
+                    "Do not show a reservation card for a different day. Correct the card "
+                    "or explain that this day is unavailable.",
+                )
+            )
 
     if found_something and not cleaned.proposal_ids and not proposals.made_in_run(tx, run_id):
         # Seen on simulated days: a plan told in words, pharmacies and prices and all,

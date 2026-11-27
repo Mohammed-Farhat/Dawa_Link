@@ -709,6 +709,7 @@ def _guard_output(graph_state: _State) -> _State:
                 client_language=language.language_of(work.loaded.client_text),
                 product_names=_product_names(tx, work),
                 a_person_has_it=_a_person_has_it(tx, work),
+                client_pickup_day=work.turn.state.client_pickup_day if work.turn else None,
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)
@@ -769,7 +770,14 @@ def _use_template(work: _Work, which: Fixed, note: str | None) -> None:
             cards = [
                 proposal_id
                 for proposal_id in work.turn.created_proposals
-                if proposal_id in known and proposals.state_of(tx, known[proposal_id]) == "open"
+                if proposal_id in known
+                and proposals.state_of(tx, known[proposal_id]) == "open"
+                and (
+                    known[proposal_id].kind not in ("reserve", "reserve_group")
+                    or work.turn.state.client_pickup_day is None
+                    or known[proposal_id].payload.get("pickup_day")
+                    == work.turn.state.client_pickup_day.isoformat()
+                )
             ][:5]
         if not cards:
             which = Fixed.TRY_AGAIN
