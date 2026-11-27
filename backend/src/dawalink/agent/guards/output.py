@@ -7,10 +7,11 @@ and after that a text written by us is sent instead (AG-D9).
 
 import re
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 from dawalink.agent.guards.clinical import clinical_reasons, without_names
+from dawalink.agent.guards.grounding import pharmacy_contact_errors
 from dawalink.agent.guards.redact import has_personal_details
 from dawalink.agent.language import looks_arabizi
 from dawalink.agent.tools import ALL, Reply
@@ -177,6 +178,7 @@ def check(
     client_language: str | None = None,
     product_names: Iterable[str] = (),
     a_person_has_it: bool = True,
+    tool_answers: Sequence[str] = (),
 ) -> Checked:
     """The reply with links removed, and everything that is wrong with it.
 
@@ -350,4 +352,6 @@ def check(
                 "in English.",
             )
         )
+    for error in pharmacy_contact_errors(cleaned.text, tool_answers):
+        violations.append(Violation("grounding", error))
     return Checked(cleaned, tuple(violations))

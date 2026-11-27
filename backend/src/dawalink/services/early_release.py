@@ -74,6 +74,8 @@ class Asked:
 
     request_id: uuid.UUID | None
     pharmacies_asked: int
+    newly_asked: int = 0
+    already_asked: int = 0
 
 
 def _move_ask(
@@ -262,7 +264,7 @@ def request_early_release(
             .select_from(EarlyReleaseAsk)
             .where(EarlyReleaseAsk.er_request_id == existing.id)
         ).scalar_one()
-        return Asked(existing.id, asked)
+        return Asked(existing.id, asked, already_asked=asked)
 
     if claim.state != "ACTIVE" or claim.qty_missing < 1 or claim.ends_at <= tx.now:
         raise ServiceError(
@@ -349,7 +351,7 @@ def request_early_release(
             },
             event=f"ask:{ask.id}",
         )
-    return Asked(request.id, len(chosen))
+    return Asked(request.id, len(chosen), newly_asked=len(chosen))
 
 
 def _own_open_ask(tx: Tx, pharmacy_id: uuid.UUID, ask_id: uuid.UUID) -> EarlyReleaseAsk:

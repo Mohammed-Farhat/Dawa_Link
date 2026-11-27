@@ -709,6 +709,7 @@ def _guard_output(graph_state: _State) -> _State:
                 client_language=language.language_of(work.loaded.client_text),
                 product_names=_product_names(tx, work),
                 a_person_has_it=_a_person_has_it(tx, work),
+                tool_answers=[done.as_json() for done in work.outcomes if done.ok],
             )
         kinds = [violation.type for violation in checked.violations]
         span.metadata.update(violations=kinds, repair_used=work.repaired)

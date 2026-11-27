@@ -194,7 +194,11 @@ class RequestEarlyRelease(Arguments):
 
 
 class Asked(Output):
-    asked: int
+    asked: int = Field(description="Total pharmacy contacts belonging to the returned request.")
+    newly_asked: int = Field(description="New pharmacy requests created by this call, not replays.")
+    already_asked: int = Field(
+        description="Contacts from a reused request; no new contact was made."
+    )
     answers_by_display: str | None = None
     reason: str | None = None
     # What to tell the client when nobody could be asked.
@@ -206,6 +210,11 @@ NOBODY_ASKED = (
     "box of this medicine that lasts the client's days. Tell the client that no pharmacy "
     "could be asked right now. Never say that you asked. The watch keeps running; you may "
     "ask again later in its 6 hours, because pharmacies open and close."
+)
+REQUEST_REUSED = (
+    "This call created no new pharmacy requests. The already_asked contacts belong to an "
+    "existing request. Report those existing contacts; do not say more/additional pharmacies "
+    "were contacted, or that the pharmacies were contacted again."
 )
 
 
@@ -237,7 +246,9 @@ def request_early_release(turn: Turn, tx: Tx, args: RequestEarlyRelease) -> Aske
         # All the model may know (R-E8): nobody could be asked right now. The sentence is
         # ours, so that the reply never invents a reason or claims an ask (seen on a real
         # run, 2026-11-22: "no pharmacy is open to that", then "no request was sent").
-        return Asked(asked=0, reason="no_candidates", note=NOBODY_ASKED)
+        return Asked(
+            asked=0, newly_asked=0, already_asked=0, reason="no_candidates", note=NOBODY_ASKED
+        )
     answer_by = tx.session.execute(
         select(func.max(EarlyReleaseAsk.respond_by)).where(
             EarlyReleaseAsk.er_request_id == asked.request_id
@@ -245,7 +256,10 @@ def request_early_release(turn: Turn, tx: Tx, args: RequestEarlyRelease) -> Aske
     ).scalar()
     return Asked(
         asked=asked.pharmacies_asked,
+        newly_asked=asked.newly_asked,
+        already_asked=asked.already_asked,
         answers_by_display=display.when(answer_by) if answer_by else None,
+        note=REQUEST_REUSED if asked.already_asked else None,
     )
 
 
@@ -349,8 +363,9 @@ TOOLS = (
     Tool(
         "request_early_release",
         "Asks up to 3 open pharmacies to release stock they keep private, for a watch or a "
-        "waiting request item. You only learn how many were asked. When `asked` is 0, "
-        "nobody was asked: say so.",
+        "waiting request item. `asked` is the total; `newly_asked` counts new contacts and "
+        "`already_asked` counts reused contacts. Only newly_asked supports claiming "
+        "additional pharmacies were contacted. When asked=0, nobody was asked: say so.",
         RequestEarlyRelease,
         request_early_release,
         BOTH,
