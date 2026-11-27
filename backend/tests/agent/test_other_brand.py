@@ -477,6 +477,7 @@ class TestWholeTurns:
                 "Augmentin isn't listed. Another brand exists.",
                 case_notes={"alternatives_ok": True},
             ),
+            text="I need Augmentin, anywhere",
         )
 
         def show(prompt: Prompt) -> ModelReply:
@@ -540,7 +541,7 @@ class TestWholeTurns:
             show,
             with_a_shortcut,
             without_it,
-            text="Yes, tell me about other brands of Augmentin",
+            text="Yes, tell me about other brands of Augmentin, anywhere",
         )
 
         assert scene.run(result).guardrails == ["card"]

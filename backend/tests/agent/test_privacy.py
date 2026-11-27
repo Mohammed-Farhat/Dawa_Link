@@ -100,7 +100,7 @@ def test_all_19_tools_and_nothing_private_reaches_the_model(scene: Scene) -> Non
         after_plan,
         show_cards,
         text="ana Rami Haddad, e7kine 3a 70 123 456 aw rami.haddad@example.test. "
-        "ana 3and 33.8961, 35.4832. baddi augmentin",
+        "ana 3and 33.8961, 35.4832. baddi augmentin ayya makan",
     )
     (order,) = tap(scene, seen["reserve"]).orders  # a "reserved" card joins the history
 
@@ -304,6 +304,7 @@ def test_what_one_client_wrote_never_reaches_another_clients_agent(scene: Scene)
             ("get_reservations", {}),
         ),
         reply("Hello"),
+        text="I need Augmentin, anywhere",
     )
 
     sent = scene.model.everything_sent()

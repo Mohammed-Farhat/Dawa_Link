@@ -18,7 +18,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 
-from dawalink.agent import display, language, state
+from dawalink.agent import display, language, scope, state
 from dawalink.agent.guards.redact import Identity, redact
 from dawalink.agent.state import CaseState
 from dawalink.agent.tools.base import rate
@@ -443,6 +443,31 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
     trigger, client_text = _trigger(messages, followup, case.read_up_to, to_team)
     if trigger is None:
         return None
+    # Only client text (or the request form), never model notes/tool arguments, can
+    # resolve scope. Rebuild legacy scope from history; later turns use fresh messages.
+    from dawalink.services import areas as area_service
+
+    known_places = area_service.listed(tx)
+    legacy_scope = "search_scope" not in (conversation.case_state or {})
+    for message in messages:
+        text = message.text_redacted or ""
+        if message.author == "agent" and scope.asks_scope(text):
+            case.scope_question_seq = max(case.scope_question_seq, message.seq)
+        if message.author != "client" or message.seq in to_team:
+            continue
+        if not legacy_scope and message.seq <= case.read_up_to:
+            continue
+        asserted = scope.explicit_scope(text, known_places)
+        if asserted is not None:
+            case.search_scope = asserted
+        elif case.search_scope.kind == "unanswered" and 0 < case.scope_question_seq < message.seq:
+            # Ask once: any actual answer, including "I don't know" or a skipped
+            # field, means no preference. Merely setting questions_asked is not enough.
+            case.search_scope = state.SearchScope(kind="nearest")
+    if mode is AgentMode.SOURCING and case.search_scope.kind == "unanswered":
+        # Submitted requests already supply their search location; policy says plan
+        # immediately without another clarification round.
+        case.search_scope = state.SearchScope(kind="anywhere")
     still_open = proposals.of_conversation(tx, conversation_id, case.open_proposal_ids)
     case.open_proposal_ids = [
         proposal_id
@@ -511,6 +536,13 @@ def load(tx: Tx, conversation_id: uuid.UUID, *, followup: bool = False) -> Loade
         f"requests {open_requests}/{MAX_OPEN_REQUESTS}, watches {watches}/{MAX_WATCHES}, "
         f"early-release requests {asks}/{MAX_OPEN_EARLY_RELEASE_REQUESTS}.",
         _person_line(tx, client_id, conversation_id),
+        "Pharmacy search scope: "
+        + case.search_scope.kind
+        + (
+            ". Ask where before find_options or plan_basket; catalog lookups are allowed."
+            if case.search_scope.kind == "unanswered"
+            else ". Use this choice; do not ask again."
+        ),
     ]
     watching = _watch_lines(tx, client_id) if mode is AgentMode.ASSISTANT else []
     if watching:

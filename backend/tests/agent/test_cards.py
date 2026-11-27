@@ -89,7 +89,9 @@ class TestWhatAReplyMayShow:
         def with_a_card(prompt: Prompt) -> ModelReply:
             return call("propose_reservation", listing_id=str(box), pickup_day=str(TODAY))
 
-        fixed = scene.turn(search, words_only, with_a_card, proposal_from(scene))
+        fixed = scene.turn(
+            search, words_only, with_a_card, proposal_from(scene), text="Augmentin anywhere"
+        )
         stubborn = scene.turn(search, words_only, words_only, text="again please")
 
         assert len(fixed.proposal_ids) == 1
@@ -102,6 +104,7 @@ class TestWhatAReplyMayShow:
         result = scene.turn(
             call("find_options", product_ids=[str(scene.augmentin)]),
             reply("It isn't listed at any pharmacy right now."),
+            text="Augmentin anywhere",
         )
 
         assert scene.run(result).guardrails == []

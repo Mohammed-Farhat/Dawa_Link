@@ -67,6 +67,22 @@ class PlanRef(BaseModel):
     groups: list[PlanGroup]
 
 
+class SearchArea(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    place: str = Field(min_length=2, max_length=60)
+    district: str | None = None
+
+
+class SearchScope(BaseModel):
+    """Client-owned scope; a saved location or a model preference is not an answer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["unanswered", "nearest", "areas", "anywhere"] = "unanswered"
+    areas: list[SearchArea] = Field(default_factory=list, max_length=3)
+
+
 class CaseState(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -83,6 +99,8 @@ class CaseState(BaseModel):
     # many days, when). It is never asked twice: once true, it stays true.
     questions_asked: bool = False
     # Written by code.
+    search_scope: SearchScope = Field(default_factory=SearchScope)
+    scope_question_seq: int = 0
     shown_listing_ids: list[uuid.UUID] = Field(default_factory=list)
     open_proposal_ids: list[uuid.UUID] = Field(default_factory=list)
     # The client's medicines in this chat: for each medicine, the first product that was
@@ -201,6 +219,7 @@ def for_model(state: CaseState) -> dict[str, Any]:
             "plans",
             "followups_used",
             "read_up_to",
+            "scope_question_seq",
             "escalated",
         },
     )

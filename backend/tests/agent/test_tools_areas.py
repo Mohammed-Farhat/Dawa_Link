@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 
+from dawalink.agent.state import SearchArea, SearchScope
 from tests.agent.conftest import Scene
 from tests.db.factories import TODAY
 from tests.services.conftest import World
@@ -13,6 +14,12 @@ from tests.services.conftest import World
 
 def district(world: World, name: str) -> int:
     return int(world.one("SELECT id FROM districts WHERE name = :n", n=name).id)
+
+
+def client_scope(scene: Scene, *names: str) -> None:
+    scene.tool_turn().state.search_scope = SearchScope(
+        kind="areas", areas=[SearchArea(place=name) for name in names]
+    )
 
 
 class TestTheAgentsTools:
@@ -27,6 +34,7 @@ class TestTheAgentsTools:
     def test_an_area_to_look_in_is_not_where_the_client_is(
         self, scene: Scene, sidon: uuid.UUID
     ) -> None:
+        client_scope(scene, "saida")
         scene.stock()
         scene.stock(pharmacy_id=sidon)
 
@@ -41,6 +49,7 @@ class TestTheAgentsTools:
         assert (chat.loc_source, chat.loc_area_id) == ("shared", None)
 
     def test_several_areas_are_searched_together(self, scene: Scene, sidon: uuid.UUID) -> None:
+        client_scope(scene, "Saida", "Hamra")
         scene.stock()
         scene.stock(pharmacy_id=sidon)
 
@@ -55,6 +64,7 @@ class TestTheAgentsTools:
         assert found["searched_in"] == ["Beirut", "Sidon"]  # Hamra counts as its district
 
     def test_none_in_the_areas_is_said_with_what_is_elsewhere(self, scene: Scene) -> None:
+        client_scope(scene, "Saida")
         scene.stock()
 
         found = scene.tool(
@@ -65,6 +75,7 @@ class TestTheAgentsTools:
         assert (found["why_none"], found["elsewhere"]) == ("not_in_these_areas", 1)
 
     def test_a_name_that_is_not_listed_is_never_guessed(self, scene: Scene) -> None:
+        client_scope(scene, "Timbuktu")
         scene.stock()
 
         told = scene.tool(
@@ -100,6 +111,7 @@ class TestTheAgentsTools:
         assert option["pickup_days_allowed"] == [TODAY.isoformat()]
 
     def test_a_plan_can_be_kept_to_the_areas(self, scene: Scene, sidon: uuid.UUID) -> None:
+        client_scope(scene, "Saida")
         scene.stock()
 
         planned = scene.tool(
